@@ -9,9 +9,6 @@
     <meta name="apple-mobile-web-app-title" content="VÄDER">
     <title>VÄDER – Meteorologisk prognos</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         :root {
             --bg-primary:#0d1f0d;--bg-secondary:#152815;--bg-card:#1a321a;--bg-input:#0f240f;
@@ -21,7 +18,7 @@
             --radius:8px;--radius-sm:4px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; padding: 16px; }
+        body { font-family: system-ui, -apple-system, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; padding: 16px; }
         .container { max-width: 560px; margin: 0 auto; }
         header { text-align: center; padding: 20px 0 16px; }
         header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
@@ -58,6 +55,12 @@
         .form-view.hidden { display: none; }
         .result-header { font-size: 0.8rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 12px; }
         .hint { font-size: 0.72rem; color: var(--text-muted); text-align: center; margin-bottom: 14px; line-height: 1.5; }
+        .info-text { font-size: 0.72rem; color: var(--text-muted); margin-bottom: 6px; }
+        .input-row { display: flex; gap: 8px; }
+        .input-row input { flex: 1; min-width: 0; }
+        input[type="text"] { width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 0.92rem; padding: 11px 12px; outline: none; -webkit-appearance: none; }
+        input[type="text"]:focus { border-color: var(--border-focus); }
+        input[type="text"]::placeholder { color: var(--text-muted); }
     </style>
 </head>
 <body>
@@ -91,10 +94,13 @@
                 <span class="status-value empty" id="dispDatum">— tryck Nu</span>
                 <button class="btn btn-sm btn-time" onclick="setNu()">Nu</button>
             </div>
-            <div class="status-row">
-                <span class="status-label">ORT</span>
-                <span class="status-value empty" id="dispOrt">— tryck MGRS</span>
-                <button class="btn btn-sm btn-time" id="mgrsBtn" onclick="hamtaOrt()">MGRS</button>
+        </div>
+
+        <div class="status-box">
+            <div class="info-text">Plats / koordinater</div>
+            <div class="input-row">
+                <input type="text" id="ortInput" placeholder="Stockholm, Sverige" autocomplete="off">
+                <button class="btn btn-sm btn-time" id="mgrsBtn" onclick="hamtaOrt()">📍 MGRS</button>
             </div>
         </div>
 
@@ -102,9 +108,8 @@
     </div>
 
     <div class="result-view" id="resultView">
-        <div class="result-header">VÄDERRAPPORT – PROMPT</div>
-        <p class="hint">Klistra in texten nedan i en AI-assistent (Claude, ChatGPT m.fl.) för att få prognosengenerad.</p>
-        <button class="btn btn-copy" onclick="kopiera()">Kopiera prompt</button>
+        <div class="result-header">VÄDERRAPPORT</div>
+        <button class="btn btn-copy" onclick="kopiera()">Kopiera rapport</button>
         <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
         <div class="prompt-box" id="promptOutput"></div>
         <div class="button-group" style="margin-top:8px">
@@ -119,6 +124,8 @@
 <script>
 let datumVal = '';
 let ortVal   = '';
+let latVal   = null;
+let lonVal   = null;
 
 function setNu() {
     const now = new Date();
@@ -132,71 +139,179 @@ function setNu() {
 
 function hamtaOrt() {
     const btn = document.getElementById('mgrsBtn');
-    const el  = document.getElementById('dispOrt');
     btn.textContent = '…';
     btn.disabled = true;
     if (!navigator.geolocation) {
-        el.textContent = 'Geolokalisering ej tillgänglig';
-        el.classList.add('empty');
-        btn.textContent = 'MGRS'; btn.disabled = false; return;
+        btn.textContent = '📍 MGRS'; btn.disabled = false; return;
     }
     navigator.geolocation.getCurrentPosition(pos => {
-        const lat = pos.coords.latitude.toFixed(5);
-        const lon = pos.coords.longitude.toFixed(5);
-        // Försök reverse-geocode via Nominatim (kräver nätverksåtkomst)
+        latVal = pos.coords.latitude;
+        lonVal = pos.coords.longitude;
+        const lat = latVal.toFixed(5);
+        const lon = lonVal.toFixed(5);
         fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=sv`)
             .then(r => r.json())
             .then(d => {
                 const city = d.address?.city || d.address?.town || d.address?.village || d.address?.county || `${lat}, ${lon}`;
-                ortVal = city;
-                el.textContent = city;
-                el.classList.remove('empty');
+                document.getElementById('ortInput').value = city;
             })
             .catch(() => {
-                ortVal = `${lat}, ${lon}`;
-                el.textContent = ortVal;
-                el.classList.remove('empty');
+                document.getElementById('ortInput').value = `${lat}, ${lon}`;
             })
-            .finally(() => { btn.textContent = 'MGRS'; btn.disabled = false; });
+            .finally(() => { btn.textContent = '📍 MGRS'; btn.disabled = false; });
     }, () => {
-        el.textContent = 'Kunde inte hämta position';
-        el.classList.add('empty');
-        btn.textContent = 'MGRS'; btn.disabled = false;
+        btn.textContent = '📍 MGRS'; btn.disabled = false;
     });
 }
 
-function generera() {
+// ÅÅMMDD → YYYY-MM-DD
+function toISODate(yymmdd) {
+    return '20' + yymmdd.slice(0,2) + '-' + yymmdd.slice(2,4) + '-' + yymmdd.slice(4,6);
+}
+
+// ISO datetime string (e.g. "2026-03-27T06:15") → DDTTMM
+function toDDTTMM(isoStr) {
+    const d = new Date(isoStr);
+    const p = n => String(n).padStart(2,'0');
+    return p(d.getDate()) + p(d.getHours()) + p(d.getMinutes());
+}
+
+// Add minutes to ISO datetime string
+function addMinutes(isoStr, mins) {
+    const d = new Date(isoStr);
+    d.setMinutes(d.getMinutes() + mins);
+    const p = n => String(n).padStart(2,'0');
+    return d.getFullYear() + '-' + p(d.getMonth()+1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+}
+
+// Degrees → Swedish cardinal
+function vindRiktning(deg) {
+    const dirs = ['N','NO','Ö','SO','S','SV','V','NV'];
+    return dirs[Math.round(deg / 45) % 8];
+}
+
+// Wind speed (m/s) → description
+function vindBeskriv(ms) {
+    if (ms < 1)  return 'Vindstilla';
+    if (ms < 4)  return 'Svag vind';
+    if (ms < 8)  return 'Måttlig vind';
+    if (ms < 14) return 'Frisk vind';
+    if (ms < 20) return 'Hård vind';
+    return 'Stormvind';
+}
+
+// Cloud cover % → sky description
+function molnBeskriv(cc) {
+    if (cc < 20)  return 'Klart';
+    if (cc < 45)  return 'Lätt molnigt';
+    if (cc < 70)  return 'Halvklart';
+    return 'Mulet';
+}
+
+// UAV assessment
+function uavBedomning(windMs, cloudPct, precip) {
+    let parts = [];
+    if (windMs >= 10)      parts.push('UAV-verksamhet starkt begränsad pga hård vind');
+    else if (windMs >= 6)  parts.push('Begränsad UAV-verksamhet, måttlig vind');
+    else                   parts.push('Inga begränsningar UAV, gynnsamma vindförhållanden');
+    if (cloudPct >= 70)    parts.push('låg takthorisont');
+    if (precip > 2)        parts.push('nedsatt sikt vid regn/snö');
+    return parts.join(', ') + '.';
+}
+
+// CBRN assessment
+function cbrnBedomning(windMs, windDir) {
+    if (windMs < 2)  return 'Mycket svag vind – lokal ansamling av kemiska ämnen möjlig. Hög CBRN-risk vid markutsläpp.';
+    if (windMs < 5)  return `Svag vind ${windDir}, långsam spridning och lokal ansamling vid markutsläpp.`;
+    if (windMs < 10) return `Måttlig vind ${windDir}, normal spridning nedåt vindrogen. Övervaka vindriktning.`;
+    return `Hård vind ${windDir}, snabb spridning nedåt vindrogen. Kontaminerat område utvidgas snabbt.`;
+}
+
+// Frost assessment
+function frostBedomning(minTemp) {
+    if (minTemp > 1) return null;
+    if (minTemp <= 0) return `Frosthalka trolig under natten/morgonen, marktemperatur kring ${minTemp}°C.`;
+    return `Frosthalka möjlig, marktemperatur nära 0°C (${minTemp}°C).`;
+}
+
+async function generera() {
     if (!datumVal) { alert('Tryck på "Nu" för att ange dagens datum.'); return; }
-    const ort = ortVal || 'Stockholm';
-    const prompt =
-`Du är en militär väderassistent. Skapa en kortfattad meteorologisk prognos för ${ort} för datum ${datumVal}. Använd exakt följande format:
+    const ortText = document.getElementById('ortInput').value.trim();
+    if (!ortText && !latVal) { alert('Ange en ort eller tryck på 📍 MGRS.'); return; }
 
-Orientering:
-Meteorologisk prognos ${datumVal}
-Temp [min]–[max]°C. [Väderförhållanden]. [Nederbörd].
-[Vindstyrka och riktning].
-Soluppgång [DDTTMM]
-Solnedgång [DDTTMM]
-Om soligt/klart väder, inkludera:
-Golden hour morgon [DDTTMM]–[DDTTMM], för fotografering.
-Golden hour kväll [DDTTMM]–[DDTTMM], för fotografering.
-Om molntäcke, utelämna Golden Hour helt.
-[Sikt och UAV-påverkan].
-[CBRN-påverkan baserat på vindförhållanden och spridningsrisk].
-[Frosthalka och marktemperatur].
+    const genBtn = document.querySelector('.btn-primary');
+    genBtn.textContent = 'Hämtar väderdata…';
+    genBtn.disabled = true;
 
-Regler:
-- Datum skrivs ÅÅMMDD (ex: 260321)
-- Tider skrivs DDTTMM (ex: 210546)
-- Ingen punkt efter solnedgångstidenInkludera påverkan på militär verksamhet (UAV, CBRN)
-- Håll det kortfattat, inga kartor
-- Sök aktuell väderdata från webben innan du svarar
-- Sök golden hour-tider för ${ort} datum ${datumVal} från webbkälla (golden-hour.com eller liknande), uppskatta inte`;
+    try {
+        // Geocode text input if no GPS coords
+        if (!latVal || !lonVal) {
+            const geoResp = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(ortText)}&limit=1`);
+            const geoData = await geoResp.json();
+            if (!geoData.length) throw new Error(`Hittade ingen plats för "${ortText}"`);
+            latVal = parseFloat(geoData[0].lat);
+            lonVal = parseFloat(geoData[0].lon);
+        }
+        ortVal = ortText || document.getElementById('ortInput').value.trim();
 
-    document.getElementById('promptOutput').textContent = prompt;
-    document.getElementById('formView').classList.add('hidden');
-    document.getElementById('resultView').classList.add('active');
-    window.scrollTo(0, 0);
+        const isoDate = toISODate(datumVal);
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latVal.toFixed(4)}&longitude=${lonVal.toFixed(4)}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,cloudcover_mean,windspeed_10m_max,winddirection_10m_dominant,sunrise,sunset&timezone=auto&start_date=${isoDate}&end_date=${isoDate}`;
+        const resp = await fetch(url);
+        if (!resp.ok) throw new Error('API-fel ' + resp.status);
+        const data = await resp.json();
+        const d = data.daily;
+
+        const tempMax    = Math.round(d.temperature_2m_max[0]);
+        const tempMin    = Math.round(d.temperature_2m_min[0]);
+        const precip     = d.precipitation_sum[0] ?? 0;
+        const cloudPct   = Math.round(d.cloudcover_mean[0] ?? 0);
+        const windMs     = Math.round(d.windspeed_10m_max[0] / 3.6); // km/h → m/s
+        const windDeg    = d.winddirection_10m_dominant[0] ?? 0;
+        const sunriseISO = d.sunrise[0];
+        const sunsetISO  = d.sunset[0];
+
+        const windDir  = vindRiktning(windDeg);
+        const windDesc = vindBeskriv(windMs);
+        const skyDesc  = molnBeskriv(cloudPct);
+
+        // Precipitation text
+        let nederbord = 'Ingen nederbörd';
+        if (precip >= 0.1 && precip < 3)  nederbord = `Lätt nederbörd ${precip.toFixed(1)} mm`;
+        else if (precip >= 3 && precip < 10) nederbord = `Måttlig nederbörd ${precip.toFixed(1)} mm`;
+        else if (precip >= 10)             nederbord = `Kraftig nederbörd ${precip.toFixed(1)} mm`;
+
+        const sunriseDDTTMM = toDDTTMM(sunriseISO);
+        const sunsetDDTTMM  = toDDTTMM(sunsetISO);
+
+        // Golden hour (only if cloud cover < 50%)
+        let goldenLines = '';
+        if (cloudPct < 50) {
+            const ghMorgStart = toDDTTMM(sunriseISO);
+            const ghMorgEnd   = toDDTTMM(addMinutes(sunriseISO, 30));
+            const ghKvallStart = toDDTTMM(addMinutes(sunsetISO, -30));
+            const ghKvallEnd   = toDDTTMM(sunsetISO);
+            goldenLines = `Golden hour morgon ${ghMorgStart}–${ghMorgEnd}, för fotografering.\nGolden hour kväll ${ghKvallStart}–${ghKvallEnd}, för fotografering.`;
+        }
+
+        const uav   = uavBedomning(windMs, cloudPct, precip);
+        const cbrn  = cbrnBedomning(windMs, windDir);
+        const frost = frostBedomning(tempMin);
+
+        let rapport = `Orientering:\nMeteorologisk prognos ${datumVal}\nTemp ${tempMin}–${tempMax}°C. ${skyDesc}. ${nederbord}.\n${windDesc} ${windMs} m/s från ${windDir}.\nSoluppgång ${sunriseDDTTMM}\nSolnedgång ${sunsetDDTTMM}`;
+        if (goldenLines) rapport += '\n' + goldenLines;
+        rapport += `\n${uav}\n${cbrn}`;
+        if (frost) rapport += '\n' + frost;
+
+        document.getElementById('promptOutput').textContent = rapport;
+        document.getElementById('formView').classList.add('hidden');
+        document.getElementById('resultView').classList.add('active');
+        window.scrollTo(0, 0);
+    } catch(err) {
+        alert('Kunde inte hämta väderdata: ' + err.message);
+    } finally {
+        genBtn.textContent = 'Generera väderrapport';
+        genBtn.disabled = false;
+    }
 }
 
 function kopiera() {
@@ -220,15 +335,17 @@ function atergaForm() {
     window.scrollTo(0, 0);
 }
 function nollstall() {
-    datumVal = ''; ortVal = '';
+    datumVal = ''; ortVal = ''; latVal = null; lonVal = null;
     document.getElementById('dispDatum').textContent = '— tryck Nu';
     document.getElementById('dispDatum').classList.add('empty');
-    document.getElementById('dispOrt').textContent = '— tryck MGRS';
-    document.getElementById('dispOrt').classList.add('empty');
+    document.getElementById('ortInput').value = '';
     document.getElementById('resultView').classList.remove('active');
     document.getElementById('formView').classList.remove('hidden');
     window.scrollTo(0, 0);
 }
+
+// Reset GPS coords if user edits the location field manually
+document.getElementById('ortInput').addEventListener('input', () => { latVal = null; lonVal = null; });
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
 
