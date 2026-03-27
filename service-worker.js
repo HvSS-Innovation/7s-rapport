@@ -1,4 +1,4 @@
-const CACHE = 'hv-v36';
+const CACHE = 'hv-v38';
 const FILES = [
   './',
   './index.html',
@@ -10,6 +10,7 @@ const FILES = [
   './eobusare.html',
   './obo.html',
   './rassoika.html',
+  './vader.html',
   './what.html',
   './scrim.html',
   './weft.html',

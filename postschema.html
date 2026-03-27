@@ -32,8 +32,8 @@
         .tab-link { flex: 1; text-align: center; padding: 9px 2px; border-radius: var(--radius-sm); color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
         .tab-link:hover { background: var(--bg-card); color: var(--text-secondary); }
         .tab-link.active { background: var(--accent-dim); color: var(--accent); }
-        .tab-nav-sub { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 3px 4px 4px; }
-        .tab-nav-sub .tab-link { font-size: 0.62rem; padding: 6px 2px; letter-spacing: 0.04em; }
+        .tab-nav-sub { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
 
         .section-label { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
         .section-letter { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
@@ -144,6 +144,7 @@
         <a href="eobusare.html" class="tab-link">EOBUSARE</a>
         <a href="obo.html" class="tab-link">OBO</a>
         <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+        <a href="vader.html" class="tab-link">VÄDER</a>
     </nav>
 
     <main>
@@ -243,6 +244,7 @@ let soldater = [];
 let poster = [];
 let schema = [];
 let soldatMinVila = {}; // namn → min vilotid i h (0 = ingen krav)
+let soldatRoll = {};    // namn → 'forare' | 'rpas' | 'grpc' | ''
 let specialFrontSet = new Set(); // specialsoldater som ska placeras FRAM istället för bak
 let schedulableSpecials = []; // fylls i genererSchema, används i renderSchema
 
@@ -287,7 +289,7 @@ function addSoldat(value = '', doFocus = true) {
     const inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Namn'; inp.value = value;
     const sel = document.createElement('select');
     sel.style.cssText = 'width:auto;flex-shrink:0;padding:12px 8px;font-size:0.8rem;';
-    [['', '–'], ['6', 'Förare'], ['8', 'RPAS']].forEach(([v, t]) => {
+    [['', '–'], ['grpc', 'Grpc'], ['6', 'Förare'], ['8', 'RPAS']].forEach(([v, t]) => {
         const o = document.createElement('option'); o.value = v; o.textContent = t; sel.appendChild(o);
     });
     const btn = document.createElement('button'); btn.className = 'btn-remove'; btn.textContent = '×'; btn.type = 'button';
@@ -326,11 +328,13 @@ function genererSchema() {
     poster = Array.from(document.querySelectorAll('#posterLista input')).map(i => i.value.trim()).filter(Boolean);
     const soldatRows = Array.from(document.querySelectorAll('#soldatLista .list-row'));
     soldater = soldatRows.map(r => r.querySelector('input').value.trim()).filter(Boolean);
-    soldatMinVila = {};
+    soldatMinVila = {}; soldatRoll = {};
     soldatRows.forEach(r => {
         const namn = r.querySelector('input').value.trim();
-        const roll = r.querySelector('select')?.value;
-        if (namn) soldatMinVila[namn] = roll ? parseInt(roll) : 0;
+        const roll = r.querySelector('select')?.value || '';
+        if (!namn) return;
+        soldatRoll[namn] = roll === '6' ? 'forare' : roll === '8' ? 'rpas' : roll === 'grpc' ? 'grpc' : '';
+        soldatMinVila[namn] = roll === '6' ? 6 : roll === '8' ? 8 : 0;
     });
 
     if (!poster.length || !soldater.length) { alert('Lägg till minst en post och en soldat.'); return; }
@@ -341,18 +345,19 @@ function genererSchema() {
     const antalSkift = Math.ceil(total / skift);
     const N = poster.length;
 
-    // Pooler: ordinarie roterar, special (förare/RPAS) läggs sist i kön
-    const regularPool = soldater.filter(sol => !soldatMinVila[sol]);
-    // Sortera special stigande efter vilokrav → minst restriktiv in FÖRST, mest restriktiv SIST
-    const specialPool = soldater.filter(sol => soldatMinVila[sol] > 0)
+    // Pooler: ordinarie roterar, special (Förare/RPAS/Grpc) placeras sist eller först
+    const isSpecial = sol => soldatRoll[sol] === 'forare' || soldatRoll[sol] === 'rpas' || soldatRoll[sol] === 'grpc';
+    const regularPool = soldater.filter(sol => !isSpecial(sol));
+    // Sortera special stigande efter vilokrav (Grpc=0 → alltid minst restriktiv)
+    const specialPool = soldater.filter(sol => isSpecial(sol))
                                 .sort((a, b) => soldatMinVila[a] - soldatMinVila[b]);
-    // Fallback: om för få ordinarie, använd alla MINUS special (undviker dubbelschemaläggning)
+    // Fallback: om för få ordinarie, använd alla icke-special, sist soldater
     const activePool  = regularPool.length >= N ? regularPool
-                      : soldater.filter(sol => !soldatMinVila[sol]).length >= 1
-                        ? soldater.filter(sol => !soldatMinVila[sol])
+                      : soldater.filter(sol => !isSpecial(sol)).length >= 1
+                        ? soldater.filter(sol => !isSpecial(sol))
                         : soldater;
 
-    // Uteslut specialsoldater om schemat är kortare än deras vilokrav
+    // Uteslut Förare/RPAS om schemat är kortare än deras vilokrav (Grpc=0 → alltid med)
     schedulableSpecials = specialPool.filter(sol =>
         Math.ceil(soldatMinVila[sol] / skift) < antalSkift
     );
@@ -435,11 +440,12 @@ function genererSchema() {
     window.scrollTo(0, 0);
 }
 
-// Visa namn med rollsuffix: (F) för Förare, (R) för RPAS
+// Visa namn med rollsuffix
 function displayNamn(namn) {
-    const v = soldatMinVila[namn];
-    if (v === 6) return namn + ' (F)';
-    if (v === 8) return namn + ' (R)';
+    const r = soldatRoll[namn];
+    if (r === 'forare') return namn + ' (F)';
+    if (r === 'rpas')   return namn + ' (R)';
+    if (r === 'grpc')   return namn + ' (G)';
     return namn;
 }
 
@@ -464,11 +470,12 @@ function renderSchema() {
     // Knappar för att flytta Förare/RPAS fram eller bak individuellt
     const ctrl = document.getElementById('specialControls');
     if (schedulableSpecials.length > 0) {
+        const roleLabel = { forare: 'F', rpas: 'R', grpc: 'G' };
         let ch = '<div style="display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 4px">';
         schedulableSpecials.forEach(sol => {
             const isFront = specialFrontSet.has(sol);
-            const role = soldatMinVila[sol] === 6 ? 'F' : 'R';
-            ch += `<button class="btn btn-sm btn-secondary" onclick="toggleSpecialPos('${sol}')" style="font-size:0.78rem">${sol} (${role}): ${isFront ? '↑ Fram' : '↓ Bak'}</button>`;
+            const rl = roleLabel[soldatRoll[sol]] || '';
+            ch += `<button class="btn btn-sm btn-secondary" onclick="toggleSpecialPos('${sol}')" style="font-size:0.78rem">${sol}${rl ? ' (' + rl + ')' : ''}: ${isFront ? '▲ TIDIGT' : '▼ SIST'}</button>`;
         });
         ch += '</div>';
         ctrl.innerHTML = ch;
@@ -601,7 +608,7 @@ function atergaInst() {
 
 function nollstall() {
     if (!confirm('Nollställ schemat och börja om?')) return;
-    schema = []; poster = []; soldater = []; specialFrontSet = new Set();
+    schema = []; poster = []; soldater = []; soldatRoll = {}; specialFrontSet = new Set();
     document.getElementById('tnr').value = '';
     document.getElementById('enhet').value = '';
     document.getElementById('skiftLangd').value = '2';

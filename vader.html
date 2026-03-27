@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d1f0d">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="VÄDER">
+    <title>VÄDER – Meteorologisk prognos</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-primary:#0d1f0d;--bg-secondary:#152815;--bg-card:#1a321a;--bg-input:#0f240f;
+            --border:#2d4a2d;--border-focus:#4a7c4a;--text-primary:#e8f0e8;--text-secondary:#8aaa8a;
+            --text-muted:#5a7a5a;--accent:#4caf50;--accent-hover:#66bb6a;--accent-dim:#1e3d1e;
+            --danger:#c62828;--danger-hover:#e53935;--info:#1565c0;--info-hover:#1976d2;
+            --radius:8px;--radius-sm:4px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; padding: 16px; }
+        .container { max-width: 560px; margin: 0 auto; }
+        header { text-align: center; padding: 20px 0 16px; }
+        header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+        header p { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.06em; margin-top: 2px; }
+        .tab-nav { display: flex; gap: 4px; margin-bottom: 4px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-link { flex: 1; text-align: center; padding: 9px 2px; border-radius: var(--radius-sm); color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
+        .tab-link:hover { background: var(--bg-card); color: var(--text-secondary); }
+        .tab-link.active { background: var(--accent-dim); color: var(--accent); }
+        .tab-nav-sub { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
+        label { font-weight: 600; font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-bottom: 6px; }
+        .sub-label { font-weight: 600; font-size: 0.78rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-top: 14px; margin-bottom: 6px; }
+        .field-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 5px; opacity: 0.75; }
+        input[type="text"], input[type="number"], textarea, select {
+            width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            color: var(--text-primary); font-family: inherit; font-size: 1rem; padding: 12px 14px; outline: none;
+            transition: border-color 0.15s; -webkit-appearance: none; appearance: none;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus { border-color: var(--border-focus); }
+        textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+        .input-row { display: flex; gap: 8px; align-items: flex-start; }
+        .input-row input { flex: 1; min-width: 0; }
+        .input-col2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .form-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+        .form-group.section-group { border-left: 3px solid var(--accent); }
+        .section-label { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+        .section-letter { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .section-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+        .section-subtitle { font-size: 0.68rem; color: var(--text-muted); margin-top: 1px; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; border: none; border-radius: var(--radius); font-family: inherit; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { width: 100%; background: var(--accent); color: #fff; margin-top: 8px; font-size: 1rem; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-sm { min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; white-space: nowrap; flex-shrink: 0; }
+        .btn-time { background: var(--accent-dim); color: var(--accent); border: none; }
+        .btn-time:hover { background: var(--border-focus); }
+        .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; }
+        .btn-copy:hover { background: var(--info-hover); }
+        .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
+        .btn-danger { flex: 1; background: var(--danger); color: #fff; border: none; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .button-group { display: flex; gap: 10px; }
+        .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+        .toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
+        .toggle-row label { margin-bottom: 0; font-size: 0.78rem; }
+        .result-view { display: none; }
+        .result-view.active { display: block; }
+        .form-view.hidden { display: none; }
+        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
+        .copy-feedback { text-align: center; color: var(--accent); font-size: 0.85rem; font-weight: 600; height: 24px; opacity: 0; transition: opacity 0.2s; margin-bottom: 12px; }
+        .copy-feedback.show { opacity: 1; }
+        .ai-box { background: var(--bg-secondary); border: 1px dashed var(--border-focus); border-radius: var(--radius); padding: 12px 14px; font-size: 0.75rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 10px; }
+        .ai-box strong { color: var(--text-secondary); }
+        .ai-prompt { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-family: 'Courier New', monospace; font-size: 0.7rem; color: var(--text-secondary); white-space: pre-wrap; line-height: 1.5; margin-top: 8px; }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header><h1>VÄDER</h1><p>Meteorologisk prognos – militärt format</p></header>
+
+    <nav class="tab-nav">
+        <a href="index.html" class="tab-link">7S</a>
+        <a href="what.html" class="tab-link">WHAT</a>
+        <a href="scrim.html" class="tab-link">SCRIM</a>
+        <a href="weft.html" class="tab-link">WEFT</a>
+        <a href="ah.html" class="tab-link">A–H</a>
+    </nav>
+    <nav class="tab-nav-sub">
+        <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+        <a href="fors.html" class="tab-link">FORS</a>
+        <a href="pedars.html" class="tab-link">PEDARS</a>
+        <a href="postschema.html" class="tab-link">SCHEMA</a>
+        <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+        <a href="obo.html" class="tab-link">OBO</a>
+        <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+        <a href="vader.html" class="tab-link active">VÄDER</a>
+    </nav>
+
+    <main>
+    <div class="form-view" id="formView">
+
+        <!-- AI-prompt -->
+        <div class="ai-box">
+            <strong>Generera prognos med AI</strong> — klistra in prompten nedan i valfri AI-assistent (Claude, ChatGPT m.fl.), fyll sedan i fälten manuellt eller klistra in svaret direkt i textfältet längst ned.
+            <div class="ai-prompt" id="aiPrompt"></div>
+        </div>
+
+        <!-- Datum -->
+        <div class="form-group">
+            <label for="datum">Datum (ÅÅMMDD)</label>
+            <div class="input-row" style="margin-top:6px">
+                <input type="text" id="datum" placeholder="260321" inputmode="numeric" maxlength="6" autocomplete="off">
+                <button class="btn btn-sm btn-time" onclick="setDatumNu()">Nu</button>
+            </div>
+        </div>
+
+        <!-- Temperatur -->
+        <div class="form-group section-group">
+            <div class="section-label">
+                <div class="section-letter">T</div>
+                <div><div class="section-title">Temperatur &amp; väder</div></div>
+            </div>
+            <div class="input-col2">
+                <div>
+                    <label for="tempMin">Min °C</label>
+                    <input type="number" id="tempMin" placeholder="-3" style="margin-top:6px">
+                </div>
+                <div>
+                    <label for="tempMax">Max °C</label>
+                    <input type="number" id="tempMax" placeholder="4" style="margin-top:6px">
+                </div>
+            </div>
+            <label style="margin-top:12px" for="vaderForh">Väderförhållanden</label>
+            <textarea id="vaderForh" rows="2" placeholder="Ex: Övervägande molnigt med klara perioder"></textarea>
+            <label style="margin-top:12px" for="nederbord">Nederbörd</label>
+            <textarea id="nederbord" rows="2" placeholder="Ex: Ingen nederbörd. Dimma möjlig på morgonen."></textarea>
+        </div>
+
+        <!-- Vind -->
+        <div class="form-group section-group">
+            <div class="section-label">
+                <div class="section-letter">V</div>
+                <div><div class="section-title">Vind</div></div>
+            </div>
+            <textarea id="vind" rows="2" placeholder="Ex: SW 3–6 m/s, byar upp till 10 m/s"></textarea>
+        </div>
+
+        <!-- Sol / Golden hour -->
+        <div class="form-group section-group">
+            <div class="section-label">
+                <div class="section-letter">S</div>
+                <div><div class="section-title">Sol &amp; golden hour</div></div>
+            </div>
+            <div class="input-col2">
+                <div>
+                    <label for="solUpp">Soluppgång (DDTTMM)</label>
+                    <input type="text" id="solUpp" placeholder="210546" inputmode="numeric" maxlength="6" style="margin-top:6px">
+                </div>
+                <div>
+                    <label for="solNed">Solnedgång (DDTTMM)</label>
+                    <input type="text" id="solNed" placeholder="211831" inputmode="numeric" maxlength="6" style="margin-top:6px">
+                </div>
+            </div>
+            <div class="toggle-row" style="margin-top:12px">
+                <input type="checkbox" id="inkluderaGolden" onchange="renderGoldenFields()">
+                <label for="inkluderaGolden">Inkludera golden hour (klart väder)</label>
+            </div>
+            <div id="goldenFields" style="display:none">
+                <label style="margin-top:12px" for="ghMorgStart">Golden hour morgon – start (DDTTMM)</label>
+                <div class="input-col2" style="margin-top:6px">
+                    <input type="text" id="ghMorgStart" placeholder="210520" inputmode="numeric" maxlength="6">
+                    <input type="text" id="ghMorgSlut" placeholder="210550" inputmode="numeric" maxlength="6">
+                </div>
+                <label style="margin-top:10px" for="ghKvallStart">Golden hour kväll – start (DDTTMM)</label>
+                <div class="input-col2" style="margin-top:6px">
+                    <input type="text" id="ghKvallStart" placeholder="211800" inputmode="numeric" maxlength="6">
+                    <input type="text" id="ghKvallSlut" placeholder="211835" inputmode="numeric" maxlength="6">
+                </div>
+            </div>
+        </div>
+
+        <!-- Sikt & militär påverkan -->
+        <div class="form-group section-group">
+            <div class="section-label">
+                <div class="section-letter">M</div>
+                <div><div class="section-title">Militär påverkan</div></div>
+            </div>
+            <label for="siktUav">Sikt &amp; UAV-påverkan</label>
+            <textarea id="siktUav" rows="2" placeholder="Ex: Sikt &gt;10 km. UAV-operationer möjliga hela dygnet."></textarea>
+            <label style="margin-top:12px" for="cbrn">CBRN-påverkan</label>
+            <textarea id="cbrn" rows="2" placeholder="Ex: SW-vind → spridning mot NE. Låg CBRN-risk."></textarea>
+            <label style="margin-top:12px" for="frost">Halka &amp; marktemperatur</label>
+            <textarea id="frost" rows="2" placeholder="Ex: Risk för frosthalka nattetid. Marktemp ca -1°C."></textarea>
+        </div>
+
+        <button class="btn btn-primary" onclick="generera()">Generera prognos</button>
+    </div>
+
+    <div class="result-view" id="resultView">
+        <div style="font-size:0.8rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);text-align:center;margin-bottom:12px">METEOROLOGISK PROGNOS</div>
+        <button class="btn btn-copy" onclick="kopiera()">Kopiera prognos</button>
+        <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
+        <pre class="report-output" id="reportOutput"></pre>
+        <div class="button-group">
+            <button class="btn btn-secondary" onclick="atergaForm()">Ändra</button>
+            <button class="btn btn-danger" onclick="nollstall()">Nollställ</button>
+        </div>
+    </div>
+
+    </main>
+</div>
+
+<script>
+function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+
+function setDatumNu() {
+    const now = new Date();
+    const p = n => String(n).padStart(2, '0');
+    const yy = String(now.getFullYear()).slice(2);
+    document.getElementById('datum').value = yy + p(now.getMonth() + 1) + p(now.getDate());
+}
+
+function renderGoldenFields() {
+    const cb = document.getElementById('inkluderaGolden');
+    document.getElementById('goldenFields').style.display = cb.checked ? 'block' : 'none';
+}
+
+function updateAiPrompt() {
+    const datum = v('datum') || 'ÅÅMMDD';
+    document.getElementById('aiPrompt').textContent =
+`Du är en militär väderassistent. Skapa en kortfattad meteorologisk prognos för Stockholm för datum ${datum}. Använd exakt detta format:
+
+Orientering:
+Meteorologisk prognos ${datum}
+Temp [min]–[max]°C. [Väderförhållanden]. [Nederbörd].
+[Vindstyrka och riktning].
+Soluppgång [DDTTMM]
+Solnedgång [DDTTMM]
+(Om klart väder:)
+Golden hour morgon [DDTTMM]–[DDTTMM], för fotografering.
+Golden hour kväll [DDTTMM]–[DDTTMM], för fotografering.
+[Sikt och UAV-påverkan].
+[CBRN-påverkan baserat på vind].
+[Frosthalka och marktemperatur].
+
+Regler: Datum = ÅÅMMDD, tider = DDTTMM. Inga kartor. Sök golden hour-tider för Stockholm ${datum}.`;
+}
+
+document.getElementById('datum').addEventListener('input', updateAiPrompt);
+updateAiPrompt();
+
+function generera() {
+    const datum  = v('datum');
+    const tMin   = v('tempMin');
+    const tMax   = v('tempMax');
+    const forh   = v('vaderForh');
+    const ned    = v('nederbord');
+    const vind   = v('vind');
+    const solUpp = v('solUpp');
+    const solNed = v('solNed');
+    const golden = document.getElementById('inkluderaGolden').checked;
+    const ghMs   = v('ghMorgStart');
+    const ghMsl  = v('ghMorgSlut');
+    const ghKs   = v('ghKvallStart');
+    const ghKsl  = v('ghKvallSlut');
+    const sikt   = v('siktUav');
+    const cbrn   = v('cbrn');
+    const frost  = v('frost');
+
+    if (!datum) { alert('Ange datum (ÅÅMMDD).'); return; }
+
+    let lines = ['Orientering:', `Meteorologisk prognos ${datum}`];
+
+    let rad2 = '';
+    if (tMin || tMax) rad2 += `Temp ${tMin || '?'}–${tMax || '?'}°C.`;
+    if (forh) rad2 += (rad2 ? ' ' : '') + forh + (forh.endsWith('.') ? '' : '.');
+    if (ned)  rad2 += (rad2 ? ' ' : '') + ned  + (ned.endsWith('.')  ? '' : '.');
+    if (rad2) lines.push(rad2);
+    if (vind) lines.push(vind + (vind.endsWith('.') ? '' : '.'));
+    if (solUpp) lines.push(`Soluppgång ${solUpp}`);
+    if (solNed) lines.push(`Solnedgång ${solNed}`);
+    if (golden) {
+        if (ghMs && ghMsl) lines.push(`Golden hour morgon ${ghMs}–${ghMsl}, för fotografering.`);
+        if (ghKs && ghKsl) lines.push(`Golden hour kväll ${ghKs}–${ghKsl}, för fotografering.`);
+    }
+    if (sikt)  lines.push(sikt  + (sikt.endsWith('.')  ? '' : '.'));
+    if (cbrn)  lines.push(cbrn  + (cbrn.endsWith('.')  ? '' : '.'));
+    if (frost) lines.push(frost + (frost.endsWith('.') ? '' : '.'));
+
+    document.getElementById('reportOutput').textContent = lines.join('\n');
+    document.getElementById('formView').classList.add('hidden');
+    document.getElementById('resultView').classList.add('active');
+    window.scrollTo(0, 0);
+}
+
+function kopiera() {
+    const text = document.getElementById('reportOutput').textContent;
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(text).then(showFeedback).catch(() => fallback(text));
+    } else { fallback(text); }
+}
+function fallback(text) {
+    const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); } catch(_) { alert('Kopiera manuellt.'); }
+    document.body.removeChild(ta); showFeedback();
+}
+function showFeedback() {
+    const el = document.getElementById('copyFeedback'); el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+function atergaForm() {
+    document.getElementById('resultView').classList.remove('active');
+    document.getElementById('formView').classList.remove('hidden');
+    window.scrollTo(0, 0);
+}
+function nollstall() {
+    ['datum','tempMin','tempMax','vaderForh','nederbord','vind','solUpp','solNed',
+     'ghMorgStart','ghMorgSlut','ghKvallStart','ghKvallSlut','siktUav','cbrn','frost']
+        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    document.getElementById('inkluderaGolden').checked = false;
+    renderGoldenFields();
+    document.getElementById('resultView').classList.remove('active');
+    document.getElementById('formView').classList.remove('hidden');
+    window.scrollTo(0, 0);
+}
+
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
+
+document.addEventListener('DOMContentLoaded', () => {
+    const a = document.createElement('a');
+    a.href = 'https://github.com/gitjoda71/faltrapport/issues/new?title=%5BBeta-Feedback%5D%20VADER&body=**Form%3A**%20VADER%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**%0A%0A**Telefon%3A**';
+    a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = 'Bugg eller förslag? Lämna feedback →';
+    a.style.cssText = 'display:block;text-align:center;padding:24px 0 12px;font-size:0.7rem;color:#5a7a5a;text-decoration:none';
+    document.querySelector('.container')?.appendChild(a);
+});
+</script>
+<script src="version.js"></script>
+</body>
+</html>

@@ -32,8 +32,8 @@
         .tab-link { flex: 1; text-align: center; padding: 9px 2px; border-radius: var(--radius-sm); color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
         .tab-link:hover { background: var(--bg-card); color: var(--text-secondary); }
         .tab-link.active { background: var(--accent-dim); color: var(--accent); }
-        .tab-nav-sub { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); padding: 3px 4px 4px; }
-        .tab-nav-sub .tab-link { font-size: 0.62rem; padding: 6px 2px; letter-spacing: 0.04em; }
+        .tab-nav-sub { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
 
         .form-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
         .form-group.section-group { border-left: 3px solid var(--accent); }
@@ -136,6 +136,7 @@
         <a href="eobusare.html" class="tab-link">EOBUSARE</a>
         <a href="obo.html" class="tab-link active">OBO</a>
         <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+        <a href="vader.html" class="tab-link">VÄDER</a>
     </nav>
 
     <!-- FORM VIEW -->
@@ -544,20 +545,28 @@ function parsePUK() {
     if (sections.gen || sections.bes) {
         const t = sections.gen || sections.bes;
         fillField('b_malb', extract(t, [
-            /(?:M[aå]lbild)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Inled|GFI|D[aä]refter|Slutligen|RIL|$))/i
+            /(?:M[aå]lbild)\s*:?\s*([\s\S]*?)(?=\n\s*(?:Inled|GFI|D[aä]refter|Slutligen|RIL\b|Order\b|Insatsregler|$))/i
         ]));
         fillField('b_inled', extract(t, [
-            /(?:Inledningsvis|Inled(?:ning)?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:D[aä]refter|Slutligen|RIL|M[aå]lbild|$))/i
+            /(?:Inledningsvis|Inled(?:ning)?)\s*:?\s*([\s\S]*?)(?=\n\s*(?:D[aä]refter|Slutligen|RIL\b|M[aå]lbild|Order\b|Insatsregler|$))/i
         ]));
         fillField('b_darefter', extract(t, [
-            /(?:D[aä]refter)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Slutligen|RIL|Inled|M[aå]lbild|$))/i
+            /(?:D[aä]refter)\s*:?\s*([\s\S]*?)(?=\n\s*(?:Slutligen|RIL\b|Inled|M[aå]lbild|Order\b|Insatsregler|$))/i
         ]));
         fillField('b_slutligen', extract(t, [
-            /(?:Slutligen)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:RIL|Inled|D[aä]refter|M[aå]lbild|$))/i
+            /(?:Slutligen)\s*:?\s*([\s\S]*?)(?=\n\s*(?:RIL\b|Inled|D[aä]refter|M[aå]lbild|Order\b|Insatsregler|$))/i
         ]));
         fillField('b_ril', extract(t, [
-            /(?:RIL|Riktlinjer)\s*[:\-]\s*([\s\S]*?)$/im
+            /(?:RIL\b|Riktlinjer)[^\n]*\n([\s\S]*?)(?=\n\s*(?:Order\b|Insatsregler|\d+\.|$))/i
         ]));
+        fillField('b_rfi', extract(t, [
+            /(?:Insatsregler|RFI)\b[^\n]*\n([\s\S]*?)(?=\n\s*(?:Order\b|RIL\b|\d+\.|$))/i
+        ]));
+        // Extrahera eventuell "Order"-undersektion ur gen → används av orderLista-parsern
+        if (!sections.ord) {
+            const om = t.match(/\bOrder\b[^\n]*\n([\s\S]*?)(?=\n\s*(?:Insatsregler|RIL\b|\d+\.|$))/i);
+            if (om) sections.ord = om[1];
+        }
         // Fallback: om inga sub-rubriker, lägg allt i GFI inledning
         if (!v('b_inled') && !v('b_malb') && t.length > 5) {
             fillField('b_inled', t);
@@ -571,7 +580,9 @@ function parsePUK() {
         const orderEntries = [];
         let current = null;
         lines.forEach(line => {
-            const m = line.match(/^\s*[-•*]?\s*(.+?)\s*[:\-–]\s+(.+)/);
+            // Matchar "Enhet: uppgift" men även "EA text" (militär kortform utan kolon)
+            const m = line.match(/^\s*[-•*]?\s*(.+?)\s*[:\-–]\s+(.+)/) ||
+                      line.match(/^\s*([A-ZÅÄÖ]{2,4})\s+(.+)/);
             if (m) {
                 orderEntries.push({ enhet: m[1].trim(), uppgift: m[2].trim() });
             } else if (line.trim()) {
@@ -621,8 +632,8 @@ function parsePUK() {
     if (sections.log) {
         const t = sections.log;
         fillField('o_skadeplats', extract(t, [
-            /(?:Sjukv[åa]rd(?:stj[äa]nst)?|Skadeplatsen?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Underh|$))/i,
-            /^([\s\S]+?)(?=\n\s*(?:Underh|$))/i
+            /(?:Sjukv[åa]rd(?:stj[äa]nst)?|Skadeplatsen?|Samlingsplats\s+f[öo]r\s+skadade)\s*[:\- ]?\s*([\s\S]*?)(?=\n\s*(?:Pluton|Underh|$))/i,
+            /^([\s\S]+)/i
         ]));
     }
 
@@ -630,11 +641,15 @@ function parsePUK() {
     if (sections.led) {
         const t = sections.led;
         fillField('o_samband', extract(t, [
-            /(?:Samband)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Plutch|Chefen|Stf|$))/i
+            /(?:Samband)\s*[:\-]\s*([\s\S]*?)(?=\n|$)/i,
+            /(?:Plutonsn[äa]t|rakanal)\s*:?\s*([\s\S]*?)(?=\n|$)/i,
+            /^(Plutonsn[äa]t.+)$/im,
+            /^(ra\d.+)$/im
         ]));
         fillField('o_chef_pos', extract(t, [
-            /(?:Plutch|Chefen?|Stf)\s*[:\-]?\s*([\s\S]*?)(?=\n\s*(?:Samband|$))/i,
-            /(?:leder\s+fr[åa]n)\s*([\s\S]*?)(?=\n|$)/i
+            /(?:Plutch|Chefen?|Stf|Jag\s+leder)\s*[:\-]?\s*([\s\S]*?)(?=\n|$)/i,
+            /(?:leder\s+(?:fr[åa]n|bakom))\s*([\s\S]*?)(?=\n|$)/i,
+            /^([^\n]+)/i
         ]));
     }
 
