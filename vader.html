@@ -44,6 +44,7 @@
         .btn-time:hover { background: var(--border-focus); }
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; }
         .btn-copy:hover { background: var(--info-hover); }
+
         .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
         .btn-danger { flex: 1; background: var(--danger); color: #fff; border: none; }
         .button-group { display: flex; gap: 10px; }
@@ -109,11 +110,11 @@
 
     <div class="result-view" id="resultView">
         <div class="result-header">VÄDERRAPPORT</div>
-        <button class="btn btn-copy" onclick="kopiera()">Kopiera rapport</button>
+        <div class="prompt-box" id="promptOutput" contenteditable="true"></div>
+        <button class="btn btn-copy" onclick="kopiera()">Kopiera till urklipp</button>
         <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
-        <div class="prompt-box" id="promptOutput"></div>
         <div class="button-group" style="margin-top:8px">
-            <button class="btn btn-secondary" onclick="atergaForm()">Ändra</button>
+            <button class="btn btn-secondary" onclick="document.getElementById('promptOutput').focus()">Redigera</button>
             <button class="btn btn-danger" onclick="nollstall()">Nollställ</button>
         </div>
     </div>
@@ -290,17 +291,16 @@ async function generera() {
             const ghMorgEnd   = toDDTTMM(addMinutes(sunriseISO, 30));
             const ghKvallStart = toDDTTMM(addMinutes(sunsetISO, -30));
             const ghKvallEnd   = toDDTTMM(sunsetISO);
-            goldenLines = `Golden hour morgon ${ghMorgStart}–${ghMorgEnd}, för fotografering.\nGolden hour kväll ${ghKvallStart}–${ghKvallEnd}, för fotografering.`;
+            goldenLines = `Golden hour morgon ${ghMorgStart}–${ghMorgEnd}\nGolden hour kväll ${ghKvallStart}–${ghKvallEnd}`;
         }
 
         const uav   = uavBedomning(windMs, cloudPct, precip);
         const cbrn  = cbrnBedomning(windMs, windDir);
         const frost = frostBedomning(tempMin);
 
-        let rapport = `Orientering:\nMeteorologisk prognos ${datumVal}\nTemp ${tempMin}–${tempMax}°C. ${skyDesc}. ${nederbord}.\n${windDesc} ${windMs} m/s från ${windDir}.\nSoluppgång ${sunriseDDTTMM}\nSolnedgång ${sunsetDDTTMM}`;
-        if (goldenLines) rapport += '\n' + goldenLines;
-        rapport += `\n${uav}\n${cbrn}`;
+        let rapport = `Orientering:\nMeteorologisk prognos ${datumVal}\n\nTemp ${tempMin}–${tempMax}°C. ${skyDesc}. ${nederbord}.\n${windDesc} ${windMs} m/s från ${windDir}.\n\nSoluppgång ${sunriseDDTTMM}\nSolnedgång ${sunsetDDTTMM}\n\n${uav}\n${cbrn}`;
         if (frost) rapport += '\n' + frost;
+        if (goldenLines) rapport += '\n\nFör fotografering;\n' + goldenLines;
 
         document.getElementById('promptOutput').textContent = rapport;
         document.getElementById('formView').classList.add('hidden');
@@ -315,9 +315,11 @@ async function generera() {
 }
 
 function kopiera() {
-    const text = document.getElementById('promptOutput').textContent;
+    const el = document.getElementById('promptOutput');
+    const text = el.innerText || el.textContent;
+    const afterCopy = () => { showFeedback(); if (navigator.share) navigator.share({ text }).catch(() => {}); };
     if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(text).then(showFeedback).catch(() => fallback(text));
+        navigator.clipboard.writeText(text).then(afterCopy).catch(() => fallback(text));
     } else { fallback(text); }
 }
 function fallback(text) {

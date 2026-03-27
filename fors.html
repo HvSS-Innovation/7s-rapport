@@ -309,7 +309,8 @@ function generateReport() {
 
 function copyReport() {
     const text = document.getElementById('reportOutput').textContent;
-    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(showFeedback).catch(() => fallbackCopy(text));
+    const afterCopy = () => { showFeedback(); if (navigator.share) navigator.share({ text }).catch(() => {}); };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(afterCopy).catch(() => fallbackCopy(text));
     else fallbackCopy(text);
 }
 function fallbackCopy(text) {

@@ -68,6 +68,7 @@
         .btn-time:hover { background: var(--border-focus); }
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; border: none; }
         .btn-copy:hover { background: var(--info-hover); }
+
         .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
         .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
         .btn-danger { width: 100%; background: var(--danger); color: #fff; border: none; margin-top: 8px; }
@@ -245,7 +246,7 @@
         </div>
 
         <button class="btn btn-primary" onclick="generateStatuskvitto()">Generera statuskvitto</button>
-        <button class="btn btn-danger" onclick="borjaOm()">B&#246;rja om (ny eldst&#228;llning)</button>
+
     </div>
 
     <!-- Resultatvy -->
@@ -256,7 +257,7 @@
         <div class="copy-feedback" id="copyFeedback">&#10003; Kopierat</div>
         <div class="button-group">
             <button class="btn btn-secondary" onclick="backToEdit()">Redigera</button>
-            <button class="btn btn-danger flex1" onclick="borjaOm()">B&#246;rja om</button>
+            <button class="btn btn-danger flex1" onclick="borjaOm()">Nollställ</button>
         </div>
     </div>
 
@@ -334,8 +335,7 @@ function generateStatuskvitto() {
         'A \u2013 Ammo: ' + (ammo ? ammo + '%' : '-') + '  |  Skadade: ' + (skadade || '-') + (ovrigt ? '\n   \u00d6vrigt: ' + ovrigt : ''),
         'R \u2013 Rapport avgiven: ' + rapportStatus + ' till ' + (v('e7_till') || '-'),
         'E \u2013 F\u00f6rb\u00e4ttra: ' + (v('e8_forbattra') || '-'),
-        '',
-        'KOM!'
+        ''
     ];
 
     document.getElementById('reportOutput').textContent = lines.join('\n');
@@ -347,8 +347,9 @@ function generateStatuskvitto() {
 // ── Kopiera ───────────────────────────────────────────────────────────────────
 function copyReport() {
     const text = document.getElementById('reportOutput').textContent;
+    const afterCopy = () => { showFeedback(); if (navigator.share) navigator.share({ text }).catch(() => {}); };
     if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(text).then(showFeedback).catch(function() { fallbackCopy(text); });
+        navigator.clipboard.writeText(text).then(afterCopy).catch(function() { fallbackCopy(text); });
     } else {
         fallbackCopy(text);
     }

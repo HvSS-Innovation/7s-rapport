@@ -63,6 +63,7 @@
         .btn-time:hover { background: var(--border-focus); }
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; }
         .btn-copy:hover { background: var(--info-hover); }
+
         .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
         .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
         .btn-danger { flex: 1; background: var(--danger); color: #fff; }
@@ -360,11 +361,42 @@ const MGRS = (() => {
     return { forward };
 })();
 
-function applyGPSPosition(pos) {
+function haversine(lat1, lon1, lat2, lon2) {
+    const R = 6371000, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
+    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+async function applyGPSPosition(pos) {
     const { latitude: lat, longitude: lon } = pos.coords;
     const mgrs = MGRS.forward(lat, lon);
+    const parts = [mgrs];
+    try {
+        const nomResp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=sv`);
+        const addr = (await nomResp.json()).address || {};
+        const road = addr.road || addr.pedestrian || addr.footway || '';
+        const houseNumber = addr.house_number || '';
+
+        const q = `[out:json][timeout:10];way(around:50,${lat},${lon})[highway][name];out body;>;out skel qt;`;
+        const ovData = await (await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`)).json();
+        const ways = ovData.elements.filter(e => e.type === 'way');
+        const nodes = {};
+        ovData.elements.filter(e => e.type === 'node').forEach(n => { nodes[n.id] = n; });
+        const nodeWays = {};
+        ways.forEach(w => { const name = w.tags?.name; if (!name) return; (w.nodes||[]).forEach(nid => { if (!nodeWays[nid]) nodeWays[nid] = new Set(); nodeWays[nid].add(name); }); });
+        let bestNames = null, bestDist = Infinity;
+        for (const [nid, nameSet] of Object.entries(nodeWays)) {
+            if (nameSet.size < 2) continue;
+            const n = nodes[nid]; if (!n) continue;
+            const d = haversine(lat, lon, n.lat, n.lon);
+            if (d < 50 && d < bestDist) { bestDist = d; bestNames = [...nameSet]; }
+        }
+        if (bestNames) parts.push(`korsningen ${bestNames.join(', ')}`);
+        else if (road) parts.push(houseNumber ? `${road} ${houseNumber}` : road);
+    } catch (_) {}
     const field = document.getElementById('stalle');
-    field.value = field.value ? field.value + ', ' + mgrs : mgrs;
+    const result = parts.join(', ');
+    field.value = field.value ? field.value + ', ' + result : result;
 }
 function gpsErrorMessage(err) {
     if (err.code === 1) return 'Platsåtkomst nekad – tillåt i webbläsarens inställningar och ladda om sidan.';
@@ -440,7 +472,7 @@ function generateReport() {
 
 function copyToClipboard() {
     const text = document.getElementById('reportOutput').textContent;
-    const afterCopy = () => { showCopyFeedback(); setTimeout(() => { const a = document.createElement('a'); a.href = 'sgnl://compose?text=' + encodeURIComponent(text); a.click(); }, 400); };
+    const afterCopy = () => { showCopyFeedback(); if (navigator.share) navigator.share({ text }).catch(() => {}); };
     if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(text).then(afterCopy).catch(() => { fallbackCopy(text); afterCopy(); }); }
     else { fallbackCopy(text); afterCopy(); }
 }

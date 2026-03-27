@@ -93,6 +93,7 @@
         .btn-time:hover { background: var(--border-focus); }
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; border: none; }
         .btn-copy:hover { background: var(--info-hover); }
+
         .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
         .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
         .btn-danger { width: 100%; background: var(--danger); color: #fff; border: none; margin-top: 8px; }
@@ -343,12 +344,12 @@
             <button onclick="showExport('order')">Patrullorder</button>
         </div>
         <div class="result-header" id="resultHeader">Statuskvitto genererat</div>
-        <button class="btn btn-copy" onclick="copyReport()">Kopiera text</button>
-        <div class="copy-feedback" id="copyFeedback">Kopierat!</div>
         <pre class="report-output" id="reportOutput"></pre>
+        <button class="btn btn-copy" onclick="copyReport()">Kopiera till urklipp</button>
+        <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
         <div class="button-group">
-            <button class="btn btn-secondary" onclick="goBack()">&#8592; &Auml;ndra</button>
-            <button class="btn btn-danger flex1" onclick="clearAll()">&Rensa allt</button>
+            <button class="btn btn-secondary" onclick="goBack()">Redigera</button>
+            <button class="btn btn-danger flex1" onclick="clearAll()">Nollställ</button>
         </div>
         <div style="height:24px"></div>
     </div>
@@ -577,6 +578,7 @@ function copyReport() {
         const fb = document.getElementById('copyFeedback');
         fb.classList.add('show');
         setTimeout(() => fb.classList.remove('show'), 2000);
+        if (navigator.share) navigator.share({ text }).catch(() => {});
     });
 }
 

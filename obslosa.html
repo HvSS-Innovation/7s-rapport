@@ -160,6 +160,7 @@
         .btn-time:hover { background: var(--border-focus); }
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 8px; }
         .btn-copy:hover { background: var(--info-hover); }
+
         .btn-print { width: 100%; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); margin-bottom: 12px; }
         .btn-print:hover { background: var(--bg-card); color: var(--text-primary); }
         .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
@@ -379,7 +380,6 @@
         <div class="result-header">Postinstruktion klar</div>
         <div class="report-output" id="reportOutput"></div>
         <button class="btn btn-copy" onclick="copyReport()">Kopiera till urklipp</button>
-        <button class="btn btn-print" onclick="window.print()">Skriv ut / Spara PDF</button>
         <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
         <div class="button-group">
             <button class="btn btn-secondary" onclick="backToEdit()">Redigera</button>
@@ -486,8 +486,9 @@ function generateReport() {
 
 function copyReport() {
     const text = document.getElementById('reportOutput').textContent;
+    const afterCopy = () => { showFeedback(); if (navigator.share) navigator.share({ text }).catch(() => {}); };
     if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(text).then(showFeedback).catch(() => fallbackCopy(text));
+        navigator.clipboard.writeText(text).then(afterCopy).catch(() => fallbackCopy(text));
     } else fallbackCopy(text);
 }
 function fallbackCopy(text) {
