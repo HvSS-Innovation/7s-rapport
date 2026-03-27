@@ -31,7 +31,17 @@ self.addEventListener('activate', e => {
 });
 
 self.addEventListener('fetch', e => {
-  e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request))
-  );
+  const url = new URL(e.request.url);
+  const isHTML = url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.js');
+  if (isHTML) {
+    // Network-first: alltid senaste version när online, cache som fallback offline
+    e.respondWith(
+      fetch(e.request).then(resp => {
+        caches.open(CACHE).then(c => c.put(e.request, resp.clone()));
+        return resp;
+      }).catch(() => caches.match(e.request))
+    );
+  } else {
+    e.respondWith(caches.match(e.request).then(cached => cached || fetch(e.request)));
+  }
 });
