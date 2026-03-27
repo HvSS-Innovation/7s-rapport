@@ -435,6 +435,15 @@ function deleteSavedPlace(v) { set('7s_places', get('7s_places').filter(x=>x!==v
 function deleteSavedSagesman(v) { set('7s_sagesman', get('7s_sagesman').filter(x=>x!==v)); loadSavedItems(); }
 
 document.addEventListener('DOMContentLoaded', () => { loadSavedItems(); loadLastSagesman(); setCurrentTime(); });
+document.addEventListener('DOMContentLoaded', () => {
+    const a = document.createElement('a');
+    a.href = 'https://github.com/gitjoda71/faltrapport/issues/new?title=%5BBeta-Feedback%5D%20WHAT&body=**Form%3A**%20WHAT%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**';
+    a.target = '_blank'; a.rel = 'noopener noreferrer';
+    a.textContent = 'Bugg eller förslag? Lämna feedback →';
+    a.style.cssText = 'display:block;text-align:center;padding:24px 0 12px;font-size:0.7rem;color:#5a7a5a;text-decoration:none';
+    const c = document.querySelector('.container');
+    if (c) c.appendChild(a);
+});
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
 </script>
 <script src="version.js"></script>
