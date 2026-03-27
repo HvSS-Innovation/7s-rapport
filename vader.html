@@ -17,7 +17,7 @@
             --bg-primary:#0d1f0d;--bg-secondary:#152815;--bg-card:#1a321a;--bg-input:#0f240f;
             --border:#2d4a2d;--border-focus:#4a7c4a;--text-primary:#e8f0e8;--text-secondary:#8aaa8a;
             --text-muted:#5a7a5a;--accent:#4caf50;--accent-hover:#66bb6a;--accent-dim:#1e3d1e;
-            --danger:#c62828;--danger-hover:#e53935;--info:#1565c0;--info-hover:#1976d2;
+            --danger:#c62828;--info:#1565c0;--info-hover:#1976d2;
             --radius:8px;--radius-sm:4px;
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,51 +32,32 @@
         .tab-link.active { background: var(--accent-dim); color: var(--accent); }
         .tab-nav-sub { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
         .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
-        label { font-weight: 600; font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-bottom: 6px; }
-        .sub-label { font-weight: 600; font-size: 0.78rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-top: 14px; margin-bottom: 6px; }
-        .field-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 5px; opacity: 0.75; }
-        input[type="text"], input[type="number"], textarea, select {
-            width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
-            color: var(--text-primary); font-family: inherit; font-size: 1rem; padding: 12px 14px; outline: none;
-            transition: border-color 0.15s; -webkit-appearance: none; appearance: none;
-        }
-        input[type="text"]:focus, input[type="number"]:focus, textarea:focus, select:focus { border-color: var(--border-focus); }
-        textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
-        .input-row { display: flex; gap: 8px; align-items: flex-start; }
-        .input-row input { flex: 1; min-width: 0; }
-        .input-col2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-        .form-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
-        .form-group.section-group { border-left: 3px solid var(--accent); }
-        .section-label { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-        .section-letter { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-dim); border: 1px solid var(--accent); color: var(--accent); font-size: 1rem; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-        .section-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
-        .section-subtitle { font-size: 0.68rem; color: var(--text-muted); margin-top: 1px; }
+        .status-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+        .status-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+        .status-row:last-child { margin-bottom: 0; }
+        .status-label { font-size: 0.75rem; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; color: var(--text-muted); flex-shrink: 0; width: 60px; }
+        .status-value { font-size: 0.92rem; font-family: 'Courier New', monospace; color: var(--text-primary); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .status-value.empty { color: var(--text-muted); font-style: italic; }
         .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; border: none; border-radius: var(--radius); font-family: inherit; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
         .btn:active { transform: scale(0.97); }
         .btn-primary { width: 100%; background: var(--accent); color: #fff; margin-top: 8px; font-size: 1rem; }
         .btn-primary:hover { background: var(--accent-hover); }
-        .btn-sm { min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; white-space: nowrap; flex-shrink: 0; }
-        .btn-time { background: var(--accent-dim); color: var(--accent); border: none; }
+        .btn-sm { min-height: 44px; padding: 10px 18px; border-radius: var(--radius-sm); font-size: 0.88rem; white-space: nowrap; flex-shrink: 0; }
+        .btn-time { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--border); }
         .btn-time:hover { background: var(--border-focus); }
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; }
         .btn-copy:hover { background: var(--info-hover); }
         .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
-        .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
         .btn-danger { flex: 1; background: var(--danger); color: #fff; border: none; }
-        .btn-danger:hover { background: var(--danger-hover); }
         .button-group { display: flex; gap: 10px; }
-        .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
-        .toggle-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; }
-        .toggle-row label { margin-bottom: 0; font-size: 0.78rem; }
+        .copy-feedback { text-align: center; color: var(--accent); font-size: 0.85rem; font-weight: 600; height: 24px; opacity: 0; transition: opacity 0.2s; margin-bottom: 12px; }
+        .copy-feedback.show { opacity: 1; }
+        .prompt-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; user-select: all; }
         .result-view { display: none; }
         .result-view.active { display: block; }
         .form-view.hidden { display: none; }
-        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
-        .copy-feedback { text-align: center; color: var(--accent); font-size: 0.85rem; font-weight: 600; height: 24px; opacity: 0; transition: opacity 0.2s; margin-bottom: 12px; }
-        .copy-feedback.show { opacity: 1; }
-        .ai-box { background: var(--bg-secondary); border: 1px dashed var(--border-focus); border-radius: var(--radius); padding: 12px 14px; font-size: 0.75rem; color: var(--text-muted); line-height: 1.6; margin-bottom: 10px; }
-        .ai-box strong { color: var(--text-secondary); }
-        .ai-prompt { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; font-family: 'Courier New', monospace; font-size: 0.7rem; color: var(--text-secondary); white-space: pre-wrap; line-height: 1.5; margin-top: 8px; }
+        .result-header { font-size: 0.8rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 12px; }
+        .hint { font-size: 0.72rem; color: var(--text-muted); text-align: center; margin-bottom: 14px; line-height: 1.5; }
     </style>
 </head>
 <body>
@@ -104,109 +85,29 @@
     <main>
     <div class="form-view" id="formView">
 
-        <!-- AI-prompt -->
-        <div class="ai-box">
-            <strong>Generera prognos med AI</strong> — klistra in prompten nedan i valfri AI-assistent (Claude, ChatGPT m.fl.), fyll sedan i fälten manuellt eller klistra in svaret direkt i textfältet längst ned.
-            <div class="ai-prompt" id="aiPrompt"></div>
-        </div>
-
-        <!-- Datum -->
-        <div class="form-group">
-            <label for="datum">Datum (ÅÅMMDD)</label>
-            <div class="input-row" style="margin-top:6px">
-                <input type="text" id="datum" placeholder="260321" inputmode="numeric" maxlength="6" autocomplete="off">
-                <button class="btn btn-sm btn-time" onclick="setDatumNu()">Nu</button>
+        <div class="status-box">
+            <div class="status-row">
+                <span class="status-label">DATUM</span>
+                <span class="status-value empty" id="dispDatum">— tryck Nu</span>
+                <button class="btn btn-sm btn-time" onclick="setNu()">Nu</button>
+            </div>
+            <div class="status-row">
+                <span class="status-label">ORT</span>
+                <span class="status-value empty" id="dispOrt">— tryck MGRS</span>
+                <button class="btn btn-sm btn-time" id="mgrsBtn" onclick="hamtaOrt()">MGRS</button>
             </div>
         </div>
 
-        <!-- Temperatur -->
-        <div class="form-group section-group">
-            <div class="section-label">
-                <div class="section-letter">T</div>
-                <div><div class="section-title">Temperatur &amp; väder</div></div>
-            </div>
-            <div class="input-col2">
-                <div>
-                    <label for="tempMin">Min °C</label>
-                    <input type="number" id="tempMin" placeholder="-3" style="margin-top:6px">
-                </div>
-                <div>
-                    <label for="tempMax">Max °C</label>
-                    <input type="number" id="tempMax" placeholder="4" style="margin-top:6px">
-                </div>
-            </div>
-            <label style="margin-top:12px" for="vaderForh">Väderförhållanden</label>
-            <textarea id="vaderForh" rows="2" placeholder="Ex: Övervägande molnigt med klara perioder"></textarea>
-            <label style="margin-top:12px" for="nederbord">Nederbörd</label>
-            <textarea id="nederbord" rows="2" placeholder="Ex: Ingen nederbörd. Dimma möjlig på morgonen."></textarea>
-        </div>
-
-        <!-- Vind -->
-        <div class="form-group section-group">
-            <div class="section-label">
-                <div class="section-letter">V</div>
-                <div><div class="section-title">Vind</div></div>
-            </div>
-            <textarea id="vind" rows="2" placeholder="Ex: SW 3–6 m/s, byar upp till 10 m/s"></textarea>
-        </div>
-
-        <!-- Sol / Golden hour -->
-        <div class="form-group section-group">
-            <div class="section-label">
-                <div class="section-letter">S</div>
-                <div><div class="section-title">Sol &amp; golden hour</div></div>
-            </div>
-            <div class="input-col2">
-                <div>
-                    <label for="solUpp">Soluppgång (DDTTMM)</label>
-                    <input type="text" id="solUpp" placeholder="210546" inputmode="numeric" maxlength="6" style="margin-top:6px">
-                </div>
-                <div>
-                    <label for="solNed">Solnedgång (DDTTMM)</label>
-                    <input type="text" id="solNed" placeholder="211831" inputmode="numeric" maxlength="6" style="margin-top:6px">
-                </div>
-            </div>
-            <div class="toggle-row" style="margin-top:12px">
-                <input type="checkbox" id="inkluderaGolden" onchange="renderGoldenFields()">
-                <label for="inkluderaGolden">Inkludera golden hour (klart väder)</label>
-            </div>
-            <div id="goldenFields" style="display:none">
-                <label style="margin-top:12px" for="ghMorgStart">Golden hour morgon – start (DDTTMM)</label>
-                <div class="input-col2" style="margin-top:6px">
-                    <input type="text" id="ghMorgStart" placeholder="210520" inputmode="numeric" maxlength="6">
-                    <input type="text" id="ghMorgSlut" placeholder="210550" inputmode="numeric" maxlength="6">
-                </div>
-                <label style="margin-top:10px" for="ghKvallStart">Golden hour kväll – start (DDTTMM)</label>
-                <div class="input-col2" style="margin-top:6px">
-                    <input type="text" id="ghKvallStart" placeholder="211800" inputmode="numeric" maxlength="6">
-                    <input type="text" id="ghKvallSlut" placeholder="211835" inputmode="numeric" maxlength="6">
-                </div>
-            </div>
-        </div>
-
-        <!-- Sikt & militär påverkan -->
-        <div class="form-group section-group">
-            <div class="section-label">
-                <div class="section-letter">M</div>
-                <div><div class="section-title">Militär påverkan</div></div>
-            </div>
-            <label for="siktUav">Sikt &amp; UAV-påverkan</label>
-            <textarea id="siktUav" rows="2" placeholder="Ex: Sikt &gt;10 km. UAV-operationer möjliga hela dygnet."></textarea>
-            <label style="margin-top:12px" for="cbrn">CBRN-påverkan</label>
-            <textarea id="cbrn" rows="2" placeholder="Ex: SW-vind → spridning mot NE. Låg CBRN-risk."></textarea>
-            <label style="margin-top:12px" for="frost">Halka &amp; marktemperatur</label>
-            <textarea id="frost" rows="2" placeholder="Ex: Risk för frosthalka nattetid. Marktemp ca -1°C."></textarea>
-        </div>
-
-        <button class="btn btn-primary" onclick="generera()">Generera prognos</button>
+        <button class="btn btn-primary" onclick="generera()">Generera väderrapport</button>
     </div>
 
     <div class="result-view" id="resultView">
-        <div style="font-size:0.8rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);text-align:center;margin-bottom:12px">METEOROLOGISK PROGNOS</div>
-        <button class="btn btn-copy" onclick="kopiera()">Kopiera prognos</button>
+        <div class="result-header">VÄDERRAPPORT – PROMPT</div>
+        <p class="hint">Klistra in texten nedan i en AI-assistent (Claude, ChatGPT m.fl.) för att få prognosengenerad.</p>
+        <button class="btn btn-copy" onclick="kopiera()">Kopiera prompt</button>
         <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
-        <pre class="report-output" id="reportOutput"></pre>
-        <div class="button-group">
+        <div class="prompt-box" id="promptOutput"></div>
+        <div class="button-group" style="margin-top:8px">
             <button class="btn btn-secondary" onclick="atergaForm()">Ändra</button>
             <button class="btn btn-danger" onclick="nollstall()">Nollställ</button>
         </div>
@@ -216,90 +117,90 @@
 </div>
 
 <script>
-function v(id) { return (document.getElementById(id)?.value || '').trim(); }
+let datumVal = '';
+let ortVal   = '';
 
-function setDatumNu() {
+function setNu() {
     const now = new Date();
     const p = n => String(n).padStart(2, '0');
     const yy = String(now.getFullYear()).slice(2);
-    document.getElementById('datum').value = yy + p(now.getMonth() + 1) + p(now.getDate());
+    datumVal = yy + p(now.getMonth() + 1) + p(now.getDate());
+    const el = document.getElementById('dispDatum');
+    el.textContent = datumVal;
+    el.classList.remove('empty');
 }
 
-function renderGoldenFields() {
-    const cb = document.getElementById('inkluderaGolden');
-    document.getElementById('goldenFields').style.display = cb.checked ? 'block' : 'none';
+function hamtaOrt() {
+    const btn = document.getElementById('mgrsBtn');
+    const el  = document.getElementById('dispOrt');
+    btn.textContent = '…';
+    btn.disabled = true;
+    if (!navigator.geolocation) {
+        el.textContent = 'Geolokalisering ej tillgänglig';
+        el.classList.add('empty');
+        btn.textContent = 'MGRS'; btn.disabled = false; return;
+    }
+    navigator.geolocation.getCurrentPosition(pos => {
+        const lat = pos.coords.latitude.toFixed(5);
+        const lon = pos.coords.longitude.toFixed(5);
+        // Försök reverse-geocode via Nominatim (kräver nätverksåtkomst)
+        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=sv`)
+            .then(r => r.json())
+            .then(d => {
+                const city = d.address?.city || d.address?.town || d.address?.village || d.address?.county || `${lat}, ${lon}`;
+                ortVal = city;
+                el.textContent = city;
+                el.classList.remove('empty');
+            })
+            .catch(() => {
+                ortVal = `${lat}, ${lon}`;
+                el.textContent = ortVal;
+                el.classList.remove('empty');
+            })
+            .finally(() => { btn.textContent = 'MGRS'; btn.disabled = false; });
+    }, () => {
+        el.textContent = 'Kunde inte hämta position';
+        el.classList.add('empty');
+        btn.textContent = 'MGRS'; btn.disabled = false;
+    });
 }
 
-function updateAiPrompt() {
-    const datum = v('datum') || 'ÅÅMMDD';
-    document.getElementById('aiPrompt').textContent =
-`Du är en militär väderassistent. Skapa en kortfattad meteorologisk prognos för Stockholm för datum ${datum}. Använd exakt detta format:
+function generera() {
+    if (!datumVal) { alert('Tryck på "Nu" för att ange dagens datum.'); return; }
+    const ort = ortVal || 'Stockholm';
+    const prompt =
+`Du är en militär väderassistent. Skapa en kortfattad meteorologisk prognos för ${ort} för datum ${datumVal}. Använd exakt följande format:
 
 Orientering:
-Meteorologisk prognos ${datum}
+Meteorologisk prognos ${datumVal}
 Temp [min]–[max]°C. [Väderförhållanden]. [Nederbörd].
 [Vindstyrka och riktning].
 Soluppgång [DDTTMM]
 Solnedgång [DDTTMM]
-(Om klart väder:)
+Om soligt/klart väder, inkludera:
 Golden hour morgon [DDTTMM]–[DDTTMM], för fotografering.
 Golden hour kväll [DDTTMM]–[DDTTMM], för fotografering.
+Om molntäcke, utelämna Golden Hour helt.
 [Sikt och UAV-påverkan].
-[CBRN-påverkan baserat på vind].
+[CBRN-påverkan baserat på vindförhållanden och spridningsrisk].
 [Frosthalka och marktemperatur].
 
-Regler: Datum = ÅÅMMDD, tider = DDTTMM. Inga kartor. Sök golden hour-tider för Stockholm ${datum}.`;
-}
+Regler:
+- Datum skrivs ÅÅMMDD (ex: 260321)
+- Tider skrivs DDTTMM (ex: 210546)
+- Ingen punkt efter solnedgångstidenInkludera påverkan på militär verksamhet (UAV, CBRN)
+- Håll det kortfattat, inga kartor
+- Sök aktuell väderdata från webben innan du svarar
+- Sök golden hour-tider för ${ort} datum ${datumVal} från webbkälla (golden-hour.com eller liknande), uppskatta inte`;
 
-document.getElementById('datum').addEventListener('input', updateAiPrompt);
-updateAiPrompt();
-
-function generera() {
-    const datum  = v('datum');
-    const tMin   = v('tempMin');
-    const tMax   = v('tempMax');
-    const forh   = v('vaderForh');
-    const ned    = v('nederbord');
-    const vind   = v('vind');
-    const solUpp = v('solUpp');
-    const solNed = v('solNed');
-    const golden = document.getElementById('inkluderaGolden').checked;
-    const ghMs   = v('ghMorgStart');
-    const ghMsl  = v('ghMorgSlut');
-    const ghKs   = v('ghKvallStart');
-    const ghKsl  = v('ghKvallSlut');
-    const sikt   = v('siktUav');
-    const cbrn   = v('cbrn');
-    const frost  = v('frost');
-
-    if (!datum) { alert('Ange datum (ÅÅMMDD).'); return; }
-
-    let lines = ['Orientering:', `Meteorologisk prognos ${datum}`];
-
-    let rad2 = '';
-    if (tMin || tMax) rad2 += `Temp ${tMin || '?'}–${tMax || '?'}°C.`;
-    if (forh) rad2 += (rad2 ? ' ' : '') + forh + (forh.endsWith('.') ? '' : '.');
-    if (ned)  rad2 += (rad2 ? ' ' : '') + ned  + (ned.endsWith('.')  ? '' : '.');
-    if (rad2) lines.push(rad2);
-    if (vind) lines.push(vind + (vind.endsWith('.') ? '' : '.'));
-    if (solUpp) lines.push(`Soluppgång ${solUpp}`);
-    if (solNed) lines.push(`Solnedgång ${solNed}`);
-    if (golden) {
-        if (ghMs && ghMsl) lines.push(`Golden hour morgon ${ghMs}–${ghMsl}, för fotografering.`);
-        if (ghKs && ghKsl) lines.push(`Golden hour kväll ${ghKs}–${ghKsl}, för fotografering.`);
-    }
-    if (sikt)  lines.push(sikt  + (sikt.endsWith('.')  ? '' : '.'));
-    if (cbrn)  lines.push(cbrn  + (cbrn.endsWith('.')  ? '' : '.'));
-    if (frost) lines.push(frost + (frost.endsWith('.') ? '' : '.'));
-
-    document.getElementById('reportOutput').textContent = lines.join('\n');
+    document.getElementById('promptOutput').textContent = prompt;
     document.getElementById('formView').classList.add('hidden');
     document.getElementById('resultView').classList.add('active');
     window.scrollTo(0, 0);
 }
 
 function kopiera() {
-    const text = document.getElementById('reportOutput').textContent;
+    const text = document.getElementById('promptOutput').textContent;
     if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(text).then(showFeedback).catch(() => fallback(text));
     } else { fallback(text); }
@@ -307,7 +208,7 @@ function kopiera() {
 function fallback(text) {
     const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
     document.body.appendChild(ta); ta.select();
-    try { document.execCommand('copy'); } catch(_) { alert('Kopiera manuellt.'); }
+    try { document.execCommand('copy'); } catch(_) {}
     document.body.removeChild(ta); showFeedback();
 }
 function showFeedback() {
@@ -319,11 +220,11 @@ function atergaForm() {
     window.scrollTo(0, 0);
 }
 function nollstall() {
-    ['datum','tempMin','tempMax','vaderForh','nederbord','vind','solUpp','solNed',
-     'ghMorgStart','ghMorgSlut','ghKvallStart','ghKvallSlut','siktUav','cbrn','frost']
-        .forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
-    document.getElementById('inkluderaGolden').checked = false;
-    renderGoldenFields();
+    datumVal = ''; ortVal = '';
+    document.getElementById('dispDatum').textContent = '— tryck Nu';
+    document.getElementById('dispDatum').classList.add('empty');
+    document.getElementById('dispOrt').textContent = '— tryck MGRS';
+    document.getElementById('dispOrt').classList.add('empty');
     document.getElementById('resultView').classList.remove('active');
     document.getElementById('formView').classList.remove('hidden');
     window.scrollTo(0, 0);
@@ -333,7 +234,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-work
 
 document.addEventListener('DOMContentLoaded', () => {
     const a = document.createElement('a');
-    a.href = 'https://github.com/gitjoda71/faltrapport/issues/new?title=%5BBeta-Feedback%5D%20VADER&body=**Form%3A**%20VADER%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**%0A%0A**Telefon%3A**';
+    a.href = 'https://github.com/gitjoda71/faltrapport/issues/new?title=%5BBeta-Feedback%5D%20VADER&body=**Form%3A**%20VADER%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**';
     a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.textContent = 'Bugg eller förslag? Lämna feedback →';
     a.style.cssText = 'display:block;text-align:center;padding:24px 0 12px;font-size:0.7rem;color:#5a7a5a;text-decoration:none';

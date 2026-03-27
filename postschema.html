@@ -314,7 +314,7 @@ function parseTNR(tnr) {
 // ── Formatera tid (TNR: DDHHMM) ───────────────────────────────────────────────
 function formatTid(d) {
     const p = n => String(n).padStart(2, '0');
-    return p(d.getDate()) + p(d.getHours()) + p(d.getMinutes());
+    return p(d.getHours()) + p(d.getMinutes());
 }
 
 // ── Generera schema ───────────────────────────────────────────────────────────
@@ -362,21 +362,13 @@ function genererSchema() {
         Math.ceil(soldatMinVila[sol] / skift) < antalSkift
     );
 
-    // Bygg slot-karta: front-soldater → tidigast möjliga slot, back-soldater → sista slot
-    const frontSpecials = schedulableSpecials.filter(sol => specialFrontSet.has(sol))
-        .sort((a, b) => soldatMinVila[a] - soldatMinVila[b]);
+    // Bygg slot-karta: TIDIGT → slot 0 (bruteforce), SIST → sista slot (bruteforce)
+    const frontSpecials = schedulableSpecials.filter(sol => specialFrontSet.has(sol));
     const backSpecials  = schedulableSpecials.filter(sol => !specialFrontSet.has(sol));
 
     const specialSlots = new Map();
-    let nextFront = 0;
-    frontSpecials.forEach(sol => {
-        const earliest = Math.ceil(soldatMinVila[sol] / skift);
-        const slot = Math.max(earliest, nextFront);
-        specialSlots.set(sol, slot);
-        nextFront = slot + 1;
-    });
-    const backStart = Math.max(0, antalSkift - backSpecials.length);
-    backSpecials.forEach((sol, i) => specialSlots.set(sol, backStart + i));
+    frontSpecials.forEach((sol, i) => specialSlots.set(sol, i));
+    backSpecials.forEach((sol, i) => specialSlots.set(sol, antalSkift - backSpecials.length + i));
 
     // Spåra senast aktivt skift per soldat (för "mest utvilad"-urvalet)
     const lastFinished = {};
@@ -427,11 +419,14 @@ function genererSchema() {
             schema.push({ tid: tidStr, startMs: dispStart.getTime(), endMs: dispEnd.getTime(), post, soldat: soldatNamn, skiftNr: s });
         });
 
-        // nyPerson är aktiv t.o.m. slot s + N - 1 (POST1 nu, POST2 nästa skift, osv.)
-        lastFinished[nyPerson] = s + N - 1;
-
-        pipeline.unshift(nyPerson);
-        if (pipeline.length > N) pipeline.length = N;
+        if (specialEntry) {
+            // Specialsoldat: ett skift, inga fler — läggs ej i pipeline
+            lastFinished[nyPerson] = Infinity;
+        } else {
+            lastFinished[nyPerson] = s + N - 1;
+            pipeline.unshift(nyPerson);
+            if (pipeline.length > N) pipeline.length = N;
+        }
     }
 
     renderSchema();
@@ -639,7 +634,7 @@ if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-work
 // ── Feedback-länk ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     const a = document.createElement('a');
-    a.href = 'https://github.com/gitjoda71/faltrapport/issues/new?title=%5BBeta-Feedback%5D%20SCHEMA&body=**Form%3A**%20POSTSCHEMA%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**%0A%0A**Telefon%3A**';
+    a.href = 'https://github.com/gitjoda71/faltrapport/issues/new?title=%5BBeta-Feedback%5D%20SCHEMA&body=**Form%3A**%20POSTSCHEMA%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**';
     a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.textContent = 'Bugg eller förslag? Lämna feedback →';
     a.style.cssText = 'display:block;text-align:center;padding:24px 0 12px;font-size:0.7rem;color:#5a7a5a;text-decoration:none';
