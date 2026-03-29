@@ -265,6 +265,28 @@ Fördelarna med ett eget repo:
 - [x] Se till att Från/Till/TNR-blocket i alla 13 flikar matchar OBSLÖSA:s format som referens: inline 2-kolumns grid med `style="display:grid;grid-template-columns:1fr 1fr;gap:8px"` direkt i HTML (ej CSS-klass), label ovanför respektive fält, allt i ett `form-group`-block. TNR ligger i eget `form-group` direkt under.
 - Berörda filer: `index.html`, `what.html`, `scrim.html`, `weft.html`, `ah.html`, `obslosa.html` (referens, ej ändra), `fors.html`, `pedars.html`, `postschema.html`, `eobusare.html`, `obo.html`, `rassoika.html`, `vader.html`
 
+### VÄDER – Ta bort Från/Till
+- [ ] Ta bort Från/Till-fälten i `vader.html`. Väderrapporten är inte en person-till-person-rapport och behöver inte avsändare/mottagare.
+
+### Alla tabs – Standardisera result-header-text
+- [ ] Ändra `.result-header`-texten i alla filer till formatet `<RAPPORTNAMN> redo att kopieras`:
+  - `index.html` — ✅ "Rapport redo att kopieras"
+  - `what.html` — ✅ "Rapport redo att kopieras"
+  - `scrim.html` — ✅ "Rapport redo att kopieras"
+  - `weft.html` — ✅ "Rapport redo att kopieras"
+  - `ah.html` — ✅ "Rapport redo att kopieras"
+  - `obslosa.html` — ❌ "Postinstruktion klar" → "OBSLÖSA redo att kopieras"
+  - `fors.html` — ❌ "FORS-rapport redo" → "FORS redo att kopieras"
+  - `pedars.html` — ❌ "PEDARS-rapport klar" → "PEDARS redo att kopieras"
+  - `postschema.html` — ❌ → "SCHEMA redo att kopieras"
+  - `eobusare.html` — ❌ "Statuskvitto – EOBUSARE" → "EOBUSARE redo att kopieras"
+  - `obo.html` — ❌ "Order genererad" → "OBO redo att kopieras"
+  - `rassoika.html` — ❌ "Statuskvitto genererat" → "RASSOIKA redo att kopieras"
+  - `vader.html` — ❌ "VÄDERRAPPORT" → "VÄDER redo att kopieras"
+
+### EOBUSARE – Ändra rapporttitel
+- [ ] Ändra rapport-titeln i `generateStatuskvitto()` från `STATUS: EOBUSARE – ELDSTÄLLNING INTAGEN` till bara `EOBUSARE` (rad ~341 i eobusare.html)
+
 ---
 
 **Nästa Steg:**
