@@ -29,8 +29,6 @@
         .tab-link.active { background: var(--accent-dim); color: var(--accent); }
         .tab-nav-sub { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
         .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
-        .form-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
-        label { font-weight: 600; font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); }
         .status-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
         .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; border: none; border-radius: var(--radius); font-family: inherit; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
         .btn:active { transform: scale(0.97); }
@@ -86,20 +84,6 @@
     <main>
     <div class="form-view" id="formView">
 
-        <!-- FRÅN / TILL -->
-        <div class="form-group">
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-                <div>
-                    <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
-                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
-                </div>
-                <div>
-                    <label for="till" style="margin-bottom:6px">Till</label>
-                    <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
-                </div>
-            </div>
-        </div>
-
         <div class="status-box">
             <div class="info-text">Datum (ÅÅMMDD)</div>
             <div class="input-row">
@@ -120,7 +104,7 @@
     </div>
 
     <div class="result-view" id="resultView">
-        <div class="result-header">VÄDERRAPPORT</div>
+        <div class="result-header">VÄDER redo att kopieras</div>
         <div class="prompt-box" id="promptOutput" contenteditable="true"></div>
         <button class="btn btn-copy" onclick="kopiera()">Kopiera till urklipp</button>
         <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
@@ -306,9 +290,7 @@ async function generera() {
         const cbrn  = cbrnBedomning(windMs, windDir);
         const frost = frostBedomning(tempMin);
 
-        const franVal = document.getElementById('fran').value.trim();
-        const tillVal = document.getElementById('till').value.trim();
-        let rapport = `VÄDERRAPPORT\nFrån: ${franVal || '-'}\nTill: ${tillVal || '-'}\n\nOrientering:\nMeteorologisk prognos ${datumVal}\n\nTemp ${tempMin}–${tempMax}°C. ${skyDesc}. ${nederbord}.\n${windDesc} ${windMs} m/s från ${windDir}.\n\nSoluppgång ${sunriseDDTTMM}\nSolnedgång ${sunsetDDTTMM}\n\n${uav}\n${cbrn}`;
+        let rapport = `VÄDERRAPPORT\n\nOrientering:\nMeteorologisk prognos ${datumVal}\n\nTemp ${tempMin}–${tempMax}°C. ${skyDesc}. ${nederbord}.\n${windDesc} ${windMs} m/s från ${windDir}.\n\nSoluppgång ${sunriseDDTTMM}\nSolnedgång ${sunsetDDTTMM}\n\n${uav}\n${cbrn}`;
         if (frost) rapport += '\n' + frost;
         if (goldenLines) rapport += '\n\nFör fotografering;\n' + goldenLines;
 
@@ -348,8 +330,6 @@ function atergaForm() {
 }
 function nollstall() {
     ortVal = ''; latVal = null; lonVal = null;
-    document.getElementById('fran').value = '';
-    document.getElementById('till').value = '';
     document.getElementById('dispDatum').value = '';
     document.getElementById('ortInput').value = '';
     document.getElementById('resultView').classList.remove('active');

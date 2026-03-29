@@ -265,7 +265,7 @@
 
     <!-- Resultatvy -->
     <div class="result-view" id="resultView">
-        <div class="result-header">Statuskvitto &#8211; EOBUSARE</div>
+        <div class="result-header">EOBUSARE redo att kopieras</div>
         <div class="report-output" id="reportOutput"></div>
         <button class="btn btn-copy" onclick="copyReport()">Kopiera till urklipp</button>
         <div class="copy-feedback" id="copyFeedback">&#10003; Kopierat</div>
@@ -338,7 +338,7 @@ function generateStatuskvitto() {
     const ovrigt = v('e6_ovrigt');
 
     const lines = [
-        'STATUS: EOBUSARE \u2013 ELDST\u00c4LLNING INTAGEN',
+        'EOBUSARE',
         'Fr\u00e5n: ' + (v('fran') || '-'),
         'Till: ' + (v('till') || '-'),
         'TNR: ' + (v('tnr') || '-'),

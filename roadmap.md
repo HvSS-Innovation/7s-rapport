@@ -266,10 +266,10 @@ Fördelarna med ett eget repo:
 - Berörda filer: `index.html`, `what.html`, `scrim.html`, `weft.html`, `ah.html`, `obslosa.html` (referens, ej ändra), `fors.html`, `pedars.html`, `postschema.html`, `eobusare.html`, `obo.html`, `rassoika.html`, `vader.html`
 
 ### VÄDER – Ta bort Från/Till
-- [ ] Ta bort Från/Till-fälten i `vader.html`. Väderrapporten är inte en person-till-person-rapport och behöver inte avsändare/mottagare.
+- [x] Ta bort Från/Till-fälten i `vader.html`. Väderrapporten är inte en person-till-person-rapport och behöver inte avsändare/mottagare.
 
 ### Alla tabs – Standardisera result-header-text
-- [ ] Ändra `.result-header`-texten i alla filer till formatet `<RAPPORTNAMN> redo att kopieras`:
+- [x] Ändra `.result-header`-texten i alla filer till formatet `<RAPPORTNAMN> redo att kopieras`:
   - `index.html` — ✅ "Rapport redo att kopieras"
   - `what.html` — ✅ "Rapport redo att kopieras"
   - `scrim.html` — ✅ "Rapport redo att kopieras"
@@ -285,7 +285,7 @@ Fördelarna med ett eget repo:
   - `vader.html` — ❌ "VÄDERRAPPORT" → "VÄDER redo att kopieras"
 
 ### EOBUSARE – Ändra rapporttitel
-- [ ] Ändra rapport-titeln i `generateStatuskvitto()` från `STATUS: EOBUSARE – ELDSTÄLLNING INTAGEN` till bara `EOBUSARE` (rad ~341 i eobusare.html)
+- [x] Ändra rapport-titeln i `generateStatuskvitto()` från `STATUS: EOBUSARE – ELDSTÄLLNING INTAGEN` till bara `EOBUSARE` (rad ~341 i eobusare.html)
 
 ---
 

@@ -366,7 +366,7 @@
             <button class="active" onclick="showExport('kvitto')">Statuskvitto</button>
             <button onclick="showExport('order')">Patrullorder</button>
         </div>
-        <div class="result-header" id="resultHeader">Statuskvitto genererat</div>
+        <div class="result-header" id="resultHeader">RASSOIKA redo att kopieras</div>
         <pre class="report-output" id="reportOutput"></pre>
         <button class="btn btn-copy" onclick="copyReport()">Kopiera till urklipp</button>
         <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
@@ -565,7 +565,7 @@ function generateReport() {
     cachedOrder = generateOrder();
     currentExportMode = 'kvitto';
     document.getElementById('reportOutput').textContent = cachedKvitto;
-    document.getElementById('resultHeader').textContent = 'Statuskvitto genererat';
+    document.getElementById('resultHeader').textContent = 'RASSOIKA redo att kopieras';
     // Reset toggle buttons
     var btns = document.querySelectorAll('#exportToggle button');
     btns[0].classList.add('active');
@@ -583,12 +583,12 @@ function showExport(mode) {
         btns[0].classList.add('active');
         btns[1].classList.remove('active');
         document.getElementById('reportOutput').textContent = cachedKvitto;
-        document.getElementById('resultHeader').textContent = 'Statuskvitto genererat';
+        document.getElementById('resultHeader').textContent = 'RASSOIKA redo att kopieras';
         } else {
         btns[1].classList.add('active');
         btns[0].classList.remove('active');
         document.getElementById('reportOutput').textContent = cachedOrder;
-        document.getElementById('resultHeader').textContent = 'Patrullorder genererad';
+        document.getElementById('resultHeader').textContent = 'RASSOIKA redo att kopieras';
     }
 }
 
