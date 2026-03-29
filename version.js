@@ -1,4 +1,4 @@
-const APP_VERSION = '20260329_184926';
+const APP_VERSION = '20260329_202851';
 document.addEventListener('DOMContentLoaded', () => {
     const el = document.createElement('div');
     el.textContent = APP_VERSION;
