@@ -131,8 +131,8 @@
         .btn-primary { width: 100%; background: var(--accent); color: #fff; margin-top: 8px; font-size: 1rem; }
         .btn-primary:hover { background: var(--accent-hover); }
         .btn-sm {
-            min-height: 48px; padding: 12px 14px; border-radius: var(--radius-sm);
-            font-size: 0.9rem; white-space: nowrap; flex-shrink: 0;
+            min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm);
+            font-size: 0.85rem; white-space: nowrap; flex-shrink: 0;
         }
         .btn-gps { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-dim); }
         .btn-gps:hover { background: var(--border-focus); border-color: var(--border-focus); }
@@ -563,7 +563,7 @@ function setCurrentTime() {
 
 // ── Rapport ─────────────────────────────────────────────────────────────────
 function generateReport() {
-    const v = id => document.getElementById(id).value;
+    const v = id => document.getElementById(id).value.trim();
     savePlaceIfNew(v('stalle'));
     saveSagesmanIfNew(v('sagesman'));
     const lines = [
