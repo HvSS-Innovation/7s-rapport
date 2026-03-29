@@ -253,7 +253,7 @@ Fördelarna med ett eget repo:
 - **Referens:** `index.html` (7S) — `generateReport()` använder `v('fält') || '-'` för alla fält
 
 ### WHAT – Knapp "Fyll tid från foto"
-- [ ] Ändra knappen "Fyll tid från foto" i `what.html` från `btn-primary` (grön) till samma stil som övriga sekundära knappar (grå/dashed). Den sticker idag ut som en primär åtgärdsknapp men fyller en hjälpfunktion.
+- [x] Ändra knappen "Fyll tid från foto" i `what.html` från `btn-primary` (grön) till samma stil som övriga sekundära knappar (grå/dashed). Den sticker idag ut som en primär åtgärdsknapp men fyller en hjälpfunktion.
 
 ### FORS – Ta bort NIVÅ-dropdown
 - [ ] Ta bort select-fältet "NIVÅ" (Kompani → Bataljon etc.) från `fors.html`. Ta även bort relaterad JS-logik (`updateNiva()`, `enhetLabel` o.dyl.) om den enbart stödjer detta fält.
