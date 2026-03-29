@@ -181,7 +181,7 @@
         }
         .report-output {
             background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
-            padding: 16px; font-family: 'Courier New', monospace; font-size: 0.92rem;
+            padding: 16px; font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.8;
             line-height: 1.9; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px;
         }
         .copy-feedback {
@@ -230,6 +230,20 @@
 
     <main>
     <div class="form-view" id="formView">
+
+        <!-- FRÅN / TILL -->
+        <div class="form-group">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                    <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
+                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
+                </div>
+                <div>
+                    <label for="till" style="margin-bottom:6px">Till</label>
+                    <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                </div>
+            </div>
+        </div>
 
         <!-- TNR -->
         <div class="form-group">
@@ -440,17 +454,17 @@ function setNow() {
     document.getElementById('tnr').value = `${pad(now.getDate())}${pad(now.getHours())}${pad(now.getMinutes())}`;
 }
 const v = id => document.getElementById(id).value.trim();
-function row(label, val) { return val ? `${label}: ${val}` : ''; }
+function row(label, val) { return `${label}: ${val || '-'}`; }
 function block(letter, title, lines) {
-    const content = lines.filter(Boolean).join('\n');
-    if (!content) return '';
-    return `\n= ${letter} – ${title} =\n${content}`;
+    return `\n= ${letter} – ${title} =\n${lines.join('\n')}`;
 }
 
 // ── Rapport ───────────────────────────────────────────────────────────────────
 function generateReport() {
     const parts = [
         'POSTINSTRUKTION (OBSLÖSA)',
+        `Från: ${v('fran') || '-'}`,
+        `Till: ${v('till') || '-'}`,
         `TNR:   ${v('tnr') || '-'}`,
         `Plats: ${v('plats') || '-'}`,
     ];
@@ -462,23 +476,26 @@ function generateReport() {
         row('CIVIL',   v('o_civil')),
     ]));
 
-    const bLines = [row('BEVAKA', v('b_vad'))];
     const gv = v('b_grans_v'), gh = v('b_grans_h');
-    if (gv || gh) bLines.push(`GRÄNSER: V: ${gv||'—'}  |  H: ${gh||'—'}`);
-    if (v('b_obs')) bLines.push(row('OBSERVERA', v('b_obs')));
-    parts.push(block('B','BEVAKNINGSOMRÅDE', bLines));
+    parts.push(block('B','BEVAKNINGSOMRÅDE', [
+        row('BEVAKA', v('b_vad')),
+        `GRÄNSER: V: ${gv||'-'}  |  H: ${gh||'-'}`,
+        row('OBSERVERA', v('b_obs')),
+    ]));
 
-    parts.push(block('S','SÄTT ATT TILLKALLA CHEF', [v('s_tillkalla')]));
+    parts.push(block('S','SÄTT ATT TILLKALLA CHEF', [v('s_tillkalla') || '-']));
 
     const l1 = v('l_ord1').toUpperCase(), l2 = v('l_ord2').toUpperCase();
-    if (l1 || l2) parts.push(`\n= L – LÖSEN =\nORD 1: ${l1||'—'}  |  ORD 2: ${l2||'—'}`);
+    parts.push(`\n= L – LÖSEN =\nORD 1: ${l1||'-'}  |  ORD 2: ${l2||'-'}`);
 
-    parts.push(block('Ö','ÖPPNA ELD', [v('o_eld')]));
-    const sLines = [v('s_stall')]; if(v('s_utr')) sLines.push(row('EXTRA', v('s_utr')));
-    parts.push(block('S','STÄLLNING OCH UTRUSTNING', sLines));
-    parts.push(block('A','AVLÖSNING', [v('a_avlosning')]));
+    parts.push(block('Ö','ÖPPNA ELD', [v('o_eld') || '-']));
+    parts.push(block('S','STÄLLNING OCH UTRUSTNING', [
+        v('s_stall') || '-',
+        ...(v('s_utr') ? [row('EXTRA', v('s_utr'))] : []),
+    ]));
+    parts.push(block('A','AVLÖSNING', [v('a_avlosning') || '-']));
 
-    document.getElementById('reportOutput').textContent = parts.filter(p=>p!=='').join('\n');
+    document.getElementById('reportOutput').textContent = parts.join('\n');
     document.getElementById('formView').classList.add('hidden');
     document.getElementById('resultView').classList.add('active');
     window.scrollTo(0,0);

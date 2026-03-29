@@ -102,7 +102,7 @@
         .result-view.active { display: block; }
         .form-view.hidden { display: none; }
         .result-header { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 12px; }
-        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
+        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.8; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
         .copy-feedback { text-align: center; color: var(--accent); font-size: 0.85rem; font-weight: 600; height: 24px; opacity: 0; transition: opacity 0.2s; margin-bottom: 12px; }
         .copy-feedback.show { opacity: 1; }
     </style>
@@ -154,8 +154,16 @@
         </div>
 
         <div class="form-group">
-            <div class="label-row"><label for="enhet" id="enhetLabel">Kompani/Enhet</label></div>
-            <input type="text" id="enhet" placeholder="Ex: AQ / 2a plut" autocomplete="off">
+            <div class="input-col2">
+                <div>
+                    <label for="enhet" id="enhetLabel" style="margin-bottom:6px">Fr&aring;n</label>
+                    <input type="text" id="enhet" placeholder="Ex: AQ / 2a plut" autocomplete="off">
+                </div>
+                <div>
+                    <label for="till" style="margin-bottom:6px">Till</label>
+                    <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                </div>
+            </div>
         </div>
 
         <hr class="divider">
@@ -166,21 +174,10 @@
                 <div class="section-letter">F</div>
                 <div>
                     <div class="section-title">Förbandets position</div>
-                    <div class="section-subtitle">Ange BARA om krypterat samband</div>
                 </div>
             </div>
 
-            <div class="warn-box" id="warnBox">
-                <span>⚠️</span>
-                <span><strong>OBS! Sekretess.</strong> Ange inte koordinater i klartext om sambandet ej är krypterat. Täck med UPK eller ortsnamn.</span>
-            </div>
-
-            <div class="crypto-row">
-                <input type="checkbox" id="krypto" onchange="toggleWarn()">
-                <label for="krypto">Krypterat samband – koordinater kan anges</label>
-            </div>
-
-            <textarea id="f_position" rows="2" style="margin-top:10px" placeholder="Position / ortsnamn / UPK..." oninput="checkPosition()"></textarea>
+            <textarea id="f_position" rows="2" style="margin-top:10px" placeholder="Position / ortsnamn / UPK..."></textarea>
         </div>
 
         <!-- O – ORI OM MOTSTÅNDAREN -->
@@ -255,49 +252,34 @@ function updateNiva() {
     const labels = {kompani:'Kompani/Enhet', pluton:'Pluton/Enhet', grupp:'Grupp/Enhet'};
     document.getElementById('enhetLabel').textContent = labels[niva];
 }
-function checkPosition() {
-    const val = document.getElementById('f_position').value.trim();
-    const krypto = document.getElementById('krypto').checked;
-    const warn = document.getElementById('warnBox');
-    // Visa varning om text finns och ej krypto
-    if (val && !krypto) warn.classList.add('show');
-    else warn.classList.remove('show');
-}
-function toggleWarn() { checkPosition(); }
-
 const v = id => document.getElementById(id).value.trim();
 
 function generateReport() {
-    const krypto = document.getElementById('krypto').checked;
-
     const lines = [
         'FORS-RAPPORT',
         `Från: ${v('enhet') || '-'}`,
+        `Till: ${v('till') || '-'}`,
         `TNR:  ${v('tnr') || '-'}`,
         '',
     ];
 
-    const pos = v('f_position');
-    if (pos) {
-        lines.push(`F – FÖRBANDETS POSITION`);
-        lines.push(krypto ? pos : `[SEKRETESS – Se eget system]${pos ? '\n(Notering: ' + pos + ')' : ''}`);
-        lines.push('');
-    }
+    lines.push('F – FÖRBANDETS POSITION');
+    lines.push(v('f_position') || '-');
+    lines.push('');
 
-    const om = v('o_mot');
-    if (om) { lines.push('O – ORIENTERING'); lines.push(om); lines.push(''); }
+    lines.push('O – ORIENTERING');
+    lines.push(v('o_mot') || '-');
+    lines.push('');
 
-    const rg = v('r_genomford'), rp = v('r_pagaende'), rpl = v('r_planerad');
-    if (rg || rp || rpl) {
-        lines.push('R – REDOGÖRELSE FÖR VHT');
-        if (rg) lines.push(`Genomförd: ${rg}`);
-        if (rp) lines.push(`Pågående:  ${rp}`);
-        if (rpl) lines.push(`Planerad:  ${rpl}`);
-        lines.push('');
-    }
+    lines.push('R – REDOGÖRELSE FÖR VHT');
+    lines.push(`Genomförd: ${v('r_genomford') || '-'}`);
+    lines.push(`Pågående:  ${v('r_pagaende') || '-'}`);
+    lines.push(`Planerad:  ${v('r_planerad') || '-'}`);
+    lines.push('');
 
-    const sl = v('s_slut');
-    if (sl) { lines.push('S – SLUTSATSER'); lines.push(sl); lines.push(''); }
+    lines.push('S – SLUTSATSER');
+    lines.push(v('s_slut') || '-');
+    lines.push('');
 
     lines.push('SLUT!');
 
@@ -328,8 +310,6 @@ function backToEdit() {
 function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
     ['enhet','tnr','f_position','o_mot','r_genomford','r_pagaende','r_planerad','s_slut'].forEach(id => document.getElementById(id).value = '');
-    document.getElementById('krypto').checked = false;
-    document.getElementById('warnBox').classList.remove('show');
     backToEdit();
 }
 

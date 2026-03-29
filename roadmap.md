@@ -168,5 +168,91 @@ Fördelarna med ett eget repo:
 
 ---
 
+---
+
+## 7. Backlog / Kommande ändringar
+
+### RASSOIKA – Slumpa lösen
+- [x] Lägg till en "Slumpa"-knapp intill lösen-fälten (Ord 1 fråga / Ord 2 svar) i `rassoika.html`
+- Genererar två **tvåstaviga svenska ord** som inte naturligt hör ihop (t.ex. "SKO – MOLN", inte "SOL – SKEN")
+- Bygg in en wordlist med ~100–200 tvåstaviga substantiv: vardagliga, enkla att uttala i radio, ingen militär terminologi (undviker förväxling med taktiska termer)
+- Algoritmen väljer slumpmässigt utan upprepning; om samma ord skulle dras två gånger — dra om
+- Orden skrivs i VERSALER (standard för lösen i militär kommunikation)
+- Exempel på godkända ord: SKO, MOLN, BORD, KORG, HUND, FISK, STEN, TRÄD, LAMM, KNIV, GLAS, SKOG, BERG, SAND, NATT, STJÄRN… (undvik par som naturligt hör ihop: SOL+SKEN, IS+BERG, DAG+LJUS)
+
+### RASSOIKA – Statuskvitto
+- [x] Justera `generateKvitto()` i `rassoika.html` så att utdata matchar exakt nedan format. Ta bort raderna för Lösen och "Anmält till" ur kvittot (känslig info hör hemma i Patrullorder, inte kvittot). **Patrullorder (`generateOrder()`) berörs inte.**
+- Målformat:
+  ```
+  KVITTO: PATRULL UTGÅENDE
+  TNR:           <tnr>
+  Utgångstid:    <an_stund | ->
+  Styrka:        <antal> pers
+
+  Sammansättning:
+    <namn> (<roll>)
+    …
+  Stf: <stf_namn>
+
+  Stegstatus:
+    ✗/✓ R-Repetera
+    ✗/✓ A-Avdela
+    ✗/✓ S-Samla
+    ✗/✓ S-Stridsberedskap
+    ✗/✓ O-Orientera
+    ✗/✓ I-Indela
+    ✗/✓ K-Kontrollera
+    ✗/✓ A-Anmäl
+  ```
+
+### Alla formulär – Lägg till fältet "Till:"
+- [x] Alla rapporter ska ha fälten **Från:** och **Till:** i rapporthuvudet, direkt ovanför TNR. Visa `-` om tomt (konsekvent med övriga fält).
+- [x] 7S, WHAT, SCRIM, WEFT, A-H: Lägg till en blank rad mellan Till-raden och Stund-raden i rapporten (`''` i lines-arrayen). Målformat:
+  ```
+  7S RAPPORT
+  Från: -
+  Till: -
+
+  Stund: 291812 (s 04)
+  …
+  ```
+- Målformat för alla rapporter:
+  ```
+  <RAPPORTNAMN>
+  Från: -
+  Till: -
+  TNR:  DDHHMM
+  ```
+- Berörda filer (alla tabbar som genererar rapport):
+  `index.html` (7S), `what.html`, `scrim.html`, `weft.html`, `ah.html`,
+  `obslosa.html`, `fors.html` (har redan Från, saknar Till),
+  `pedars.html` (har redan Enhet/TNR — lägg till Till),
+  `postschema.html`, `eobusare.html`, `obo.html`, `rassoika.html`, `vader.html`
+
+### POSTSCHEMA
+- [x] Byt standardnamn på poster: "POST 1" → "Värnpost", "POST 2" → "Eldvakt" (`postschema.html`, funktionerna `resetForm` och `DOMContentLoaded`)
+- [x] Klona knappen "+ Lägg till soldat" så att den visas både **ovanför** och **under** soldatlistan (idag finns den bara under). Samma sak bör gälla "+ Lägg till post" om listan växer.
+- [x] Soldatfälten ska ha löpande nummer som defaultvärde (1, 2, 3 … i steg med listan). När man klickar i fältet markeras siffran automatiskt (`input.select()` på `focus`-event) så att man direkt kan skriva ett namn utan att radera först. Samma princip bör gälla namnfälten för poster.
+
+### Alla formulär – Rapportformat vid tomma fält (pedagogiskt hjälpmedel)
+- [x] Genererad rapport ska **alltid visa alla rubriker/fältnamn**, även när fältet är tomt — visa `-` som platshållare. Fungerar som ett pedagogiskt hjälpmedel: en tom rapport visar rapportens struktur och vad som ska fyllas i.
+- Gäller samtliga formulär:
+  - `index.html` — **7S** ✅ redan korrekt (referensimplementation)
+  - `what.html` — **WHAT** ✅ redan korrekt
+  - `scrim.html` — **SCRIM** ✅ redan korrekt
+  - `weft.html` — **WEFT** ✅ redan korrekt
+  - `ah.html` — **A–H** ✅ redan korrekt
+  - `obslosa.html` — **OBSLÖSA** ✅ åtgärdat
+  - `fors.html` — **FORS** ✅ åtgärdat
+  - `pedars.html` — **PEDARS** ✅ åtgärdat (E, D, A, R visar alltid)
+  - `postschema.html` — **SCHEMA** ✅ dynamiskt schema visar alltid poster med `-`
+  - `eobusare.html` — **EOBUSARE** ✅ redan korrekt
+  - `obo.html` — **OBO** ✅ åtgärdat (Orientering, Beslut, Order alltid synliga)
+  - `rassoika.html` — **RASSOIKA** ✅ redan korrekt
+  - `vader.html` — **VÄDER** (API-driven, ej tillämpligt)
+- **Referens:** `index.html` (7S) — `generateReport()` använder `v('fält') || '-'` för alla fält
+
+---
+
 **Nästa Steg:**
 Börja med Fas 1: sätt upp filstrukturen (`index.html`, `style.css`, `app.js`, `manifest.json`, `sw.js`) och PWA-skelettet. Bygg sedan ut `7s.html` som master-mall innan de övriga formulären skapas.

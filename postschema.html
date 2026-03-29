@@ -91,7 +91,7 @@
         .result-view.active { display: block; }
         .form-view.hidden { display: none; }
         .result-header { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 12px; }
-        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
+        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.8; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
         .copy-feedback { text-align: center; color: var(--accent); font-size: 0.85rem; font-weight: 600; height: 24px; opacity: 0; transition: opacity 0.2s; margin-bottom: 12px; }
         .copy-feedback.show { opacity: 1; }
 
@@ -199,6 +199,7 @@
                     <div class="section-subtitle">Vaktposter som ska bemannas</div>
                 </div>
             </div>
+            <button class="btn-add" onclick="addPost()" style="margin-bottom:6px">+ Lägg till post</button>
             <div id="posterLista"></div>
             <button class="btn-add" id="addPostBtn" onclick="addPost()">+ Lägg till post</button>
         </div>
@@ -211,6 +212,7 @@
                     <div class="section-subtitle">Personal att schemalägga</div>
                 </div>
             </div>
+            <button class="btn-add" onclick="addSoldat()" style="margin-bottom:6px">+ Lägg till soldat</button>
             <div id="soldatLista"></div>
             <button class="btn-add" id="addSoldatBtn" onclick="addSoldat()">+ Lägg till soldat</button>
         </div>
@@ -276,17 +278,29 @@ function renderSagesman() {
 function addPost(value = '', doFocus = true) {
     const lista = document.getElementById('posterLista');
     const row = document.createElement('div'); row.className = 'list-row';
-    const inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Postnamn (ex: NORRA GRIND)'; inp.value = value;
+    const inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Postnamn (ex: NORRA GRIND)';
+    if (value) {
+        inp.value = value;
+    } else {
+        inp.value = String(lista.children.length + 1);
+        inp.addEventListener('focus', function() { this.select(); }, { once: false });
+    }
     const btn = document.createElement('button'); btn.className = 'btn-remove'; btn.textContent = '×'; btn.type = 'button';
     btn.onclick = () => lista.removeChild(row);
     row.appendChild(inp); row.appendChild(btn); lista.appendChild(row);
-    if (doFocus) inp.focus();
+    if (doFocus) { inp.focus(); inp.select(); }
 }
 
 function addSoldat(value = '', doFocus = true) {
     const lista = document.getElementById('soldatLista');
     const row = document.createElement('div'); row.className = 'list-row';
-    const inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Namn'; inp.value = value;
+    const inp = document.createElement('input'); inp.type = 'text'; inp.placeholder = 'Namn';
+    if (value) {
+        inp.value = value;
+    } else {
+        inp.value = String(lista.children.length + 1);
+        inp.addEventListener('focus', function() { this.select(); }, { once: false });
+    }
     const sel = document.createElement('select');
     sel.style.cssText = 'width:auto;flex-shrink:0;padding:12px 8px;font-size:0.8rem;';
     [['', '–'], ['grpc', 'Grpc'], ['6', 'Förare'], ['8', 'RPAS']].forEach(([v, t]) => {
@@ -295,7 +309,7 @@ function addSoldat(value = '', doFocus = true) {
     const btn = document.createElement('button'); btn.className = 'btn-remove'; btn.textContent = '×'; btn.type = 'button';
     btn.onclick = () => lista.removeChild(row);
     row.appendChild(inp); row.appendChild(sel); row.appendChild(btn); lista.appendChild(row);
-    if (doFocus) inp.focus();
+    if (doFocus) { inp.focus(); inp.select(); }
 }
 
 // ── Nu-knappar ────────────────────────────────────────────────────────────────
@@ -612,7 +626,7 @@ function nollstall() {
     document.getElementById('soldatLista').innerHTML = '';
     document.getElementById('schemaContainer').innerHTML = '';
 
-    addPost('POST 1', false); addPost('POST 2', false);
+    addPost('Värnpost', false); addPost('Eldvakt', false);
     addSoldat('', false); addSoldat('', false); addSoldat('', false); addSoldat('', false);
     document.getElementById('steg2').style.display = 'none';
     document.getElementById('steg1').style.display = 'block';
@@ -625,7 +639,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const last = localStorage.getItem('sch_lastSagesman');
     if (last) document.getElementById('sagesman').value = last;
     setNow();
-    addPost('POST 1', false); addPost('POST 2', false);
+    addPost('Värnpost', false); addPost('Eldvakt', false);
     addSoldat('', false); addSoldat('', false); addSoldat('', false); addSoldat('', false);
 });
 

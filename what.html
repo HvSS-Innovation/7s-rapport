@@ -117,6 +117,20 @@
                 <div id="fotoStatus" style="font-size:0.8rem;color:var(--text-muted);margin-top:8px;text-align:center"></div>
             </div>
 
+            <!-- FRÅN / TILL -->
+            <div class="form-group">
+                <div class="input-col2">
+                    <div>
+                        <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
+                        <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="till" style="margin-bottom:6px">Till</label>
+                        <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                    </div>
+                </div>
+            </div>
+
             <!-- STUND -->
             <div class="form-group">
                 <div class="label-row">
@@ -379,7 +393,10 @@ function generateReport() {
     const v = id => document.getElementById(id).value;
     savePlaceIfNew(v('stalle')); saveSagesmanIfNew(v('sagesman'));
     const lines = [
-        'WHAT RAPPORT\n',
+        'WHAT RAPPORT',
+        `Från: ${v('fran') || '-'}`,
+        `Till: ${v('till') || '-'}`,
+        '',
         `Stund:    ${v('stund') || '-'}`,
         `Ställe:   ${v('stalle') || '-'}`,
         `Wheels:   ${v('wheels') || '-'}`,

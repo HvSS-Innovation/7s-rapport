@@ -100,7 +100,7 @@
         .result-view.active { display: block; }
         .form-view.hidden { display: none; }
         .result-header { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 12px; }
-        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
+        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.8; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
         .copy-feedback { text-align: center; color: var(--accent); font-size: 0.85rem; font-weight: 600; height: 24px; opacity: 0; transition: opacity 0.2s; margin-bottom: 12px; }
         .copy-feedback.show { opacity: 1; }
 
@@ -142,6 +142,20 @@
 
     <!-- FORM VIEW -->
     <div class="form-view" id="formView">
+
+        <!-- FRÅN / TILL -->
+        <div class="form-group">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                    <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
+                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
+                </div>
+                <div>
+                    <label for="till" style="margin-bottom:6px">Till</label>
+                    <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                </div>
+            </div>
+        </div>
 
         <!-- TNR -->
         <div class="form-group">
@@ -352,44 +366,38 @@ function generateReport() {
 
     const lines = [
         `ORDER (${format})`,
+        `Från: ${v('fran') || '-'}`,
+        `Till: ${v('till') || '-'}`,
         `TNR: ${v('tnr') || '-'}`
     ];
-    if (v('plats')) lines.push(`Plats: ${v('plats')}`);
+    lines.push(`Plats: ${v('plats') || '-'}`);
     lines.push('');
 
-    // Orientering
-    const oriLines = [];
-    if (v('o_motstandaren')) oriLines.push(`Fi: ${v('o_motstandaren')}`);
-    if (v('o_egna')) oriLines.push(`Egna: ${v('o_egna')}`);
-    if (v('o_terrang')) oriLines.push(`Terr\u00e4ng: ${v('o_terrang')}`);
-    if (v('o_vader')) oriLines.push(`V\u00e4der: ${v('o_vader')}`);
-    if (v('o_civil')) oriLines.push(`Civil: ${v('o_civil')}`);
-    if (v('o_plut_uppgift')) oriLines.push(`Plutonens uppgift: ${v('o_plut_uppgift')}`);
-    if (oriLines.length || v('o_var_uppgift')) {
-        lines.push('ORIENTERING');
-        oriLines.forEach(l => lines.push(l));
-        if (v('o_var_uppgift')) lines.push(`V\u00c5R UPPGIFT: ${v('o_var_uppgift')}`);
-        lines.push('');
-    }
+    // Orientering – alltid visa
+    lines.push('ORIENTERING');
+    lines.push(`Fi:                ${v('o_motstandaren') || '-'}`);
+    lines.push(`Egna:              ${v('o_egna') || '-'}`);
+    lines.push(`Terräng:           ${v('o_terrang') || '-'}`);
+    lines.push(`Väder:             ${v('o_vader') || '-'}`);
+    lines.push(`Civil:             ${v('o_civil') || '-'}`);
+    lines.push(`Plutonens uppgift: ${v('o_plut_uppgift') || '-'}`);
+    lines.push(`VÅR UPPGIFT:       ${v('o_var_uppgift') || '-'}`);
+    lines.push('');
 
-    // Beslut
-    const besLines = [];
-    if (v('b_malb')) besLines.push(`M\u00e5lbild: ${v('b_malb')}`);
-    if (v('b_inled')) besLines.push(`Inledningsvis: ${v('b_inled')}`);
-    if (v('b_darefter')) besLines.push(`D\u00e4refter: ${v('b_darefter')}`);
-    if (v('b_slutligen')) besLines.push(`Slutligen: ${v('b_slutligen')}`);
-    if (v('b_ril')) besLines.push(`RIL: ${v('b_ril')}`);
-    besLines.push(`RFI: ${v('b_rfi') || '\u2013'}`);
-    if (besLines.length) {
-        lines.push('BESLUT');
-        besLines.forEach(l => lines.push(l));
-        lines.push('');
-    }
+    // Beslut – alltid visa
+    lines.push('BESLUT');
+    lines.push(`Målbild:       ${v('b_malb') || '-'}`);
+    lines.push(`Inledningsvis: ${v('b_inled') || '-'}`);
+    lines.push(`Därefter:      ${v('b_darefter') || '-'}`);
+    lines.push(`Slutligen:     ${v('b_slutligen') || '-'}`);
+    lines.push(`RIL:           ${v('b_ril') || '-'}`);
+    lines.push(`RFI:           ${v('b_rfi') || '-'}`);
+    lines.push('');
 
     // Order/Kommando
     const orderKort = document.getElementById('orderLista').children;
+    lines.push(format === 'OBK' ? 'KOMMANDO' : 'ORDER');
     if (orderKort.length) {
-        lines.push(format === 'OBK' ? 'KOMMANDO' : 'ORDER');
         Array.from(orderKort).forEach(card => {
             const inputs = card.querySelectorAll('input');
             const ta = card.querySelector('textarea');
@@ -401,11 +409,13 @@ function generateReport() {
                 if (beredd) lines.push(`  Beredd: ${beredd}`);
             }
         });
-        if (v('o_skadeplats')) lines.push(`Skadeplatsen: ${v('o_skadeplats')}`);
-        if (v('o_samband')) lines.push(`Samband: ${v('o_samband')}`);
-        if (v('o_chef_pos')) lines.push(`Chefen/stf: ${v('o_chef_pos')}`);
-        lines.push('');
+    } else {
+        lines.push('-');
     }
+    lines.push(`Skadeplatsen: ${v('o_skadeplats') || '-'}`);
+    lines.push(`Samband:      ${v('o_samband') || '-'}`);
+    lines.push(`Chefen/stf:   ${v('o_chef_pos') || '-'}`);
+    lines.push('');
 
     lines.push('');
     lines.push('SLUT. Tillägg? Frågor? Framåt!');

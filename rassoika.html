@@ -109,7 +109,7 @@
         .result-view.active { display: block; }
         .form-view.hidden { display: none; }
         .result-header { font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 12px; }
-        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.92rem; line-height: 1.9; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
+        .report-output { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.8; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; }
         .copy-feedback { text-align: center; color: var(--accent); font-size: 0.85rem; font-weight: 600; height: 24px; opacity: 0; transition: opacity 0.2s; margin-bottom: 12px; }
         .copy-feedback.show { opacity: 1; }
 
@@ -145,6 +145,20 @@
 
     <!-- FORM VIEW -->
     <div class="form-view" id="formView">
+
+        <!-- FRÅN / TILL -->
+        <div class="form-group">
+            <div class="input-col2">
+                <div>
+                    <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
+                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
+                </div>
+                <div>
+                    <label for="till" style="margin-bottom:6px">Till</label>
+                    <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                </div>
+            </div>
+        </div>
 
         <!-- TNR -->
         <div class="form-group">
@@ -258,10 +272,19 @@
                 <textarea id="o_uppgift" placeholder="Uppgiften och l&ouml;sningsid&eacute;n..."></textarea>
                 <label for="o_inpass" style="margin-top:10px">In- och utpassering</label>
                 <textarea id="o_inpass" placeholder="In- och utpassering..."></textarea>
-                <span class="sub-label">L&ouml;sen</span>
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:6px;">
+                    <span class="sub-label" style="margin:0">L&ouml;sen</span>
+                    <button type="button" class="btn-add" style="margin-top:0;padding:5px 12px;font-size:0.78rem" onclick="slumpaLosen()">&#x1F3B2; Slumpa</button>
+                </div>
                 <div class="input-col2">
-                    <input type="text" id="o_los1" placeholder="L&ouml;sen Ord 1">
-                    <input type="text" id="o_los2" placeholder="Ord 2">
+                    <div>
+                        <label style="font-size:0.7rem;margin-bottom:4px">Ord 1 (fr&aring;ga)</label>
+                        <input type="text" id="o_los1" placeholder="Ord 1">
+                    </div>
+                    <div>
+                        <label style="font-size:0.7rem;margin-bottom:4px">Ord 2 (svar)</label>
+                        <input type="text" id="o_los2" placeholder="Ord 2">
+                    </div>
                 </div>
                 <label for="o_samb_tecken" style="margin-top:10px">Egna tecken f&ouml;r internt samband</label>
                 <textarea id="o_samb_tecken" placeholder="Egna tecken f&ouml;r internt samband..."></textarea>
@@ -453,6 +476,8 @@ function generateKvitto() {
 
     const lines = [
         'KVITTO: PATRULL UTGÅENDE',
+        `Från:          ${v('fran') || '-'}`,
+        `Till:          ${v('till') || '-'}`,
         `TNR:           ${v('tnr') || '-'}`,
         `Utgångstid:    ${v('an_stund') || '-'}`,
         `Styrka:        ${patrullMedl.length || '?'} pers`,
@@ -460,11 +485,7 @@ function generateKvitto() {
         'Sammansättning:',
     ];
     patrullMedl.forEach(m => lines.push(`  ${m}`));
-    if (v('a_stf_namn')) lines.push(`Stf: ${v('a_stf_namn')}`);
-    lines.push('');
-
-    if (v('o_los1') || v('o_los2')) lines.push(`Lösen: ${v('o_los1').toUpperCase() || '?'} – ${v('o_los2').toUpperCase() || '?'}`);
-    if (v('an_till')) lines.push(`Anmält till: ${v('an_till')}`);
+    if (v('a_stf_namn')) lines.push(`  Stf: ${v('a_stf_namn')}`);
     lines.push('');
 
     const stegNamn = ['R-Repetera', 'A-Avdela', 'S-Samla', 'S-Stridsberedskap', 'O-Orientera', 'I-Indela', 'K-Kontrollera', 'A-Anmäl'];
@@ -486,7 +507,9 @@ function generateKvitto() {
 
 function generateOrder() {
     const lines = ['PATRULLORDER', ''];
-    if (v('tnr')) lines.push(`TNR: ${v('tnr')}`);
+    lines.push(`Från: ${v('fran') || '-'}`);
+    lines.push(`Till: ${v('till') || '-'}`);
+    lines.push(`TNR:  ${v('tnr') || '-'}`);
     lines.push('');
 
     // R – Uppgift
@@ -617,6 +640,43 @@ document.addEventListener('DOMContentLoaded', function() {
 // ============================================================
 if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('service-worker.js');
+}
+
+// ── Slumpa lösen ─────────────────────────────────────────────────────────────
+const LOSEN_WORDS = [
+    'BORD','BORG','BRAND','BREV','BRON','BUSS','BYXA','DÖRR','FISK','FLAG',
+    'FLOD','FLUGA','FORS','FÅNGA','GLAS','GRAN','GRIND','GRUND','GRÄS','GUBBE',
+    'HAMN','HJUL','HUND','HUSET','HÄST','HÖNA','JÄRN','KORG','KRITA','KRUKA',
+    'KVARN','KYRKL','KÄLLA','KÖRV','LAMM','LADA','LAND','LOCK','LUFTA','LYSA',
+    'LÄDER','LÖNN','METALL','MOLN','MUGG','MÖRKT','NYCKEL','NÄTET','OXEL','PANNA',
+    'PINNE','PLANK','PLOG','PLÅT','PUMPA','PÅSE','RÄCKE','RÄVAR','RULLA','RYGG',
+    'SAND','SIDEN','SJÖN','SKOG','SKRUV','SKYLT','SLUSS','SMUTS','SNARA','SPIK',
+    'SPJUT','SPÅR','STEGE','STEN','STORM','STRAND','STRECK','STRÅ','SULA','SVANS',
+    'SVING','SÄCK','SÖDER','TEGEL','TIMME','TORG','TORKA','TRÅD','TRÄD','TRÄSK',
+    'TUNNA','TÄCKE','TÄLT','UGNEN','VAPEN','VATTEN','VIND','VINGE','VIRKE','VISP',
+    'VRÄKA','VÄGG','VÄLT','VÄMJA','YXAN','ÄRTA','ÖKEN','ÖPPNA','ÖRTEN','ÅSKAN'
+];
+
+// Naturliga par som ska undvikas
+const LOSEN_FORBIDDEN_PAIRS = new Set([
+    'SOL-SKEN','IS-BERG','DAG-LJUS','BRAND-FACK','STORM-VIND','VATTEN-FALL',
+    'SKOG-BRAND','SAND-STRAND','FLOD-STRAND','GRAN-SKOG','TRÄD-GREN'
+]);
+
+function slumpaLosen() {
+    const words = [...LOSEN_WORDS];
+    let ord1, ord2;
+    let attempts = 0;
+    do {
+        ord1 = words[Math.floor(Math.random() * words.length)];
+        do { ord2 = words[Math.floor(Math.random() * words.length)]; } while (ord2 === ord1);
+        attempts++;
+    } while (
+        (LOSEN_FORBIDDEN_PAIRS.has(`${ord1}-${ord2}`) || LOSEN_FORBIDDEN_PAIRS.has(`${ord2}-${ord1}`))
+        && attempts < 50
+    );
+    document.getElementById('o_los1').value = ord1;
+    document.getElementById('o_los2').value = ord2;
 }
 
 // ── Feedback-länk ──────────────────────────────────────────────────────────

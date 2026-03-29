@@ -142,10 +142,18 @@
             <div class="field-hint">Format: DDHHMM (dag–timme–minut, t.ex. 231430)</div>
         </div>
 
-        <!-- Enhet -->
+        <!-- Från / Till -->
         <div class="form-group">
-            <label for="enhet">Enhet/Pluton</label>
-            <input type="text" id="enhet" placeholder="2a Plut" autocomplete="off" style="margin-top:6px">
+            <div class="input-col2">
+                <div>
+                    <label for="enhet" style="margin-bottom:6px">Fr&aring;n</label>
+                    <input type="text" id="enhet" placeholder="Ex: 2a Plut" autocomplete="off">
+                </div>
+                <div>
+                    <label for="till" style="margin-bottom:6px">Till</label>
+                    <input type="text" id="till" placeholder="Ex: AQ" autocomplete="off">
+                </div>
+            </div>
         </div>
 
         <!-- P – PERSONAL -->
@@ -357,8 +365,9 @@ function v(id) { const el=document.getElementById(id); return el ? el.value.trim
 function generateReport() {
     const lines = [
         'PEDARS – UNDERHÅLLSRAPPORT',
-        `Enhet: ${v('enhet')||'-'}`,
-        `TNR:   ${v('tnr')||'-'}`,
+        `Från: ${v('enhet')||'-'}`,
+        `Till: ${v('till')||'-'}`,
+        `TNR:  ${v('tnr')||'-'}`,
         '',
     ];
 
@@ -377,20 +386,23 @@ function generateReport() {
     lines.push('');
 
     // E
-    const ers = v('e_ers');
-    if (ers) { lines.push('E – ERSÄTTNING AV FÖRNÖDENHETER'); lines.push(ers); lines.push(''); }
+    lines.push('E – ERSÄTTNING AV FÖRNÖDENHETER');
+    lines.push(v('e_ers') || '-');
+    lines.push('');
 
     // D
     const fordDivs = document.getElementById('fordonsLista').children;
+    lines.push('D – DRIVMEDEL');
     if (fordDivs.length) {
-        lines.push('D – DRIVMEDEL');
         Array.from(fordDivs).forEach(c => {
             const inputs = c.querySelectorAll('input');
             const typ = inputs[0]?.value.trim(), reg = inputs[1]?.value.trim(), pct = inputs[2]?.value.trim();
             if (typ) lines.push(`  ${typ}${reg?' ('+reg+')':''}: ${pct||'?'}%`);
         });
-        lines.push('');
+    } else {
+        lines.push('  -');
     }
+    lines.push('');
 
     // A
     const ammoLines = [];
@@ -405,20 +417,24 @@ function generateReport() {
             ammoLines.push(`  ${typ}: ${parts.join(', ')}`);
         }
     });
-    if (ammoLines.length) { lines.push('A – AMMUNITION'); lines.push(...ammoLines); lines.push(''); }
+    lines.push('A – AMMUNITION');
+    if (ammoLines.length) { lines.push(...ammoLines); } else { lines.push('  -'); }
+    lines.push('');
 
     // R
     const repDivs = document.getElementById('repLista').children;
+    lines.push('R – REPARATIONER');
     if (repDivs.length) {
-        lines.push('R – REPARATIONER');
         Array.from(repDivs).forEach(c => {
             const inputs = c.querySelectorAll('input'); const sel = c.querySelector('select');
             const typ = inputs[0]?.value.trim(), reg = inputs[1]?.value.trim(), rep = inputs[2]?.value.trim();
             const korbar = sel ? sel.value : '';
             if (typ||rep) lines.push(`  ${typ||'?'}${reg?' ('+reg+')':''}: ${rep||'—'} | Körbar: ${korbar}`);
         });
-        lines.push('');
+    } else {
+        lines.push('  -');
     }
+    lines.push('');
 
     // S
     lines.push('S – SAMLAD FÖRMÅGA');
