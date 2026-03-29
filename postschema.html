@@ -152,6 +152,20 @@
     <!-- STEG 1: Inställningar -->
     <div id="steg1">
 
+        <!-- FRÅN / TILL -->
+        <div class="form-group">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                    <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
+                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
+                </div>
+                <div>
+                    <label for="till" style="margin-bottom:6px">Till</label>
+                    <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                </div>
+            </div>
+        </div>
+
         <!-- TNR -->
         <div class="form-group">
             <label for="tnr">TNR</label>
@@ -574,7 +588,13 @@ function swapCell(td, idx) {
 function exportSchema() {
     const enhet = document.getElementById('enhet').value.trim();
     const sagesman = document.getElementById('sagesman').value.trim();
+    const fran = document.getElementById('fran').value.trim();
+    const till = document.getElementById('till').value.trim();
+    const tnr = document.getElementById('tnr').value.trim();
     let text = `VAKTSCHEMA – ${enhet || '[enhet saknas]'}\n`;
+    text += `Från: ${fran || '-'}\n`;
+    text += `Till: ${till || '-'}\n`;
+    text += `TNR:  ${tnr || '-'}\n`;
     text += `Ansvarig: ${sagesman || '-'}\n\n`;
 
     const luckor = [...new Set(schema.map(s => s.tid))];
@@ -618,6 +638,8 @@ function atergaInst() {
 function nollstall() {
     if (!confirm('Nollställ schemat och börja om?')) return;
     schema = []; poster = []; soldater = []; soldatRoll = {}; specialFrontSet = new Set();
+    document.getElementById('fran').value = '';
+    document.getElementById('till').value = '';
     document.getElementById('tnr').value = '';
     document.getElementById('enhet').value = '';
     document.getElementById('skiftLangd').value = '2';

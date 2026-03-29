@@ -132,6 +132,20 @@
     <main>
     <div class="form-view" id="formView">
 
+        <!-- FRÅN / TILL -->
+        <div class="form-group">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                <div>
+                    <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
+                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
+                </div>
+                <div>
+                    <label for="till" style="margin-bottom:6px">Till</label>
+                    <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                </div>
+            </div>
+        </div>
+
         <!-- TNR -->
         <div class="form-group">
             <label for="tnr">TNR</label>
@@ -140,20 +154,6 @@
                 <button class="btn btn-sm btn-time" onclick="setNow()">Nu</button>
             </div>
             <div class="field-hint">Format: DDHHMM (dag–timme–minut, t.ex. 231430)</div>
-        </div>
-
-        <!-- Från / Till -->
-        <div class="form-group">
-            <div class="input-col2">
-                <div>
-                    <label for="enhet" style="margin-bottom:6px">Fr&aring;n</label>
-                    <input type="text" id="enhet" placeholder="Ex: 2a Plut" autocomplete="off">
-                </div>
-                <div>
-                    <label for="till" style="margin-bottom:6px">Till</label>
-                    <input type="text" id="till" placeholder="Ex: AQ" autocomplete="off">
-                </div>
-            </div>
         </div>
 
         <!-- P – PERSONAL -->
@@ -365,7 +365,7 @@ function v(id) { const el=document.getElementById(id); return el ? el.value.trim
 function generateReport() {
     const lines = [
         'PEDARS – UNDERHÅLLSRAPPORT',
-        `Från: ${v('enhet')||'-'}`,
+        `Från: ${v('fran')||'-'}`,
         `Till: ${v('till')||'-'}`,
         `TNR:  ${v('tnr')||'-'}`,
         '',
@@ -465,7 +465,7 @@ function showFeedback(){const el=document.getElementById('copyFeedback');el.clas
 function backToEdit(){document.getElementById('formView').classList.remove('hidden');document.getElementById('resultView').classList.remove('active');}
 function resetForm() {
     if (!confirm('Nollställ hela formuläret?')) return;
-    ['tnr','enhet','till','p_total','p_ska','e_ers','s_motivering'].forEach(id => {
+    ['fran','till','tnr','p_total','p_ska','e_ers','s_motivering'].forEach(id => {
         const el = document.getElementById(id); if (el) el.value = '';
     });
     document.getElementById('persLista').innerHTML = ''; persId = 0;

@@ -256,13 +256,13 @@ Fördelarna med ett eget repo:
 - [x] Ändra knappen "Fyll tid från foto" i `what.html` från `btn-primary` (grön) till samma stil som övriga sekundära knappar (grå/dashed). Den sticker idag ut som en primär åtgärdsknapp men fyller en hjälpfunktion.
 
 ### FORS – Ta bort NIVÅ-dropdown
-- [ ] Ta bort select-fältet "NIVÅ" (Kompani → Bataljon etc.) från `fors.html`. Ta även bort relaterad JS-logik (`updateNiva()`, `enhetLabel` o.dyl.) om den enbart stödjer detta fält.
+- [x] Ta bort select-fältet "NIVÅ" (Kompani → Bataljon etc.) från `fors.html`. Ta även bort relaterad JS-logik (`updateNiva()`, `enhetLabel` o.dyl.) om den enbart stödjer detta fält.
 
 ### VÄDER – Gör DATUM-fältet redigerbart
-- [ ] Gör DATUM-fältet i `vader.html` direkt redigerbart som ett vanligt textfält. Nu-knappen får finnas kvar men ska inte vara enda sättet att sätta datum. Använd samma mönster som övriga textfält.
+- [x] Gör DATUM-fältet i `vader.html` direkt redigerbart som ett vanligt textfält. Nu-knappen får finnas kvar men ska inte vara enda sättet att sätta datum. Använd samma mönster som övriga textfält.
 
 ### Alla 13 tabs – Standardisera Från/Till/TNR-layout
-- [ ] Se till att Från/Till/TNR-blocket i alla 13 flikar matchar OBSLÖSA:s format som referens: inline 2-kolumns grid med `style="display:grid;grid-template-columns:1fr 1fr;gap:8px"` direkt i HTML (ej CSS-klass), label ovanför respektive fält, allt i ett `form-group`-block. TNR ligger i eget `form-group` direkt under.
+- [x] Se till att Från/Till/TNR-blocket i alla 13 flikar matchar OBSLÖSA:s format som referens: inline 2-kolumns grid med `style="display:grid;grid-template-columns:1fr 1fr;gap:8px"` direkt i HTML (ej CSS-klass), label ovanför respektive fält, allt i ett `form-group`-block. TNR ligger i eget `form-group` direkt under.
 - Berörda filer: `index.html`, `what.html`, `scrim.html`, `weft.html`, `ah.html`, `obslosa.html` (referens, ej ändra), `fors.html`, `pedars.html`, `postschema.html`, `eobusare.html`, `obo.html`, `rassoika.html`, `vader.html`
 
 ---

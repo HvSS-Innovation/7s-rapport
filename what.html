@@ -113,13 +113,13 @@
             <!-- FOTO -->
             <div class="form-group" style="border-style:dashed;">
                 <input type="file" id="fotoInput" accept="image/*" style="display:none" onchange="readFoto(this)">
-                <button class="btn" style="margin-top:0" onclick="document.getElementById('fotoInput').click()">📷 Fyll tid från foto</button>
+                <button class="btn btn-primary" style="margin-top:0" onclick="document.getElementById('fotoInput').click()">📷 Hämta tid från sparat foto</button>
                 <div id="fotoStatus" style="font-size:0.8rem;color:var(--text-muted);margin-top:8px;text-align:center"></div>
             </div>
 
             <!-- FRÅN / TILL -->
             <div class="form-group">
-                <div class="input-col2">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                     <div>
                         <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
                         <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
