@@ -112,10 +112,7 @@
             <button class="btn btn-secondary" onclick="document.getElementById('promptOutput').focus()">Redigera</button>
             <button class="btn btn-danger" onclick="nollstall()">Nollställ</button>
         </div>
-        <a id="smhiLink" href="#" target="_blank" rel="noopener noreferrer"
-           style="display:none;text-align:center;padding:18px 0 4px;font-size:0.75rem;color:var(--text-muted);text-decoration:none">
-            Se SMHI-prognos för <span id="smhiOrt"></span> →
-        </a>
+        <button class="btn btn-secondary" id="smhiBtn" style="display:none;width:100%;margin-top:10px" onclick="laggTillSmhi()">+ Lägg till SMHI-länk</button>
     </div>
 
     </main>
@@ -125,6 +122,7 @@
 let ortVal   = '';
 let latVal   = null;
 let lonVal   = null;
+let smhiUrl  = '';
 
 function setNu() {
     const now = new Date();
@@ -294,26 +292,26 @@ async function generera() {
         const cbrn  = cbrnBedomning(windMs, windDir);
         const frost = frostBedomning(tempMin);
 
-        let rapport = `VÄDERRAPPORT\n\nOrientering:\nMeteorologisk prognos ${datumVal}\n\nTemp ${tempMin}–${tempMax}°C. ${skyDesc}. ${nederbord}.\n${windDesc} ${windMs} m/s från ${windDir}.\n\nSoluppgång ${sunriseDDTTMM}\nSolnedgång ${sunsetDDTTMM}\n\n${uav}\n${cbrn}`;
+        const ortNamn = ortVal.split(',')[0].trim();
+        let rapport = `VÄDERRAPPORT\n\nOrientering:\nMeteorologisk prognos ${datumVal}${ortNamn ? ' (' + ortNamn + ')' : ''}\n\nTemp ${tempMin}–${tempMax}°C. ${skyDesc}. ${nederbord}.\n${windDesc} ${windMs} m/s från ${windDir}.\n\nSoluppgång ${sunriseDDTTMM}\nSolnedgång ${sunsetDDTTMM}\n\n${uav}\n${cbrn}`;
         if (frost) rapport += '\n' + frost;
         if (goldenLines) rapport += '\n\nFör fotografering;\n' + goldenLines;
 
         document.getElementById('promptOutput').textContent = rapport;
 
         // SMHI-länk med geonameid-uppslagning
-        const smhiLink = document.getElementById('smhiLink');
-        const smhiOrt  = ortVal.split(',')[0].trim();
-        smhiLink.style.display = 'none';
-        if (smhiOrt) {
-            fetch(`https://www.smhi.se/wpt-a/backend_solr/autocomplete/search/${encodeURIComponent(smhiOrt)}`)
+        const smhiBtn = document.getElementById('smhiBtn');
+        smhiUrl = '';
+        smhiBtn.style.display = 'none';
+        if (ortNamn) {
+            fetch(`https://www.smhi.se/wpt-a/backend_solr/autocomplete/search/${encodeURIComponent(ortNamn)}`)
                 .then(r => r.json())
                 .then(hits => {
                     if (hits.length) {
                         const id = hits[0].geonameid;
                         const namn = hits[0].name;
-                        smhiLink.href = `https://www.smhi.se/vader/prognoser-och-varningar/vaderprognos/q/${encodeURIComponent(namn)}/${id}`;
-                        document.getElementById('smhiOrt').textContent = namn;
-                        smhiLink.style.display = 'block';
+                        smhiUrl = `https://www.smhi.se/vader/prognoser-och-varningar/vaderprognos/q/${encodeURIComponent(namn)}/${id}`;
+                        smhiBtn.style.display = 'block';
                     }
                 })
                 .catch(() => {});
@@ -346,6 +344,14 @@ function fallback(text) {
 }
 function showFeedback() {
     const el = document.getElementById('copyFeedback'); el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+function laggTillSmhi() {
+    if (!smhiUrl) return;
+    const el = document.getElementById('promptOutput');
+    el.textContent = el.textContent.replace(/\n*SMHI:.*$/m, '') + '\n\nSMHI: ' + smhiUrl;
+    const btn = document.getElementById('smhiBtn');
+    btn.textContent = '✓ SMHI-länk tillagd';
+    btn.disabled = true;
 }
 function atergaForm() {
     document.getElementById('resultView').classList.remove('active');
