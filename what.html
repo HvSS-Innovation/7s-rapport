@@ -459,8 +459,11 @@ document.addEventListener('DOMContentLoaded', () => {
     a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.textContent = 'Bugg eller förslag? Lämna feedback →';
     a.style.cssText = 'display:block;text-align:center;padding:24px 0 12px;font-size:0.7rem;color:#5a7a5a;text-decoration:none';
+    const p = document.createElement('p');
+    p.textContent = 'Ingen data skickas eller lagras utanfor din enhet.';
+    p.style.cssText = 'text-align:center;padding:8px 0 0;font-size:0.65rem;color:#3a5a3a;';
     const c = document.querySelector('.container');
-    if (c) c.appendChild(a);
+    if (c) { c.appendChild(p); c.appendChild(a); }
 });
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
 </script>
