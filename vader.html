@@ -300,15 +300,23 @@ async function generera() {
 
         document.getElementById('promptOutput').textContent = rapport;
 
-        // SMHI-länk
+        // SMHI-länk med geonameid-uppslagning
         const smhiLink = document.getElementById('smhiLink');
         const smhiOrt  = ortVal.split(',')[0].trim();
+        smhiLink.style.display = 'none';
         if (smhiOrt) {
-            smhiLink.href = `https://www.smhi.se/vader/prognoser-och-varningar/vaderprognos/q/${encodeURIComponent(smhiOrt)}`;
-            document.getElementById('smhiOrt').textContent = smhiOrt;
-            smhiLink.style.display = 'block';
-        } else {
-            smhiLink.style.display = 'none';
+            fetch(`https://www.smhi.se/wpt-a/backend_solr/autocomplete/search/${encodeURIComponent(smhiOrt)}`)
+                .then(r => r.json())
+                .then(hits => {
+                    if (hits.length) {
+                        const id = hits[0].geonameid;
+                        const namn = hits[0].name;
+                        smhiLink.href = `https://www.smhi.se/vader/prognoser-och-varningar/vaderprognos/q/${encodeURIComponent(namn)}/${id}`;
+                        document.getElementById('smhiOrt').textContent = namn;
+                        smhiLink.style.display = 'block';
+                    }
+                })
+                .catch(() => {});
         }
 
         document.getElementById('formView').classList.add('hidden');
