@@ -112,6 +112,10 @@
             <button class="btn btn-secondary" onclick="document.getElementById('promptOutput').focus()">Redigera</button>
             <button class="btn btn-danger" onclick="nollstall()">Nollställ</button>
         </div>
+        <a id="smhiLink" href="#" target="_blank" rel="noopener noreferrer"
+           style="display:none;text-align:center;padding:18px 0 4px;font-size:0.75rem;color:var(--text-muted);text-decoration:none">
+            Se SMHI-prognos för <span id="smhiOrt"></span> →
+        </a>
     </div>
 
     </main>
@@ -295,6 +299,18 @@ async function generera() {
         if (goldenLines) rapport += '\n\nFör fotografering;\n' + goldenLines;
 
         document.getElementById('promptOutput').textContent = rapport;
+
+        // SMHI-länk
+        const smhiLink = document.getElementById('smhiLink');
+        const smhiOrt  = ortVal.split(',')[0].trim();
+        if (smhiOrt) {
+            smhiLink.href = `https://www.smhi.se/vader/prognoser-och-varningar/vaderprognos/q/${encodeURIComponent(smhiOrt)}`;
+            document.getElementById('smhiOrt').textContent = smhiOrt;
+            smhiLink.style.display = 'block';
+        } else {
+            smhiLink.style.display = 'none';
+        }
+
         document.getElementById('formView').classList.add('hidden');
         document.getElementById('resultView').classList.add('active');
         window.scrollTo(0, 0);
