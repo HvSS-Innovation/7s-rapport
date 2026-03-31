@@ -298,14 +298,14 @@ Fördelarna med ett eget repo:
 ### RASSOIKA – Förbättringar från blogganalys
 Källa: hemvarn.wordpress.com (RASSOIKA-artikel)
 - [ ] **O – Terrängmodell som orienteringsval:** Lägg till "Terrängmodell" som fjärde alternativ i select-fältet `o_visat` (idag: Karta / Terrängskiss / I terrängen). Terrängmodell (sandlåda) är en vanlig metod vid patrullorder.
-- [ ] **I – Fördefinierade roller som snabbval:** Lägg till snabbvalsknappar för vanliga roller (Orienterare, Rapportkarl, Spejare, Säkerhetsman) i indelningssteget, så man slipper skriva fritext varje gång.
+- [x] **I – Fördefinierade roller som snabbval:** Lägg till snabbvalsknappar för vanliga roller (Orienterare, Rapportkarl, Spejare, Säkerhetsman) i indelningssteget, så man slipper skriva fritext varje gång.
 - [ ] **R – Checkpunkter för klargörande:** Lägg till checkpunkter under Repetera-steget: mineringar, fiendeläge, egna förband, terräng, väder — så att patrullchefen inte missar att klargöra dessa.
 - [ ] **K – Förtydliga övningsmoment:** Byt texten "Övning av moment genomförd (vid tid/behov)" till "Övning av strid/moment genomförd (rehearsal)" för att bättre matcha reglementets formulering.
 
 ### Automatiserad Feedback-loop (CRM för fältet)
-- [ ] **Direkt tackmail:** Skicka ett automatiskt "Tack för din rapport" direkt vid inskickat formulär. Använd EmailJS eller Formspree för att hantera detta utan backend.
-- [ ] **Notifiering vid lösning:** Automatisera ett mail till rapportören när deras bugg/förslag är implementerat. Triggat via GitHub Actions när tillhörande Issue stängs.
-- [ ] **Versionsreferens:** Inkludera en länk till den uppdaterade versionen av 7srapport.com i mailet.
+- [x] **Direkt tackmail:** Skicka ett automatiskt "Tack för din rapport" direkt vid inskickat formulär. Använd EmailJS eller Formspree för att hantera detta utan backend.
+- [x] **Notifiering vid lösning:** Automatisera ett mail till rapportören när deras bugg/förslag är implementerat. Triggat via GitHub Actions när tillhörande Issue stängs.
+- [x] **Versionsreferens:** Inkludera en länk till den uppdaterade versionen av 7srapport.com i mailet.
 
 ---
 
