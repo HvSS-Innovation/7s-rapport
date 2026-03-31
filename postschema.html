@@ -104,7 +104,7 @@
         .schema-table td:first-child { color: var(--text-muted); font-size: .8rem; white-space: nowrap; }
         .schema-table tr:nth-child(even) td { background: rgba(255,255,255,.02); }
         .schema-wrap { overflow-x: auto; border-radius: var(--radius); border: 1px solid var(--border); }
-
+        .wake-row td { font-size: 0.72rem; color: var(--text-muted); padding: 3px 8px; border: none; font-style: italic; background: transparent !important; }
 
         #steg2 h2 { color: var(--accent); font-size: 1.1rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; margin-bottom: 12px; }
 
@@ -192,17 +192,11 @@
             <input type="text" id="sagesman" placeholder="Ex: Per Johansson, 2a Plut" autocomplete="off">
             <div class="saved-items" id="savedSagesman"></div>
 
-            <div class="input-col2" style="margin-top:12px">
-                <div>
-                    <label for="skiftLangd">Skiftlängd (tim)</label>
-                    <input type="number" id="skiftLangd" value="2" min="1" max="12" style="margin-top:6px">
-                </div>
-                <div>
-                    <label for="totalTimmar">Totalt (tim)</label>
-                    <input type="number" id="totalTimmar" value="36" min="4" max="168" style="margin-top:6px">
-                </div>
+            <div style="margin-top:12px">
+                <label for="totalTimmar">Totalt antal timmar</label>
+                <input type="number" id="totalTimmar" value="9" min="1" max="168" style="margin-top:6px">
             </div>
-            <div class="field-hint">Varje skift får en slumpmässig ±10 min förskjutning för att förvilla spanare.</div>
+            <div class="field-hint">Varje pass är 50, 60 eller 70 min (slumpas). Grpc alltid 60 min. Förare/RPAS 60–70 min.</div>
         </div>
 
         <div class="form-group section-group">
@@ -263,6 +257,7 @@ let soldatMinVila = {}; // namn → min vilotid i h (0 = ingen krav)
 let soldatRoll = {};    // namn → 'forare' | 'rpas' | 'grpc' | ''
 let specialFrontSet = new Set(); // specialsoldater som ska placeras FRAM istället för bak
 let schedulableSpecials = []; // fylls i genererSchema, används i renderSchema
+let reliefs = []; // { skiftNr, wakeTimeStr, inkommande, utgVarn, utgEld }
 
 // ── Sagesman localStorage ────────────────────────────────────────────────────
 const lsGet = k => JSON.parse(localStorage.getItem(k) || '[]');
@@ -346,11 +341,11 @@ function formatTid(d) {
 }
 
 // ── Generera schema ───────────────────────────────────────────────────────────
+// Varje pass slumpas: reguljär 50/60/70 min, Grpc 60 min, Förare/RPAS 60/70 min.
 function genererSchema() {
     const tnrVal = document.getElementById('tnr').value.trim();
     if (!tnrVal || tnrVal.length < 6) { alert('Ange TNR (DDHHMM) för schemats starttid.'); return; }
     const startTid = parseTNR(tnrVal);
-    const skift = parseInt(document.getElementById('skiftLangd').value) || 2;
     const total = parseInt(document.getElementById('totalTimmar').value) || 36;
 
     poster = Array.from(document.querySelectorAll('#posterLista input')).map(i => i.value.trim()).filter(Boolean);
@@ -370,97 +365,138 @@ function genererSchema() {
     saveSagesmanIfNew(document.getElementById('sagesman').value.trim());
 
     schema = [];
-    const antalSkift = Math.ceil(total / skift);
+    const totalMs = total * 3600000;
+    const endMs = startTid.getTime() + totalMs;
     const N = poster.length;
 
     // Pooler: ordinarie roterar, special (Förare/RPAS/Grpc) placeras sist eller först
     const isSpecial = sol => soldatRoll[sol] === 'forare' || soldatRoll[sol] === 'rpas' || soldatRoll[sol] === 'grpc';
     const regularPool = soldater.filter(sol => !isSpecial(sol));
-    // Sortera special stigande efter vilokrav (Grpc=0 → alltid minst restriktiv)
     const specialPool = soldater.filter(sol => isSpecial(sol))
                                 .sort((a, b) => soldatMinVila[a] - soldatMinVila[b]);
-    // Fallback: om för få ordinarie, använd alla icke-special, sist soldater
     const activePool  = regularPool.length >= N ? regularPool
                       : soldater.filter(sol => !isSpecial(sol)).length >= 1
                         ? soldater.filter(sol => !isSpecial(sol))
                         : soldater;
 
-    // Uteslut Förare/RPAS om schemat är kortare än deras vilokrav (Grpc=0 → alltid med)
-    schedulableSpecials = specialPool.filter(sol =>
-        Math.ceil(soldatMinVila[sol] / skift) < antalSkift
-    );
+    // Uppskatta antal pass (snitt 60 min) för att placera TIDIGT/SIST-soldater
+    const estimatedSlots = Math.round(total * 60 / 60);
 
-    // Bygg slot-karta: TIDIGT → slot 0 (bruteforce), SIST → sista slot (bruteforce)
+    // Uteslut Förare/RPAS om schemat inte ger dem tillräcklig vila
+    schedulableSpecials = specialPool.filter(sol => {
+        const viloPass = Math.ceil(soldatMinVila[sol] * 60 / 60); // antal pass vila
+        return viloPass < estimatedSlots;
+    });
+
+    // Bygg slot-karta: TIDIGT → första pass, SIST → sista pass
     const frontSpecials = schedulableSpecials.filter(sol => specialFrontSet.has(sol));
     const backSpecials  = schedulableSpecials.filter(sol => !specialFrontSet.has(sol));
-
     const specialSlots = new Map();
     frontSpecials.forEach((sol, i) => specialSlots.set(sol, i));
-    backSpecials.forEach((sol, i) => specialSlots.set(sol, antalSkift - backSpecials.length + i));
+    backSpecials.forEach((sol, i) => specialSlots.set(sol, estimatedSlots - backSpecials.length + i));
 
-    // Spåra senast aktivt skift per soldat (för "mest utvilad"-urvalet)
+    // Spåra senast aktivt pass per soldat (för "mest utvilad"-urvalet)
     const lastFinished = {};
     soldater.forEach(sol => { lastFinished[sol] = -Infinity; });
 
-    // Initialisera pipeline från ordinarie pool
-    // → specialsoldater startar med lastFinished=-Infinity → får full vila från schema-start
+    // Initialisera pipeline
     const pipeline = [];
     for (let i = 0; i < N; i++) {
         const sol = activePool[(activePool.length - 1 - i + activePool.length) % activePool.length];
         pipeline.push(sol);
-        if (i < N - 1) lastFinished[sol] = 0; // dessa gör faktiskt POST2..POSTN vid slot 0
+        if (i < N - 1) lastFinished[sol] = 0;
     }
 
-    let currentTime = new Date(startTid.getTime());
+    let currentMs = startTid.getTime();
+    let s = 0;
 
-    for (let s = 0; s < antalSkift; s++) {
-        const skiftStart = new Date(currentTime.getTime());
-        currentTime = new Date(currentTime.getTime() + skift * 3600000);
-        // ±10 min slumpmässig förskjutning för att förvilla spanare (påverkar ej viloberäkning)
-        const jitterMs = Math.round(Math.random() * 20 - 10) * 60000;
-        const dispStart = new Date(skiftStart.getTime() + jitterMs);
-        const dispEnd   = new Date(currentTime.getTime() + jitterMs);
-        const tidStr = formatTid(dispStart) + '–' + formatTid(dispEnd);
-
+    while (currentMs < endMs) {
         const busyNow = new Set(pipeline.slice(0, N - 1));
-
         let nyPerson;
+        let passMinuter;
+
+        // Kolla om en specialsoldat ska gå nu
         const specialEntry = [...specialSlots.entries()].find(([, slot]) => slot === s);
+
         if (specialEntry) {
             nyPerson = specialEntry[0];
+            const role = soldatRoll[nyPerson];
+            passMinuter = (role === 'grpc') ? 60 : [60, 70][Math.floor(Math.random() * 2)];
         } else {
-            // Välj ordinarie soldat med längst vila som inte är i pipelinen nu
+            // Välj ordinarie soldat med längst vila
             const candidates = activePool.filter(sol => !busyNow.has(sol));
             candidates.sort((a, b) => {
                 const la = lastFinished[a], lb = lastFinished[b];
                 if (la === lb) return activePool.indexOf(a) - activePool.indexOf(b);
-                if (la === -Infinity) return -1; // a aldrig schemaglagd → mest utvilad
+                if (la === -Infinity) return -1;
                 if (lb === -Infinity) return 1;
-                return la - lb; // lägre lastFinished = mer utvilad
+                return la - lb;
             });
             nyPerson = candidates[0] || activePool.find(sol => !busyNow.has(sol)) || activePool[0];
+            passMinuter = [50, 60, 70][Math.floor(Math.random() * 3)];
         }
 
-        // Tilldela poster: POST1=nyPerson, POST2=pipeline[0], POST3=pipeline[1] …
+        // Kapa mot schemaslutet
+        const remainingMs = endMs - currentMs;
+        const passMs = Math.min(passMinuter * 60000, remainingMs);
+
+        const passStart = new Date(currentMs);
+        const passEnd = new Date(currentMs + passMs);
+        const tidStr = formatTid(passStart) + '\u2013' + formatTid(passEnd);
+
         poster.forEach((post, pi) => {
             const soldatNamn = pi === 0 ? nyPerson : (pipeline[pi - 1] || nyPerson);
-            schema.push({ tid: tidStr, startMs: dispStart.getTime(), endMs: dispEnd.getTime(), post, soldat: soldatNamn, skiftNr: s });
+            schema.push({ tid: tidStr, startMs: passStart.getTime(), endMs: passEnd.getTime(), post, soldat: soldatNamn, skiftNr: s });
         });
 
-        if (specialEntry) {
-            // Specialsoldat: ett skift, inga fler — läggs ej i pipeline
-            lastFinished[nyPerson] = Infinity;
-        } else {
-            lastFinished[nyPerson] = s + N - 1;
-            pipeline.unshift(nyPerson);
-            if (pipeline.length > N) pipeline.length = N;
-        }
+        lastFinished[nyPerson] = s + N - 1;
+        pipeline.unshift(nyPerson);
+        if (pipeline.length > N) pipeline.length = N;
+
+        currentMs += passMs;
+        s++;
     }
 
+    computeReliefs();
     renderSchema();
     document.getElementById('steg1').style.display = 'none';
     document.getElementById('steg2').style.display = 'block';
     window.scrollTo(0, 0);
+}
+
+// ── Beräkna avlösningskedja ──────────────────────────────────────────────────
+function computeReliefs() {
+    reliefs = [];
+    const luckor = [...new Set(schema.map(s => s.tid))];
+    // Identifiera Värnpost (index 0) och Eldvakt (index 1) via namn
+    const varnIdx = poster.findIndex(p => p.toLowerCase().includes('värn'));
+    const eldIdx  = poster.findIndex(p => p.toLowerCase().includes('eld'));
+    const piVarn = varnIdx >= 0 ? varnIdx : 0;
+    const piEld  = eldIdx  >= 0 ? eldIdx  : (poster.length > 1 ? 1 : 0);
+
+    for (let ti = 1; ti < luckor.length; ti++) {
+        const tid = luckor[ti];
+        const prevTid = luckor[ti - 1];
+        const nyVarn = schema.find(s => s.tid === tid && s.post === poster[piVarn])?.soldat || '-';
+        const gammalVarn = schema.find(s => s.tid === prevTid && s.post === poster[piVarn])?.soldat || '-';
+        const gammalEld = schema.find(s => s.tid === prevTid && s.post === poster[piEld])?.soldat || '-';
+        // Väckningstid = skiftets starttid minus 10 min
+        const entry = schema.find(s => s.tid === tid);
+        const wakeMs = entry ? entry.startMs - 10 * 60000 : 0;
+        const wakeDate = new Date(wakeMs);
+        const wakeTimeStr = String(wakeDate.getHours()).padStart(2, '0') + String(wakeDate.getMinutes()).padStart(2, '0');
+
+        reliefs.push({
+            skiftNr: entry?.skiftNr ?? ti,
+            tidIdx: ti,
+            wakeTimeStr,
+            inkommande: nyVarn,
+            utgVarn: gammalVarn,
+            utgEld: gammalEld,
+            varnNamn: poster[piVarn],
+            eldNamn: poster[piEld]
+        });
+    }
 }
 
 // Visa namn med rollsuffix
@@ -479,6 +515,11 @@ function renderSchema() {
     html += '</tr></thead><tbody>';
 
     luckor.forEach((tid, ti) => {
+        // Avlösningsrad (visas före varje skift utom det första)
+        const rel = reliefs.find(r => r.tidIdx === ti);
+        if (rel) {
+            html += `<tr class="wake-row"><td colspan="${poster.length + 1}">⏰ ${rel.wakeTimeStr}: ${rel.utgEld} väcker ${rel.inkommande} → ${rel.inkommande} avl ${rel.utgVarn} (${rel.varnNamn}) → ${rel.utgVarn} avl ${rel.utgEld} (${rel.eldNamn})</td></tr>`;
+        }
         html += `<tr><td>${tid}</td>`;
         poster.forEach((post, pi) => {
             const entry = schema.find(s => s.tid === tid && s.post === post);
@@ -579,6 +620,7 @@ function swapCell(td, idx) {
     sel.focus();
     function commit() {
         schema[idx].soldat = sel.value;
+        computeReliefs();
         renderSchema();
     }
     sel.addEventListener('change', commit);
@@ -598,7 +640,16 @@ function exportSchema() {
     text += `Ansvarig: ${sagesman || '-'}\n\n`;
 
     const luckor = [...new Set(schema.map(s => s.tid))];
-    luckor.forEach(tid => {
+    luckor.forEach((tid, ti) => {
+        // Avlösningskedja före varje skift utom det första
+        const rel = reliefs.find(r => r.tidIdx === ti);
+        if (rel) {
+            text += `--- Avlösning kl ${rel.wakeTimeStr} ---\n`;
+            text += `  1. ${rel.utgEld} (${rel.eldNamn}) väcker ${rel.inkommande}\n`;
+            text += `  2. ${rel.inkommande} avlöser ${rel.utgVarn} (${rel.varnNamn})\n`;
+            text += `  3. ${rel.utgVarn} avlöser ${rel.utgEld} (${rel.eldNamn})\n`;
+            text += `  4. ${rel.utgEld} till vila\n\n`;
+        }
         text += `${tid}\n`;
         poster.forEach(post => {
             const entry = schema.find(s => s.tid === tid && s.post === post);
@@ -642,8 +693,7 @@ function nollstall() {
     document.getElementById('till').value = '';
     document.getElementById('tnr').value = '';
     document.getElementById('enhet').value = '';
-    document.getElementById('skiftLangd').value = '2';
-    document.getElementById('totalTimmar').value = '24';
+    document.getElementById('totalTimmar').value = '9';
     document.getElementById('posterLista').innerHTML = '';
     document.getElementById('soldatLista').innerHTML = '';
     document.getElementById('schemaContainer').innerHTML = '';
