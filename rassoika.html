@@ -309,6 +309,12 @@
                 </div>
             </summary>
             <div class="step-content">
+                <div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px">
+                    <button class="btn-add" style="margin:0" onclick="addIndelaRoll('Orienterare')">Orienterare</button>
+                    <button class="btn-add" style="margin:0" onclick="addIndelaRoll('Rapportkarl')">Rapportkarl</button>
+                    <button class="btn-add" style="margin:0" onclick="addIndelaRoll('Spejare')">Spejare</button>
+                    <button class="btn-add" style="margin:0" onclick="addIndelaRoll('S&auml;kerhetsman')">S&auml;kerhetsman</button>
+                </div>
                 <div id="indelaLista"></div>
                 <button class="btn-add" onclick="addIndela()">+ L&auml;gg till indelning</button>
                 <label for="i_uppsikt" style="margin-top:12px">Uppsikt</label>
@@ -436,7 +442,7 @@ function addPatrull() {
 // ============================================================
 let indelaCount = 0;
 
-function addIndela() {
+function addIndela(roll) {
     indelaCount++;
     const lista = document.getElementById('indelaLista');
     const card = document.createElement('div');
@@ -444,11 +450,12 @@ function addIndela() {
     card.id = 'indelaCard_' + indelaCount;
     card.innerHTML = `
         <input type="text" placeholder="Person">
-        <input type="text" placeholder="Uppgift/sektor">
+        <input type="text" placeholder="Uppgift/sektor" value="${roll || ''}">
         <button class="btn-remove-sm" onclick="removeIndela('indelaCard_${indelaCount}')" title="Ta bort">&#10005;</button>
     `;
     lista.appendChild(card);
 }
+function addIndelaRoll(roll) { addIndela(roll); }
 
 function removeCard(id) {
     const el = document.getElementById(id);
@@ -682,7 +689,7 @@ function slumpaLosen() {
 // ── Feedback-länk ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
     const a = document.createElement('a');
-    a.href = 'https://github.com/gitjoda71/faltrapport/issues/new?title=%5BBeta-Feedback%5D%20RASSOIKA&body=**Form%3A**%20RASSOIKA%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**';
+    a.href = 'https://github.com/gitjoda71/7s-rapport/issues/new?title=%5BBeta-Feedback%5D%20RASSOIKA&body=**Form%3A**%20RASSOIKA%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**';
     a.target = '_blank'; a.rel = 'noopener noreferrer';
     a.textContent = 'Bugg eller förslag? Lämna feedback →';
     a.style.cssText = 'display:block;text-align:center;padding:24px 0 12px;font-size:0.7rem;color:#5a7a5a;text-decoration:none';

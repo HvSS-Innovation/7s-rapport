@@ -287,6 +287,26 @@ Fördelarna med ett eget repo:
 ### EOBUSARE – Ändra rapporttitel
 - [x] Ändra rapport-titeln i `generateStatuskvitto()` från `STATUS: EOBUSARE – ELDSTÄLLNING INTAGEN` till bara `EOBUSARE` (rad ~341 i eobusare.html)
 
+### POSTSCHEMA – Fixa tidsberäkning
+- [x] Schema ska starta exakt på TNR-tiden (t.ex. TNR 292300 → schema börjar 2300, inte 2303)
+- [x] Varje pass slumpas oberoende: reguljär 50/60/70 min, Grpc 60 min, Förare/RPAS 60/70 min
+- [x] Eldvakten väcker den nya värnvakten 10 minuter innan avlösningen ska ske
+- [x] Grpc har exakt 1 timme per pass
+- [x] Förare och RPAS har alltid minst 1 timme och max 1 timme 10 minuter per pass
+- [x] Avlösningsordning: Vakt 9 (eld) väcker vakt 2 → vakt 2 går till vakt 1 (värn) och avlöser → vakt 1 går till vakt 9 (eld) och avlöser
+
+### RASSOIKA – Förbättringar från blogganalys
+Källa: hemvarn.wordpress.com (RASSOIKA-artikel)
+- [ ] **O – Terrängmodell som orienteringsval:** Lägg till "Terrängmodell" som fjärde alternativ i select-fältet `o_visat` (idag: Karta / Terrängskiss / I terrängen). Terrängmodell (sandlåda) är en vanlig metod vid patrullorder.
+- [ ] **I – Fördefinierade roller som snabbval:** Lägg till snabbvalsknappar för vanliga roller (Orienterare, Rapportkarl, Spejare, Säkerhetsman) i indelningssteget, så man slipper skriva fritext varje gång.
+- [ ] **R – Checkpunkter för klargörande:** Lägg till checkpunkter under Repetera-steget: mineringar, fiendeläge, egna förband, terräng, väder — så att patrullchefen inte missar att klargöra dessa.
+- [ ] **K – Förtydliga övningsmoment:** Byt texten "Övning av moment genomförd (vid tid/behov)" till "Övning av strid/moment genomförd (rehearsal)" för att bättre matcha reglementets formulering.
+
+### Automatiserad Feedback-loop (CRM för fältet)
+- [ ] **Direkt tackmail:** Skicka ett automatiskt "Tack för din rapport" direkt vid inskickat formulär. Använd EmailJS eller Formspree för att hantera detta utan backend.
+- [ ] **Notifiering vid lösning:** Automatisera ett mail till rapportören när deras bugg/förslag är implementerat. Triggat via GitHub Actions när tillhörande Issue stängs.
+- [ ] **Versionsreferens:** Inkludera en länk till den uppdaterade versionen av 7srapport.com i mailet.
+
 ---
 
 **Nästa Steg:**

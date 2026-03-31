@@ -1,0 +1,34 @@
+name: Feedback-loop
+
+on:
+  issues:
+    types: [opened, closed]
+
+jobs:
+  auto-reply:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'opened'
+    steps:
+      - name: Tackmeddelande
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Tack for din feedback! Vi har tagit emot ditt arende och tittar pa det sa snart vi kan.
+
+            / 7srapport.com
+
+  notify-resolved:
+    runs-on: ubuntu-latest
+    if: github.event.action == 'closed'
+    steps:
+      - name: Losningsmeddelande
+        uses: peter-evans/create-or-update-comment@v4
+        with:
+          issue-number: ${{ github.event.issue.number }}
+          body: |
+            Detta arende ar nu atgardat! Andringen finns live pa [7srapport.com](https://7srapport.com).
+
+            Tack for att du hjalper oss forbattra verktygen!
+
+            / 7srapport.com
