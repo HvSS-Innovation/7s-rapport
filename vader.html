@@ -292,7 +292,8 @@ async function generera() {
         const cbrn  = cbrnBedomning(windMs, windDir);
         const frost = frostBedomning(tempMin);
 
-        const ortNamn = ortVal.split(',')[0].trim();
+        const rawOrt = ortVal.split(',')[0].trim();
+        const ortNamn = rawOrt ? rawOrt.charAt(0).toUpperCase() + rawOrt.slice(1) : '';
         let rapport = `VÄDERRAPPORT\n\nOrientering:\nMeteorologisk prognos ${datumVal}${ortNamn ? ' (' + ortNamn + ')' : ''}\n\nTemp ${tempMin}–${tempMax}°C. ${skyDesc}. ${nederbord}.\n${windDesc} ${windMs} m/s från ${windDir}.\n\nSoluppgång ${sunriseDDTTMM}\nSolnedgång ${sunsetDDTTMM}\n\n${uav}\n${cbrn}`;
         if (frost) rapport += '\n' + frost;
         if (goldenLines) rapport += '\n\nFör fotografering;\n' + goldenLines;
