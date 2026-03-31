@@ -112,7 +112,11 @@
             <button class="btn btn-secondary" onclick="document.getElementById('promptOutput').focus()">Redigera</button>
             <button class="btn btn-danger" onclick="nollstall()">Nollställ</button>
         </div>
-        <button class="btn btn-secondary" id="smhiBtn" style="display:none;width:100%;margin-top:10px" onclick="laggTillSmhi()">+ Lägg till SMHI-länk</button>
+        <button class="btn btn-secondary" id="smhiBtn" style="display:none;width:100%;margin-top:10px" onclick="toggleSmhi()">+ Lägg till SMHI-länk</button>
+        <a id="smhiLink" href="#" target="_blank" rel="noopener noreferrer"
+           style="display:none;text-align:center;padding:18px 0 4px;font-size:0.75rem;color:var(--text-muted);text-decoration:none">
+            SMHI-prognos →
+        </a>
     </div>
 
     </main>
@@ -302,17 +306,23 @@ async function generera() {
 
         // SMHI-länk med geonameid-uppslagning
         const smhiBtn = document.getElementById('smhiBtn');
+        const smhiLinkEl = document.getElementById('smhiLink');
         smhiUrl = '';
         smhiBtn.style.display = 'none';
+        smhiBtn.textContent = '+ Lägg till SMHI-länk';
+        smhiBtn.disabled = false;
+        smhiLinkEl.style.display = 'none';
         if (ortNamn) {
             fetch(`https://www.smhi.se/wpt-a/backend_solr/autocomplete/search/${encodeURIComponent(ortNamn)}`)
                 .then(r => r.json())
                 .then(hits => {
                     if (hits.length) {
                         const id = hits[0].geonameid;
-                        const namn = hits[0].name;
-                        smhiUrl = `https://www.smhi.se/vader/prognoser-och-varningar/vaderprognos/q/${encodeURIComponent(namn)}/${id}`;
+                        const namn = hits[0].name || ortNamn;
+                        smhiUrl = `https://www.smhi.se/vader/prognoser-och-varningar/vaderprognos/q/${namn}/${id}`;
                         smhiBtn.style.display = 'block';
+                        smhiLinkEl.href = smhiUrl;
+                        smhiLinkEl.style.display = 'block';
                     }
                 })
                 .catch(() => {});
@@ -346,13 +356,20 @@ function fallback(text) {
 function showFeedback() {
     const el = document.getElementById('copyFeedback'); el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
 }
-function laggTillSmhi() {
+let smhiToggled = false;
+function toggleSmhi() {
     if (!smhiUrl) return;
     const el = document.getElementById('promptOutput');
-    el.textContent = el.textContent.replace(/\n*SMHI:.*$/m, '') + '\n\nSMHI: ' + smhiUrl;
     const btn = document.getElementById('smhiBtn');
-    btn.textContent = '✓ SMHI-länk tillagd';
-    btn.disabled = true;
+    if (!smhiToggled) {
+        el.textContent = el.textContent + '\n\nSMHI: ' + smhiUrl;
+        btn.textContent = '✓ SMHI-länk tillagd';
+        smhiToggled = true;
+    } else {
+        el.textContent = el.textContent.replace(/\n\nSMHI: .+$/, '');
+        btn.textContent = '+ Lägg till SMHI-länk';
+        smhiToggled = false;
+    }
 }
 function atergaForm() {
     document.getElementById('resultView').classList.remove('active');
