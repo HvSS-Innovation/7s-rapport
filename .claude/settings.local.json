@@ -33,7 +33,12 @@
       "Bash(git push:*)",
       "Bash(gh auth:*)",
       "Bash(curl:*)",
-      "WebFetch(domain:gitjoda71.github.io)"
+      "WebFetch(domain:gitjoda71.github.io)",
+      "Bash(cd /c/0-Dropbox/Dropbox/\"1oels dokument\"/Antigravity/hv)",
+      "Bash(for f:*)",
+      "Bash(do sed:*)",
+      "Bash(sed -i \"s|    if \\(c\\) c.appendChild\\(a\\);|    if \\(c\\) { c.appendChild\\(p\\); c.appendChild\\(a\\); }|\" \"$f\")",
+      "Bash(echo \"OK: $f\")"
     ]
   }
 }
