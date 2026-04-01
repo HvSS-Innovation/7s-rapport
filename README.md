@@ -34,10 +34,6 @@ Verktyget är en del i ett större pågående arbete med att digitalisera och f�
 | **RASSOIKA** | Patrullchefens checklista |
 | **VÄDER** | Meteorologisk prognos (SMHI-data) |
 
-## Användning
-
-Öppna [7srapport.com](https://7srapport.com) i mobilen och lägg till på hemskärmen för offline-användning.
-
 ## Licens
 
 Detta projekt är licensierat under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** (CC BY-NC-SA 4.0).
