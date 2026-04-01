@@ -25,14 +25,14 @@ Verktyget är en del i ett större pågående arbete med att digitalisera och f�
 | **SCRIM** | Civila fordon |
 | **WEFT** | Flygfarkoster |
 | **A-H** | Personbeskrivning / signalement |
-| **OBSLOSA** | Observationsrapport |
+| **OBSLÖSA** | Observationsrapport |
 | **FORS** | Förbandsrapport |
 | **PEDARS** | Stridsvärderapport |
 | **SCHEMA** | Postschema med automatisk rotation |
 | **EOBUSARE** | Eldorder |
 | **OBO** | Orientering-Beslut-Order |
 | **RASSOIKA** | Patrullchefens checklista |
-| **VADER** | Meteorologisk prognos (SMHI-data) |
+| **VÄDER** | Meteorologisk prognos (SMHI-data) |
 
 ## Användning
 
