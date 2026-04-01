@@ -1,6 +1,6 @@
 # 7S Rapport & Faltrapportverktyg
 
-Webbaserade rapportverktyg for Hemvarnet och Forsvarsmakten. Alla formularen ar byggda som en PWA (Progressive Web App) och fungerar offline direkt i mobilen.
+Webbaserade rapportverktyg för Hemvärnet och Försvarsmakten. Alla formulären är byggda som en PWA (Progressive Web App) och fungerar offline direkt i mobilen.
 
 **Sajt:** [7srapport.com](https://7srapport.com)
 
@@ -20,36 +20,36 @@ Verktyget är en del i ett större pågående arbete med att digitalisera och f�
 
 | Formulär | Beskrivning |
 |----------|-------------|
-| **7S** | Spaningsrapport (Storlek, Slag, Sysselsattning...) |
+| **7S** | Spaningsrapport (Storlek, Slag, Sysselsättning...) |
 | **WHAT** | Stridsfordonsidentifiering |
 | **SCRIM** | Civila fordon |
 | **WEFT** | Flygfarkoster |
 | **A-H** | Personbeskrivning / signalement |
 | **OBSLOSA** | Observationsrapport |
-| **FORS** | Forbandsrapport |
-| **PEDARS** | Stridsvarderapport |
+| **FORS** | Förbandsrapport |
+| **PEDARS** | Stridsvärderapport |
 | **SCHEMA** | Postschema med automatisk rotation |
 | **EOBUSARE** | Eldorder |
 | **OBO** | Orientering-Beslut-Order |
 | **RASSOIKA** | Patrullchefens checklista |
 | **VADER** | Meteorologisk prognos (SMHI-data) |
 
-## Anvandning
+## Användning
 
-Oppna [7srapport.com](https://7srapport.com) i mobilen och lagg till pa hemskärmen for offline-anvandning.
+Öppna [7srapport.com](https://7srapport.com) i mobilen och lägg till på hemskärmen för offline-användning.
 
 ## Licens
 
-Detta projekt ar licensierat under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** (CC BY-NC-SA 4.0).
+Detta projekt är licensierat under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** (CC BY-NC-SA 4.0).
 
-Du far fritt:
-- **Anvanda** verktygen
+Du får fritt:
+- **Använda** verktygen
 - **Kopiera och dela** koden
 - **Modifiera och bygga vidare**
 
-Pa villkor att du:
-- **Ger attribution** (namner kallan)
-- **Inte anvander det kommersiellt** (ingen forsaljning, inga annonser, ingen monetarisering)
+På villkor att du:
+- **Ger attribution** (nämner källan)
+- **Inte använder det kommersiellt** (ingen försäljning, inga annonser, ingen monetarisering)
 - **Delar vidare under samma licens**
 
 Se [LICENSE](LICENSE) for fullstandig licenstext.
