@@ -123,12 +123,12 @@
             <div class="form-group">
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                     <div>
-                        <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
-                        <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
-                    </div>
-                    <div>
                         <label for="till" style="margin-bottom:6px">Till</label>
                         <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                    </div>
+                    <div>
+                        <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
+                        <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
                     </div>
                 </div>
             </div>
@@ -139,9 +139,9 @@
                     <label for="stund">Stund</label>
                     <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStund')">i</button>
                 </div>
-                <div class="info-text" id="infoStund">Tidpunkt när personen observerades. Format: DDHHMM</div>
+                <div class="info-text" id="infoStund">Tidpunkt när personen observerades. Format: DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
                 <div class="input-row">
-                    <input type="text" id="stund" inputmode="numeric" maxlength="6" placeholder="DDHHMM" autocomplete="off">
+                    <input type="text" id="stund" maxlength="15" placeholder="DDHHMMZMånÅÅÅÅ" pattern="[0-9]{6}[BC][A-Z]{3}[0-9]{4}" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="setCurrentTime()">Nu</button>
                 </div>
             </div>
@@ -452,8 +452,10 @@ async function readFoto(input) {
         if (!exif) { status.textContent = 'Ingen EXIF-data hittades.'; return; }
         const dt = exif.DateTimeOriginal || exif.DateTime;
         if (dt) {
-            const d = new Date(dt);
-            document.getElementById('stund').value = `${String(d.getDate()).padStart(2,'0')}${String(d.getHours()).padStart(2,'0')}${String(d.getMinutes()).padStart(2,'0')} (s ${String(d.getSeconds()).padStart(2,'0')})`;
+            const d = new Date(dt), p = n => String(n).padStart(2,'0');
+            const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+            const tz = d.getTimezoneOffset() <= -120 ? 'C' : 'B';
+            document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${tz}${months[d.getMonth()]}${d.getFullYear()}`;
             status.textContent = '✓ Tid hämtad från foto.';
         } else { status.textContent = 'Ingen tidsstämpel i bilden.'; }
     } catch(e) { status.textContent = 'Kunde inte läsa bilden: ' + e.message; }
@@ -463,8 +465,10 @@ async function readFoto(input) {
 function appendChip(id, val) { const el = document.getElementById(id); el.value = el.value.trim() ? el.value.trimEnd() + ', ' + val : val; el.focus(); }
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
 function setCurrentTime() {
-    const now = new Date();
-    document.getElementById('stund').value = `${String(now.getDate()).padStart(2,'0')}${String(now.getHours()).padStart(2,'0')}${String(now.getMinutes()).padStart(2,'0')} (s ${String(now.getSeconds()).padStart(2,'0')})`;
+    const now = new Date(), p = n => String(n).padStart(2,'0');
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const tz = now.getTimezoneOffset() <= -120 ? 'C' : 'B';
+    document.getElementById('stund').value = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}${tz}${months[now.getMonth()]}${now.getFullYear()}`;
 }
 
 function generateReport() {
@@ -472,8 +476,8 @@ function generateReport() {
     savePlaceIfNew(v('stalle')); saveSagesmanIfNew(v('sagesman'));
     const lines = [
         'A-H RAPPORT',
-        `Från: ${v('fran') || '-'}`,
         `Till: ${v('till') || '-'}`,
+        `Från: ${v('fran') || '-'}`,
         '',
         `Stund:    ${v('stund') || '-'}`,
         `Ställe:   ${v('stalle') || '-'}`,

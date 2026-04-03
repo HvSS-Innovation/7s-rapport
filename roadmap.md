@@ -311,3 +311,21 @@ Källa: hemvarn.wordpress.com (RASSOIKA-artikel)
 
 **Nästa Steg:**
 Börja med Fas 1: sätt upp filstrukturen (`index.html`, `style.css`, `app.js`, `manifest.json`, `sw.js`) och PWA-skelettet. Bygg sedan ut `7s.html` som master-mall innan de övriga formulären skapas.
+
+---
+
+## Roadmap
+
+Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemål för framtiden.
+
+### 📝 Nya / Öppna
+*(Inga öppna issues för tillfället)*
+
+### ✅ Åtgärdade
+*   **[Issue #1] byt plats på Från och Till**
+    *   Till visas nu före Från i alla 12 formulär (HTML-grid och rapportutskrift). Militär signalordning: mottagare först.
+*   **[Issue #2] fullständigt tidsnummer**
+    *   Tidsnumret utökat från `DDHHMM` till `DDHHMMZMånÅÅÅÅ` (t.ex. `031430BAPR2026`). Tidszon B (CET) / C (CEST) beräknas automatiskt. Sekunder borttagna. Uppdaterat i alla 12 formulär: JS-funktioner, EXIF-fotoläsning, placeholder, maxlength, pattern-validering och hjälptexter.
+
+### ❌ Refuserade
+*(Inga refuserade issues för tillfället)*

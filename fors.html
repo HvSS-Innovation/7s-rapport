@@ -137,12 +137,12 @@
         <div class="form-group">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <div>
-                    <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
-                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
-                </div>
-                <div>
                     <label for="till" style="margin-bottom:6px">Till</label>
                     <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                </div>
+                <div>
+                    <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
+                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
                 </div>
             </div>
         </div>
@@ -151,10 +151,10 @@
         <div class="form-group">
             <label for="tnr">TNR</label>
             <div class="input-row" style="margin-top:6px">
-                <input type="text" id="tnr" placeholder="DDHHMM" inputmode="numeric" maxlength="6" autocomplete="off">
+                <input type="text" id="tnr" placeholder="DDHHMMZMånÅÅÅÅ" maxlength="15" pattern="[0-9]{6}[BC][A-Z]{3}[0-9]{4}" autocomplete="off">
                 <button class="btn btn-sm btn-time" onclick="setNow()">Nu</button>
             </div>
-            <div class="field-hint">Format: DDHHMM (dag–timme–minut, t.ex. 231430)</div>
+            <div class="field-hint">Format: DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
         </div>
 
         <hr class="divider">
@@ -236,15 +236,17 @@ Ex: Vi kan fortsätta med uppgiften. Gruppen är stridsduglig. Ammunition räcke
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
 function setNow() {
     const now = new Date(), p = n => String(n).padStart(2,'0');
-    document.getElementById('tnr').value = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}`;
+    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    const tz = now.getTimezoneOffset() <= -120 ? 'C' : 'B';
+    document.getElementById('tnr').value = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}${tz}${months[now.getMonth()]}${now.getFullYear()}`;
 }
 const v = id => document.getElementById(id).value.trim();
 
 function generateReport() {
     const lines = [
         'FORS-RAPPORT',
-        `Från: ${v('fran') || '-'}`,
         `Till: ${v('till') || '-'}`,
+        `Från: ${v('fran') || '-'}`,
         `TNR:  ${v('tnr') || '-'}`,
         '',
     ];
