@@ -141,7 +141,7 @@
                 </div>
                 <div class="info-text" id="infoStund">Tidpunkt när fordonet observerades. Format: DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
                 <div class="input-row">
-                    <input type="text" id="stund" maxlength="15" placeholder="DDHHMMZMånÅÅÅÅ" pattern="[0-9]{6}[BC][A-Z]{3}[0-9]{4}" autocomplete="off">
+                    <input type="text" id="stund" maxlength="15" placeholder="DDHHMMZMånÅÅÅÅ" pattern="[0-9]{6}[AB][A-Z]{3}[0-9]{4}" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="setCurrentTime()">Nu</button>
                 </div>
             </div>
@@ -386,7 +386,7 @@ async function readFoto(input) {
         if (dt) {
             const d = new Date(dt), p = n => String(n).padStart(2,'0');
             const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-            const tz = d.getTimezoneOffset() <= -120 ? 'C' : 'B';
+            const tz = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
             document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${tz}${months[d.getMonth()]}${d.getFullYear()}`;
             status.textContent = '✓ Tid hämtad från foto.';
         } else { status.textContent = 'Ingen tidsstämpel i bilden.'; }
@@ -399,7 +399,7 @@ function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); 
 function setCurrentTime() {
     const now = new Date(), p = n => String(n).padStart(2,'0');
     const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    const tz = now.getTimezoneOffset() <= -120 ? 'C' : 'B';
+    const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A';
     document.getElementById('stund').value = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}${tz}${months[now.getMonth()]}${now.getFullYear()}`;
 }
 

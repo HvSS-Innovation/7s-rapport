@@ -151,7 +151,7 @@
         <div class="form-group">
             <label for="tnr">TNR</label>
             <div class="input-row" style="margin-top:6px">
-                <input type="text" id="tnr" placeholder="DDHHMMZMånÅÅÅÅ" maxlength="15" pattern="[0-9]{6}[BC][A-Z]{3}[0-9]{4}" autocomplete="off">
+                <input type="text" id="tnr" placeholder="DDHHMMZMånÅÅÅÅ" maxlength="15" pattern="[0-9]{6}[AB][A-Z]{3}[0-9]{4}" autocomplete="off">
                 <button class="btn btn-sm btn-time" onclick="setNow()">Nu</button>
             </div>
             <div class="field-hint">Format: DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
@@ -237,7 +237,7 @@ function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); 
 function setNow() {
     const now = new Date(), p = n => String(n).padStart(2,'0');
     const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    const tz = now.getTimezoneOffset() <= -120 ? 'C' : 'B';
+    const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A';
     document.getElementById('tnr').value = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}${tz}${months[now.getMonth()]}${now.getFullYear()}`;
 }
 const v = id => document.getElementById(id).value.trim();
