@@ -414,6 +414,18 @@ function toggleTnrFormat() {
     const sw = document.getElementById('tnrSwitch');
     sw.classList.toggle('is-long', tnrLong);
     sw.setAttribute('aria-checked', tnrLong);
+    const inp = sw.closest('.input-row').querySelector('input[type="text"]');
+    if (inp) {
+        const v = inp.value.trim();
+        if (tnrLong && /^\d{6}$/.test(v)) {
+            const d = new Date();
+            const z = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
+            const mån = ['JAN','FEB','MAR','APR','MAJ','JUN','JUL','AUG','SEP','OKT','NOV','DEC'][d.getMonth()];
+            inp.value = v + z + mån + d.getFullYear();
+        } else if (!tnrLong && /^\d{6}[AB][A-Z]{3}\d{4}$/.test(v)) {
+            inp.value = v.substring(0, 6);
+        }
+    }
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
