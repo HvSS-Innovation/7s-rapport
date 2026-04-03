@@ -322,6 +322,8 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
 *(Inga öppna issues för tillfället)*
 
 ### ✅ Åtgärdade
+*   **Stöd för både gammalt och nytt tidsnummer**
+    *   Appen stöder nu både kort format (`DDHHMM`) och fullständigt format (`DDHHMMZMånÅÅÅÅ`) i validering (`pattern`) och hjälptexter i alla 12 formulär.
 *   **[Issue #1] byt plats på Från och Till**
     *   Till visas nu före Från i alla 12 formulär (HTML-grid och rapportutskrift). Militär signalordning: mottagare först.
 *   **[Issue #2] fullständigt tidsnummer**

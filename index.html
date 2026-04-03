@@ -233,10 +233,11 @@
                     <label for="stund">Stund</label>
                     <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStund')" aria-label="Info om Stund">i</button>
                 </div>
-                <div class="info-text" id="infoStund">Tidpunkt när det hände. Format: DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
+                <div class="info-text" id="infoStund">Tidpunkt när det hände. Format: DDHHMM eller DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
                 <div class="input-row">
-                    <input type="text" id="stund" maxlength="15" placeholder="DDHHMMZMånÅÅÅÅ" pattern="[0-9]{6}[AB][A-Z]{3}[0-9]{4}" autocomplete="off">
+                    <input type="text" id="stund" maxlength="15" placeholder="DDHHMMZMånÅÅÅÅ" pattern="([0-9]{6}|[0-9]{6}[AB][A-Z]{3}[0-9]{4})" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="setCurrentTime()">Nu</button>
+                    <button class="btn btn-sm" id="tnrFormatBtn" tabindex="-1" onclick="toggleTnrFormat()">Kort</button>
                 </div>
             </div>
 
@@ -555,11 +556,21 @@ function changeCount(delta) {
 // ── Tid ─────────────────────────────────────────────────────────────────────
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
 
+let tnrLong = true;
+function toggleTnrFormat() {
+    tnrLong = !tnrLong;
+    document.getElementById('tnrFormatBtn').textContent = tnrLong ? 'Kort' : 'Långt';
+}
 function setCurrentTime() {
     const now = new Date(), p = n => String(n).padStart(2,'0');
-    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A';
-    document.getElementById('stund').value = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}${tz}${months[now.getMonth()]}${now.getFullYear()}`;
+    const base = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}`;
+    if (tnrLong) {
+        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A';
+        document.getElementById('stund').value = base + tz + months[now.getMonth()] + now.getFullYear();
+    } else {
+        document.getElementById('stund').value = base;
+    }
 }
 
 // ── Rapport ─────────────────────────────────────────────────────────────────

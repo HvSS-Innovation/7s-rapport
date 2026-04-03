@@ -249,10 +249,11 @@
         <div class="form-group">
             <label for="tnr">TNR</label>
             <div class="input-row" style="margin-top:6px">
-                <input type="text" id="tnr" placeholder="DDHHMMZMånÅÅÅÅ" maxlength="15" pattern="[0-9]{6}[AB][A-Z]{3}[0-9]{4}" autocomplete="off">
+                <input type="text" id="tnr" placeholder="DDHHMMZMånÅÅÅÅ" maxlength="15" pattern="([0-9]{6}|[0-9]{6}[AB][A-Z]{3}[0-9]{4})" autocomplete="off">
                 <button class="btn btn-sm btn-time" onclick="setNow()">Nu</button>
+                <button class="btn btn-sm" id="tnrFormatBtn" onclick="toggleTnrFormat()">Kort</button>
             </div>
-            <div class="field-hint">Format: DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
+            <div class="field-hint">Format: DDHHMM eller DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
         </div>
 
         <!-- PLATS -->
@@ -448,11 +449,21 @@ async function getGPS() {
 
 // ── Hjälpfunktioner ───────────────────────────────────────────────────────────
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
+let tnrLong = true;
+function toggleTnrFormat() {
+    tnrLong = !tnrLong;
+    document.getElementById('tnrFormatBtn').textContent = tnrLong ? 'Kort' : 'Långt';
+}
 function setNow() {
     const now = new Date(), p = n => String(n).padStart(2,'0');
-    const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A';
-    document.getElementById('tnr').value = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}${tz}${months[now.getMonth()]}${now.getFullYear()}`;
+    const base = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}`;
+    if (tnrLong) {
+        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A';
+        document.getElementById('tnr').value = base + tz + months[now.getMonth()] + now.getFullYear();
+    } else {
+        document.getElementById('tnr').value = base;
+    }
 }
 const v = id => document.getElementById(id).value.trim();
 function row(label, val) { return `${label}: ${val || '-'}`; }
