@@ -158,6 +158,17 @@
         .btn-gps:disabled { opacity: 0.5; cursor: not-allowed; }
         .btn-time { background: var(--accent-dim); color: var(--accent); font-size: 0.85rem; min-height: 40px; padding: 8px 16px; border-radius: var(--radius-sm); white-space: nowrap; }
         .btn-time:hover { background: var(--border-focus); }
+        /* ── TNR Toggle Switch ─── */
+        .tnr-switch{position:relative;display:inline-flex;align-items:center;width:110px;height:36px;background:var(--accent-dim);border:1px solid var(--border);border-radius:18px;cursor:pointer;transition:border-color .2s;-webkit-tap-highlight-color:transparent;user-select:none;flex-shrink:0}
+        .tnr-switch:hover{border-color:var(--border-focus)}
+        .tnr-switch-thumb{position:absolute;top:3px;left:3px;width:50px;height:28px;background:var(--accent);border-radius:14px;transition:transform .25s cubic-bezier(.4,0,.2,1);pointer-events:none}
+        .tnr-switch.is-long .tnr-switch-thumb{transform:translateX(54px)}
+        .tnr-switch-labels{position:absolute;inset:0;display:flex;pointer-events:none}
+        .tnr-switch-label{flex:1;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;letter-spacing:.05em;transition:color .2s}
+        .tnr-switch .lbl-kort{color:var(--bg-primary)}
+        .tnr-switch .lbl-lang{color:var(--text-muted)}
+        .tnr-switch.is-long .lbl-kort{color:var(--text-muted)}
+        .tnr-switch.is-long .lbl-lang{color:var(--bg-primary)}
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 8px; }
         .btn-copy:hover { background: var(--info-hover); }
 
@@ -251,7 +262,7 @@
             <div class="input-row" style="margin-top:6px">
                 <input type="text" id="tnr" placeholder="DDHHMMZMånÅÅÅÅ" maxlength="15" pattern="([0-9]{6}|[0-9]{6}[AB][A-Z]{3}[0-9]{4})" autocomplete="off">
                 <button class="btn btn-sm btn-time" onclick="setNow()">Nu</button>
-                <button class="btn btn-sm" id="tnrFormatBtn" onclick="toggleTnrFormat()">Kort</button>
+                <div class="tnr-switch is-long" id="tnrSwitch" onclick="toggleTnrFormat()" role="switch" aria-checked="true" tabindex="0"><div class="tnr-switch-thumb"></div><div class="tnr-switch-labels"><span class="tnr-switch-label lbl-kort">Kort</span><span class="tnr-switch-label lbl-lang">Kompl</span></div></div>
             </div>
             <div class="field-hint">Format: DDHHMM eller DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
         </div>
@@ -334,6 +345,11 @@
                     <div class="section-title">Lösen</div>
                     <div class="section-subtitle">Tvådelat lösen</div>
                 </div>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px">
+                <span class="sub-label" style="margin:0">Slumpa nytt lösen</span>
+                <button type="button" class="btn-add" style="margin-top:0;padding:5px 12px;font-size:0.78rem"
+                        onclick="slumpaLosen('l_ord1','l_ord2')">🎲 Slumpa</button>
             </div>
             <div class="input-half">
                 <div>
@@ -452,7 +468,20 @@ function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); 
 let tnrLong = true;
 function toggleTnrFormat() {
     tnrLong = !tnrLong;
-    document.getElementById('tnrFormatBtn').textContent = tnrLong ? 'Kort' : 'Långt';
+    const sw = document.getElementById('tnrSwitch');
+    sw.classList.toggle('is-long', tnrLong);
+    sw.setAttribute('aria-checked', tnrLong);
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = tnrLong ? 880 : 660;
+        gain.gain.value = 0.03;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
+        osc.stop(ctx.currentTime + 0.06);
+    } catch(e) {}
 }
 function setNow() {
     const now = new Date(), p = n => String(n).padStart(2,'0');
@@ -476,7 +505,8 @@ function generateReport() {
     const parts = [
         'POSTINSTRUKTION (OBSLÖSA)',
         `Till: ${v('till') || '-'}`,
-        `Från: ${v('fran') || '-'}`,
+        `Från:   ${v('fran') || '-'}`,
+        '',
         `TNR:   ${v('tnr') || '-'}`,
         `Plats: ${v('plats') || '-'}`,
     ];
@@ -542,8 +572,42 @@ function resetForm() {
     backToEdit();
 }
 
+// ── Slumpa lösen ─────────────────────────────────────────────────────────────
+const LOSEN_WORDS = [
+    'BORD','BORG','BRAND','BREV','BRON','BUSS','BYXA','DÖRR','FISK','FLAG',
+    'FLOD','FLUGA','FORS','GLAS','GRAN','GRIND','GRUND','GRÄS','GUBBE',
+    'HAMN','HJUL','HUND','HÄST','HÖNA','JÄRN','KORG','KRITA','KRUKA',
+    'KVARN','KÄLLA','LAMM','LADA','LAND','LOCK','LÄDER','LÖNN','MOLN',
+    'MUGG','NYCKEL','OXEL','PANNA','PINNE','PLANK','PLOG','PLÅT','PUMPA',
+    'PÅSE','RÄCKE','RULLA','RYGG','SAND','SIDEN','SJÖN','SKOG','SKRUV',
+    'SKYLT','SLUSS','SNARA','SPIK','SPJUT','SPÅR','STEGE','STEN','STORM',
+    'STRAND','STRECK','SULA','SVANS','SÄCK','SÖDER','TEGEL','TIMME','TORG',
+    'TRÅD','TRÄD','TRÄSK','TUNNA','TÄCKE','TÄLT','VAPEN','VIND','VINGE',
+    'VIRKE','VISP','VÄGG','YXAN','ÄRTA','ÖKEN','ÖRTEN','ÅSKAN'
+];
+const LOSEN_FORBIDDEN_PAIRS = new Set([
+    'SOL-SKEN','IS-BERG','DAG-LJUS','BRAND-FACK','STORM-VIND','VATTEN-FALL',
+    'SKOG-BRAND','SAND-STRAND','FLOD-STRAND','GRAN-SKOG','TRÄD-GREN',
+    'SKOG-TRÄD','TRÄD-SKOG','VIND-STORM','STORM-MOLN','STEN-SAND',
+    'SAND-STEN','HAMN-SJÖN','SJÖN-STRAND','SKOG-GRAN'
+]);
+function slumpaLosen(id1, id2) {
+    let ord1, ord2, attempts = 0;
+    do {
+        ord1 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)];
+        do { ord2 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)]; } while (ord2 === ord1);
+        attempts++;
+    } while (
+        (LOSEN_FORBIDDEN_PAIRS.has(ord1+'-'+ord2) || LOSEN_FORBIDDEN_PAIRS.has(ord2+'-'+ord1))
+        && attempts < 50
+    );
+    document.getElementById(id1).value = ord1;
+    document.getElementById(id2).value = ord2;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     setNow();
+    slumpaLosen('l_ord1', 'l_ord2');
 });
 
 

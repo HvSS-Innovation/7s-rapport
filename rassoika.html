@@ -91,6 +91,17 @@
         .btn-sm { min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; white-space: nowrap; flex-shrink: 0; }
         .btn-time { background: var(--accent-dim); color: var(--accent); border: none; }
         .btn-time:hover { background: var(--border-focus); }
+        /* ── TNR Toggle Switch ─── */
+        .tnr-switch{position:relative;display:inline-flex;align-items:center;width:110px;height:36px;background:var(--accent-dim);border:1px solid var(--border);border-radius:18px;cursor:pointer;transition:border-color .2s;-webkit-tap-highlight-color:transparent;user-select:none;flex-shrink:0}
+        .tnr-switch:hover{border-color:var(--border-focus)}
+        .tnr-switch-thumb{position:absolute;top:3px;left:3px;width:50px;height:28px;background:var(--accent);border-radius:14px;transition:transform .25s cubic-bezier(.4,0,.2,1);pointer-events:none}
+        .tnr-switch.is-long .tnr-switch-thumb{transform:translateX(54px)}
+        .tnr-switch-labels{position:absolute;inset:0;display:flex;pointer-events:none}
+        .tnr-switch-label{flex:1;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;letter-spacing:.05em;transition:color .2s}
+        .tnr-switch .lbl-kort{color:var(--bg-primary)}
+        .tnr-switch .lbl-lang{color:var(--text-muted)}
+        .tnr-switch.is-long .lbl-kort{color:var(--text-muted)}
+        .tnr-switch.is-long .lbl-lang{color:var(--bg-primary)}
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; border: none; }
         .btn-copy:hover { background: var(--info-hover); }
 
@@ -166,7 +177,7 @@
             <div class="input-row" style="margin-top:6px">
                 <input type="text" id="tnr" placeholder="DDHHMMZMånÅÅÅÅ" maxlength="15" pattern="([0-9]{6}|[0-9]{6}[AB][A-Z]{3}[0-9]{4})" autocomplete="off">
                 <button class="btn btn-sm btn-time" onclick="setNow()">Nu</button>
-                <button class="btn btn-sm" id="tnrFormatBtn" onclick="toggleTnrFormat()">Kort</button>
+                <div class="tnr-switch is-long" id="tnrSwitch" onclick="toggleTnrFormat()" role="switch" aria-checked="true" tabindex="0"><div class="tnr-switch-thumb"></div><div class="tnr-switch-labels"><span class="tnr-switch-label lbl-kort">Kort</span><span class="tnr-switch-label lbl-lang">Kompl</span></div></div>
             </div>
             <div class="field-hint">Format: DDHHMM eller DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
         </div>
@@ -282,7 +293,7 @@
                 <textarea id="o_inpass" placeholder="In- och utpassering..."></textarea>
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-top:14px;margin-bottom:6px;">
                     <span class="sub-label" style="margin:0">L&ouml;sen</span>
-                    <button type="button" class="btn-add" style="margin-top:0;padding:5px 12px;font-size:0.78rem" onclick="slumpaLosen()">&#x1F3B2; Slumpa</button>
+                    <button type="button" class="btn-add" style="margin-top:0;padding:5px 12px;font-size:0.78rem" onclick="slumpaLosen('o_los1','o_los2')">&#x1F3B2; Slumpa</button>
                 </div>
                 <div class="input-col2">
                     <div>
@@ -375,12 +386,7 @@
 
     </div><!-- /form-view -->
 
-    <!-- RESULT VIEW -->
     <div class="result-view" id="resultView">
-        <div class="export-toggle" id="exportToggle">
-            <button class="active" onclick="showExport('kvitto')">Statuskvitto</button>
-            <button onclick="showExport('order')">Patrullorder</button>
-        </div>
         <div class="result-header" id="resultHeader">RASSOIKA redo att kopieras</div>
         <pre class="report-output" id="reportOutput"></pre>
         <button class="btn btn-copy" onclick="copyReport()">Kopiera till urklipp</button>
@@ -416,7 +422,20 @@ function lsSet(key, val) {
 let tnrLong = true;
 function toggleTnrFormat() {
     tnrLong = !tnrLong;
-    document.getElementById('tnrFormatBtn').textContent = tnrLong ? 'Kort' : 'Långt';
+    const sw = document.getElementById('tnrSwitch');
+    sw.classList.toggle('is-long', tnrLong);
+    sw.setAttribute('aria-checked', tnrLong);
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = tnrLong ? 880 : 660;
+        gain.gain.value = 0.03;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
+        osc.stop(ctx.currentTime + 0.06);
+    } catch(e) {}
 }
 function setNow() {
     const now = new Date(), p = n => String(n).padStart(2,'0');
@@ -496,133 +515,105 @@ function removeIndela(id) {
 // ============================================================
 // GENERERA RAPPORT
 // ============================================================
-let currentExportMode = 'kvitto';
-let cachedKvitto = '';
-let cachedOrder = '';
-
-function generateKvitto() {
-    const patrullMedl = Array.from(document.getElementById('patrullLista').children).map(c => {
-        const inp = c.querySelector('input');
-        const sel = c.querySelector('select');
-        return inp?.value.trim() ? `${inp.value.trim()} (${sel?.value || ''})` : null;
-    }).filter(Boolean);
-
+function generateReport() {
     const lines = [
-        'KVITTO: PATRULL UTGÅENDE',
-        `Till:          ${v('till') || '-'}`,
-        `Från:          ${v('fran') || '-'}`,
-        `TNR:           ${v('tnr') || '-'}`,
-        `Utgångstid:    ${v('an_stund') || '-'}`,
-        `Styrka:        ${patrullMedl.length || '?'} pers`,
+        'RASSOIKA',
+        `Till: ${v('till') || '-'}`,
+        `Från: ${v('fran') || '-'}`,
         '',
-        'Sammansättning:',
+        `TNR:  ${v('tnr') || '-'}`,
+        '',
+        'R - Repetera'
     ];
-    patrullMedl.forEach(m => lines.push(`  ${m}`));
-    if (v('a_stf_namn')) lines.push(`  Stf: ${v('a_stf_namn')}`);
-    lines.push('');
-
-    const stegNamn = ['R-Repetera', 'A-Avdela', 'S-Samla', 'S-Stridsberedskap', 'O-Orientera', 'I-Indela', 'K-Kontrollera', 'A-Anmäl'];
-    const stegStatus = [
-        document.getElementById('r_rep')?.checked,
-        document.getElementById('a_stf_check')?.checked,
-        document.getElementById('s1_samlad')?.checked,
-        document.getElementById('ss_ammo')?.checked,
-        document.getElementById('o_genomford')?.checked,
-        (document.getElementById('indelaLista')?.children.length || 0) > 0,
-        document.getElementById('k_uppgift')?.checked,
-        document.getElementById('an_anmalt')?.checked,
-    ];
-    lines.push('Stegstatus:');
-    stegNamn.forEach((n, i) => lines.push(`  ${stegStatus[i] ? '\u2713' : '\u2717'} ${n}`));
-
-    return lines.join('\n');
-}
-
-function generateOrder() {
-    const lines = ['PATRULLORDER', ''];
-    lines.push(`Till: ${v('till') || '-'}`);
-    lines.push(`Från: ${v('fran') || '-'}`);
-    lines.push(`TNR:  ${v('tnr') || '-'}`);
-    lines.push('');
-
-    // R – Uppgift
-    if (v('r_uppgift') || v('r_plan')) {
-        lines.push('UPPGIFT:');
-        if (v('r_uppgift')) lines.push(v('r_uppgift'));
-        if (v('r_plan')) { lines.push(''); lines.push('Plan:'); lines.push(v('r_plan')); }
-        lines.push('');
+    
+    // R - Repetera
+    const r_uppg = v('r_uppgift');
+    const r_plan = v('r_plan');
+    const chkArr = [];
+    if (document.getElementById('r_chk_min')?.checked) chkArr.push('Mineringar');
+    if (document.getElementById('r_chk_fiende')?.checked) chkArr.push('Fiendeläge');
+    if (document.getElementById('r_chk_egna')?.checked) chkArr.push('Egna förband');
+    if (document.getElementById('r_chk_terrang')?.checked) chkArr.push('Terräng');
+    if (document.getElementById('r_chk_vader')?.checked) chkArr.push('Väder');
+    if (r_uppg || r_plan || chkArr.length > 0) {
+        if (chkArr.length > 0) lines.push('  Klarlagt: ' + chkArr.join(', '));
+        if (r_uppg) lines.push('  Uppgift: ' + r_uppg);
+        if (r_plan) lines.push('  Plan: ' + r_plan);
+    } else {
+        lines.push('-');
     }
-
-    // O – Orientering (main content)
-    lines.push('ORIENTERING:');
-    if (v('o_fiende')) { lines.push('Fienden:'); lines.push(v('o_fiende')); lines.push(''); }
-    if (v('o_egna')) { lines.push('Egna förband:'); lines.push(v('o_egna')); lines.push(''); }
-    if (v('o_uppgift')) { lines.push('Uppgift & lösningsidé:'); lines.push(v('o_uppgift')); lines.push(''); }
-    if (v('o_inpass')) { lines.push('In- och utpassering:'); lines.push(v('o_inpass')); lines.push(''); }
-    if (v('o_los1') || v('o_los2')) lines.push(`Lösen: ${v('o_los1').toUpperCase()} – ${v('o_los2').toUpperCase()}`);
-    if (v('o_samb_tecken')) { lines.push('Egna tecken:'); lines.push(v('o_samb_tecken')); lines.push(''); }
-    if (v('o_atersaml')) { lines.push('Återsamlingsplatser:'); lines.push(v('o_atersaml')); lines.push(''); }
-
-    // I – Indelning
-    const indelningar = Array.from(document.getElementById('indelaLista').children).map(c => {
-        const inputs = c.querySelectorAll('input');
-        const namn = inputs[0]?.value.trim() || '';
-        const uppg = inputs[1]?.value.trim() || '';
-        return namn ? `${namn}: ${uppg}` : null;
-    }).filter(Boolean);
-    if (indelningar.length) {
-        lines.push('INDELNING:');
-        indelningar.forEach(i => lines.push(`  ${i}`));
-        if (v('i_uppsikt')) lines.push(`Uppsikt: ${v('i_uppsikt')}`);
-        lines.push('');
-    }
-
-    // Sammansättning
+    
+    // A - Avdela
+    lines.push('');
+    lines.push('A - Avdela');
     const patrullMedl = Array.from(document.getElementById('patrullLista').children).map(c => {
         const inp = c.querySelector('input');
         const sel = c.querySelector('select');
         return inp?.value.trim() ? `${inp.value.trim()} (${sel?.value || ''})` : null;
     }).filter(Boolean);
     if (patrullMedl.length) {
-        lines.push('SAMMANSÄTTNING:');
         patrullMedl.forEach(m => lines.push(`  ${m}`));
         if (v('a_stf_namn')) lines.push(`  Stf: ${v('a_stf_namn')}`);
-        lines.push('');
+    } else {
+        lines.push('-');
     }
 
-    return lines.join('\n');
-}
+    // S - Samla
+    lines.push('');
+    lines.push('S - Samla');
+    lines.push(v('s1_plats') ? `  Plats: ${v('s1_plats')}` : '-');
 
-function generateReport() {
-    cachedKvitto = generateKvitto();
-    cachedOrder = generateOrder();
-    currentExportMode = 'kvitto';
-    document.getElementById('reportOutput').textContent = cachedKvitto;
+    // S - Stridsberedskap
+    lines.push('');
+    lines.push('S - Stridsberedskap');
+    lines.push(v('ss_ovrigt') ? `  Övrigt mtrl: ${v('ss_ovrigt')}` : '-');
+
+    // O - Orientera
+    lines.push('');
+    lines.push('O - Orientera');
+    let o_has = false;
+    if (v('o_fiende')) { lines.push('  Fienden: ' + v('o_fiende')); o_has = true; }
+    if (v('o_egna')) { lines.push('  Egna: ' + v('o_egna')); o_has = true; }
+    if (v('o_uppgift')) { lines.push('  Uppgift/Idé: ' + v('o_uppgift')); o_has = true; }
+    if (v('o_inpass')) { lines.push('  In/Utpassering: ' + v('o_inpass')); o_has = true; }
+    if (v('o_los1') || v('o_los2')) { lines.push(`  Lösen: ${v('o_los1').toUpperCase()} - ${v('o_los2').toUpperCase()}`); o_has = true; }
+    if (v('o_samb_tecken')) { lines.push('  Egna tecken: ' + v('o_samb_tecken')); o_has = true; }
+    if (v('o_atersaml')) { lines.push('  Återsamlingsplatser: ' + v('o_atersaml')); o_has = true; }
+    lines.push('  Visat på: ' + v('o_visat'));
+
+    // I - Indela
+    lines.push('');
+    lines.push('I - Indela');
+    const indelningar = Array.from(document.getElementById('indelaLista').children).map(c => {
+        const inputs = c.querySelectorAll('input');
+        const namn = inputs[0]?.value.trim() || '';
+        const uppg = inputs[1]?.value.trim() || '';
+        return namn ? `  ${namn}: ${uppg}` : null;
+    }).filter(Boolean);
+    if (indelningar.length) {
+        indelningar.forEach(i => lines.push(i));
+        if (v('i_uppsikt')) lines.push(`  Uppsikt: ${v('i_uppsikt')}`);
+    } else {
+        lines.push('-');
+    }
+
+    // K - Kontrollera
+    lines.push('');
+    lines.push('K - Kontrollera');
+    lines.push(v('k_noter') ? `  Noteringar: ${v('k_noter')}` : '-');
+
+    // A - Anmäl
+    lines.push('');
+    lines.push('A - Anmäl');
+    lines.push(v('an_till') ? `  Klar anmäld till: ${v('an_till')}` : '-');
+    if (v('an_stund')) lines.push(`  Utgångstid: ${v('an_stund')}`);
+    
+    document.getElementById('reportOutput').textContent = lines.join('\n');
     document.getElementById('resultHeader').textContent = 'RASSOIKA redo att kopieras';
-    // Reset toggle buttons
-    var btns = document.querySelectorAll('#exportToggle button');
-    btns[0].classList.add('active');
-    btns[1].classList.remove('active');
-
+    
     document.getElementById('formView').classList.add('hidden');
     document.getElementById('resultView').classList.add('active');
     window.scrollTo(0, 0);
-}
-
-function showExport(mode) {
-    currentExportMode = mode;
-    var btns = document.querySelectorAll('#exportToggle button');
-    if (mode === 'kvitto') {
-        btns[0].classList.add('active');
-        btns[1].classList.remove('active');
-        document.getElementById('reportOutput').textContent = cachedKvitto;
-        document.getElementById('resultHeader').textContent = 'RASSOIKA redo att kopieras';
-        } else {
-        btns[1].classList.add('active');
-        btns[0].classList.remove('active');
-        document.getElementById('reportOutput').textContent = cachedOrder;
-        document.getElementById('resultHeader').textContent = 'RASSOIKA redo att kopieras';
-    }
 }
 
 // ============================================================
@@ -678,42 +669,39 @@ if ('serviceWorker' in navigator) {
 // ── Slumpa lösen ─────────────────────────────────────────────────────────────
 const LOSEN_WORDS = [
     'BORD','BORG','BRAND','BREV','BRON','BUSS','BYXA','DÖRR','FISK','FLAG',
-    'FLOD','FLUGA','FORS','FÅNGA','GLAS','GRAN','GRIND','GRUND','GRÄS','GUBBE',
-    'HAMN','HJUL','HUND','HUSET','HÄST','HÖNA','JÄRN','KORG','KRITA','KRUKA',
-    'KVARN','KYRKL','KÄLLA','KÖRV','LAMM','LADA','LAND','LOCK','LUFTA','LYSA',
-    'LÄDER','LÖNN','METALL','MOLN','MUGG','MÖRKT','NYCKEL','NÄTET','OXEL','PANNA',
-    'PINNE','PLANK','PLOG','PLÅT','PUMPA','PÅSE','RÄCKE','RÄVAR','RULLA','RYGG',
-    'SAND','SIDEN','SJÖN','SKOG','SKRUV','SKYLT','SLUSS','SMUTS','SNARA','SPIK',
-    'SPJUT','SPÅR','STEGE','STEN','STORM','STRAND','STRECK','STRÅ','SULA','SVANS',
-    'SVING','SÄCK','SÖDER','TEGEL','TIMME','TORG','TORKA','TRÅD','TRÄD','TRÄSK',
-    'TUNNA','TÄCKE','TÄLT','UGNEN','VAPEN','VATTEN','VIND','VINGE','VIRKE','VISP',
-    'VRÄKA','VÄGG','VÄLT','VÄMJA','YXAN','ÄRTA','ÖKEN','ÖPPNA','ÖRTEN','ÅSKAN'
+    'FLOD','FLUGA','FORS','GLAS','GRAN','GRIND','GRUND','GRÄS','GUBBE',
+    'HAMN','HJUL','HUND','HÄST','HÖNA','JÄRN','KORG','KRITA','KRUKA',
+    'KVARN','KÄLLA','LAMM','LADA','LAND','LOCK','LÄDER','LÖNN','MOLN',
+    'MUGG','NYCKEL','OXEL','PANNA','PINNE','PLANK','PLOG','PLÅT','PUMPA',
+    'PÅSE','RÄCKE','RULLA','RYGG','SAND','SIDEN','SJÖN','SKOG','SKRUV',
+    'SKYLT','SLUSS','SNARA','SPIK','SPJUT','SPÅR','STEGE','STEN','STORM',
+    'STRAND','STRECK','SULA','SVANS','SÄCK','SÖDER','TEGEL','TIMME','TORG',
+    'TRÅD','TRÄD','TRÄSK','TUNNA','TÄCKE','TÄLT','VAPEN','VIND','VINGE',
+    'VIRKE','VISP','VÄGG','YXAN','ÄRTA','ÖKEN','ÖRTEN','ÅSKAN'
 ];
-
-// Naturliga par som ska undvikas
 const LOSEN_FORBIDDEN_PAIRS = new Set([
     'SOL-SKEN','IS-BERG','DAG-LJUS','BRAND-FACK','STORM-VIND','VATTEN-FALL',
-    'SKOG-BRAND','SAND-STRAND','FLOD-STRAND','GRAN-SKOG','TRÄD-GREN'
+    'SKOG-BRAND','SAND-STRAND','FLOD-STRAND','GRAN-SKOG','TRÄD-GREN',
+    'SKOG-TRÄD','TRÄD-SKOG','VIND-STORM','STORM-MOLN','STEN-SAND',
+    'SAND-STEN','HAMN-SJÖN','SJÖN-STRAND','SKOG-GRAN'
 ]);
-
-function slumpaLosen() {
-    const words = [...LOSEN_WORDS];
-    let ord1, ord2;
-    let attempts = 0;
+function slumpaLosen(id1, id2) {
+    let ord1, ord2, attempts = 0;
     do {
-        ord1 = words[Math.floor(Math.random() * words.length)];
-        do { ord2 = words[Math.floor(Math.random() * words.length)]; } while (ord2 === ord1);
+        ord1 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)];
+        do { ord2 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)]; } while (ord2 === ord1);
         attempts++;
     } while (
-        (LOSEN_FORBIDDEN_PAIRS.has(`${ord1}-${ord2}`) || LOSEN_FORBIDDEN_PAIRS.has(`${ord2}-${ord1}`))
+        (LOSEN_FORBIDDEN_PAIRS.has(ord1+'-'+ord2) || LOSEN_FORBIDDEN_PAIRS.has(ord2+'-'+ord1))
         && attempts < 50
     );
-    document.getElementById('o_los1').value = ord1;
-    document.getElementById('o_los2').value = ord2;
+    document.getElementById(id1).value = ord1;
+    document.getElementById(id2).value = ord2;
 }
 
 // ── Feedback-länk ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function() {
+    slumpaLosen('o_los1', 'o_los2');
     const a = document.createElement('a');
     a.href = 'https://github.com/gitjoda71/7s-rapport/issues/new?title=%5BBeta-Feedback%5D%20RASSOIKA&body=**Form%3A**%20RASSOIKA%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**';
     a.target = '_blank'; a.rel = 'noopener noreferrer';

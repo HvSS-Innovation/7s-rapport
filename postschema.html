@@ -65,6 +65,17 @@
         .btn-sm { min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; white-space: nowrap; flex-shrink: 0; }
         .btn-time { background: var(--accent-dim); color: var(--accent); border: none; }
         .btn-time:hover { background: var(--border-focus); }
+        /* ── TNR Toggle Switch ─── */
+        .tnr-switch{position:relative;display:inline-flex;align-items:center;width:110px;height:36px;background:var(--accent-dim);border:1px solid var(--border);border-radius:18px;cursor:pointer;transition:border-color .2s;-webkit-tap-highlight-color:transparent;user-select:none;flex-shrink:0}
+        .tnr-switch:hover{border-color:var(--border-focus)}
+        .tnr-switch-thumb{position:absolute;top:3px;left:3px;width:50px;height:28px;background:var(--accent);border-radius:14px;transition:transform .25s cubic-bezier(.4,0,.2,1);pointer-events:none}
+        .tnr-switch.is-long .tnr-switch-thumb{transform:translateX(54px)}
+        .tnr-switch-labels{position:absolute;inset:0;display:flex;pointer-events:none}
+        .tnr-switch-label{flex:1;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;letter-spacing:.05em;transition:color .2s}
+        .tnr-switch .lbl-kort{color:var(--bg-primary)}
+        .tnr-switch .lbl-lang{color:var(--text-muted)}
+        .tnr-switch.is-long .lbl-kort{color:var(--text-muted)}
+        .tnr-switch.is-long .lbl-lang{color:var(--bg-primary)}
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; }
         .btn-copy:hover { background: var(--info-hover); }
         .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
@@ -172,7 +183,7 @@
             <div class="input-row" style="margin-top:6px">
                 <input type="text" id="tnr" placeholder="DDHHMMZMånÅÅÅÅ" maxlength="15" pattern="([0-9]{6}|[0-9]{6}[AB][A-Z]{3}[0-9]{4})" autocomplete="off">
                 <button class="btn btn-sm btn-time" onclick="setNow()">Nu</button>
-                <button class="btn btn-sm" id="tnrFormatBtn" onclick="toggleTnrFormat()">Kort</button>
+                <div class="tnr-switch is-long" id="tnrSwitch" onclick="toggleTnrFormat()" role="switch" aria-checked="true" tabindex="0"><div class="tnr-switch-thumb"></div><div class="tnr-switch-labels"><span class="tnr-switch-label lbl-kort">Kort</span><span class="tnr-switch-label lbl-lang">Kompl</span></div></div>
             </div>
             <div class="field-hint">Format: DDHHMM eller DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
         </div>
@@ -193,11 +204,17 @@
             <input type="text" id="sagesman" placeholder="Ex: Per Johansson, 2a Plut" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
             <div class="saved-items" id="savedSagesman"></div>
 
-            <div style="margin-top:12px">
-                <label for="totalTimmar">Totalt antal timmar</label>
-                <input type="number" id="totalTimmar" value="9" min="1" max="168" style="margin-top:6px">
+            <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px">
+                <div>
+                    <label for="totalTimmar">Totalt antal timmar</label>
+                    <input type="number" id="totalTimmar" value="9" min="1" max="168" style="margin-top:6px">
+                </div>
+                <div>
+                    <label for="passLangd">Passlängd (timmar)</label>
+                    <input type="number" id="passLangd" value="1" min="0.5" max="24" step="0.5" style="margin-top:6px">
+                </div>
             </div>
-            <div class="field-hint">Varje pass är 50, 60 eller 70 min (slumpas). Grpc alltid 60 min. Förare/RPAS 60–70 min.</div>
+            <div class="field-hint">Anger längden per vaktpass. Grpc/Förare/RPAS beräknas in enligt vilokrav.</div>
         </div>
 
         <div class="form-group section-group">
@@ -326,7 +343,20 @@ function addSoldat(value = '', doFocus = true) {
 let tnrLong = true;
 function toggleTnrFormat() {
     tnrLong = !tnrLong;
-    document.getElementById('tnrFormatBtn').textContent = tnrLong ? 'Kort' : 'Långt';
+    const sw = document.getElementById('tnrSwitch');
+    sw.classList.toggle('is-long', tnrLong);
+    sw.setAttribute('aria-checked', tnrLong);
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = tnrLong ? 880 : 660;
+        gain.gain.value = 0.03;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
+        osc.stop(ctx.currentTime + 0.06);
+    } catch(e) {}
 }
 function setNow() {
     const now = new Date(), p = n => String(n).padStart(2,'0');
@@ -360,6 +390,7 @@ function genererSchema() {
     if (!tnrVal || tnrVal.length < 6) { alert('Ange TNR (DDHHMM) för schemats starttid.'); return; }
     const startTid = parseTNR(tnrVal);
     const total = parseInt(document.getElementById('totalTimmar').value) || 36;
+    const passLangdMin = (parseFloat(document.getElementById('passLangd').value) || 1) * 60;
 
     poster = Array.from(document.querySelectorAll('#posterLista input')).map(i => i.value.trim()).filter(Boolean);
     const soldatRows = Array.from(document.querySelectorAll('#soldatLista .list-row'));
@@ -392,12 +423,12 @@ function genererSchema() {
                         ? soldater.filter(sol => !isSpecial(sol))
                         : soldater;
 
-    // Uppskatta antal pass (snitt 60 min) för att placera TIDIGT/SIST-soldater
-    const estimatedSlots = Math.round(total * 60 / 60);
+    // Uppskatta antal pass för att placera TIDIGT/SIST-soldater
+    const estimatedSlots = Math.round(total * 60 / passLangdMin);
 
     // Uteslut Förare/RPAS om schemat inte ger dem tillräcklig vila
     schedulableSpecials = specialPool.filter(sol => {
-        const viloPass = Math.ceil(soldatMinVila[sol] * 60 / 60); // antal pass vila
+        const viloPass = Math.ceil(soldatMinVila[sol] * 60 / passLangdMin); // antal pass vila
         return viloPass < estimatedSlots;
     });
 
@@ -434,7 +465,7 @@ function genererSchema() {
         if (specialEntry) {
             nyPerson = specialEntry[0];
             const role = soldatRoll[nyPerson];
-            passMinuter = (role === 'grpc') ? 60 : [60, 70][Math.floor(Math.random() * 2)];
+            passMinuter = passLangdMin; // Använder användarens inställda passlängd
         } else {
             // Välj ordinarie soldat med längst vila
             const candidates = activePool.filter(sol => !busyNow.has(sol));
@@ -446,7 +477,7 @@ function genererSchema() {
                 return la - lb;
             });
             nyPerson = candidates[0] || activePool.find(sol => !busyNow.has(sol)) || activePool[0];
-            passMinuter = [50, 60, 70][Math.floor(Math.random() * 3)];
+            passMinuter = passLangdMin; // Använder användarens inställda passlängd
         }
 
         // Kapa mot schemaslutet
@@ -649,6 +680,7 @@ function exportSchema() {
     let text = `VAKTSCHEMA – ${enhet || '[enhet saknas]'}\n`;
     text += `Till: ${till || '-'}\n`;
     text += `Från: ${fran || '-'}\n`;
+    text += `\n`;
     text += `TNR:  ${tnr || '-'}\n`;
     text += `Ansvarig: ${sagesman || '-'}\n\n`;
 
