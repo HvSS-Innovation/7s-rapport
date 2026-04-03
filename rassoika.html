@@ -182,6 +182,13 @@
             </summary>
             <div class="step-content">
                 <p class="step-note">Uppgift repeterad</p>
+                <div style="margin:8px 0">
+                    <label><input type="checkbox" id="r_chk_min"> Mineringar</label><br>
+                    <label><input type="checkbox" id="r_chk_fiende"> Fiendel&auml;ge</label><br>
+                    <label><input type="checkbox" id="r_chk_egna"> Egna f&ouml;rband</label><br>
+                    <label><input type="checkbox" id="r_chk_terrang"> Terr&auml;ng</label><br>
+                    <label><input type="checkbox" id="r_chk_vader"> V&auml;der</label>
+                </div>
                 <label for="r_uppgift" style="margin-top:8px">Uppgiftens k&auml;rna</label>
                 <textarea id="r_uppgift" placeholder="Uppgiftens k&auml;rna &mdash; fiende, mineringar, egna f&ouml;rband, terr&auml;ng, v&auml;der, in/utpassering, l&ouml;sen, rapportering..."></textarea>
                 <label for="r_plan" style="margin-top:10px">Plan f&ouml;r l&ouml;sning</label>
@@ -296,6 +303,7 @@
                     <option value="Karta">Karta</option>
                     <option value="Terr&auml;ngskiss">Terr&auml;ngskiss</option>
                     <option value="I terr&auml;ngen">I terr&auml;ngen</option>
+                    <option value="Terr&auml;ngmodell">Terr&auml;ngmodell</option>
                 </select>
             </div>
         </details>
@@ -336,7 +344,7 @@
                 <p class="step-note">Alla vet sin uppgift (verifierat via fr&aring;gor)</p>
                 <p class="step-note">Utrustning s&auml;ker &mdash; skramlar ej, inga reflexer</p>
                 <p class="step-note">Sekretesshandlingar kvarlämnade/f&ouml;rst&ouml;rda</p>
-                <p class="step-note">&Ouml;vning av moment genomf&ouml;rd (vid tid/behov)</p>
+                <p class="step-note">&Ouml;vning av strid/moment genomf&ouml;rd (rehearsal)</p>
                 <label for="k_noter" style="margin-top:8px">Noteringar fr&aring;n kontrollen</label>
                 <textarea id="k_noter" rows="2" placeholder="Noteringar fr&aring;n kontrollen..."></textarea>
             </div>

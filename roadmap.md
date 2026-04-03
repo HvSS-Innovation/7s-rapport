@@ -297,10 +297,10 @@ Fördelarna med ett eget repo:
 
 ### RASSOIKA – Förbättringar från blogganalys
 Källa: hemvarn.wordpress.com (RASSOIKA-artikel)
-- [ ] **O – Terrängmodell som orienteringsval:** Lägg till "Terrängmodell" som fjärde alternativ i select-fältet `o_visat` (idag: Karta / Terrängskiss / I terrängen). Terrängmodell (sandlåda) är en vanlig metod vid patrullorder.
 - [x] **I – Fördefinierade roller som snabbval:** Lägg till snabbvalsknappar för vanliga roller (Orienterare, Rapportkarl, Spejare, Säkerhetsman) i indelningssteget, så man slipper skriva fritext varje gång.
-- [ ] **R – Checkpunkter för klargörande:** Lägg till checkpunkter under Repetera-steget: mineringar, fiendeläge, egna förband, terräng, väder — så att patrullchefen inte missar att klargöra dessa.
-- [ ] **K – Förtydliga övningsmoment:** Byt texten "Övning av moment genomförd (vid tid/behov)" till "Övning av strid/moment genomförd (rehearsal)" för att bättre matcha reglementets formulering.
+- [x] **O – Terrängmodell som orienteringsval:** Lagt till "Terrängmodell" som fjärde alternativ i `o_visat`-selecten.
+- [x] **R – Checkpunkter för klargörande:** Lagt till checkboxar under Repetera-steget: mineringar, fiendeläge, egna förband, terräng, väder — som minnesstöd för patrullchefen.
+- [x] **K – Förtydliga övningsmoment:** Bytt texten till "Övning av strid/moment genomförd (rehearsal)".
 
 ### Automatiserad Feedback-loop (CRM för fältet)
 - [x] **Direkt tackmail:** Skicka ett automatiskt "Tack för din rapport" direkt vid inskickat formulär. Använd EmailJS eller Formspree för att hantera detta utan backend.
@@ -319,7 +319,54 @@ Börja med Fas 1: sätt upp filstrukturen (`index.html`, `style.css`, `app.js`, 
 Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemål för framtiden.
 
 ### 📝 Nya / Öppna
-*(Inga öppna issues för tillfället)*
+*   **Automatisk ologisk lösendragning i OBSLÖSA och RASSOIKA**
+    *   *Kravspecifikation:* Lösenordsfälten ska slumpas fram automatiskt när sidan laddas, men även ha en knapp för att slumpa fram nya ord manuellt. 
+    *   Orden måste uppfylla följande kryptologiska principer:
+        *   Alltid exakt tvåstaviga svenska ord.
+        *   Inga egennamn.
+        *   Kombinationen av ord får inte ha en logisk eller naturlig följd (t.ex. ett adjektiv/adverb får inte komma före ett substantiv/verb så det upplevs som en mening). Det ska vara omaka ordklasser.
+*   **Pedagogisk toggle/switch för TNR (Kort/Långt)**
+    *   *Kravspecifikation:* Knappen som växlar TNR mellan kort och långt format ska bli ett "slide"-reglage för ökad tydlighet (Kort till vänster, Långt till höger).
+    *   Ska innehålla en simpel glidande CSS-animation.
+    *   Ett mycket kort diskret "slide"-ljud spelas upp när värdet växlas.
+    *   Ordet och placeringen inuti knappen ändras visuellt när den klickas, och samtidigt ändras fältets format/hjälptext för att förstärka den pedagogiska effekten. Inget överdrivet, bara enkla UX-förbättringar för fältbruk.
+*   **Ta bort fältet 'Plats' i OBO**
+    *   *Kravspecifikation:* Fältet 'Plats' ska plockas bort helt från OBO-formuläret, då det anses överflödigt.
+*   **Enhetligt radbryte i rapportutskriften för resterande formulär**
+    *   *Kravspecifikation:* Lägg in ett extra, manuellt radbryte (blankrad) mellan blocket med avsändare (`Från: -`) och `TNR: ...` i de kopierade sammanställningarna. Gäller följande 7 formulär: OBSLÖSA, FORS, PEDARS, SCHEMA, EOBUSARE, OBO och RASSOIKA. Målet är att matcha utseendet från 7S, WHAT, SCRIM, WEFT och A-H.
+*   **Enhetlig linjär utskrift i RASSOIKA (ta bort mall-val)**
+    *   *Kravspecifikation:* Ta bort knapparna/valen för "Statuskvitto" och "Patrullorder" helt och hållet från RASSOIKA. Användaren ska inte kunna välja mall för hur den genererade texten ska se ut. Istället ska det vid klick på "Generera" alltid komma ut ett och samma ständiga format (`R-A-S-S-O-I-K-A`) på följande sätt:
+        ```text
+        RASSOIKA
+        Till: -
+        Från: -
+
+        TNR:  [t.ex. 032108BAPR2026]
+
+        R - Repetera
+        -
+
+        A - Avdela
+        -
+
+        S - Samla
+        -
+
+        S - Stridsberedskap
+        -
+
+        O - Orientera
+        -
+
+        I - Indela
+        -
+
+        K - Kontrollera
+        -
+
+        A - Anmäl
+        -
+        ```
 
 ### ✅ Åtgärdade
 *   **Automatisk konvertering till versaler för specifika fält**
