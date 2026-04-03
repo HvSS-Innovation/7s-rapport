@@ -218,11 +218,11 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                     <div>
                         <label for="till" style="margin-bottom:6px">Till</label>
-                        <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                        <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
                     </div>
                     <div>
                         <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
-                        <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
+                        <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
                     </div>
                 </div>
             </div>
@@ -337,7 +337,7 @@
                     <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSagesman')" aria-label="Info om Sagesman">i</button>
                 </div>
                 <div class="info-text" id="infoSagesman">Format: NIN 111. 1a p, 2a grp. För- och Efternamn<br><u>Gu</u>nnarsson, <u>D</u>aniel → GUD</div>
-                <input type="text" id="sagesman" placeholder="GUD 111. 3e p, 2a grp." autocomplete="off">
+                <input type="text" id="sagesman" placeholder="GUD 111. 3e p, 2a grp." autocomplete="off" oninput="this.value = this.value.toUpperCase()">
                 <div class="field-hint">(Namnkod = de två första bokstäverna i efternamnet + första bokstaven i förnamnet)</div>
                 <div class="saved-items" id="savedSagesman"></div>
             </div>

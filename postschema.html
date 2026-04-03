@@ -157,11 +157,11 @@
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
                 <div>
                     <label for="till" style="margin-bottom:6px">Till</label>
-                    <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off">
+                    <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
                 </div>
                 <div>
                     <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
-                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off">
+                    <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
                 </div>
             </div>
         </div>
@@ -190,7 +190,7 @@
             <input type="text" id="enhet" placeholder="Ex: 2. Pluton, 3. Kompaniet" autocomplete="off">
 
             <label for="sagesman" style="margin-top:12px">Schemaansvarig</label>
-            <input type="text" id="sagesman" placeholder="Ex: Per Johansson, 2a Plut" autocomplete="off">
+            <input type="text" id="sagesman" placeholder="Ex: Per Johansson, 2a Plut" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
             <div class="saved-items" id="savedSagesman"></div>
 
             <div style="margin-top:12px">

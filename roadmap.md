@@ -322,6 +322,8 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
 *(Inga öppna issues för tillfället)*
 
 ### ✅ Åtgärdade
+*   **Automatisk konvertering till versaler för specifika fält**
+    *   Fälten för "Till", "Från" och "Sagesman" konverterar nu automatiskt all inmatning till versaler (stora bokstäver) i farten. Uppdaterat i alla berörda formulär.
 *   **Stöd för både gammalt och nytt tidsnummer**
     *   Appen stöder nu både kort format (`DDHHMM`) och fullständigt format (`DDHHMMZMånÅÅÅÅ`) i validering (`pattern`) och hjälptexter i alla 12 formulär.
 *   **[Issue #1] byt plats på Från och Till**

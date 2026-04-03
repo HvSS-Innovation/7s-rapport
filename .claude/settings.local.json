@@ -38,7 +38,15 @@
       "Bash(for f:*)",
       "Bash(do sed:*)",
       "Bash(sed -i \"s|    if \\(c\\) c.appendChild\\(a\\);|    if \\(c\\) { c.appendChild\\(p\\); c.appendChild\\(a\\); }|\" \"$f\")",
-      "Bash(echo \"OK: $f\")"
+      "Bash(echo \"OK: $f\")",
+      "Bash(grep -l \"Från\\\\|Till\" \"c:\\\\0-Dropbox\\\\Dropbox\\\\1oels dokument\\\\Antigravity\\\\hv\"/*.html)",
+      "Bash(ls -la \"c:\\\\0-Dropbox\\\\Dropbox\\\\1oels dokument\\\\Antigravity\\\\hv\"/*.css)",
+      "Bash(grep -l \"Från\\\\|Till\" *.html)",
+      "Bash(grep -n \"grid-template-columns.*1fr 1fr\" *.html)",
+      "Bash(grep -n \"pattern=\" *.html)",
+      "Bash(wc -l *.html)",
+      "Bash(grep -n \"function setNow\\\\|function setCurrentTime\" *.html)",
+      "Bash(grep -c \"<script>\" *.html)"
     ]
   }
 }
