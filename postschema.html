@@ -682,16 +682,7 @@ function exportSchema() {
     text += `Ansvarig: ${sagesman || '-'}\n\n`;
 
     const luckor = [...new Set(schema.map(s => s.tid))];
-    luckor.forEach((tid, ti) => {
-        // Avlösningskedja före varje skift utom det första
-        const rel = reliefs.find(r => r.tidIdx === ti);
-        if (rel) {
-            text += `--- Avlösning kl ${rel.wakeTimeStr} ---\n`;
-            text += `  1. ${rel.utgEld} (${rel.eldNamn}) väcker ${rel.inkommande}\n`;
-            text += `  2. ${rel.inkommande} avlöser ${rel.utgVarn} (${rel.varnNamn})\n`;
-            text += `  3. ${rel.utgVarn} avlöser ${rel.utgEld} (${rel.eldNamn})\n`;
-            text += `  4. ${rel.utgEld} till vila\n\n`;
-        }
+    luckor.forEach((tid) => {
         text += `${tid}\n`;
         poster.forEach(post => {
             const entry = schema.find(s => s.tid === tid && s.post === post);
