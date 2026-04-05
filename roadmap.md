@@ -234,6 +234,19 @@ Fördelarna med ett eget repo:
 - [x] Klona knappen "+ Lägg till soldat" så att den visas både **ovanför** och **under** soldatlistan (idag finns den bara under). Samma sak bör gälla "+ Lägg till post" om listan växer.
 - [x] Soldatfälten ska ha löpande nummer som defaultvärde (1, 2, 3 … i steg med listan). När man klickar i fältet markeras siffran automatiskt (`input.select()` på `focus`-event) så att man direkt kan skriva ett namn utan att radera först. Samma princip bör gälla namnfälten för poster.
 
+#### 🛡️ Förbättringar av viloregler (Feedback från fältet)
+
+- [ ] **Viloregel på postnivå (inte personnivå):** Flytta logiken för viloregler från den enskilda personen till den specifika posten. Vid skapande av t.ex. eldpostlista krävs viloregel, men vid infartspost dagtid är det inte lika nödvändigt. Nuvarande personbundna regler skapar onödiga begränsningar.
+    - *Implementering:* Varje post i `posterLista` bör ha en toggle eller checkbox för att aktivera/avaktivera vilokrav. Schemaläggningsmotorn respekterar då vilokravet per post snarare än globalt per person.
+
+- [x] **Justerbara parametrar för vila:** Möjliggör inställning av specifik vilotid (i timmar) per post, istället för fasta 6h eller 3+5 som gäller för fordonsförare och liknande.
+    - *Exempel:* En soldat som är infartspost dagtid kan behöva 2 timmars vila innan nästa förläggningspost. Implementerat som ett numeriskt fält (Vila h) vid varje post i posterLista. 0 = inget krav.
+    - *Bakgrund:* Fastställd viloregel 6h/3+5 gäller fordonsförare — andra posttyper kan ha lägre eller inga krav.
+
+- [ ] **Logik för gruppvis skiftgång (intern rotation):** Stöd för scenarion där en grupp ansvarar för en postering under t.ex. 6–8 timmar och roterar internt (t.ex. 1 h per person), utan individuella vilokrav mellan de korta interna passen.
+    - *Krav:* Individuell viloregel ska inte tillämpas på intern rotation inom gruppen, så länge gruppens totala dygnsvila uppfylls i enlighet med dygnsschemat.
+    - *Utred:* Räcker en öppen lista för signering i dessa fall, eller krävs en lista i förväg? Implementera ett alternativt schemaläggningsläge för gruppansvar med öppen signering.
+
 ### Alla formulär – Rapportformat vid tomma fält (pedagogiskt hjälpmedel)
 - [x] Genererad rapport ska **alltid visa alla rubriker/fältnamn**, även när fältet är tomt — visa `-` som platshållare. Fungerar som ett pedagogiskt hjälpmedel: en tom rapport visar rapportens struktur och vad som ska fyllas i.
 - Gäller samtliga formulär:
@@ -318,24 +331,25 @@ Börja med Fas 1: sätt upp filstrukturen (`index.html`, `style.css`, `app.js`, 
 
 Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemål för framtiden.
 
-### 📝 Nya / Öppna
+### 📝 Nya / Öppna (Arbetsfördelning)
+
+#### 🎨 Uppgifter för UX/UI-Specialist (Claude Opus Web-gränssnitt)
+> **INSTRUKTION TILL CLAUDE:** Eftersom projektet består av 12 separata HTML-filer, ska du **inte** be användaren klistra in koden manuellt överallt. 
+> Ditt mål är att utveckla logiken/stilarna som självständiga kodblock (t.ex. en JS-funktion, eller en CSS-klass). Mata ut koden komplett i chatten, och skriv därefter en prompt som användaren kan ge till sin "lokala agent" (Antigravity) som säger: *"Applicera denna CSS/JS i filen X, eller sprid ut denna kod över de 12 html-filerna"*. På så sätt elimineras risken för slarvfel.
+
 *   **Automatisk ologisk lösendragning i OBSLÖSA och RASSOIKA**
     *   *Kravspecifikation:* Lösenordsfälten ska slumpas fram automatiskt när sidan laddas, men även ha en knapp för att slumpa fram nya ord manuellt. 
-    *   Orden måste uppfylla följande kryptologiska principer:
-        *   Alltid exakt tvåstaviga svenska ord.
-        *   Inga egennamn.
-        *   Kombinationen av ord får inte ha en logisk eller naturlig följd (t.ex. ett adjektiv/adverb får inte komma före ett substantiv/verb så det upplevs som en mening). Det ska vara omaka ordklasser.
+    *   Orden måste uppfylla följande kryptologiska principer: Alltid exakt tvåstaviga svenska ord, inga egennamn, och kombinationen av ord får inte ha en logisk följd (omaka ordklasser).
 *   **Pedagogisk toggle/switch för TNR (Kort/Långt)**
-    *   *Kravspecifikation:* Knappen som växlar TNR mellan kort och långt format ska bli ett "slide"-reglage för ökad tydlighet (Kort till vänster, Långt till höger).
-    *   Ska innehålla en simpel glidande CSS-animation.
-    *   Ett mycket kort diskret "slide"-ljud spelas upp när värdet växlas.
-    *   Ordet och placeringen inuti knappen ändras visuellt när den klickas, och samtidigt ändras fältets format/hjälptext för att förstärka den pedagogiska effekten. Inget överdrivet, bara enkla UX-förbättringar för fältbruk.
+    *   *Kravspecifikation:* Knappen som växlar TNR mellan kort och långt format ska bli ett "slide"-reglage för ökad tydlighet. Innehåller enkel glidande CSS-animation, extremt diskret kort ljud ("slide"), färg-/textbyte för tydlig UX.
+
+#### 🤖 Uppgifter för Lokal Agent (Antigravity)
 *   **Ta bort fältet 'Plats' i OBO**
     *   *Kravspecifikation:* Fältet 'Plats' ska plockas bort helt från OBO-formuläret, då det anses överflödigt.
 *   **Enhetligt radbryte i rapportutskriften för resterande formulär**
-    *   *Kravspecifikation:* Lägg in ett extra, manuellt radbryte (blankrad) mellan blocket med avsändare (`Från: -`) och `TNR: ...` i de kopierade sammanställningarna. Gäller följande 7 formulär: OBSLÖSA, FORS, PEDARS, SCHEMA, EOBUSARE, OBO och RASSOIKA. Målet är att matcha utseendet från 7S, WHAT, SCRIM, WEFT och A-H.
+    *   *Kravspecifikation:* Lägg in ett extra, manuellt radbryte (blankrad) mellan blocket med avsändare (`Från: -`) och `TNR: ...` i formulären: OBSLÖSA, FORS, PEDARS, SCHEMA, EOBUSARE, OBO och RASSOIKA för att matcha layouten i 7S m.fl.
 *   **Enhetlig linjär utskrift i RASSOIKA (ta bort mall-val)**
-    *   *Kravspecifikation:* Ta bort knapparna/valen för "Statuskvitto" och "Patrullorder" helt och hållet från RASSOIKA. Användaren ska inte kunna välja mall för hur den genererade texten ska se ut. Istället ska det vid klick på "Generera" alltid komma ut ett och samma ständiga format (`R-A-S-S-O-I-K-A`) på följande sätt:
+    *   *Kravspecifikation:* Ta bort "Statuskvitto" och "Patrullorder" valet. Generera en enda utskrift med formatet (`R-A-S-S-O-I-K-A`):
         ```text
         RASSOIKA
         Till: -
@@ -369,6 +383,8 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
         ```
 
 ### ✅ Åtgärdade
+*   **Återställd valbar passlängd i POSTSCHEMA**
+    *   Fältet "Passlängd (timmar)" är tillbaka under Schema-inställningarna. Koden som tidigare slumpade passlängder (50/60/70 min) inaktiverades, och systemet respekterar nu istället användarens val fullt ut.
 *   **Automatisk konvertering till versaler för specifika fält**
     *   Fälten för "Till", "Från" och "Sagesman" konverterar nu automatiskt all inmatning till versaler (stora bokstäver) i farten. Uppdaterat i alla berörda formulär.
 *   **Stöd för både gammalt och nytt tidsnummer**

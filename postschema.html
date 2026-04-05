@@ -226,6 +226,7 @@
                 </div>
             </div>
             <button class="btn-add" onclick="addPost()" style="margin-bottom:6px">+ Lägg till post</button>
+            <div class="field-hint" style="margin:4px 0 8px">Kolumnen <strong>Vila&nbsp;h</strong> anger minsta vilotid (timmar) innan personen kan sättas upp på den posten igen. <strong>0 = inget krav.</strong></div>
             <div id="posterLista"></div>
             <button class="btn-add" id="addPostBtn" onclick="addPost()">+ Lägg till post</button>
         </div>
@@ -275,7 +276,6 @@ let soldatMinVila = {}; // namn → min vilotid i h (0 = ingen krav)
 let soldatRoll = {};    // namn → 'forare' | 'rpas' | 'grpc' | ''
 let specialFrontSet = new Set(); // specialsoldater som ska placeras FRAM istället för bak
 let schedulableSpecials = []; // fylls i genererSchema, används i renderSchema
-let reliefs = []; // { skiftNr, wakeTimeStr, inkommande, utgVarn, utgEld }
 
 // ── Sagesman localStorage ────────────────────────────────────────────────────
 const lsGet = k => JSON.parse(localStorage.getItem(k) || '[]');
@@ -312,9 +312,14 @@ function addPost(value = '', doFocus = true) {
         inp.value = String(lista.children.length + 1);
         inp.addEventListener('focus', function() { this.select(); }, { once: false });
     }
+    const vilaInp = document.createElement('input');
+    vilaInp.type = 'number'; vilaInp.min = '0'; vilaInp.max = '24'; vilaInp.step = '0.5';
+    vilaInp.value = '0'; vilaInp.title = 'Vilokrav (h) – minsta vilotid sedan senaste passet på denna post';
+    vilaInp.style.cssText = 'width:62px;flex-shrink:0;padding:12px 6px;font-size:0.82rem;text-align:center;';
+    vilaInp.placeholder = '0h';
     const btn = document.createElement('button'); btn.className = 'btn-remove'; btn.textContent = '×'; btn.type = 'button';
     btn.onclick = () => lista.removeChild(row);
-    row.appendChild(inp); row.appendChild(btn); lista.appendChild(row);
+    row.appendChild(inp); row.appendChild(vilaInp); row.appendChild(btn); lista.appendChild(row);
     if (doFocus) { inp.focus(); inp.select(); }
 }
 
@@ -404,7 +409,14 @@ function genererSchema() {
     const total = parseInt(document.getElementById('totalTimmar').value) || 36;
     const passLangdMin = (parseFloat(document.getElementById('passLangd').value) || 1) * 60;
 
-    poster = Array.from(document.querySelectorAll('#posterLista input')).map(i => i.value.trim()).filter(Boolean);
+    const posterRows = Array.from(document.querySelectorAll('#posterLista .list-row'));
+    poster = posterRows.map(r => r.querySelector('input[type="text"]')?.value.trim()).filter(Boolean);
+    const postVilokrav = {};
+    posterRows.forEach(r => {
+        const namn = r.querySelector('input[type="text"]')?.value.trim();
+        const vila = parseFloat(r.querySelector('input[type="number"]')?.value) || 0;
+        if (namn) postVilokrav[namn] = vila;
+    });
     const soldatRows = Array.from(document.querySelectorAll('#soldatLista .list-row'));
     soldater = soldatRows.map(r => r.querySelector('input').value.trim()).filter(Boolean);
     soldatMinVila = {}; soldatRoll = {};
@@ -454,6 +466,9 @@ function genererSchema() {
     // Spåra senast aktivt pass per soldat (för "mest utvilad"-urvalet)
     const lastFinished = {};
     soldater.forEach(sol => { lastFinished[sol] = -Infinity; });
+    // Spåra senaste sluttid i ms per soldat (för tidbaserat vilokrav per post)
+    const lastFinishedMs = {};
+    soldater.forEach(sol => { lastFinishedMs[sol] = -Infinity; });
 
     // Initialisera pipeline
     const pipeline = [];
@@ -480,7 +495,15 @@ function genererSchema() {
             passMinuter = passLangdMin; // Använder användarens inställda passlängd
         } else {
             // Välj ordinarie soldat med längst vila
-            const candidates = activePool.filter(sol => !busyNow.has(sol));
+            // Vilokrav: ta det högsta kravet bland alla poster (i ms)
+            const vilaKravMs = Math.max(0, ...poster.map(p => (postVilokrav[p] || 0))) * 3600000;
+            const candidates = activePool.filter(sol => {
+                if (busyNow.has(sol)) return false;
+                if (vilaKravMs > 0 && lastFinishedMs[sol] > -Infinity) {
+                    return currentMs >= lastFinishedMs[sol] + vilaKravMs;
+                }
+                return true;
+            });
             candidates.sort((a, b) => {
                 const la = lastFinished[a], lb = lastFinished[b];
                 if (la === lb) return activePool.indexOf(a) - activePool.indexOf(b);
@@ -488,7 +511,10 @@ function genererSchema() {
                 if (lb === -Infinity) return 1;
                 return la - lb;
             });
-            nyPerson = candidates[0] || activePool.find(sol => !busyNow.has(sol)) || activePool[0];
+            // Fallback: ignorera vilokrav om inga kandidater finns (undviker låsning)
+            const fallback = activePool.filter(sol => !busyNow.has(sol))
+                .sort((a, b) => (lastFinished[a] ?? 0) - (lastFinished[b] ?? 0));
+            nyPerson = candidates[0] || fallback[0] || activePool[0];
             passMinuter = passLangdMin; // Använder användarens inställda passlängd
         }
 
@@ -506,6 +532,7 @@ function genererSchema() {
         });
 
         lastFinished[nyPerson] = s + N - 1;
+        lastFinishedMs[nyPerson] = currentMs + passMs;
         pipeline.unshift(nyPerson);
         if (pipeline.length > N) pipeline.length = N;
 
@@ -513,46 +540,10 @@ function genererSchema() {
         s++;
     }
 
-    computeReliefs();
     renderSchema();
     document.getElementById('steg1').style.display = 'none';
     document.getElementById('steg2').style.display = 'block';
     window.scrollTo(0, 0);
-}
-
-// ── Beräkna avlösningskedja ──────────────────────────────────────────────────
-function computeReliefs() {
-    reliefs = [];
-    const luckor = [...new Set(schema.map(s => s.tid))];
-    // Identifiera Värnpost (index 0) och Eldvakt (index 1) via namn
-    const varnIdx = poster.findIndex(p => p.toLowerCase().includes('värn'));
-    const eldIdx  = poster.findIndex(p => p.toLowerCase().includes('eld'));
-    const piVarn = varnIdx >= 0 ? varnIdx : 0;
-    const piEld  = eldIdx  >= 0 ? eldIdx  : (poster.length > 1 ? 1 : 0);
-
-    for (let ti = 1; ti < luckor.length; ti++) {
-        const tid = luckor[ti];
-        const prevTid = luckor[ti - 1];
-        const nyVarn = schema.find(s => s.tid === tid && s.post === poster[piVarn])?.soldat || '-';
-        const gammalVarn = schema.find(s => s.tid === prevTid && s.post === poster[piVarn])?.soldat || '-';
-        const gammalEld = schema.find(s => s.tid === prevTid && s.post === poster[piEld])?.soldat || '-';
-        // Väckningstid = skiftets starttid minus 10 min
-        const entry = schema.find(s => s.tid === tid);
-        const wakeMs = entry ? entry.startMs - 10 * 60000 : 0;
-        const wakeDate = new Date(wakeMs);
-        const wakeTimeStr = String(wakeDate.getHours()).padStart(2, '0') + String(wakeDate.getMinutes()).padStart(2, '0');
-
-        reliefs.push({
-            skiftNr: entry?.skiftNr ?? ti,
-            tidIdx: ti,
-            wakeTimeStr,
-            inkommande: nyVarn,
-            utgVarn: gammalVarn,
-            utgEld: gammalEld,
-            varnNamn: poster[piVarn],
-            eldNamn: poster[piEld]
-        });
-    }
 }
 
 // Visa namn med rollsuffix
@@ -571,11 +562,6 @@ function renderSchema() {
     html += '</tr></thead><tbody>';
 
     luckor.forEach((tid, ti) => {
-        // Avlösningsrad (visas före varje skift utom det första)
-        const rel = reliefs.find(r => r.tidIdx === ti);
-        if (rel) {
-            html += `<tr class="wake-row"><td colspan="${poster.length + 1}">⏰ ${rel.wakeTimeStr}: ${rel.utgEld} väcker ${rel.inkommande} → ${rel.inkommande} avl ${rel.utgVarn} (${rel.varnNamn}) → ${rel.utgVarn} avl ${rel.utgEld} (${rel.eldNamn})</td></tr>`;
-        }
         html += `<tr><td>${tid}</td>`;
         poster.forEach((post, pi) => {
             const entry = schema.find(s => s.tid === tid && s.post === post);
@@ -676,7 +662,6 @@ function swapCell(td, idx) {
     sel.focus();
     function commit() {
         schema[idx].soldat = sel.value;
-        computeReliefs();
         renderSchema();
     }
     sel.addEventListener('change', commit);
