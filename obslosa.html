@@ -222,7 +222,11 @@
         .map-modal-title { font-size:0.82rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); }
         .map-modal-close { background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:4px 8px; }
         .map-modal-close:hover { color:var(--text-primary); }
-        #mapContainer { flex:1; width:100%; }
+        #mapContainer { flex:1; width:100%; position:relative; }
+        .map-spinner { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg-primary); z-index:1000; transition:opacity 0.3s; }
+        .map-spinner.hidden { opacity:0; pointer-events:none; }
+        .map-spinner::after { content:''; width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:mapspin 0.8s linear infinite; }
+        @keyframes mapspin { to { transform:rotate(360deg); } }
         .map-modal-footer { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-secondary); border-top:1px solid var(--border); flex-shrink:0; }
         .map-mgrs-display { flex:1; font-family:'Courier New',monospace; font-size:0.9rem; font-weight:700; color:var(--accent); letter-spacing:0.06em; }
         .map-confirm-btn { min-height:40px; padding:8px 18px; border:none; border-radius:var(--radius-sm); background:var(--accent); color:#fff; font-family:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; white-space:nowrap; }
@@ -299,7 +303,7 @@
                 <span class="map-modal-title">Välj plats på kartan</span>
                 <button class="map-modal-close" onclick="closeMapModal()">×</button>
             </div>
-            <div id="mapContainer"></div>
+            <div id="mapContainer"><div class="map-spinner" id="mapSpinner"></div></div>
             <div class="map-modal-footer">
                 <span class="map-mgrs-display" id="mapMgrsDisplay">Tryck på kartan</span>
                 <button class="map-confirm-btn" id="mapConfirmBtn" disabled onclick="confirmMapSelection()">Välj plats</button>
@@ -668,9 +672,12 @@ function openMapModal() {
     document.getElementById('mapConfirmBtn').disabled = true;
     mapSelectedMgrs = '';
     if (mapMarker) { mapMarker.remove(); mapMarker = null; }
+    var sp = document.getElementById('mapSpinner');
+    if (sp) sp.classList.remove('hidden');
     if (!mapInstance) {
         mapInstance = L.map('mapContainer', { zoomControl: true });
-        L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' }).addTo(mapInstance);
+        var tileLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' }).addTo(mapInstance);
+        tileLayer.on('load', function() { if (sp) sp.classList.add('hidden'); });
         mapInstance.on('click', function(e) {
             mapSelectedMgrs = MGRS.forward(e.latlng.lat, e.latlng.lng);
             document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs;
