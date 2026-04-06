@@ -655,7 +655,7 @@ function openMapModal() {
     mapSelectedMgrs = '';
     if (mapMarker) { mapMarker.remove(); mapMarker = null; }
     var sp = document.getElementById('mapSpinner');
-    if (sp) { sp.classList.remove('hidden'); }
+    if (sp && !mapInstance) { sp.classList.remove('hidden'); }
 
     if (!mapInstance) {
         mapInstance = L.map('mapContainer', { zoomControl: true });
