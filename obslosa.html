@@ -12,6 +12,8 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -214,6 +216,18 @@
                 font-size: 11pt; line-height: 1.6;
             }
         }
+        .map-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10000; flex-direction:column; }
+        .map-modal-overlay.open { display:flex; }
+        .map-modal-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border); flex-shrink:0; }
+        .map-modal-title { font-size:0.82rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); }
+        .map-modal-close { background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:4px 8px; }
+        .map-modal-close:hover { color:var(--text-primary); }
+        #mapContainer { flex:1; width:100%; }
+        .map-modal-footer { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-secondary); border-top:1px solid var(--border); flex-shrink:0; }
+        .map-mgrs-display { flex:1; font-family:'Courier New',monospace; font-size:0.9rem; font-weight:700; color:var(--accent); letter-spacing:0.06em; }
+        .map-confirm-btn { min-height:40px; padding:8px 18px; border:none; border-radius:var(--radius-sm); background:var(--accent); color:#fff; font-family:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .map-confirm-btn:hover { background:var(--accent-hover); }
+        .map-confirm-btn:disabled { opacity:0.4; cursor:default; }
     </style>
 </head>
 <body>
@@ -274,7 +288,18 @@
             </div>
             <div class="input-row">
                 <input type="text" id="plats" placeholder="MGRS / Platsnamn" autocomplete="off">
-                <button class="btn btn-sm btn-gps" id="gpsBtn" onclick="getGPS()">📍 MGRS</button>
+                <button class="btn btn-sm btn-time" onclick="openMapModal()">🗺 Karta</button>
+            </div>
+        </div>
+        <div class="map-modal-overlay" id="mapModal">
+            <div class="map-modal-header">
+                <span class="map-modal-title">Välj plats på kartan</span>
+                <button class="map-modal-close" onclick="closeMapModal()">×</button>
+            </div>
+            <div id="mapContainer"></div>
+            <div class="map-modal-footer">
+                <span class="map-mgrs-display" id="mapMgrsDisplay">Tryck på kartan</span>
+                <button class="map-confirm-btn" id="mapConfirmBtn" disabled onclick="confirmMapSelection()">Välj plats</button>
             </div>
         </div>
 
@@ -586,16 +611,15 @@ function resetForm() {
 
 // ── Slumpa lösen ─────────────────────────────────────────────────────────────
 const LOSEN_WORDS = [
-    'BORD','BORG','BRAND','BREV','BRON','BUSS','BYXA','DÖRR','FISK','FLAG',
-    'FLOD','FLUGA','FORS','GLAS','GRAN','GRIND','GRUND','GRÄS','GUBBE',
-    'HAMN','HJUL','HUND','HÄST','HÖNA','JÄRN','KORG','KRITA','KRUKA',
-    'KVARN','KÄLLA','LAMM','LADA','LAND','LOCK','LÄDER','LÖNN','MOLN',
-    'MUGG','NYCKEL','OXEL','PANNA','PINNE','PLANK','PLOG','PLÅT','PUMPA',
-    'PÅSE','RÄCKE','RULLA','RYGG','SAND','SIDEN','SJÖN','SKOG','SKRUV',
-    'SKYLT','SLUSS','SNARA','SPIK','SPJUT','SPÅR','STEGE','STEN','STORM',
-    'STRAND','STRECK','SULA','SVANS','SÄCK','SÖDER','TEGEL','TIMME','TORG',
-    'TRÅD','TRÄD','TRÄSK','TUNNA','TÄCKE','TÄLT','VAPEN','VIND','VINGE',
-    'VIRKE','VISP','VÄGG','YXAN','ÄRTA','ÖKEN','ÖRTEN','ÅSKAN'
+    'ANKARE','ALARE','ASKA','BULLER','BYXA','BÅGE','CIRKEL','DAGAR','DIMMA','DRAKE',
+    'DUNKE','FICKA','FLASKA','FLUGA','FÄSTE','GAFFEL','GRILLA','GUBBE','HAKE','HAMMA',
+    'HYLLA','HÄLTE','HÖNA','ISBIT','JAKTEN','KAPPA','KEDJA','KIKARE','KRYCKA','KULA',
+    'KUSTEN','KYRKA','KÄLLA','LAKAN','LAMPA','LUCKA','LÄGER','LÖFTE','MASKA','MATARE',
+    'MURA','MÖRKET','NYCKEL','NÄVA','OXEL','PANNA','PILEN','PISTOL','PLANKA','POKÉ',
+    'PUMPA','PÅSE','RINGEN','RULLA','RYGGEN','SAXEN','SIDEN','SKEDAR','SNARA','STAKE',
+    'STEGE','STRUMP','SVARVA','SVINGA','SÄCKAR','SÖDER','TAVLA','TIDEN','TIMME','TRAPPA',
+    'TUNNA','TÄCKE','TÄLTET','UDDE','VAGGA','VAPEN','VATTEN','VILLA','VINGE','VIRKE',
+    'VÄSKA','YXAN','ÄRTA','ÖKEN','ÖRA','ÖRTEN','ÖVER'
 ];
 const LOSEN_FORBIDDEN_PAIRS = new Set([
     'SOL-SKEN','IS-BERG','DAG-LJUS','BRAND-FACK','STORM-VIND','VATTEN-FALL',
@@ -604,15 +628,24 @@ const LOSEN_FORBIDDEN_PAIRS = new Set([
     'SAND-STEN','HAMN-SJÖN','SJÖN-STRAND','SKOG-GRAN'
 ]);
 function slumpaLosen(id1, id2) {
+    const specialVowels = /[åäö]/gi;
     let ord1, ord2, attempts = 0;
     do {
         ord1 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)];
-        do { ord2 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)]; } while (ord2 === ord1);
+        do { 
+            ord2 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)]; 
+        } while (ord2 === ord1);
+        
         attempts++;
-    } while (
-        (LOSEN_FORBIDDEN_PAIRS.has(ord1+'-'+ord2) || LOSEN_FORBIDDEN_PAIRS.has(ord2+'-'+ord1))
-        && attempts < 50
-    );
+        const v1 = (ord1.match(specialVowels) || []).map(v => v.toUpperCase());
+        const v2 = (ord2.match(specialVowels) || []).map(v => v.toUpperCase());
+        const sharedVowel = v1.some(v => v2.includes(v));
+
+        if (!sharedVowel && !LOSEN_FORBIDDEN_PAIRS.has(ord1+'-'+ord2) && !LOSEN_FORBIDDEN_PAIRS.has(ord2+'-'+ord1)) {
+            break;
+        }
+    } while (attempts < 100);
+    
     document.getElementById(id1).value = ord1;
     document.getElementById(id2).value = ord2;
 }
@@ -623,6 +656,39 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 
+
+// ── Interaktiv karta för PLATS ───────────────────────────────────────────────
+let mapInstance = null, mapMarker = null, mapSelectedMgrs = '';
+function openMapModal() {
+    document.getElementById('mapModal').classList.add('open');
+    document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
+    document.getElementById('mapConfirmBtn').disabled = true;
+    mapSelectedMgrs = '';
+    if (mapMarker) { mapMarker.remove(); mapMarker = null; }
+    if (!mapInstance) {
+        mapInstance = L.map('mapContainer', { zoomControl: true });
+        L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' }).addTo(mapInstance);
+        mapInstance.on('click', function(e) {
+            mapSelectedMgrs = MGRS.forward(e.latlng.lat, e.latlng.lng);
+            document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs;
+            document.getElementById('mapConfirmBtn').disabled = false;
+            if (mapMarker) mapMarker.setLatLng(e.latlng); else mapMarker = L.marker(e.latlng).addTo(mapInstance);
+        });
+    }
+    setTimeout(() => {
+        mapInstance.invalidateSize();
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => mapInstance.setView([pos.coords.latitude, pos.coords.longitude], 13), () => mapInstance.setView([59.33, 18.07], 5));
+        } else mapInstance.setView([59.33, 18.07], 5);
+    }, 100);
+}
+function closeMapModal() { document.getElementById('mapModal').classList.remove('open'); }
+function confirmMapSelection() {
+    if (!mapSelectedMgrs) return;
+    const f = document.getElementById('plats');
+    f.value = f.value.trim() ? f.value.trim() + ', ' + mapSelectedMgrs : mapSelectedMgrs;
+    closeMapModal();
+}
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
 

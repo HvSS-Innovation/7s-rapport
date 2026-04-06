@@ -13,6 +13,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/exifr@7.1.3/dist/full.umd.js"></script>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
             --bg-primary: #0d1f0d; --bg-secondary: #152815; --bg-card: #1a321a;
@@ -94,6 +96,18 @@
         .tab-link.active { background: var(--accent-dim); color: var(--accent); }
         .tab-nav-sub { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
         .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
+        .map-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10000; flex-direction:column; }
+        .map-modal-overlay.open { display:flex; }
+        .map-modal-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border); flex-shrink:0; }
+        .map-modal-title { font-size:0.82rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); }
+        .map-modal-close { background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:4px 8px; }
+        .map-modal-close:hover { color:var(--text-primary); }
+        #mapContainer { flex:1; width:100%; }
+        .map-modal-footer { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-secondary); border-top:1px solid var(--border); flex-shrink:0; }
+        .map-mgrs-display { flex:1; font-family:'Courier New',monospace; font-size:0.9rem; font-weight:700; color:var(--accent); letter-spacing:0.06em; }
+        .map-confirm-btn { min-height:40px; padding:8px 18px; border:none; border-radius:var(--radius-sm); background:var(--accent); color:#fff; font-family:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .map-confirm-btn:hover { background:var(--accent-hover); }
+        .map-confirm-btn:disabled { opacity:0.4; cursor:default; }
     </style>
 </head>
 <body>
@@ -167,9 +181,20 @@
                 <div class="info-text" id="infoStalle">Var personen observerades.</div>
                 <div class="input-row">
                     <input type="text" id="stalle" placeholder="Plats / koordinater" autocomplete="off">
-                    <button class="btn btn-sm btn-gps" id="gpsBtn" tabindex="-1" onclick="getGPS()">📍 MGRS</button>
+                    <button class="btn btn-sm btn-time" tabindex="-1" onclick="openMapModal()">🗺 Karta</button>
                 </div>
                 <div class="saved-items" id="savedStalle"></div>
+            </div>
+            <div class="map-modal-overlay" id="mapModal">
+                <div class="map-modal-header">
+                    <span class="map-modal-title">Välj plats på kartan</span>
+                    <button class="map-modal-close" onclick="closeMapModal()">×</button>
+                </div>
+                <div id="mapContainer"></div>
+                <div class="map-modal-footer">
+                    <span class="map-mgrs-display" id="mapMgrsDisplay">Tryck på kartan</span>
+                    <button class="map-confirm-btn" id="mapConfirmBtn" disabled onclick="confirmMapSelection()">Välj plats</button>
+                </div>
             </div>
 
             <!-- AGE -->
@@ -588,6 +613,39 @@ function renderSaved(cid, items, inputId, delFn) {
 }
 function deleteSavedPlace(v) { set('7s_places', get('7s_places').filter(x=>x!==v)); loadSavedItems(); }
 function deleteSavedSagesman(v) { set('7s_sagesman', get('7s_sagesman').filter(x=>x!==v)); loadSavedItems(); }
+
+// ── Interaktiv karta för STÄLLE ──────────────────────────────────────────────
+let mapInstance = null, mapMarker = null, mapSelectedMgrs = '';
+function openMapModal() {
+    document.getElementById('mapModal').classList.add('open');
+    document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
+    document.getElementById('mapConfirmBtn').disabled = true;
+    mapSelectedMgrs = '';
+    if (mapMarker) { mapMarker.remove(); mapMarker = null; }
+    if (!mapInstance) {
+        mapInstance = L.map('mapContainer', { zoomControl: true });
+        L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' }).addTo(mapInstance);
+        mapInstance.on('click', function(e) {
+            mapSelectedMgrs = MGRS.forward(e.latlng.lat, e.latlng.lng);
+            document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs;
+            document.getElementById('mapConfirmBtn').disabled = false;
+            if (mapMarker) mapMarker.setLatLng(e.latlng); else mapMarker = L.marker(e.latlng).addTo(mapInstance);
+        });
+    }
+    setTimeout(() => {
+        mapInstance.invalidateSize();
+        if (navigator.geolocation) {
+            navigator.geolocation.getCurrentPosition(pos => mapInstance.setView([pos.coords.latitude, pos.coords.longitude], 13), () => mapInstance.setView([59.33, 18.07], 5));
+        } else mapInstance.setView([59.33, 18.07], 5);
+    }, 100);
+}
+function closeMapModal() { document.getElementById('mapModal').classList.remove('open'); }
+function confirmMapSelection() {
+    if (!mapSelectedMgrs) return;
+    const f = document.getElementById('stalle');
+    f.value = f.value.trim() ? f.value.trim() + ', ' + mapSelectedMgrs : mapSelectedMgrs;
+    closeMapModal();
+}
 
 // ── Embed-läge (öppnad via 7S SYMBOL-modal) ──────────────────────────────────
 const isEmbed = new URLSearchParams(location.search).get('mode') === 'embed';
