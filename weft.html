@@ -181,6 +181,7 @@
                 <div class="input-row">
                     <input type="text" id="stalle" placeholder="Plats / koordinater / riktning" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="openMapModal()">🗺 Karta</button>
+                    <button class="btn-remove" tabindex="-1" onclick="document.getElementById('stalle').value=''" title="Rensa">×</button>
                 </div>
                 <div class="saved-items" id="savedStalle"></div>
             </div>
@@ -192,7 +193,6 @@
                 <div id="mapContainer"></div>
                 <div class="map-modal-footer">
                     <span class="map-mgrs-display" id="mapMgrsDisplay">Tryck på kartan</span>
-                    <button class="map-modal-close" onclick="clearMapMarker()" title="Rensa markör">×</button>
                     <button class="map-confirm-btn" id="mapConfirmBtn" disabled onclick="confirmMapSelection()">Välj plats</button>
                 </div>
             </div>
