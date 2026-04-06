@@ -571,9 +571,16 @@ function openMapModal() {
     }
     setTimeout(() => {
         mapInstance.invalidateSize();
+        var cached = localStorage.getItem('mapLastPos');
+        if (cached) { cached = JSON.parse(cached); mapInstance.setView([cached.lat, cached.lng], cached.z || 13); }
+        else { mapInstance.setView([59.33, 18.07], 5); }
         if (navigator.geolocation) {
-            navigator.geolocation.getCurrentPosition(pos => mapInstance.setView([pos.coords.latitude, pos.coords.longitude], 13), () => mapInstance.setView([59.33, 18.07], 5));
-        } else mapInstance.setView([59.33, 18.07], 5);
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                var lat = pos.coords.latitude, lng = pos.coords.longitude;
+                if (!cached) mapInstance.setView([lat, lng], 13);
+                localStorage.setItem('mapLastPos', JSON.stringify({lat:lat, lng:lng, z:13}));
+            }, function(){});
+        }
     }, 100);
 }
 function closeMapModal() { document.getElementById('mapModal').classList.remove('open'); }
