@@ -518,6 +518,12 @@ function setCurrentTime() {
     }
 }
 
+function nowTnr() {
+    const now = new Date(), p = n => String(n).padStart(2,'0');
+    const base = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}`;
+    if (tnrLong) { const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']; const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A'; return base + tz + months[now.getMonth()] + now.getFullYear(); }
+    return base;
+}
 function generateReport() {
     const v = id => document.getElementById(id).value.trim();
     savePlaceIfNew(v('stalle')); saveSagesmanIfNew(v('sagesman'));
@@ -526,7 +532,7 @@ function generateReport() {
         `Till: ${v('till') || '-'}`,
         `Från: ${v('fran') || '-'}`,
         '',
-        `TNR: ${v('stund') || '-'}`,
+        `TNR: ${nowTnr()}`,
         '',
         `Stund:    ${v('stund') || '-'}`,
         `Ställe:   ${v('stalle') || '-'}`,
