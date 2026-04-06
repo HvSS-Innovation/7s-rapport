@@ -228,6 +228,11 @@
         .map-confirm-btn { min-height:40px; padding:8px 18px; border:none; border-radius:var(--radius-sm); background:var(--accent); color:#fff; font-family:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; white-space:nowrap; }
         .map-confirm-btn:hover { background:var(--accent-hover); }
         .map-confirm-btn:disabled { opacity:0.4; cursor:default; }
+        .input-wrap { position:relative; flex:1; min-width:0; }
+        .input-wrap input { width:100%; padding-right:32px; }
+        .input-clear { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); font-size:1.1rem; cursor:pointer; padding:4px; line-height:1; display:none; }
+        .input-clear:hover { color:var(--text-primary); }
+        .input-wrap input:not(:placeholder-shown) ~ .input-clear { display:block; }
     </style>
 </head>
 <body>
@@ -287,9 +292,11 @@
                 <label for="plats">Plats (Poststället)</label>
             </div>
             <div class="input-row">
-                <input type="text" id="plats" placeholder="MGRS / Platsnamn" autocomplete="off">
+                <div class="input-wrap">
+                    <input type="text" id="plats" placeholder="MGRS / Platsnamn" autocomplete="off">
+                    <button class="input-clear" tabindex="-1" onclick="document.getElementById('plats').value='';this.style.display='none'" title="Rensa">×</button>
+                </div>
                 <button class="btn btn-sm btn-time" onclick="openMapModal()">🗺 Karta</button>
-                <button class="btn-remove" tabindex="-1" onclick="document.getElementById('plats').value=''" title="Rensa">×</button>
             </div>
         </div>
         <div class="map-modal-overlay" id="mapModal">
