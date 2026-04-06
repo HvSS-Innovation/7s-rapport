@@ -198,8 +198,10 @@
                     <label><input type="checkbox" id="r_chk_fiende"> Fiendel&auml;ge</label><br>
                     <label><input type="checkbox" id="r_chk_egna"> Egna f&ouml;rband</label><br>
                     <label><input type="checkbox" id="r_chk_terrang"> Terr&auml;ng</label><br>
-                    <label><input type="checkbox" id="r_chk_vader"> V&auml;der</label>
+                    <label><input type="checkbox" id="r_chk_vader"> V&auml;der</label><br>
+                    <label><input type="checkbox" id="r_chk_ovrigt"> &Ouml;vrigt</label>
                 </div>
+                <textarea id="r_ovrigt" placeholder="Övrigt — t.ex. objektssäkring, hinder, annat som patrullen behöver klarlägga..." style="margin-top:6px"></textarea>
                 <label for="r_uppgift" style="margin-top:8px">Uppgiftens k&auml;rna</label>
                 <textarea id="r_uppgift" placeholder="Uppgiftens k&auml;rna &mdash; fiende, mineringar, egna f&ouml;rband, terr&auml;ng, v&auml;der, in/utpassering, l&ouml;sen, rapportering..."></textarea>
                 <label for="r_plan" style="margin-top:10px">Plan f&ouml;r l&ouml;sning</label>
@@ -334,6 +336,8 @@
                     <button class="btn-add" style="margin:0" onclick="addIndelaRoll('Rapportkarl')">Rapportkarl</button>
                     <button class="btn-add" style="margin:0" onclick="addIndelaRoll('Spejare')">Spejare</button>
                     <button class="btn-add" style="margin:0" onclick="addIndelaRoll('S&auml;kerhetsman')">S&auml;kerhetsman</button>
+                    <button class="btn-add" style="margin:0" onclick="addIndelaRoll('Hundförare')">Hundförare</button>
+                    <button class="btn-add" style="margin:0" onclick="addIndelaRoll('Stegräknare')">Stegräknare</button>
                 </div>
                 <div id="indelaLista"></div>
                 <button class="btn-add" onclick="addIndela()">+ L&auml;gg till indelning</button>
@@ -547,10 +551,13 @@ function generateReport() {
     if (document.getElementById('r_chk_egna')?.checked) chkArr.push('Egna förband');
     if (document.getElementById('r_chk_terrang')?.checked) chkArr.push('Terräng');
     if (document.getElementById('r_chk_vader')?.checked) chkArr.push('Väder');
-    if (r_uppg || r_plan || chkArr.length > 0) {
+    if (document.getElementById('r_chk_ovrigt')?.checked) chkArr.push('Övrigt');
+    const r_ovrigt = v('r_ovrigt');
+    if (r_uppg || r_plan || r_ovrigt || chkArr.length > 0) {
         if (chkArr.length > 0) lines.push('  Klarlagt: ' + chkArr.join(', '));
         if (r_uppg) lines.push('  Uppgift: ' + r_uppg);
         if (r_plan) lines.push('  Plan: ' + r_plan);
+        if (r_ovrigt) lines.push('  Övrigt: ' + r_ovrigt);
     } else {
         lines.push('-');
     }
@@ -680,16 +687,15 @@ if ('serviceWorker' in navigator) {
 
 // ── Slumpa lösen ─────────────────────────────────────────────────────────────
 const LOSEN_WORDS = [
-    'BORD','BORG','BRAND','BREV','BRON','BUSS','BYXA','DÖRR','FISK','FLAG',
-    'FLOD','FLUGA','FORS','GLAS','GRAN','GRIND','GRUND','GRÄS','GUBBE',
-    'HAMN','HJUL','HUND','HÄST','HÖNA','JÄRN','KORG','KRITA','KRUKA',
-    'KVARN','KÄLLA','LAMM','LADA','LAND','LOCK','LÄDER','LÖNN','MOLN',
-    'MUGG','NYCKEL','OXEL','PANNA','PINNE','PLANK','PLOG','PLÅT','PUMPA',
-    'PÅSE','RÄCKE','RULLA','RYGG','SAND','SIDEN','SJÖN','SKOG','SKRUV',
-    'SKYLT','SLUSS','SNARA','SPIK','SPJUT','SPÅR','STEGE','STEN','STORM',
-    'STRAND','STRECK','SULA','SVANS','SÄCK','SÖDER','TEGEL','TIMME','TORG',
-    'TRÅD','TRÄD','TRÄSK','TUNNA','TÄCKE','TÄLT','VAPEN','VIND','VINGE',
-    'VIRKE','VISP','VÄGG','YXAN','ÄRTA','ÖKEN','ÖRTEN','ÅSKAN'
+    'ANKARE','ALARE','ASKA','BULLER','BYXA','BÅGE','CIRKEL','DAGAR','DIMMA','DRAKE',
+    'DUNKE','FICKA','FLASKA','FLUGA','FÄSTE','GAFFEL','GRILLA','GUBBE','HAKE','HAMMA',
+    'HYLLA','HÄLTE','HÖNA','ISBIT','JAKTEN','KAPPA','KEDJA','KIKARE','KRYCKA','KULA',
+    'KUSTEN','KYRKA','KÄLLA','LAKAN','LAMPA','LUCKA','LÄGER','LÖFTE','MASKA','MATARE',
+    'MURA','MÖRKET','NYCKEL','NÄVA','OXEL','PANNA','PILEN','PISTOL','PLANKA','POKÉ',
+    'PUMPA','PÅSE','RINGEN','RULLA','RYGGEN','SAXEN','SIDEN','SKEDAR','SNARA','STAKE',
+    'STEGE','STRUMP','SVARVA','SVINGA','SÄCKAR','SÖDER','TAVLA','TIDEN','TIMME','TRAPPA',
+    'TUNNA','TÄCKE','TÄLTET','UDDE','VAGGA','VAPEN','VATTEN','VILLA','VINGE','VIRKE',
+    'VÄSKA','YXAN','ÄRTA','ÖKEN','ÖRA','ÖRTEN','ÖVER'
 ];
 const LOSEN_FORBIDDEN_PAIRS = new Set([
     'SOL-SKEN','IS-BERG','DAG-LJUS','BRAND-FACK','STORM-VIND','VATTEN-FALL',
@@ -698,15 +704,24 @@ const LOSEN_FORBIDDEN_PAIRS = new Set([
     'SAND-STEN','HAMN-SJÖN','SJÖN-STRAND','SKOG-GRAN'
 ]);
 function slumpaLosen(id1, id2) {
+    const specialVowels = /[åäö]/gi;
     let ord1, ord2, attempts = 0;
     do {
         ord1 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)];
-        do { ord2 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)]; } while (ord2 === ord1);
+        do { 
+            ord2 = LOSEN_WORDS[Math.floor(Math.random() * LOSEN_WORDS.length)]; 
+        } while (ord2 === ord1);
+        
         attempts++;
-    } while (
-        (LOSEN_FORBIDDEN_PAIRS.has(ord1+'-'+ord2) || LOSEN_FORBIDDEN_PAIRS.has(ord2+'-'+ord1))
-        && attempts < 50
-    );
+        const v1 = (ord1.match(specialVowels) || []).map(v => v.toUpperCase());
+        const v2 = (ord2.match(specialVowels) || []).map(v => v.toUpperCase());
+        const sharedVowel = v1.some(v => v2.includes(v));
+
+        if (!sharedVowel && !LOSEN_FORBIDDEN_PAIRS.has(ord1+'-'+ord2) && !LOSEN_FORBIDDEN_PAIRS.has(ord2+'-'+ord1)) {
+            break;
+        }
+    } while (attempts < 100);
+    
     document.getElementById(id1).value = ord1;
     document.getElementById(id2).value = ord2;
 }

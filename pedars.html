@@ -210,11 +210,21 @@
                 <div class="section-letter">D</div>
                 <div>
                     <div class="section-title">Drivmedel</div>
-                    <div class="section-subtitle">Fordon · Nivå i %</div>
+                    <div class="section-subtitle">Fordon · Elverk · Lampor · Ved</div>
                 </div>
             </div>
+            <div class="sub-label">Fordon</div>
             <div class="card-list" id="fordonsLista"></div>
             <button class="btn btn-add" onclick="addFordon()">+ Lägg till fordon</button>
+            <div class="sub-label" style="margin-top:14px">Elverk</div>
+            <div class="card-list" id="elverksLista"></div>
+            <button class="btn btn-add" onclick="addElverk()">+ Lägg till elverk</button>
+            <div class="sub-label" style="margin-top:14px">Lampor / Belysning</div>
+            <div class="card-list" id="lamporLista"></div>
+            <button class="btn btn-add" onclick="addLampa()">+ Lägg till lampa</button>
+            <div class="sub-label" style="margin-top:14px">Ved / Kaminer</div>
+            <div class="card-list" id="vedLista"></div>
+            <button class="btn btn-add" onclick="addVed()">+ Lägg till ved/kamin</button>
         </div>
 
         <!-- A – AMMUNITION -->
@@ -337,6 +347,66 @@ function addFordon() {
     list.appendChild(card);
 }
 
+// ── Dynamiska kort: Elverk ────────────────────────────────────────────────────
+let elvId = 0;
+function addElverk() {
+    const id = ++elvId;
+    const list = document.getElementById('elverksLista');
+    const card = document.createElement('div'); card.className = 'dyn-card'; card.id = `elv_${id}`;
+    card.innerHTML = `
+        <button class="del-btn" onclick="removeCard('elv_${id}')">×</button>
+        <div class="card-row">
+            <input type="text" placeholder="Beteckning (ex: Elverk 5 kW)" autocomplete="off">
+        </div>
+        <div class="card-row" style="align-items:center;gap:10px;margin-top:8px">
+            <input type="number" inputmode="numeric" placeholder="%" min="0" max="100" style="max-width:80px">
+            <span style="font-size:.8rem;color:var(--text-muted)">% drivmedel kvar</span>
+        </div>`;
+    list.appendChild(card);
+}
+
+// ── Dynamiska kort: Lampor ────────────────────────────────────────────────────
+let lampId = 0;
+function addLampa() {
+    const id = ++lampId;
+    const list = document.getElementById('lamporLista');
+    const card = document.createElement('div'); card.className = 'dyn-card'; card.id = `lamp_${id}`;
+    card.innerHTML = `
+        <button class="del-btn" onclick="removeCard('lamp_${id}')">×</button>
+        <div class="card-row">
+            <input type="text" placeholder="Typ (ex: Strålkastare, Pannlampa)" autocomplete="off">
+            <input type="number" inputmode="numeric" placeholder="Ant." min="0" style="max-width:70px">
+        </div>
+        <div class="card-row" style="align-items:center;gap:10px;margin-top:8px">
+            <input type="number" inputmode="numeric" placeholder="%" min="0" max="100" style="max-width:80px">
+            <span style="font-size:.8rem;color:var(--text-muted)">% drivmedel/batteri kvar</span>
+        </div>`;
+    list.appendChild(card);
+}
+
+// ── Dynamiska kort: Ved/Kaminer ───────────────────────────────────────────────
+let vedId = 0;
+function addVed() {
+    const id = ++vedId;
+    const list = document.getElementById('vedLista');
+    const card = document.createElement('div'); card.className = 'dyn-card'; card.id = `ved_${id}`;
+    card.innerHTML = `
+        <button class="del-btn" onclick="removeCard('ved_${id}')">×</button>
+        <div class="card-row">
+            <input type="text" placeholder="Typ (ex: Kamin, Fältspis)" autocomplete="off">
+        </div>
+        <div class="card-row" style="align-items:center;gap:10px;margin-top:8px">
+            <input type="number" inputmode="numeric" placeholder="Mängd" min="0" style="max-width:80px">
+            <select style="width:auto;flex-shrink:0;padding:10px 8px;font-size:0.85rem">
+                <option value="knippen">knippen</option>
+                <option value="m³">m³</option>
+                <option value="kg">kg</option>
+                <option value="dygn">dygn kvar</option>
+            </select>
+        </div>`;
+    list.appendChild(card);
+}
+
 // ── Dynamiska kort: Reparationer ──────────────────────────────────────────────
 let repId = 0;
 function addRep() {
@@ -404,17 +474,47 @@ function generateReport() {
     lines.push('');
 
     // D
-    const fordDivs = document.getElementById('fordonsLista').children;
     lines.push('D – DRIVMEDEL');
+    let drivAny = false;
+    const fordDivs = document.getElementById('fordonsLista').children;
     if (fordDivs.length) {
+        lines.push('  Fordon:');
         Array.from(fordDivs).forEach(c => {
             const inputs = c.querySelectorAll('input');
             const typ = inputs[0]?.value.trim(), reg = inputs[1]?.value.trim(), pct = inputs[2]?.value.trim();
-            if (typ) lines.push(`  ${typ}${reg?' ('+reg+')':''}: ${pct||'?'}%`);
+            if (typ) { lines.push(`    ${typ}${reg?' ('+reg+')':''}: ${pct||'?'}%`); drivAny = true; }
         });
-    } else {
-        lines.push('  -');
     }
+    const elvDivs = document.getElementById('elverksLista').children;
+    if (elvDivs.length) {
+        lines.push('  Elverk:');
+        Array.from(elvDivs).forEach(c => {
+            const inputs = c.querySelectorAll('input');
+            const bet = inputs[0]?.value.trim(), pct = inputs[1]?.value.trim();
+            if (bet) { lines.push(`    ${bet}: ${pct||'?'}%`); drivAny = true; }
+        });
+    }
+    const lampDivs = document.getElementById('lamporLista').children;
+    if (lampDivs.length) {
+        lines.push('  Lampor/Belysning:');
+        Array.from(lampDivs).forEach(c => {
+            const inputs = c.querySelectorAll('input');
+            const typ = inputs[0]?.value.trim(), ant = inputs[1]?.value.trim(), pct = inputs[2]?.value.trim();
+            if (typ) { lines.push(`    ${typ}${ant?' x'+ant:''}: ${pct||'?'}%`); drivAny = true; }
+        });
+    }
+    const vedDivs = document.getElementById('vedLista').children;
+    if (vedDivs.length) {
+        lines.push('  Ved/Kaminer:');
+        Array.from(vedDivs).forEach(c => {
+            const inp = c.querySelector('input[type=text]');
+            const num = c.querySelector('input[type=number]');
+            const sel = c.querySelector('select');
+            const typ = inp?.value.trim(), mangd = num?.value.trim(), enhet = sel?.value || '';
+            if (typ) { lines.push(`    ${typ}: ${mangd||'?'} ${enhet}`); drivAny = true; }
+        });
+    }
+    if (!drivAny) lines.push('  -');
     lines.push('');
 
     // A
