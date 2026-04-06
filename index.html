@@ -647,6 +647,7 @@ function openMapModal() {
     document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
     document.getElementById('mapConfirmBtn').disabled = true;
     mapSelectedMgrs = '';
+    if (mapMarker) { mapMarker.remove(); mapMarker = null; }
 
     if (!mapInstance) {
         mapInstance = L.map('mapContainer', { zoomControl: true });
