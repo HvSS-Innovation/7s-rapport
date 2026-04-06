@@ -188,6 +188,18 @@
         .tab-link.active { background: var(--accent-dim); color: var(--accent); }
         .tab-nav-sub { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
         .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
+        /* Symbol embed modal */
+        .embed-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center; padding:12px; }
+        .embed-modal-overlay.open { display:flex; }
+        .embed-modal { width:100%; max-width:580px; height:85vh; background:var(--bg-primary); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column; }
+        .embed-modal-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border); }
+        .embed-modal-title { font-size:0.82rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); }
+        .embed-modal-close { background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:4px 8px; border-radius:var(--radius-sm); transition:color 0.15s; }
+        .embed-modal-close:hover { color:var(--text-primary); }
+        .embed-modal iframe { flex:1; border:none; width:100%; }
+        .symbol-format-group { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+        .symbol-format-btn { background:var(--accent-dim); border:1px dashed var(--accent); color:var(--accent); font-size:0.78rem; font-weight:600; padding:5px 12px; border-radius:20px; cursor:pointer; font-family:inherit; transition:background 0.15s; }
+        .symbol-format-btn:hover { background:var(--border-focus); }
     </style>
 </head>
 <body>
@@ -338,6 +350,23 @@
                     <button class="chip" onclick="appendChip('symbol','Gul')"><span class="chip-dot" style="background:#fdd835"></span>Gul</button>
                     <button class="chip" onclick="appendChip('symbol','Blå')"><span class="chip-dot" style="background:#1565c0"></span>Blå</button>
                     <button class="chip" onclick="appendChip('symbol','Kamouflage')">Kamouflage</button>
+                </div>
+                <div class="symbol-format-group">
+                    <button class="symbol-format-btn" onclick="openSymbolEmbed('scrim.html','SCRIM')">SCRIM</button>
+                    <button class="symbol-format-btn" onclick="openSymbolEmbed('what.html','WHAT')">WHAT</button>
+                    <button class="symbol-format-btn" onclick="openSymbolEmbed('weft.html','WEFT')">WEFT</button>
+                    <button class="symbol-format-btn" onclick="openSymbolEmbed('ah.html','A-H')">A-H</button>
+                </div>
+            </div>
+
+            <!-- Symbol embed modal -->
+            <div class="embed-modal-overlay" id="symbolModal">
+                <div class="embed-modal">
+                    <div class="embed-modal-header">
+                        <span class="embed-modal-title" id="symbolModalTitle">SYMBOL</span>
+                        <button class="embed-modal-close" onclick="closeSymbolEmbed()">×</button>
+                    </div>
+                    <iframe id="symbolIframe" sandbox="allow-scripts allow-same-origin"></iframe>
                 </div>
             </div>
 
@@ -555,6 +584,27 @@ function appendChip(fieldId, value) {
     el.value = el.value.trim() ? el.value.trimEnd() + ', ' + value : value;
     el.focus();
 }
+
+// ── Symbol embed (SCRIM/WHAT/WEFT/A-H i modal) ──────────────────────────────
+function openSymbolEmbed(file, label) {
+    document.getElementById('symbolModalTitle').textContent = 'SYMBOL: Fyll i via ' + label;
+    document.getElementById('symbolIframe').src = file + '?mode=embed';
+    document.getElementById('symbolModal').classList.add('open');
+}
+function closeSymbolEmbed() {
+    document.getElementById('symbolModal').classList.remove('open');
+    document.getElementById('symbolIframe').src = '';
+}
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'symbol-fill') {
+        const el = document.getElementById('symbol');
+        const prefix = el.value.trim();
+        const formatted = `(${e.data.format})\n${e.data.text}`;
+        el.value = prefix ? prefix + '\n' + formatted : formatted;
+        el.rows = Math.max(4, el.value.split('\n').length + 1);
+        closeSymbolEmbed();
+    }
+});
 
 // ── +/- för Styrka ─────────────────────────────────────────────────────────
 function changeCount(delta) {

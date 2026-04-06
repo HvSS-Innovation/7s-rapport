@@ -333,6 +333,65 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
 
 ### 📝 Nya / Öppna (Arbetsfördelning)
 
+#### 7S – Interaktiv karta för STÄLLE (issue #5)
+Nuvarande MGRS-knapp hämtar enbart *egen* GPS-position — men STÄLLE i 7S avser *observationens* plats, inte rapportörens. Knappen är farlig att använda om man inte fysiskt står på platsen man rapporterar.
+
+**Krav:**
+- Behåll befintlig `📍 MGRS`-knapp oförändrad (den fyller funktion vid kontaktrapportering på plats)
+- Lägg till en ny knapp `🗺 Karta` bredvid MGRS-knappen i `.input-row` under STÄLLE
+- Knappen öppnar en kartöverlägg (modal/fullskärm) med OpenStreetMap-brickor (Leaflet.js via CDN)
+- Kartan centreras initialt på användarens GPS-position (om tillgänglig), annars Sverige (59.33, 18.07 zoom 5)
+- Tryck/klick på kartan → konverterar lat/lon till MGRS via den befintliga `MGRS.forward(lat, lon)` i `index.html`
+- MGRS-koordinaten visas i en ruta på kartan + fylls i `#stalle`-fältet vid bekräftelse ("Välj denna plats")
+- En markör visar vald punkt; ny tryckning flyttar markören
+- Stäng-knapp (×) avbryter utan att ändra fältet
+- **Kartstil: OpenTopoMap** — ingen API-nyckel krävs, visar höjdkurvor, vegetation och skogsmarkering, militärt utseende. URL: `https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png`
+- Stäng-knapp (×) avbryter utan att ändra fältet
+- **Offline-aspekt:** Notera i koden att `tile layer` kan bytas mot lokalt cachade brickor via service worker i framtiden — men *inget krav* att implementera offline-kartor nu
+- **Framtida uppgradering:** Om skärpan på hög zoom är otillräcklig — byt till MapLibre GL JS + vector tiles (skalbar vektorgrafik, skarp i alla zoomnivåer, smidigare panorering)
+
+**Berörda filer:** `index.html` (HTML: kartmodal + knapp, CSS: modal-stil, JS: Leaflet init + klick-hantering)
+**Beroenden:** Leaflet.js (~40 kB gzip) via CDN `<link>` + `<script>` i `<head>`
+
+#### 7S – SYMBOL kan fyllas via inbäddade delformulär (issue #5)
+SYMBOL-fältet i 7S kan innehålla en SCRIM-, WEFT- eller A-H-beskrivning. Idag är dessa separata flikar som genererar egna rapporter och inte kommunicerar med 7S. Problemet: rapportören måste skicka två separata rapporter istället för en komplett 7S.
+
+**Flöde:**
+1. Under SYMBOL-fältet i `index.html` — lägg till snabbknappar: `[SCRIM]` `[WEFT]` `[A-H]` `[WHAT]` (samma stil som befintliga färg-chips)
+2. Klick öppnar valt formulär som en **modal/overlay** ovanpå 7S (användaren lämnar aldrig 7S-sidan)
+3. Formuläret laddas i en `<iframe>` med URL-parameter `?mode=embed` (t.ex. `scrim.html?mode=embed`)
+4. I embed-läge:
+   - Dölj: navigation (`.tab-nav`, `.tab-nav-sub`), header, Från/Till/TNR-block, Stund/Ställe/Sagesman-fält, "Kopiera"-knapp
+   - Visa: **enbart de formatspecifika fälten** (SCRIM: Size/Colour/Reg/Ident/Model; WEFT: Wings/Engines/Fuselage/Tail; A-H: Age/Build/…; WHAT: Wheels/Hull/Armament/Turret)
+   - Visa knappen **"Klistra in i 7S"** istället för "Generera rapport"
+5. Knappen samlar enbart de formatspecifika fälten (inte Stund/Ställe/Sagesman — de finns redan i 7S) och anropar `window.parent.postMessage({ type: 'symbol-fill', format: 'SCRIM', text: '...' }, '*')`
+6. `index.html` lyssnar på `message`-event → fyller `#symbol`-textarea med mottagen text → stänger modalen
+7. I den slutliga 7S-rapporten visas det som:
+   ```
+   Symbol (SCRIM):
+     Size:       Pickup, stor
+     Colour:     Svart
+     Reg.nr:     ABC 123
+     Ident.mrks: Antenn, rostig
+     Model:      Toyota Hilux
+   ```
+
+**Viktiga detaljer:**
+- Stund, Ställe och Sagesman ska **inte** dupliceras — de ärvs från 7S-rapporten. Embed-läget visar bara det som är unikt för formatet.
+- WHAT bör ingå bland valen (stridsfordon är en vanlig observation i 7S)
+- Befintliga färg-chips (Grön, Röd, Svart…) under SYMBOL behålls — de kompletterar, inte ersätter, delformuläret. Användaren kan välja att bara skriva "Grön, kamouflage" eller öppna ett fullständigt SCRIM.
+- Om SYMBOL redan har text (t.ex. färg-chips) och användaren lägger till SCRIM → text appendas, inte ersätts.
+- Modalen bör ha en tydlig rubrik: "SYMBOL: Fyll i via SCRIM" och stäng-knapp (×)
+- WHAT bör inkluderas: `what.html?mode=embed` → visar Wheels/Hull/Armament/Turret
+
+**Berörda filer:**
+- `index.html` — modal-HTML + CSS, `postMessage`-lyssnare, format-knapparna under SYMBOL
+- `scrim.html`, `weft.html`, `ah.html`, `what.html` — detektera `?mode=embed` via `new URLSearchParams(location.search).has('mode')`, dölja nav/header/gemensamma fält, byta "Generera rapport" mot "Klistra in i 7S", skicka `postMessage` med enbart formatspecifika fält
+
+**Notering:** iframe-lösningen är pragmatisk och snabb. Om filerna senare refaktoreras till JS-moduler kan modalerna byggas utan iframe.
+
+**Fristående bruk påverkas ej** — SCRIM/WEFT/A-H/WHAT fungerar precis som idag när de öppnas utan `?mode=embed`.
+
 #### 🎨 Uppgifter för UX/UI-Specialist (Claude Opus Web-gränssnitt)
 > **INSTRUKTION TILL CLAUDE:** Eftersom projektet består av 12 separata HTML-filer, ska du **inte** be användaren klistra in koden manuellt överallt. 
 > Ditt mål är att utveckla logiken/stilarna som självständiga kodblock (t.ex. en JS-funktion, eller en CSS-klass). Mata ut koden komplett i chatten, och skriv därefter en prompt som användaren kan ge till sin "lokala agent" (Antigravity) som säger: *"Applicera denna CSS/JS i filen X, eller sprid ut denna kod över de 12 html-filerna"*. På så sätt elimineras risken för slarvfel.

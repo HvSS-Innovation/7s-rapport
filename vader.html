@@ -46,8 +46,9 @@
         .copy-feedback { text-align: center; color: var(--accent); font-size: 0.85rem; font-weight: 600; height: 24px; opacity: 0; transition: opacity 0.2s; margin-bottom: 12px; }
         .copy-feedback.show { opacity: 1; }
         .prompt-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 16px; font-family: 'Courier New', monospace; font-size: 0.82rem; line-height: 1.7; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px; user-select: all; }
-        .result-view { display: none; }
+        .result-view { display: none; position: relative; }
         .result-view.active { display: block; }
+        #weatherCanvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; pointer-events: none; z-index: 9999; }
         .form-view.hidden { display: none; }
         .result-header { font-size: 0.8rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 12px; }
         .hint { font-size: 0.72rem; color: var(--text-muted); text-align: center; margin-bottom: 14px; line-height: 1.5; }
@@ -104,6 +105,7 @@
     </div>
 
     <div class="result-view" id="resultView">
+        <canvas id="weatherCanvas"></canvas>
         <div class="result-header">VÄDER redo att kopieras</div>
         <div class="prompt-box" id="promptOutput" contenteditable="true"></div>
         <button class="btn btn-copy" onclick="kopiera()">Kopiera till urklipp</button>
@@ -331,6 +333,9 @@ async function generera() {
         document.getElementById('formView').classList.add('hidden');
         document.getElementById('resultView').classList.add('active');
         window.scrollTo(0, 0);
+        wxResize();
+        wxStart({ precip, tempMin, windMs, cloudPct });
+        setTimeout(wxFadeOut, 5000);
     } catch(err) {
         alert('Kunde inte hämta väderdata: ' + err.message);
     } finally {
@@ -377,6 +382,7 @@ function atergaForm() {
     window.scrollTo(0, 0);
 }
 function nollstall() {
+    wxStop();
     ortVal = ''; latVal = null; lonVal = null;
     document.getElementById('dispDatum').value = '';
     document.getElementById('ortInput').value = '';
@@ -387,6 +393,129 @@ function nollstall() {
 
 // Reset GPS coords if user edits the location field manually
 document.getElementById('ortInput').addEventListener('input', () => { latVal = null; lonVal = null; });
+
+// ── Väderanimation ───────────────────────────────────────────────────────────
+const wxCanvas = document.getElementById('weatherCanvas');
+const wxCtx = wxCanvas.getContext('2d');
+let wxParticles = [];
+let wxAnimId = null;
+let wxWeather = null;
+
+function wxResize() {
+    wxCanvas.width = window.innerWidth;
+    wxCanvas.height = window.innerHeight;
+}
+window.addEventListener('resize', wxResize);
+wxResize();
+
+function wxStart(weather) {
+    wxWeather = weather;
+    wxParticles = [];
+    const w = wxCanvas.width, h = wxCanvas.height;
+
+    // Regn
+    if (weather.precip >= 0.1 && weather.tempMin > 0) {
+        const count = weather.precip >= 10 ? 220 : weather.precip >= 3 ? 120 : 50;
+        for (let i = 0; i < count; i++) {
+            wxParticles.push({
+                type: 'rain',
+                x: Math.random() * w,
+                y: Math.random() * h,
+                len: 12 + Math.random() * 18,
+                speed: 6 + Math.random() * 6,
+                drift: weather.windMs * 0.4
+            });
+        }
+    }
+
+    // Snö
+    if (weather.precip >= 0.1 && weather.tempMin <= 0) {
+        const count = weather.precip >= 10 ? 180 : weather.precip >= 3 ? 90 : 40;
+        for (let i = 0; i < count; i++) {
+            wxParticles.push({
+                type: 'snow',
+                x: Math.random() * w,
+                y: Math.random() * h,
+                r: 1.5 + Math.random() * 3,
+                speed: 0.8 + Math.random() * 1.5,
+                wobble: Math.random() * Math.PI * 2,
+                drift: weather.windMs * 0.3
+            });
+        }
+    }
+
+    // Dimma (hög molnighet + svag vind)
+    if (weather.cloudPct >= 70 && weather.windMs < 4) {
+        for (let i = 0; i < 8; i++) {
+            wxParticles.push({
+                type: 'fog',
+                x: Math.random() * w,
+                y: h * 0.3 + Math.random() * h * 0.5,
+                r: 80 + Math.random() * 120,
+                speed: 0.15 + Math.random() * 0.25,
+                alpha: 0.03 + Math.random() * 0.04
+            });
+        }
+    }
+
+    if (!wxAnimId) wxAnimate();
+}
+
+function wxStop() {
+    if (wxAnimId) { cancelAnimationFrame(wxAnimId); wxAnimId = null; }
+    wxParticles = [];
+    wxCtx.clearRect(0, 0, wxCanvas.width, wxCanvas.height);
+    wxCanvas.style.opacity = '';
+    wxWeather = null;
+}
+
+function wxFadeOut() {
+    wxCanvas.style.transition = 'opacity 1.5s ease-out';
+    wxCanvas.style.opacity = '0';
+    setTimeout(wxStop, 1500);
+}
+
+function wxAnimate() {
+    const w = wxCanvas.width, h = wxCanvas.height;
+    wxCtx.clearRect(0, 0, w, h);
+
+    wxParticles.forEach(p => {
+        if (p.type === 'rain') {
+            p.x += p.drift;
+            p.y += p.speed;
+            if (p.y > h) { p.y = -p.len; p.x = Math.random() * w; }
+            if (p.x > w) p.x -= w;
+            wxCtx.strokeStyle = 'rgba(140,180,220,0.5)';
+            wxCtx.lineWidth = 1;
+            wxCtx.beginPath();
+            wxCtx.moveTo(p.x, p.y);
+            wxCtx.lineTo(p.x + p.drift * 0.5, p.y + p.len);
+            wxCtx.stroke();
+        }
+        else if (p.type === 'snow') {
+            p.wobble += 0.02;
+            p.x += Math.sin(p.wobble) * 0.6 + p.drift;
+            p.y += p.speed;
+            if (p.y > h + p.r) { p.y = -p.r; p.x = Math.random() * w; }
+            if (p.x > w) p.x -= w;
+            wxCtx.fillStyle = 'rgba(220,230,240,0.6)';
+            wxCtx.beginPath();
+            wxCtx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+            wxCtx.fill();
+        }
+        else if (p.type === 'fog') {
+            p.x += p.speed;
+            if (p.x - p.r > w) p.x = -p.r;
+            const g = wxCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
+            g.addColorStop(0, `rgba(180,200,180,${p.alpha})`);
+            g.addColorStop(1, 'rgba(180,200,180,0)');
+            wxCtx.fillStyle = g;
+            wxCtx.fillRect(p.x - p.r, p.y - p.r, p.r * 2, p.r * 2);
+        }
+    });
+
+    wxAnimId = requestAnimationFrame(wxAnimate);
+}
 
 if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
 

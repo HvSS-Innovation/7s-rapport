@@ -504,7 +504,38 @@ function renderSaved(cid, items, inputId, delFn) {
 function deleteSavedPlace(v) { set('7s_places', get('7s_places').filter(x=>x!==v)); loadSavedItems(); }
 function deleteSavedSagesman(v) { set('7s_sagesman', get('7s_sagesman').filter(x=>x!==v)); loadSavedItems(); }
 
-document.addEventListener('DOMContentLoaded', () => { loadSavedItems(); loadLastSagesman(); setCurrentTime(); });
+// ── Embed-läge (öppnad via 7S SYMBOL-modal) ──────────────────────────────────
+const isEmbed = new URLSearchParams(location.search).get('mode') === 'embed';
+function initEmbed() {
+    if (!isEmbed) return;
+    document.querySelector('header').style.display = 'none';
+    document.querySelectorAll('.tab-nav, .tab-nav-sub').forEach(el => el.style.display = 'none');
+    const foto = document.querySelector('.form-group[style*="dashed"]');
+    if (foto) foto.style.display = 'none';
+    ['till', 'stund', 'stalle', 'sagesman'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) { const fg = el.closest('.form-group'); if (fg) fg.style.display = 'none'; }
+    });
+    const hr = document.querySelector('.divider');
+    if (hr) hr.style.display = 'none';
+    const genBtn = document.querySelector('.btn-primary[onclick*="generateReport"]');
+    if (genBtn) {
+        genBtn.textContent = 'Klistra in i 7S';
+        genBtn.onclick = function() {
+            const v = id => (document.getElementById(id)?.value || '').trim();
+            const lines = [
+                `Wings:    ${v('wings') || '-'}`,
+                `Engines:  ${v('engines') || '-'}`,
+                `Fuselage: ${v('fuselage') || '-'}`,
+                `Tail:     ${v('tail') || '-'}`,
+            ];
+            window.parent.postMessage({ type: 'symbol-fill', format: 'WEFT', text: lines.join('\n') }, '*');
+        };
+    }
+    document.body.style.padding = '8px';
+}
+
+document.addEventListener('DOMContentLoaded', () => { loadSavedItems(); loadLastSagesman(); setCurrentTime(); initEmbed(); });
 document.addEventListener('DOMContentLoaded', () => {
     const a = document.createElement('a');
     a.href = 'https://github.com/gitjoda71/7s-rapport/issues/new?title=%5BBeta-Feedback%5D%20WEFT&body=**Form%3A**%20WEFT%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**';
