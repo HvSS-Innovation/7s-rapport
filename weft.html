@@ -107,11 +107,8 @@
         .map-confirm-btn { min-height:40px; padding:8px 18px; border:none; border-radius:var(--radius-sm); background:var(--accent); color:#fff; font-family:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; white-space:nowrap; }
         .map-confirm-btn:hover { background:var(--accent-hover); }
         .map-confirm-btn:disabled { opacity:0.4; cursor:default; }
-        .input-wrap { position:relative; flex:1; min-width:0; }
-        .input-wrap input { width:100%; padding-right:32px; }
-        .input-clear { position:absolute; right:8px; top:50%; transform:translateY(-50%); background:none; border:none; color:var(--text-muted); font-size:1.1rem; cursor:pointer; padding:4px; line-height:1; display:none; }
-        .input-clear:hover { color:var(--text-primary); }
-        .input-wrap input:not(:placeholder-shown) ~ .input-clear { display:block; }
+        .field-clear { background:none; border:none; color:var(--text-muted); font-size:0.72rem; font-weight:600; letter-spacing:0.05em; cursor:pointer; padding:2px 0; text-transform:uppercase; }
+        .field-clear:hover { color:var(--danger); }
     </style>
 </head>
 <body>
@@ -180,14 +177,12 @@
             <div class="form-group">
                 <div class="label-row">
                     <label for="stalle">Ställe</label>
-                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStalle')">i</button>
+                    <button class="field-clear" tabindex="-1" onclick="document.getElementById('stalle').value=''">RENSA ×</button>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStalle')" aria-label="Info om Ställe">i</button>
                 </div>
                 <div class="info-text" id="infoStalle">Var farkroten observerades. Riktning och höjd om möjligt.</div>
                 <div class="input-row">
-                    <div class="input-wrap">
-                        <input type="text" id="stalle" placeholder="Plats / koordinater / riktning" autocomplete="off">
-                        <button class="input-clear" tabindex="-1" onclick="document.getElementById('stalle').value='';this.style.display='none'" title="Rensa">×</button>
-                    </div>
+                    <input type="text" id="stalle" placeholder="Plats / koordinater / riktning" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="openMapModal()">🗺 Karta</button>
                 </div>
                 <div class="saved-items" id="savedStalle"></div>
