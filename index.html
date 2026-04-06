@@ -302,6 +302,7 @@
                 <div id="mapContainer"></div>
                 <div class="map-modal-footer">
                     <span class="map-mgrs-display" id="mapMgrsDisplay">Tryck på kartan</span>
+                    <button class="map-modal-close" onclick="clearMapMarker()" title="Rensa markör">×</button>
                     <button class="map-confirm-btn" id="mapConfirmBtn" disabled onclick="confirmMapSelection()">Välj plats</button>
                 </div>
             </div>
@@ -688,6 +689,13 @@ function openMapModal() {
 
 function closeMapModal() {
     document.getElementById('mapModal').classList.remove('open');
+}
+
+function clearMapMarker() {
+    if (mapMarker) { mapMarker.remove(); mapMarker = null; }
+    mapSelectedMgrs = '';
+    document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
+    document.getElementById('mapConfirmBtn').disabled = true;
 }
 
 function confirmMapSelection() {
