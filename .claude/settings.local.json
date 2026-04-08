@@ -46,7 +46,9 @@
       "Bash(grep -n \"pattern=\" *.html)",
       "Bash(wc -l *.html)",
       "Bash(grep -n \"function setNow\\\\|function setCurrentTime\" *.html)",
-      "Bash(grep -c \"<script>\" *.html)"
+      "Bash(grep -c \"<script>\" *.html)",
+      "Bash(npm run:*)",
+      "Bash(npx prisma:*)"
     ]
   }
 }

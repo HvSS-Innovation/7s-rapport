@@ -333,8 +333,12 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
 
 ### 📝 Nya / Öppna (Arbetsfördelning)
 
-#### 7S – Interaktiv karta för STÄLLE (issue #5)
-Nuvarande MGRS-knapp hämtar enbart *egen* GPS-position — men STÄLLE i 7S avser *observationens* plats, inte rapportörens. Knappen är farlig att använda om man inte fysiskt står på platsen man rapporterar.
+#### 🐛 Karta: Dubbla/flera markörer visas på kartan
+Vid upprepad användning av kartmodalen kan flera markörer visas samtidigt trots att koden ska begränsa till en. Utred om Leaflet-markören inte rensas korrekt mellan sessioner, eller om kartinstansen återskapas felaktigt. Ska alltid vara exakt en markör på kartan.
+- Berörda filer: alla 6 tabs med kartmodal (index.html, what.html, scrim.html, weft.html, ah.html, obslosa.html)
+
+#### 7S – Interaktiv karta för STÄLLE (issue #5) ✅ Implementerad
+MGRS-knappen ersatt med interaktiv karta (Leaflet.js + OpenTopoMap) i alla 6 tabs med STÄLLE/Plats-fält.
 
 **Krav:**
 - Behåll befintlig `📍 MGRS`-knapp oförändrad (den fyller funktion vid kontaktrapportering på plats)
@@ -440,6 +444,20 @@ SYMBOL-fältet i 7S kan innehålla en SCRIM-, WEFT- eller A-H-beskrivning. Idag 
         A - Anmäl
         -
         ```
+
+### 🚁 UAV / Underrättelse – Smartare positions- och uppdragshantering
+Återkoppling från användare rörande friktionen mellan drönarsystem/karta och rapportverktyget i fält.
+
+- [ ] **1. Åtskillnad av Min Position och Målposition:** Utvärdera om `Ställe`-fältet bör delas upp eller ha extra kontext. En pilot som sitter 4 km bort behöver tydligt separera var *drönaren ser* målet (målet) och var *piloten* befinner sig, för att undvika missförstånd. Byta etikett från "Ställe" till "Målets position (MGRS)"?
+- [ ] **2. Klistra in MGRS / Text-extrahering:** Manuellt knappa långa koordinater från en annan skärm under stress orsakar feltryck. Lägg till en funktion vid MGRS-fältet som automatiskt tvättar inklistrad text och försöker extrahera en giltig MGRS-sträng (t.ex. om man kopierar från en drönar-app som ger massa omgivande text).
+- [ ] **3. OCR / Bildinläsning (Framtid):** Framtida möjlighet att ladda upp en skärmdump av pilotens kontrollskärm där systemet läser av och extraherar koordinater (OCR) för att helt slippa inmatning/ögonompassning mellan olika kartsytem och dess parallaxfel.
+- [ ] **4. Uppdrags-profiler (Missions):** 7S-rapporten upplevs för statisk. Inför en inställning typ "Preppad 7S" där man kan ladda in ett visst uppdrag (t.ex. "Spana efter drönare" eller "Spana fordon"). Detta skulle kunna:
+    - Höja relevanta snabbval (chips) överst eller "förfärga" dem.
+    - Lägga till ett beskrivningsfält på varje punkt som fungerar som en minneslista för uppdraget ("Glöm ej X under denna punkt...").
+    - Gömma onödiga fält (kognitiv avlastning).
+- [ ] **5. Sensor & Observationsmetod:** Inför snabbval för *hur* observationen gjordes, till exempel: Visuell kamera (MRPAS), IR-kamera (MRPAS), Värmekikare, eller Bildförstärkare. Att veta vilken sensor som använts ger mottagaren viktig teknisk kontext.
+- [ ] **6. Tillförlitlighet & Avstånd:** På långa avstånd eller med dåliga sensorer (t.ex. blurrig IR) blir observationer ofta en "bedömningssport". Möjliggör angivelse av ungefärligt avstånd och standardiserad tillförlitlighetsgrad (exempelvis gradering 1–6) så att underrättelsebefälet kan vikta rapportens värde rätt (skilja en stensäker observation från en misstanke).
+- [ ] **7. Målets Status (Rörelse):** Ett enkelt snabbval/fält för om målet är i "Rörelse" eller "Orörligt/Statiskt", då detta ofta är direkt avgörande för verkansbeslut eller uppföljning.
 
 ### ✅ Åtgärdade
 *   **Återställd valbar passlängd i POSTSCHEMA**
