@@ -668,7 +668,26 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // ── Interaktiv karta för PLATS ───────────────────────────────────────────────
 let mapInstance = null, mapMarker = null, mapSelectedMgrs = '';
+let mapSelectedAddress = '';
 let mapViewportRestore = null;
+
+function reverseGeocode(lat, lon) {
+    mapSelectedAddress = '';
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=sv&zoom=18`)
+        .then(r => r.json())
+        .then(d => {
+            const a = d.address || {};
+            const street = a.road ? (a.road + (a.house_number ? ' ' + a.house_number : '')) : '';
+            const area = a.suburb || a.neighbourhood || a.city_district || a.village || a.town || '';
+            const parts = [street, area].filter(Boolean);
+            if (parts.length) {
+                mapSelectedAddress = parts.join(', ');
+                const disp = document.getElementById('mapMgrsDisplay');
+                if (disp && mapSelectedMgrs) disp.textContent = mapSelectedMgrs + ' — ' + mapSelectedAddress;
+            }
+        })
+        .catch(() => {});
+}
 
 function lockViewportForMapModal() {
     const viewport = document.querySelector('meta[name="viewport"]');
@@ -706,6 +725,7 @@ function openMapModal() {
             mapSelectedMgrs = MGRS.forward(e.latlng.lat, e.latlng.lng);
             document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs;
             document.getElementById('mapConfirmBtn').disabled = false;
+            reverseGeocode(e.latlng.lat, e.latlng.lng);
             if (mapMarker) mapMarker.setLatLng(e.latlng); else mapMarker = L.marker(e.latlng).addTo(mapInstance);
         });
     }
@@ -736,7 +756,7 @@ function clearMapMarker() {
 function confirmMapSelection() {
     if (!mapSelectedMgrs) return;
     const f = document.getElementById('plats');
-    f.value = mapSelectedMgrs;
+    f.value = mapSelectedAddress ? mapSelectedMgrs + ', ' + mapSelectedAddress : mapSelectedMgrs;
     closeMapModal();
 }
 

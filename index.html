@@ -649,7 +649,26 @@ let mapMarker = null;
 let mapSelectedMgrs = '';
 let mapSelectedLat = null;
 let mapSelectedLon = null;
+let mapSelectedAddress = '';
 let mapViewportRestore = null;
+
+function reverseGeocode(lat, lon) {
+    mapSelectedAddress = '';
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=sv&zoom=18`)
+        .then(r => r.json())
+        .then(d => {
+            const a = d.address || {};
+            const street = a.road ? (a.road + (a.house_number ? ' ' + a.house_number : '')) : '';
+            const area = a.suburb || a.neighbourhood || a.city_district || a.village || a.town || '';
+            const parts = [street, area].filter(Boolean);
+            if (parts.length) {
+                mapSelectedAddress = parts.join(', ');
+                const disp = document.getElementById('mapMgrsDisplay');
+                if (disp && mapSelectedMgrs) disp.textContent = mapSelectedMgrs + ' — ' + mapSelectedAddress;
+            }
+        })
+        .catch(() => {});
+}
 
 function lockViewportForMapModal() {
     const viewport = document.querySelector('meta[name="viewport"]');
@@ -695,6 +714,7 @@ function openMapModal() {
             mapSelectedMgrs = MGRS.forward(lat, lng);
             document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs;
             document.getElementById('mapConfirmBtn').disabled = false;
+            reverseGeocode(lat, lng);
             if (mapMarker) {
                 mapMarker.setLatLng(e.latlng);
             } else {
@@ -733,7 +753,7 @@ function clearMapMarker() {
 function confirmMapSelection() {
     if (!mapSelectedMgrs) return;
     const field = document.getElementById('stalle');
-    field.value = mapSelectedMgrs;
+    field.value = mapSelectedAddress ? mapSelectedMgrs + ', ' + mapSelectedAddress : mapSelectedMgrs;
     closeMapModal();
 }
 
