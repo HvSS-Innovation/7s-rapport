@@ -680,13 +680,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 
-// ============================================================
-// SERVICE WORKER
-// ============================================================
-if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('service-worker.js');
-}
-
 // ── Slumpa lösen ─────────────────────────────────────────────────────────────
 const LOSEN_WORDS = [
     'ANKARE','ALARE','ASKA','BULLER','BYXA','BÅGE','CIRKEL','DAGAR','DIMMA','DRAKE',
@@ -743,6 +736,7 @@ document.addEventListener('DOMContentLoaded', function() {
     if (c) { c.appendChild(p); c.appendChild(a); }
 });
 </script>
+<script src="pwa.js"></script>
 <script src="version.js"></script>
 </body>
 </html>

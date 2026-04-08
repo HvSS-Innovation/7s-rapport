@@ -17,6 +17,7 @@ const FILES = [
   './weft.html',
   './ah.html',
   './version.js',
+  './pwa.js',
   './ortnamn.json'
 ];
 

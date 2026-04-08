@@ -354,8 +354,6 @@ function resetForm() {
 document.addEventListener('DOMContentLoaded', () => {
     setNow();
 });
-if ('serviceWorker' in navigator) navigator.serviceWorker.register('service-worker.js');
-
 // ── Feedback-länk ──────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     const a = document.createElement('a');
@@ -370,6 +368,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if (c) { c.appendChild(p); c.appendChild(a); }
 });
 </script>
+<script src="pwa.js"></script>
 <script src="version.js"></script>
 </body>
 </html>
