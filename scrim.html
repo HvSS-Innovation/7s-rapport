@@ -367,7 +367,7 @@ async function applyGPSPosition(pos) {
     const parts = [mgrs];
     let road = '', houseNumber = '';
     try {
-        const nomResp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=18&addressdetails=1&accept-language=sv`);
+        const nomResp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=19&addressdetails=1&accept-language=sv`);
         const addr = (await nomResp.json()).address || {};
         road = addr.road || addr.pedestrian || addr.footway || '';
         houseNumber = addr.house_number || '';
@@ -564,13 +564,15 @@ let mapViewportRestore = null;
 
 function reverseGeocode(lat, lon) {
     mapSelectedAddress = '';
-    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=sv&zoom=18`)
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=sv&zoom=19`)
         .then(r => r.json())
         .then(d => {
             const a = d.address || {};
             const mainRoad = a.road || '';
             const houseNum = a.house_number || '';
-            const area = a.suburb || a.neighbourhood || a.city_district || a.village || a.town || '';
+            const local = a.suburb || a.neighbourhood || a.city_district || '';
+            const town = a.village || a.town || a.city || '';
+            const area = (local && town && local !== town) ? local + ', ' + town : (local || town);
             if (a.island) {
                 const street = mainRoad ? (mainRoad + (houseNum ? ' ' + houseNum : '')) : '';
                 resolveFeaturePosition(lat, lon, a.island, 'island', [street, area].filter(Boolean));
