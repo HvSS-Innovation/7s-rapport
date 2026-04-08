@@ -647,8 +647,24 @@ let mapMarker = null;
 let mapSelectedMgrs = '';
 let mapSelectedLat = null;
 let mapSelectedLon = null;
+let mapViewportRestore = null;
+
+function lockViewportForMapModal() {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+        if (mapViewportRestore === null) mapViewportRestore = viewport.getAttribute('content') || '';
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
+    }
+    window.scrollTo(0, 0);
+}
+
+function restoreViewportAfterMapModal() {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport && mapViewportRestore !== null) viewport.setAttribute('content', mapViewportRestore);
+}
 
 function openMapModal() {
+    lockViewportForMapModal();
     document.getElementById('mapModal').classList.add('open');
     document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
     document.getElementById('mapConfirmBtn').disabled = true;
@@ -697,6 +713,7 @@ function openMapModal() {
 
 function closeMapModal() {
     document.getElementById('mapModal').classList.remove('open');
+    restoreViewportAfterMapModal();
 }
 
 function clearMapMarker() {

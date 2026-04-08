@@ -550,7 +550,24 @@ function deleteSavedSagesman(v) { set('7s_sagesman', get('7s_sagesman').filter(x
 
 // ── Interaktiv karta för STÄLLE ──────────────────────────────────────────────
 let mapInstance = null, mapMarker = null, mapSelectedMgrs = '';
+let mapViewportRestore = null;
+
+function lockViewportForMapModal() {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+        if (mapViewportRestore === null) mapViewportRestore = viewport.getAttribute('content') || '';
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
+    }
+    window.scrollTo(0, 0);
+}
+
+function restoreViewportAfterMapModal() {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport && mapViewportRestore !== null) viewport.setAttribute('content', mapViewportRestore);
+}
+
 function openMapModal() {
+    lockViewportForMapModal();
     document.getElementById('mapModal').classList.add('open');
     document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
     document.getElementById('mapConfirmBtn').disabled = true;
@@ -583,7 +600,10 @@ function openMapModal() {
         }
     }, 100);
 }
-function closeMapModal() { document.getElementById('mapModal').classList.remove('open'); }
+function closeMapModal() {
+    document.getElementById('mapModal').classList.remove('open');
+    restoreViewportAfterMapModal();
+}
 function clearMapMarker() {
     if (mapMarker) { mapMarker.remove(); mapMarker = null; }
     mapSelectedMgrs = '';
