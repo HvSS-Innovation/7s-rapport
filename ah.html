@@ -664,10 +664,10 @@ function overpassLookup(lat, lon, addressParts) {
             const els = data.elements || [];
             const island = els.find(e => (e.tags || {}).place && /^(island|islet)$/.test(e.tags.place) && e.tags.name);
             const lake = els.find(e => (e.tags || {}).natural === 'water' && e.tags.name);
-            if (island) {
-                resolveFeaturePosition(lat, lon, island.tags.name, 'island', addressParts);
-            } else if (lake) {
+            if (lake) {
                 resolveFeaturePosition(lat, lon, lake.tags.name, 'lake', addressParts);
+            } else if (island) {
+                resolveFeaturePosition(lat, lon, island.tags.name, 'island', addressParts);
             } else {
                 lmLookup(lat, lon, addressParts);
             }
