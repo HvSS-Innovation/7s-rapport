@@ -193,6 +193,8 @@
                 <div class="input-row">
                     <input type="text" id="stalle" placeholder="Plats / koordinater" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="openMapModal()">🗺 Karta</button>
+                    <button class="btn btn-sm btn-time" tabindex="-1" onclick="document.getElementById('ocrInput').click()">📷 OCR</button>
+                    <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="ocrImage(this)">
                 </div>
                 <div class="saved-items" id="savedStalle"></div>
             </div>
@@ -352,7 +354,31 @@ const MGRS = (() => {
         const utm = toUTM(lat, lon), sq = gridSquare(utm.E, utm.N, utm.zn);
         return `${utm.zn}${utm.zl}${sq} ${String(Math.floor(utm.E%100000)).padStart(5,'0')} ${String(Math.floor(utm.N%100000)).padStart(5,'0')}`;
     }
-    return { forward };
+    function inverse(mgrsStr) {
+        const s = mgrsStr.replace(/\s+/g, '');
+        const m = s.match(/^(\d{1,2})([C-X])([A-Z])([A-Z])(\d+)$/i);
+        if (!m) return null;
+        const zn = parseInt(m[1]), band = m[2].toUpperCase(), col = m[3].toUpperCase(), row = m[4].toUpperCase();
+        const nums = m[5], half = nums.length / 2;
+        const easting = parseInt(nums.slice(0, half)) * Math.pow(10, 5 - half);
+        const northing = parseInt(nums.slice(half)) * Math.pow(10, 5 - half);
+        const setIdx = (zn - 1) % 6, colIdx = COL_LETTERS[setIdx].indexOf(col) + 1, rowIdx = ROW_LETTERS[setIdx % 2].indexOf(row);
+        const E2 = colIdx * 100000 + easting;
+        const bandIdx = 'CDEFGHJKLMNPQRSTUVWX'.indexOf(band), bandLat = -80 + bandIdx * 8 + 4;
+        const refN = toUTM(bandLat, (zn - 1) * 6 - 180 + 3).N;
+        let Ni = Math.floor(refN / 2000000) * 2000000 + rowIdx * 100000 + northing;
+        if (Ni < refN - 1000000) Ni += 2000000; if (Ni > refN + 1000000) Ni -= 2000000;
+        const ai = 6378137, fi = 1/298.257223563, bi = ai*(1-fi), e2i = (ai*ai-bi*bi)/(ai*ai), ep2i = e2i/(1-e2i), k0i = 0.9996;
+        const mu = (Ni/k0i) / (ai*(1-e2i/4-3*e2i*e2i/64-5*e2i*e2i*e2i/256));
+        const e1 = (1-Math.sqrt(1-e2i))/(1+Math.sqrt(1-e2i));
+        const phi1 = mu+(3*e1/2-27*e1**3/32)*Math.sin(2*mu)+(21*e1*e1/16-55*e1**4/32)*Math.sin(4*mu)+(151*e1**3/96)*Math.sin(6*mu);
+        const N1 = ai/Math.sqrt(1-e2i*Math.sin(phi1)**2), T1 = Math.tan(phi1)**2, C1 = ep2i*Math.cos(phi1)**2;
+        const R1 = ai*(1-e2i)/Math.pow(1-e2i*Math.sin(phi1)**2,1.5), D = (E2-500000)/(N1*k0i);
+        const lat2 = phi1-(N1*Math.tan(phi1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2i)*D**4/24+(61+90*T1+298*C1+45*T1*T1-252*ep2i-3*C1*C1)*D**6/720);
+        const lon2 = ((zn-1)*6-180+3)*Math.PI/180+(D-(1+2*T1+C1)*D**3/6+(5-2*C1+28*T1-3*C1*C1+8*ep2i+24*T1*T1)*D**5/120)/Math.cos(phi1);
+        return [lat2*180/Math.PI, lon2*180/Math.PI];
+    }
+    return { forward, inverse };
 })();
 
 // ── Klistra in MGRS / lat-lon — auto-extrahering ────────────────────────────
@@ -362,7 +388,7 @@ document.addEventListener('DOMContentLoaded', () => {
     field.addEventListener('paste', e => {
         const raw = (e.clipboardData || window.clipboardData).getData('text');
         const coord = extractCoord(raw);
-        if (coord) { e.preventDefault(); field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 800); }
+        if (coord) { e.preventDefault(); field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 800); showVerifyBtn(coord); }
     });
 });
 function extractCoord(text) {
@@ -388,6 +414,23 @@ function extractCoord(text) {
         }
     }
     return null;
+}
+
+let _tesseractLoaded = false;
+function loadTesseract() { if (_tesseractLoaded) return Promise.resolve(); return new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; s.onload = () => { _tesseractLoaded = true; res(); }; s.onerror = rej; document.head.appendChild(s); }); }
+async function ocrImage(input) {
+    const file = input.files[0]; input.value = ''; if (!file) return;
+    const field = document.getElementById('stalle') || document.getElementById('plats'); if (!field) return;
+    field.value = 'Läser bild...'; field.style.outline = '2px solid var(--info)';
+    try { await loadTesseract(); const { data: { text } } = await Tesseract.recognize(file, 'eng', { logger: () => {} }); const coord = extractCoord(text);
+        if (coord) { field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 1500); showVerifyBtn(coord); }
+        else { field.value = ''; field.style.outline = '2px solid var(--danger)'; setTimeout(() => field.style.outline = '', 1500); alert('Kunde inte hitta koordinater i bilden.'); }
+    } catch (e) { field.value = ''; field.style.outline = ''; alert('OCR misslyckades. Kontrollera nätuppkoppling (krävs första gången).'); }
+}
+function showVerifyBtn(mgrsStr) {
+    let btn = document.getElementById('verifyMapBtn');
+    if (!btn) { btn = document.createElement('button'); btn.id = 'verifyMapBtn'; btn.className = 'btn btn-sm btn-time'; btn.tabIndex = -1; btn.textContent = '✓ Visa på karta'; btn.style.cssText = 'margin-top:6px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)'; const row = (document.getElementById('stalle') || document.getElementById('plats')).closest('.input-row'); row.parentNode.insertBefore(btn, row.nextSibling); }
+    btn.style.display = ''; btn.onclick = () => { const ll = MGRS.inverse(mgrsStr); if (!ll) return; openMapModal(); const wait = setInterval(() => { if (typeof mapInstance !== 'undefined' && mapInstance) { clearInterval(wait); mapInstance.setView(ll, 14); if (typeof mapMarker !== 'undefined' && mapMarker) mapInstance.removeLayer(mapMarker); mapMarker = L.marker(ll).addTo(mapInstance); mapSelectedMgrs = mgrsStr; const disp = document.getElementById('mapMgrsDisplay'); if (disp) disp.textContent = mgrsStr + ' — '; reverseGeocode(ll[0], ll[1]); } }, 100); };
 }
 
 function haversine(lat1, lon1, lat2, lon2) {

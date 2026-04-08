@@ -300,6 +300,8 @@
             <div class="input-row">
                 <input type="text" id="plats" placeholder="MGRS / Platsnamn" autocomplete="off">
                 <button class="btn btn-sm btn-time" onclick="openMapModal()">🗺 Karta</button>
+                <button class="btn btn-sm btn-time" tabindex="-1" onclick="document.getElementById('ocrInput').click()">📷 OCR</button>
+                <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="ocrImage(this)">
             </div>
         </div>
         <div class="map-modal-overlay" id="mapModal">
@@ -482,7 +484,8 @@ const MGRS = (() => {
     }
     function gridSquare(E,Ns,zn){const s=(zn-1)%6,col=Math.floor(E/100000)-1,row=Math.floor(Ns/100000)%20;return COL_LETTERS[s][col]+ROW_LETTERS[s%2][row];}
     function forward(lat,lon){const utm=toUTM(lat,lon),sq=gridSquare(utm.E,utm.N,utm.zn),e=String(Math.floor(utm.E%100000)).padStart(5,'0'),n=String(Math.floor(utm.N%100000)).padStart(5,'0');return`${utm.zn}${utm.zl}${sq} ${e} ${n}`;}
-    return{forward};
+    function inverse(mgrsStr){var s=mgrsStr.replace(/\s+/g,'');var m=s.match(/^(\d{1,2})([C-X])([A-Z])([A-Z])(\d+)$/i);if(!m)return null;var zn=parseInt(m[1]),band=m[2].toUpperCase(),col=m[3].toUpperCase(),row=m[4].toUpperCase(),nums=m[5],half=nums.length/2;var easting=parseInt(nums.slice(0,half))*Math.pow(10,5-half);var northing=parseInt(nums.slice(half))*Math.pow(10,5-half);var e100k='ABCDEFGHJKLMNPQRSTUVWXYZ',n100k='ABCDEFGHJKLMNPQRSTUV';var colIdx=e100k.indexOf(col);if(colIdx<0)return null;var setNum=((zn-1)%6);var baseCol=(setNum%3)*8;easting+=(colIdx-baseCol+24)%24*1e5+1e5;var rowIdx=n100k.indexOf(row);if(rowIdx<0)return null;var baseRow=(setNum%2===0)?0:5;northing+=(rowIdx-baseRow+20)%20*1e5;var latBand='CDEFGHJKLMNPQRSTUVWX',bi=latBand.indexOf(band);if(bi<0)return null;var minNorth=(bi*8-80)*Math.PI/180;var a=6378137,f=1/298.257223563,e2=2*f-f*f;var ep2=e2/(1-e2);var lonOrigin=((zn-1)*6-180+3)*Math.PI/180;var M=northing;var mu=M/(a*(1-e2/4-3*e2*e2/64-5*e2*e2*e2/256));var e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));var lat1=mu+((3*e1/2-27*e1*e1*e1/32)*Math.sin(2*mu))+((21*e1*e1/16-55*e1*e1*e1*e1/32)*Math.sin(4*mu))+((151*e1*e1*e1/96)*Math.sin(6*mu));var N1=a/Math.sqrt(1-e2*Math.sin(lat1)*Math.sin(lat1));var T1=Math.tan(lat1)*Math.tan(lat1);var C1=ep2*Math.cos(lat1)*Math.cos(lat1);var R1=a*(1-e2)/Math.pow(1-e2*Math.sin(lat1)*Math.sin(lat1),1.5);var D=(easting-500000)/(N1*0.9996);var lat2=lat1-((N1*Math.tan(lat1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D*D*D*D/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D*D*D*D*D*D/720));var lon2=lonOrigin+(D-(1+2*T1+C1)*D*D*D/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D*D*D*D*D/120)/Math.cos(lat1);return[lat2*180/Math.PI,lon2*180/Math.PI];}
+    return{forward,inverse};
 })();
 
 // ── Klistra in MGRS / lat-lon — auto-extrahering ────────────────────────────
@@ -492,7 +495,7 @@ document.addEventListener('DOMContentLoaded', () => {
     field.addEventListener('paste', e => {
         const raw = (e.clipboardData || window.clipboardData).getData('text');
         const coord = extractCoord(raw);
-        if (coord) { e.preventDefault(); field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 800); }
+        if (coord) { e.preventDefault(); field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 800); showVerifyBtn(coord); }
     });
 });
 function extractCoord(text) {
@@ -518,6 +521,71 @@ function extractCoord(text) {
         }
     }
     return null;
+}
+
+/* ── OCR + Verify ── */
+var _tesseractLoaded = false;
+function loadTesseract() {
+    if (_tesseractLoaded) return Promise.resolve();
+    return new Promise(function(res, rej) {
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = function() { _tesseractLoaded = true; res(); };
+        s.onerror = rej;
+        document.head.appendChild(s);
+    });
+}
+
+async function ocrImage(input) {
+    var file = input.files[0]; input.value = '';
+    if (!file) return;
+    var field = document.getElementById('plats');
+    if (!field) return;
+    field.value = 'Läser bild...'; field.style.outline = '2px solid var(--info)';
+    try {
+        await loadTesseract();
+        var result = await Tesseract.recognize(file, 'eng', { logger: function() {} });
+        var coord = extractCoord(result.data.text);
+        if (coord) {
+            field.value = coord; field.style.outline = '2px solid var(--accent)';
+            setTimeout(function() { field.style.outline = ''; }, 1500);
+            showVerifyBtn(coord);
+        } else {
+            field.value = ''; field.style.outline = '2px solid var(--danger)';
+            setTimeout(function() { field.style.outline = ''; }, 1500);
+            alert('Kunde inte hitta koordinater i bilden.\nTips: använd en tydlig skärmbild med synliga koordinater.');
+        }
+    } catch (e) {
+        field.value = ''; field.style.outline = '';
+        alert('OCR misslyckades. Kontrollera nätuppkoppling (krävs första gången).');
+    }
+}
+
+function showVerifyBtn(mgrsStr) {
+    var btn = document.getElementById('verifyMapBtn');
+    if (!btn) {
+        btn = document.createElement('button'); btn.id = 'verifyMapBtn';
+        btn.className = 'btn btn-sm btn-time'; btn.tabIndex = -1;
+        btn.textContent = '✓ Visa på karta';
+        btn.style.cssText = 'margin-top:6px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)';
+        var row = document.getElementById('plats').closest('.input-row');
+        row.parentNode.insertBefore(btn, row.nextSibling);
+    }
+    btn.style.display = ''; btn.onclick = function() {
+        var ll = MGRS.inverse(mgrsStr); if (!ll) return;
+        openMapModal();
+        var wait = setInterval(function() {
+            if (typeof mapInstance !== 'undefined' && mapInstance) {
+                clearInterval(wait); mapInstance.setView(ll, 14);
+                if (typeof mapMarker !== 'undefined' && mapMarker) mapInstance.removeLayer(mapMarker);
+                mapMarker = L.marker(ll).addTo(mapInstance);
+                mapSelectedMgrs = mgrsStr;
+                var disp = document.getElementById('mapMgrsDisplay');
+                if (disp) disp.textContent = mgrsStr + ' — ';
+                reverseGeocode(ll[0], ll[1]);
+            }
+        }, 100);
+    };
 }
 
 async function getGPS() {
