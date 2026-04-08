@@ -583,8 +583,6 @@ function reverseGeocode(lat, lon) {
 
 function overpassLookup(lat, lon, mainRoad, houseNum, area) {
     const q = `[out:json][timeout:5];(
-        way["place"~"^(island|islet)$"](around:500,${lat},${lon});
-        relation["place"~"^(island|islet)$"](around:500,${lat},${lon});
         way["natural"="water"]["name"](around:1000,${lat},${lon});
         relation["natural"="water"]["name"](around:1000,${lat},${lon});
         way["highway"]["name"](around:100,${lat},${lon});
@@ -594,12 +592,9 @@ function overpassLookup(lat, lon, mainRoad, houseNum, area) {
         .then(data => {
             const els = data.elements || [];
             const lake = els.find(e => (e.tags || {}).natural === 'water' && e.tags.name);
-            const island = els.find(e => (e.tags || {}).place && /^(island|islet)$/.test(e.tags.place) && e.tags.name);
             const addressParts = buildAddress(els, mainRoad, houseNum, area);
             if (lake) {
                 resolveFeaturePosition(lat, lon, lake.tags.name, 'lake', addressParts);
-            } else if (island) {
-                resolveFeaturePosition(lat, lon, island.tags.name, 'island', addressParts);
             } else {
                 lmLookup(lat, lon, addressParts);
             }
