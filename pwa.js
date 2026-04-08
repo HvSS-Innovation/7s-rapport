@@ -58,16 +58,16 @@
       if (info.style.display === 'none') {
         var vl = versionLink();
         var verLine = vl ? '<br>Aktuell version: ' + vl : '';
-        info.innerHTML = '<b style="color:#c8e6c9">Varfor installera?</b><br>' +
-          'Installationen gor att verktyget fungerar offline, direkt fran din enhet. ' +
-          'Ingen data skickas eller lagras utanfor din telefon/dator.<br><br>' +
-          '<b style="color:#c8e6c9">Sakerhet</b><br>' +
-          'Installation sker pa egen risk. All kallkod ar oppen och kan granskas: ' +
+        info.innerHTML = '<b style="color:#c8e6c9">Varf\u00f6r installera?</b><br>' +
+          'Installationen g\u00f6r att verktyget fungerar offline, direkt fr\u00e5n din enhet. ' +
+          'Ingen data skickas eller lagras utanf\u00f6r din telefon/dator.<br><br>' +
+          '<b style="color:#c8e6c9">S\u00e4kerhet</b><br>' +
+          'Installation sker p\u00e5 egen risk. All k\u00e4llkod \u00e4r \u00f6ppen och kan granskas: ' +
           '<a href="https://github.com/gitjoda71/7s-rapport" target="_blank" rel="noopener" style="color:#4caf50;text-decoration:underline">github.com/gitjoda71/7s-rapport</a><br><br>' +
-          '<b style="color:#c8e6c9">Hur vet jag att sidan verkligen kommer fran GitHub?</b><br>' +
-          'Sidan hostas via GitHub Pages, vilket innebar att den serveras direkt fran det oppna repositoriet \u2014 ' +
-          'inget mellansteg dar koden kan andras. ' +
-          'Langst ner pa varje sida visas ett versions-ID som lankar till exakt den version av kallkoden som kors.' +
+          '<b style="color:#c8e6c9">Hur vet jag att sidan verkligen kommer fr\u00e5n GitHub?</b><br>' +
+          'Sidan hostas via GitHub Pages, vilket inneb\u00e4r att den serveras direkt fr\u00e5n det \u00f6ppna repositoriet \u2014 ' +
+          'inget mellansteg d\u00e4r koden kan \u00e4ndras. ' +
+          'L\u00e4ngst ner p\u00e5 varje sida visas ett versions-ID som l\u00e4nkar till exakt den version av k\u00e4llkoden som k\u00f6rs.' +
           verLine;
         info.style.display = 'block';
       } else {
