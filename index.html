@@ -215,6 +215,8 @@
         .map-spinner { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg-primary); z-index:1000; transition:opacity 0.3s; }
         .map-spinner.hidden { opacity:0; pointer-events:none; }
         .map-spinner::after { content:''; width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:mapspin 0.8s linear infinite; }
+        .geo-spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:mapspin 0.8s linear infinite; margin-left:8px; vertical-align:middle; }
+        .geo-spinner.hidden { display:none; }
         @keyframes mapspin { to { transform:rotate(360deg); } }
         .map-modal-footer { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-secondary); border-top:1px solid var(--border); flex-shrink:0; }
         .map-mgrs-display { flex:1; font-family:'Courier New',monospace; font-size:0.9rem; font-weight:700; color:var(--accent); letter-spacing:0.06em; }
@@ -310,7 +312,7 @@
                 </div>
                 <div id="mapContainer"><div class="map-spinner" id="mapSpinner"></div></div>
                 <div class="map-modal-footer">
-                    <span class="map-mgrs-display" id="mapMgrsDisplay">Tryck på kartan</span>
+                    <span class="map-mgrs-display" id="mapMgrsDisplay">Tryck på kartan</span><span class="geo-spinner hidden" id="geoSpinner"></span>
                     <button class="map-confirm-btn" id="mapConfirmBtn" disabled onclick="confirmMapSelection()">Välj plats</button>
                 </div>
             </div>
@@ -669,7 +671,7 @@ function reverseGeocode(lat, lon) {
                 overpassLookup(lat, lon, parts);
             }
         })
-        .catch(() => {});
+        .catch(() => { const sp = document.getElementById('geoSpinner'); if (sp) sp.classList.add('hidden'); });
 }
 
 function overpassLookup(lat, lon, addressParts) {
@@ -731,8 +733,7 @@ function resolveFeaturePosition(lat, lon, name, type, addressParts) {
                 const t = 0.15;
                 const dir = computeDirection(ns, ew, t);
                 if (dir) {
-                    const label = type === 'lake' ? ' strandkanten av ' : ' delen av ';
-                    prefix = dir + label + name;
+                    prefix = dir + ' ' + name;
                 }
             }
             const allParts = [prefix, ...addressParts].filter(Boolean);
@@ -746,13 +747,11 @@ function resolveFeaturePosition(lat, lon, name, type, addressParts) {
 }
 
 function computeDirection(ns, ew, t) {
-    if (Math.abs(ns) < t && Math.abs(ew) < t) return 'Centrala';
+    if (Math.abs(ns) < t && Math.abs(ew) < t) return 'C';
     let dir = '';
-    if (ns > t) dir += 'Nord'; else if (ns < -t) dir += 'Syd';
-    if (ew > t) dir += dir ? 'östra' : 'Östra';
-    else if (ew < -t) dir += dir ? 'västra' : 'Västra';
-    else if (dir === 'Nord') dir = 'Norra';
-    else if (dir === 'Syd') dir = 'Södra';
+    if (ns > t) dir += 'N'; else if (ns < -t) dir += 'S';
+    if (ew > t) dir += 'Ö';
+    else if (ew < -t) dir += 'V';
     return dir;
 }
 
@@ -761,6 +760,7 @@ function updateMapDisplay() {
     if (disp && mapSelectedMgrs && mapSelectedAddress) {
         disp.textContent = mapSelectedMgrs + ' — ' + mapSelectedAddress;
     }
+    const sp = document.getElementById('geoSpinner'); if (sp) sp.classList.add('hidden');
 }
 
 function lockViewportForMapModal() {
@@ -806,6 +806,7 @@ function openMapModal() {
             mapSelectedLon = lng;
             mapSelectedMgrs = MGRS.forward(lat, lng);
             document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs;
+            document.getElementById('geoSpinner').classList.remove('hidden');
             document.getElementById('mapConfirmBtn').disabled = false;
             reverseGeocode(lat, lng);
             if (mapMarker) {
