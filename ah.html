@@ -645,7 +645,12 @@ function openMapModal() {
     document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
     document.getElementById('mapConfirmBtn').disabled = true;
     mapSelectedMgrs = '';
-    if (mapMarker) { mapMarker.remove(); mapMarker = null; }
+    if (mapInstance) {
+        mapInstance.eachLayer(function(layer) {
+            if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
+        });
+    }
+    mapMarker = null;
     var sp = document.getElementById('mapSpinner');
     if (sp && !mapInstance) sp.classList.remove('hidden');
     if (!mapInstance) {
