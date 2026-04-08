@@ -589,9 +589,11 @@ async function getGPS() {
 }
 
 // ── Foto EXIF ────────────────────────────────────────────────────────────────
+let lastFotoFilename = '';
 async function readFoto(input) {
     const file = input.files[0];
     if (!file) return;
+    lastFotoFilename = file.name;
     const status = document.getElementById('fotoStatus');
     status.textContent = 'Läser metadata...';
     try {
@@ -687,17 +689,33 @@ function overpassLookup(lat, lon, addressParts) {
                 resolveFeaturePosition(lat, lon, island.tags.name, 'island', addressParts);
             } else if (lake) {
                 resolveFeaturePosition(lat, lon, lake.tags.name, 'lake', addressParts);
-            } else if (addressParts.length) {
-                mapSelectedAddress = addressParts.join(', ');
-                updateMapDisplay();
+            } else {
+                lmLookup(lat, lon, addressParts);
             }
         })
         .catch(() => {
-            if (addressParts.length) {
-                mapSelectedAddress = addressParts.join(', ');
-                updateMapDisplay();
-            }
+            lmLookup(lat, lon, addressParts);
         });
+}
+
+let _lmData = null;
+function lmLookup(lat, lon, addressParts) {
+    const done = () => { if (addressParts.length) { mapSelectedAddress = addressParts.join(', '); updateMapDisplay(); } };
+    const search = (data) => {
+        _lmData = data;
+        let best = null, bestDist = Infinity;
+        for (const p of data) {
+            const d = Math.pow(p.la - lat, 2) + Math.pow((p.lo - lon) * Math.cos(lat * Math.PI / 180), 2);
+            if (d < bestDist) { bestDist = d; best = p; }
+        }
+        const distKm = Math.sqrt(bestDist) * 111.32;
+        if (best && distKm < 5) {
+            const type = best.t === 's' ? 'lake' : 'island';
+            resolveFeaturePosition(lat, lon, best.n, type, addressParts);
+        } else { done(); }
+    };
+    if (_lmData) { search(_lmData); return; }
+    fetch('ortnamn.json').then(r => r.json()).then(search).catch(done);
 }
 
 function resolveFeaturePosition(lat, lon, name, type, addressParts) {
@@ -913,9 +931,10 @@ function generateReport() {
         `Slag: ${v('slag') || '-'}`,
         `Sysselsättning: ${v('sysselsattning') || '-'}`,
         `Symbol: ${v('symbol') || '-'}`,
+        lastFotoFilename ? `Foto: ${lastFotoFilename}` : null,
         `Sagesman: ${v('sagesman') || '-'}`,
         `Sedan: ${v('sedan') || '-'}`,
-    ];
+    ].filter(Boolean);
     document.getElementById('reportOutput').textContent = lines.join('\n');
     document.getElementById('formView').classList.add('hidden');
     document.getElementById('resultView').classList.add('active');
