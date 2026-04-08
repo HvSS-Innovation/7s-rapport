@@ -591,15 +591,20 @@ function overpassLookup(lat, lon, mainRoad, houseNum, area) {
             const els = data.elements || [];
             const lake = els.find(e => (e.tags || {}).natural === 'water' && e.tags.name);
             const addressParts = buildAddress(els, mainRoad, houseNum, area);
-            if (lake) {
+            if (lake && !mainRoad) {
                 resolveFeaturePosition(lat, lon, lake.tags.name, 'lake', addressParts);
+            } else if (addressParts.length) {
+                mapSelectedAddress = addressParts.join(', ');
+                updateMapDisplay();
             } else {
                 lmLookup(lat, lon, addressParts);
             }
         })
         .catch(() => {
             const street = mainRoad ? (mainRoad + (houseNum ? ' ' + houseNum : '')) : '';
-            lmLookup(lat, lon, [street, area].filter(Boolean));
+            const parts = [street, area].filter(Boolean);
+            if (parts.length) { mapSelectedAddress = parts.join(', '); updateMapDisplay(); }
+            else lmLookup(lat, lon, parts);
         });
 }
 
