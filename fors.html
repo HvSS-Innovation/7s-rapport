@@ -164,7 +164,7 @@
             <div class="input-row" style="margin-top:6px">
                 <input type="text" id="tnr" placeholder="DDHHMMZMånÅÅÅÅ" maxlength="15" pattern="([0-9]{6}|[0-9]{6}[AB][A-Z]{3}[0-9]{4})" autocomplete="off">
                 <button class="btn btn-sm btn-time" onclick="setNow()">Nu</button>
-                <div class="tnr-switch is-long" id="tnrSwitch" onclick="toggleTnrFormat()" role="switch" aria-checked="true" tabindex="0"><div class="tnr-switch-thumb"></div><div class="tnr-switch-labels"><span class="tnr-switch-label lbl-kort">Kort</span><span class="tnr-switch-label lbl-lang">Kompl</span></div></div>
+                <div class="tnr-switch" id="tnrSwitch" onclick="toggleTnrFormat()" role="switch" aria-checked="false" tabindex="0"><div class="tnr-switch-thumb"></div><div class="tnr-switch-labels"><span class="tnr-switch-label lbl-kort">Kort</span><span class="tnr-switch-label lbl-lang">Kompl</span></div></div>
             </div>
             <div class="field-hint">Format: DDHHMM eller DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
         </div>
@@ -246,7 +246,7 @@ Ex: Vi kan fortsätta med uppgiften. Gruppen är stridsduglig. Ammunition räcke
 
 <script>
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
-let tnrLong = true;
+let tnrLong = false;
 function toggleTnrFormat() {
     tnrLong = !tnrLong;
     const sw = document.getElementById('tnrSwitch');
