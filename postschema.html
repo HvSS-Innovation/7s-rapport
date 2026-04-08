@@ -681,6 +681,7 @@ function exportSchema() {
     text += `Från: ${fran || '-'}\n`;
     text += `\n`;
     text += `TNR:  ${tnr || '-'}\n`;
+    text += `\n`;
     text += `Ansvarig: ${sagesman || '-'}\n\n`;
 
     const luckor = [...new Set(schema.map(s => s.tid))];

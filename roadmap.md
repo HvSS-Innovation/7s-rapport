@@ -333,9 +333,15 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
 
 ### 📝 Nya / Öppna (Arbetsfördelning)
 
-#### 🐛 Karta: Dubbla/flera markörer visas på kartan
-Vid upprepad användning av kartmodalen kan flera markörer visas samtidigt trots att koden ska begränsa till en. Utred om Leaflet-markören inte rensas korrekt mellan sessioner, eller om kartinstansen återskapas felaktigt. Ska alltid vara exakt en markör på kartan.
-- Berörda filer: alla 6 tabs med kartmodal (index.html, what.html, scrim.html, weft.html, ah.html, obslosa.html)
+#### ⚠️ [Tier 1 - Kritisk] Säkerhetsrisk: Förhindra ofrivilligt röjande av egen position (Issue #10)
+**FARA FÖR PROJEKTET:** Användare riskerar att oavsiktligt rapportera (och därmed röja) sin egen GPS-position när avsikten var att ange _målets/observationens_ position. Detta kan leda till svåra taktiska fel eller riskera förbandets säkerhet om t.ex. artilleri leds mot fel koordinater. 
+**Åtgärd för att lösa:**
+- **Separation:** Tydliggör skillnaden mellan "Egen position" och "Observerad position" (bör byta namn från "Ställe" till "Målets position").
+- **Ingen auto-fyll:** Kartverktyget och plats-fälten får absolut inte auto-fyllarapportörens egen position utan ett uttryckligt och tydligt bekräftelseval från användaren. Kartvalet ska enkom avse den observerade positionen.
+
+#### ✅ ~~Karta: Dubbla/flera markörer visas på kartan~~ — Åtgärdat
+~~Vid upprepad användning av kartmodalen kan flera markörer visas samtidigt.~~
+- Åtgärdat i alla 6 tabs med kartmodal.
 
 #### 7S – Interaktiv karta för STÄLLE (issue #5) ✅ Implementerad
 MGRS-knappen ersatt med interaktiv karta (Leaflet.js + OpenTopoMap) i alla 6 tabs med STÄLLE/Plats-fält.
@@ -407,10 +413,8 @@ SYMBOL-fältet i 7S kan innehålla en SCRIM-, WEFT- eller A-H-beskrivning. Idag 
     *   *Kravspecifikation:* Knappen som växlar TNR mellan kort och långt format ska bli ett "slide"-reglage för ökad tydlighet. Innehåller enkel glidande CSS-animation, extremt diskret kort ljud ("slide"), färg-/textbyte för tydlig UX.
 
 #### 🤖 Uppgifter för Lokal Agent (Antigravity)
-*   **Ta bort fältet 'Plats' i OBO**
-    *   *Kravspecifikation:* Fältet 'Plats' ska plockas bort helt från OBO-formuläret, då det anses överflödigt.
-*   **Enhetligt radbryte i rapportutskriften för resterande formulär**
-    *   *Kravspecifikation:* Lägg in ett extra, manuellt radbryte (blankrad) mellan blocket med avsändare (`Från: -`) och `TNR: ...` i formulären: OBSLÖSA, FORS, PEDARS, SCHEMA, EOBUSARE, OBO och RASSOIKA för att matcha layouten i 7S m.fl.
+*   ~~**Ta bort fältet 'Plats' i OBO**~~ ✅ Redan borttaget — fältet finns inte i nuvarande OBO.
+*   ~~**Enhetligt radbryte i rapportutskriften för resterande formulär**~~ ✅ Alla 12 formulär följer nu samma mall: blankrad efter Från och efter TNR.
 *   **Enhetlig linjär utskrift i RASSOIKA (ta bort mall-val)**
     *   *Kravspecifikation:* Ta bort "Statuskvitto" och "Patrullorder" valet. Generera en enda utskrift med formatet (`R-A-S-S-O-I-K-A`):
         ```text
