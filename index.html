@@ -637,7 +637,7 @@ function showVerifyBtn(mgrsStr) {
         btn.className = 'btn btn-sm btn-time';
         btn.tabIndex = -1;
         btn.textContent = '✓ Visa på karta';
-        btn.style.cssText = 'margin-top:6px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)';
+        btn.style.cssText = 'margin-top:8px;width:100%;padding:14px;font-size:1rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer';
         const row = (document.getElementById('stalle') || document.getElementById('plats')).closest('.input-row');
         row.parentNode.insertBefore(btn, row.nextSibling);
     }

@@ -415,7 +415,7 @@ async function ocrImage(input) {
 }
 function showVerifyBtn(mgrsStr) {
     let btn = document.getElementById('verifyMapBtn');
-    if (!btn) { btn = document.createElement('button'); btn.id = 'verifyMapBtn'; btn.className = 'btn btn-sm btn-time'; btn.tabIndex = -1; btn.textContent = '✓ Visa på karta'; btn.style.cssText = 'margin-top:6px;background:var(--accent-dim);color:var(--accent);border:1px solid var(--accent)'; const row = (document.getElementById('stalle') || document.getElementById('plats')).closest('.input-row'); row.parentNode.insertBefore(btn, row.nextSibling); }
+    if (!btn) { btn = document.createElement('button'); btn.id = 'verifyMapBtn'; btn.className = 'btn btn-sm btn-time'; btn.tabIndex = -1; btn.textContent = '✓ Visa på karta'; btn.style.cssText = 'margin-top:8px;width:100%;padding:14px;font-size:1rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer'; const row = (document.getElementById('stalle') || document.getElementById('plats')).closest('.input-row'); row.parentNode.insertBefore(btn, row.nextSibling); }
     btn.style.display = ''; btn.onclick = () => { const ll = MGRS.inverse(mgrsStr); if (!ll) return; openMapModal(); const wait = setInterval(() => { if (typeof mapInstance !== 'undefined' && mapInstance) { clearInterval(wait); mapInstance.setView(ll, 14); if (typeof mapMarker !== 'undefined' && mapMarker) mapInstance.removeLayer(mapMarker); mapMarker = L.marker(ll).addTo(mapInstance); mapSelectedMgrs = mgrsStr; const disp = document.getElementById('mapMgrsDisplay'); if (disp) disp.textContent = mgrsStr + ' — '; reverseGeocode(ll[0], ll[1]); } }, 100); };
 }
 
