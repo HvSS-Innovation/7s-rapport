@@ -421,8 +421,10 @@ async function getGPS() {
     );
 }
 
+let lastFotoFilename = '';
 async function readFoto(input) {
     const file = input.files[0]; if (!file) return;
+    lastFotoFilename = file.name;
     const status = document.getElementById('fotoStatus');
     status.textContent = 'Läser metadata...';
     try {
@@ -507,8 +509,9 @@ function generateReport() {
         `Reg.nr:     ${v('registration') || '-'}`,
         `Ident.mrks: ${v('identifying') || '-'}`,
         `Model:      ${v('model') || '-'}`,
+        lastFotoFilename ? `Foto: ${lastFotoFilename}` : null,
         `Sagesman:   ${v('sagesman') || '-'}`,
-    ];
+    ].filter(Boolean);
     document.getElementById('reportOutput').textContent = lines.join('\n');
     document.getElementById('formView').classList.add('hidden');
     document.getElementById('resultView').classList.add('active');
