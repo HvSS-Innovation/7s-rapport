@@ -1,24 +1,34 @@
-name: Bump SW cache version
+name: Bump version + SW cache
 
 on:
   push:
     branches: [main]
     paths-ignore:
       - 'service-worker.js'
+      - 'version.js'
 
 jobs:
   bump:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Bump cache version
+      - name: Bump versions
         run: |
-          VERSION="hv-$(date +%Y%m%d%H%M%S)"
-          sed -i "s/const CACHE = '.*'/const CACHE = '$VERSION'/" service-worker.js
+          TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
+          SHA="${GITHUB_SHA}"
+          SHORT="${SHA:0:7}"
+
+          # Bump SW cache version
+          sed -i "s/const CACHE = '.*'/const CACHE = 'hv-${TIMESTAMP}'/" service-worker.js
+
+          # Stamp version.js with timestamp + full commit SHA
+          sed -i "s/const APP_VERSION = '.*'/const APP_VERSION = '${TIMESTAMP}'/" version.js
+          sed -i "s/const APP_COMMIT = '.*'/const APP_COMMIT = '${SHA}'/" version.js
+
       - name: Commit and push
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add service-worker.js
-          git diff --staged --quiet || git commit -m "Auto-bump SW cache version [skip ci]"
+          git add service-worker.js version.js
+          git diff --staged --quiet || git commit -m "Auto-bump version ${GITHUB_SHA:0:7} [skip ci]"
           git push
