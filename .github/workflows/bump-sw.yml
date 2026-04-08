@@ -7,16 +7,18 @@ on:
       - 'service-worker.js'
       - 'version.js'
 
+permissions:
+  contents: write
+
 jobs:
   bump:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Bump versions
         run: |
           TIMESTAMP="$(date +%Y%m%d_%H%M%S)"
           SHA="${GITHUB_SHA}"
-          SHORT="${SHA:0:7}"
 
           # Bump SW cache version
           sed -i "s/const CACHE = '.*'/const CACHE = 'hv-${TIMESTAMP}'/" service-worker.js
