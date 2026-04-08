@@ -635,6 +635,7 @@ let mapViewportRestore = null;
 
 function reverseGeocode(lat, lon) {
     mapSelectedAddress = '';
+    if (!navigator.onLine) { lmLookup(lat, lon, []); return; }
     fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=sv&zoom=19`)
         .then(r => r.json())
         .then(d => {

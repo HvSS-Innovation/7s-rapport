@@ -1,8 +1,9 @@
-const CACHE = 'hv-v47';
+const CACHE = 'hv-v48';
 const FILES = [
   './',
   './index.html',
   './manifest.json',
+  './icon.svg',
   './obslosa.html',
   './fors.html',
   './pedars.html',
@@ -15,7 +16,8 @@ const FILES = [
   './scrim.html',
   './weft.html',
   './ah.html',
-  './version.js'
+  './version.js',
+  './ortnamn.json'
 ];
 
 self.addEventListener('install', e => {
@@ -32,16 +34,23 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
-  const isHTML = url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.js');
-  if (isHTML) {
-    // Network-first: alltid senaste version när online, cache som fallback offline
+  // Network-first för HTML och JS (alltid senaste version online, cache som fallback)
+  if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.js')) {
     e.respondWith(
       fetch(e.request).then(resp => {
-        caches.open(CACHE).then(c => c.put(e.request, resp.clone()));
+        const clone = resp.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
         return resp;
       }).catch(() => caches.match(e.request))
     );
   } else {
-    e.respondWith(caches.match(e.request).then(cached => cached || fetch(e.request)));
+    // Cache-first för allt annat (ikoner, JSON-data, etc.)
+    e.respondWith(
+      caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
+        const clone = resp.clone();
+        caches.open(CACHE).then(c => c.put(e.request, clone));
+        return resp;
+      }))
+    );
   }
 });
