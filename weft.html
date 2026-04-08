@@ -107,7 +107,7 @@
         .map-spinner { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg-primary); z-index:1000; transition:opacity 0.3s; }
         .map-spinner.hidden { opacity:0; pointer-events:none; }
         .map-spinner::after { content:''; width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:mapspin 0.8s linear infinite; }
-        .geo-spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:mapspin 0.8s linear infinite; margin-left:8px; vertical-align:middle; }
+        .geo-spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:mapspin 0.8s linear infinite; margin-left:0; vertical-align:middle; }
         .geo-spinner.hidden { display:none; }
         @keyframes mapspin { to { transform:rotate(360deg); } }
         .map-modal-footer { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-secondary); border-top:1px solid var(--border); flex-shrink:0; }
