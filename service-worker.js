@@ -18,7 +18,12 @@ const FILES = [
   './ah.html',
   './version.js',
   './pwa.js',
-  './ortnamn.json'
+  './ortnamn.json',
+  './fonts/inter.css',
+  './fonts/inter-400.woff2',
+  './fonts/inter-500.woff2',
+  './fonts/inter-600.woff2',
+  './fonts/inter-700.woff2'
 ];
 
 self.addEventListener('install', e => {

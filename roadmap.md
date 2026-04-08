@@ -288,14 +288,14 @@ Fördelarna med ett eget repo:
   - `scrim.html` — ✅ "Rapport redo att kopieras"
   - `weft.html` — ✅ "Rapport redo att kopieras"
   - `ah.html` — ✅ "Rapport redo att kopieras"
-  - `obslosa.html` — ❌ "Postinstruktion klar" → "OBSLÖSA redo att kopieras"
-  - `fors.html` — ❌ "FORS-rapport redo" → "FORS redo att kopieras"
-  - `pedars.html` — ❌ "PEDARS-rapport klar" → "PEDARS redo att kopieras"
-  - `postschema.html` — ❌ → "SCHEMA redo att kopieras"
-  - `eobusare.html` — ❌ "Statuskvitto – EOBUSARE" → "EOBUSARE redo att kopieras"
-  - `obo.html` — ❌ "Order genererad" → "OBO redo att kopieras"
-  - `rassoika.html` — ❌ "Statuskvitto genererat" → "RASSOIKA redo att kopieras"
-  - `vader.html` — ❌ "VÄDERRAPPORT" → "VÄDER redo att kopieras"
+  - `obslosa.html` — ✅ "OBSLÖSA redo att kopieras"
+  - `fors.html` — ✅ "FORS redo att kopieras"
+  - `pedars.html` — ✅ "PEDARS redo att kopieras"
+  - `postschema.html` — ✅ "SCHEMA redo att kopieras"
+  - `eobusare.html` — ✅ "EOBUSARE redo att kopieras"
+  - `obo.html` — ✅ "OBO redo att kopieras"
+  - `rassoika.html` — ✅ "RASSOIKA redo att kopieras"
+  - `vader.html` — ✅ "VÄDER redo att kopieras"
 
 ### EOBUSARE – Ändra rapporttitel
 - [x] Ändra rapport-titeln i `generateStatuskvitto()` från `STATUS: EOBUSARE – ELDSTÄLLNING INTAGEN` till bara `EOBUSARE` (rad ~341 i eobusare.html)
@@ -363,8 +363,8 @@ MGRS-knappen ersatt med interaktiv karta (Leaflet.js + OpenTopoMap) i alla 6 tab
 **Berörda filer:** `index.html` (HTML: kartmodal + knapp, CSS: modal-stil, JS: Leaflet init + klick-hantering)
 **Beroenden:** Leaflet.js (~40 kB gzip) via CDN `<link>` + `<script>` i `<head>`
 
-#### 7S – SYMBOL kan fyllas via inbäddade delformulär (issue #5)
-SYMBOL-fältet i 7S kan innehålla en SCRIM-, WEFT- eller A-H-beskrivning. Idag är dessa separata flikar som genererar egna rapporter och inte kommunicerar med 7S. Problemet: rapportören måste skicka två separata rapporter istället för en komplett 7S.
+#### 7S – SYMBOL kan fyllas via inbäddade delformulär (issue #5) ✅ Implementerad
+SYMBOL-fältet i 7S kan fyllas via inbäddade SCRIM/WEFT/A-H/WHAT-formulär som öppnas som modal (iframe med `?mode=embed`). "Klistra in i 7S"-knapp skickar data via `postMessage`.
 
 **Flöde:**
 1. Under SYMBOL-fältet i `index.html` — lägg till snabbknappar: `[SCRIM]` `[WEFT]` `[A-H]` `[WHAT]` (samma stil som befintliga färg-chips)
@@ -421,8 +421,8 @@ SYMBOL-fältet i 7S kan innehålla en SCRIM-, WEFT- eller A-H-beskrivning. Idag 
 Återkoppling från användare rörande friktionen mellan drönarsystem/karta och rapportverktyget i fält.
 
 - [ ] **1. Åtskillnad av Min Position och Målposition:** Utvärdera om `Ställe`-fältet bör delas upp eller ha extra kontext. En pilot som sitter 4 km bort behöver tydligt separera var *drönaren ser* målet (målet) och var *piloten* befinner sig, för att undvika missförstånd. Byta etikett från "Ställe" till "Målets position (MGRS)"?
-- [ ] **2. Klistra in MGRS / Text-extrahering:** Manuellt knappa långa koordinater från en annan skärm under stress orsakar feltryck. Lägg till en funktion vid MGRS-fältet som automatiskt tvättar inklistrad text och försöker extrahera en giltig MGRS-sträng (t.ex. om man kopierar från en drönar-app som ger massa omgivande text).
-- [ ] **3. OCR / Bildinläsning (Framtid):** Framtida möjlighet att ladda upp en skärmdump av pilotens kontrollskärm där systemet läser av och extraherar koordinater (OCR) för att helt slippa inmatning/ögonompassning mellan olika kartsytem och dess parallaxfel.
+- [x] **2. Klistra in MGRS / Text-extrahering:** ✅ Implementerat — paste-event i Ställe-fältet extraherar automatiskt MGRS och lat/lon via `extractCoord()`. Alla 6 kartfiler.
+- [x] **3. OCR / Bildinläsning:** ✅ Implementerat — 📷 OCR-knapp vid Ställe-fältet, Tesseract.js on-demand, + "✓ Visa på karta"-verifiering. Alla 6 kartfiler.
 - [ ] **4. Uppdrags-profiler (Missions):** 7S-rapporten upplevs för statisk. Inför en inställning typ "Preppad 7S" där man kan ladda in ett visst uppdrag (t.ex. "Spana efter drönare" eller "Spana fordon"). Detta skulle kunna:
     - Höja relevanta snabbval (chips) överst eller "förfärga" dem.
     - Lägga till ett beskrivningsfält på varje punkt som fungerar som en minneslista för uppdraget ("Glöm ej X under denna punkt...").

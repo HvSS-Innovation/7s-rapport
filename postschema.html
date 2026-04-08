@@ -11,9 +11,7 @@
     <meta name="apple-mobile-web-app-title" content="POSTSCHEMA">
     <title>POSTSCHEMA – Vaktschema</title>
     <link rel="manifest" href="manifest.json">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="fonts/inter.css">
     <style>
         :root {
             --bg-primary:#0d1f0d;--bg-secondary:#152815;--bg-card:#1a321a;--bg-input:#0f240f;
@@ -468,9 +466,12 @@ function genererSchema() {
     // Spåra senast aktivt pass per soldat (för "mest utvilad"-urvalet)
     const lastFinished = {};
     soldater.forEach(sol => { lastFinished[sol] = -Infinity; });
-    // Spåra senaste sluttid i ms per soldat (för tidbaserat vilokrav per post)
-    const lastFinishedMs = {};
-    soldater.forEach(sol => { lastFinishedMs[sol] = -Infinity; });
+    // Spåra senaste sluttid i ms per soldat PER POST (för tidbaserat vilokrav per post)
+    const lastFinishedPostMs = {};
+    soldater.forEach(sol => {
+        lastFinishedPostMs[sol] = {};
+        poster.forEach(p => { lastFinishedPostMs[sol][p] = -Infinity; });
+    });
 
     // Initialisera pipeline
     const pipeline = [];
@@ -497,12 +498,18 @@ function genererSchema() {
             passMinuter = passLangdMin; // Använder användarens inställda passlängd
         } else {
             // Välj ordinarie soldat med längst vila
-            // Vilokrav: ta det högsta kravet bland alla poster (i ms)
-            const vilaKravMs = Math.max(0, ...poster.map(p => (postVilokrav[p] || 0))) * 3600000;
+            // Vilokrav: kontrollera per post — soldaten roterar genom alla poster
+            const passMs_ = passLangdMin * 60000;
             const candidates = activePool.filter(sol => {
                 if (busyNow.has(sol)) return false;
-                if (vilaKravMs > 0 && lastFinishedMs[sol] > -Infinity) {
-                    return currentMs >= lastFinishedMs[sol] + vilaKravMs;
+                // Kolla varje post soldaten kommer rotera igenom
+                for (let pi = 0; pi < N; pi++) {
+                    const post = poster[pi];
+                    const kravMs = (postVilokrav[post] || 0) * 3600000;
+                    if (kravMs > 0 && lastFinishedPostMs[sol][post] > -Infinity) {
+                        const serveTimeMs = currentMs + pi * passMs_;
+                        if (serveTimeMs < lastFinishedPostMs[sol][post] + kravMs) return false;
+                    }
                 }
                 return true;
             });
@@ -534,7 +541,11 @@ function genererSchema() {
         });
 
         lastFinished[nyPerson] = s + N - 1;
-        lastFinishedMs[nyPerson] = currentMs + passMs;
+        // Uppdatera per-post-spårning för alla soldater i detta skift
+        poster.forEach((post, pi) => {
+            const soldatNamn = pi === 0 ? nyPerson : (pipeline[pi - 1] || nyPerson);
+            lastFinishedPostMs[soldatNamn][post] = currentMs + passMs;
+        });
         pipeline.unshift(nyPerson);
         if (pipeline.length > N) pipeline.length = N;
 
