@@ -813,6 +813,7 @@ let mapSelectedMgrs = '';
 let mapSelectedLat = null;
 let mapSelectedLon = null;
 let mapSelectedAddress = '';
+let mapConfirmed = false;
 let mapViewportRestore = null;
 
 function reverseGeocode(lat, lon) {
@@ -939,6 +940,12 @@ function updateMapDisplay() {
         disp.textContent = mapSelectedMgrs + ' — ' + mapSelectedAddress;
     }
     const sp = document.getElementById('geoSpinner'); if (sp) sp.classList.add('hidden');
+    // Om användaren redan bekräftat — uppdatera Ställe-fältet i bakgrunden
+    if (mapConfirmed && mapSelectedMgrs && mapSelectedAddress) {
+        const field = document.getElementById('stalle');
+        if (field) field.value = mapSelectedMgrs + ', ' + mapSelectedAddress;
+        mapConfirmed = false;
+    }
 }
 
 function lockViewportForMapModal() {
@@ -961,6 +968,7 @@ function openMapModal() {
     document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
     document.getElementById('mapConfirmBtn').disabled = true;
     mapSelectedMgrs = '';
+    mapConfirmed = false;
     if (mapInstance) {
         mapInstance.eachLayer(function(layer) {
             if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
@@ -1026,6 +1034,8 @@ function confirmMapSelection() {
     if (!mapSelectedMgrs) return;
     const field = document.getElementById('stalle');
     field.value = mapSelectedAddress ? mapSelectedMgrs + ', ' + mapSelectedAddress : mapSelectedMgrs;
+    // Om geocoding fortfarande pågår — flagga för bakgrundsuppdatering
+    mapConfirmed = !mapSelectedAddress;
     closeMapModal();
 }
 

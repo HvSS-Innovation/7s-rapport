@@ -685,6 +685,7 @@ function deleteSavedSagesman(v) { set('7s_sagesman', get('7s_sagesman').filter(x
 // ── Interaktiv karta för STÄLLE ──────────────────────────────────────────────
 let mapInstance = null, mapMarker = null, mapSelectedMgrs = '';
 let mapSelectedAddress = '';
+let mapConfirmed = false;
 let mapViewportRestore = null;
 
 function reverseGeocode(lat, lon) {
@@ -811,6 +812,12 @@ function updateMapDisplay() {
         disp.textContent = mapSelectedMgrs + ' — ' + mapSelectedAddress;
     }
     const sp = document.getElementById('geoSpinner'); if (sp) sp.classList.add('hidden');
+    // Om användaren redan bekräftat — uppdatera fältet i bakgrunden
+    if (mapConfirmed && mapSelectedMgrs && mapSelectedAddress) {
+        const field = document.getElementById('stalle') || document.getElementById('plats');
+        if (field) field.value = mapSelectedMgrs + ', ' + mapSelectedAddress;
+        mapConfirmed = false;
+    }
 }
 
 function lockViewportForMapModal() {
@@ -833,6 +840,7 @@ function openMapModal() {
     document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
     document.getElementById('mapConfirmBtn').disabled = true;
     mapSelectedMgrs = '';
+    mapConfirmed = false;
     if (mapInstance) {
         mapInstance.eachLayer(function(layer) {
             if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
@@ -880,8 +888,9 @@ function clearMapMarker() {
 }
 function confirmMapSelection() {
     if (!mapSelectedMgrs) return;
-    const f = document.getElementById('stalle');
-    f.value = mapSelectedAddress ? mapSelectedMgrs + ', ' + mapSelectedAddress : mapSelectedMgrs;
+    const field = document.getElementById('stalle') || document.getElementById('plats');
+    field.value = mapSelectedAddress ? mapSelectedMgrs + ', ' + mapSelectedAddress : mapSelectedMgrs;
+    mapConfirmed = !mapSelectedAddress;
     closeMapModal();
 }
 
