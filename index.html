@@ -602,13 +602,11 @@ async function readFoto(input) {
         const exif = await exifr.parse(file, { tiff: true, exif: true });
         if (!exif) { status.textContent = 'Ingen EXIF-data hittades i bilden.'; return; }
 
-        // Stund från DateTimeOriginal
+        // Stund från DateTimeOriginal — alltid KORT format
         const dt = exif.DateTimeOriginal || exif.DateTime;
         if (dt) {
             const d = new Date(dt), p = n => String(n).padStart(2,'0');
-            const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-            const tz = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
-            document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${tz}${months[d.getMonth()]}${d.getFullYear()}`;
+            document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}A`;
             status.textContent = '✓ Tid hämtad från foto.';
         } else {
             status.textContent = 'Ingen tidsstämpel i bilden.';
@@ -912,14 +910,9 @@ function toggleTnrFormat() {
 }
 function setCurrentTime() {
     const now = new Date(), p = n => String(n).padStart(2,'0');
-    const base = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}`;
-    if (tnrLong) {
-        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-        const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A';
-        document.getElementById('stund').value = base + tz + months[now.getMonth()] + now.getFullYear();
-    } else {
-        document.getElementById('stund').value = base;
-    }
+    // Stund - alltid KORT format, oavsett tnrLong
+    const base = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}A`;
+    document.getElementById('stund').value = base;
 }
 
 // ── Rapport ─────────────────────────────────────────────────────────────────
