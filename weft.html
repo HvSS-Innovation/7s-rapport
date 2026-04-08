@@ -562,31 +562,34 @@ function reverseGeocode(lat, lon) {
         .then(r => r.json())
         .then(d => {
             const a = d.address || {};
-            const street = a.road ? (a.road + (a.house_number ? ' ' + a.house_number : '')) : '';
+            const mainRoad = a.road || '';
+            const houseNum = a.house_number || '';
             const area = a.suburb || a.neighbourhood || a.city_district || a.village || a.town || '';
-            const parts = [street, area].filter(Boolean);
             if (a.island) {
-                resolveFeaturePosition(lat, lon, a.island, 'island', parts);
+                const street = mainRoad ? (mainRoad + (houseNum ? ' ' + houseNum : '')) : '';
+                resolveFeaturePosition(lat, lon, a.island, 'island', [street, area].filter(Boolean));
             } else {
-                overpassLookup(lat, lon, parts);
+                overpassLookup(lat, lon, mainRoad, houseNum, area);
             }
         })
         .catch(() => { const sp = document.getElementById('geoSpinner'); if (sp) sp.classList.add('hidden'); });
 }
 
-function overpassLookup(lat, lon, addressParts) {
+function overpassLookup(lat, lon, mainRoad, houseNum, area) {
     const q = `[out:json][timeout:5];(
         way["place"~"^(island|islet)$"](around:500,${lat},${lon});
         relation["place"~"^(island|islet)$"](around:500,${lat},${lon});
         way["natural"="water"]["name"](around:1000,${lat},${lon});
         relation["natural"="water"]["name"](around:1000,${lat},${lon});
+        way["highway"]["name"](around:100,${lat},${lon});
     );out center;`;
     fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) })
         .then(r => r.json())
         .then(data => {
             const els = data.elements || [];
-            const island = els.find(e => (e.tags || {}).place && /^(island|islet)$/.test(e.tags.place) && e.tags.name);
             const lake = els.find(e => (e.tags || {}).natural === 'water' && e.tags.name);
+            const island = els.find(e => (e.tags || {}).place && /^(island|islet)$/.test(e.tags.place) && e.tags.name);
+            const addressParts = buildAddress(els, mainRoad, houseNum, area);
             if (lake) {
                 resolveFeaturePosition(lat, lon, lake.tags.name, 'lake', addressParts);
             } else if (island) {
@@ -596,8 +599,21 @@ function overpassLookup(lat, lon, addressParts) {
             }
         })
         .catch(() => {
-            lmLookup(lat, lon, addressParts);
+            const street = mainRoad ? (mainRoad + (houseNum ? ' ' + houseNum : '')) : '';
+            lmLookup(lat, lon, [street, area].filter(Boolean));
         });
+}
+
+function buildAddress(els, mainRoad, houseNum, area) {
+    const roads = [...new Set(els.filter(e => (e.tags || {}).highway && e.tags.name).map(e => e.tags.name))];
+    const crossRoad = roads.find(r => r !== mainRoad);
+    let street = '';
+    if (mainRoad && crossRoad) {
+        street = mainRoad + ' / ' + crossRoad + (houseNum ? ' ' + houseNum : '');
+    } else if (mainRoad) {
+        street = mainRoad + (houseNum ? ' ' + houseNum : '');
+    }
+    return [street, area].filter(Boolean);
 }
 
 let _lmData = null;
@@ -697,7 +713,7 @@ function openMapModal() {
         tileLayer.on('load', function() { if (sp) sp.classList.add('hidden'); });
         mapInstance.on('click', function(e) {
             mapSelectedMgrs = MGRS.forward(e.latlng.lat, e.latlng.lng);
-            document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs;
+            document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs + ' — ';
             document.getElementById('geoSpinner').classList.remove('hidden');
             document.getElementById('mapConfirmBtn').disabled = false;
             reverseGeocode(e.latlng.lat, e.latlng.lng);
