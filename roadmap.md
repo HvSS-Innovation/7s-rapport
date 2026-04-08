@@ -415,39 +415,7 @@ SYMBOL-fältet i 7S kan innehålla en SCRIM-, WEFT- eller A-H-beskrivning. Idag 
 #### 🤖 Uppgifter för Lokal Agent (Antigravity)
 *   ~~**Ta bort fältet 'Plats' i OBO**~~ ✅ Redan borttaget — fältet finns inte i nuvarande OBO.
 *   ~~**Enhetligt radbryte i rapportutskriften för resterande formulär**~~ ✅ Alla 12 formulär följer nu samma mall: blankrad efter Från och efter TNR.
-*   **Enhetlig linjär utskrift i RASSOIKA (ta bort mall-val)**
-    *   *Kravspecifikation:* Ta bort "Statuskvitto" och "Patrullorder" valet. Generera en enda utskrift med formatet (`R-A-S-S-O-I-K-A`):
-        ```text
-        RASSOIKA
-        Till: -
-        Från: -
-
-        TNR:  [t.ex. 032108BAPR2026]
-
-        R - Repetera
-        -
-
-        A - Avdela
-        -
-
-        S - Samla
-        -
-
-        S - Stridsberedskap
-        -
-
-        O - Orientera
-        -
-
-        I - Indela
-        -
-
-        K - Kontrollera
-        -
-
-        A - Anmäl
-        -
-        ```
+*   ~~**Enhetlig linjär utskrift i RASSOIKA (ta bort mall-val)**~~ ✅ Redan implementerat — en enda linjär R-A-S-S-O-I-K-A-utskrift, inga mall-val.
 
 ### 🚁 UAV / Underrättelse – Smartare positions- och uppdragshantering
 Återkoppling från användare rörande friktionen mellan drönarsystem/karta och rapportverktyget i fält.

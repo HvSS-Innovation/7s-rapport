@@ -485,6 +485,41 @@ const MGRS = (() => {
     return{forward};
 })();
 
+// ── Klistra in MGRS / lat-lon — auto-extrahering ────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const field = document.getElementById('plats');
+    if (!field) return;
+    field.addEventListener('paste', e => {
+        const raw = (e.clipboardData || window.clipboardData).getData('text');
+        const coord = extractCoord(raw);
+        if (coord) { e.preventDefault(); field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 800); }
+    });
+});
+function extractCoord(text) {
+    const mgrs = text.match(/\d{1,2}\s?[C-X]\s?[A-Z]{2}\s?\d{3,5}\s?\d{3,5}/i);
+    if (mgrs) {
+        const digits = mgrs[0].replace(/\s+/g, '');
+        const m = digits.match(/^(\d{1,2})([C-X])([A-Z]{2})(\d+)$/i);
+        if (m) {
+            const nums = m[4];
+            const half = Math.floor(nums.length / 2);
+            const east = nums.slice(0, half).padEnd(5, '0').slice(0, 5);
+            const north = nums.slice(half).padEnd(5, '0').slice(0, 5);
+            return `${m[1]}${m[2].toUpperCase()}${m[3].toUpperCase()} ${east} ${north}`;
+        }
+    }
+    const ll = text.match(/(-?\d{1,3}\.\d{2,})\s*[,/;\s]\s*(-?\d{1,3}\.\d{2,})/);
+    if (ll) {
+        const a = parseFloat(ll[1]), b = parseFloat(ll[2]);
+        const lat = Math.abs(a) <= 90 ? a : b;
+        const lon = Math.abs(a) <= 90 ? b : a;
+        if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            try { return MGRS.forward(lat, lon); } catch(_) {}
+        }
+    }
+    return null;
+}
+
 async function getGPS() {
     const btn = document.getElementById('gpsBtn');
     if (!navigator.geolocation) { alert('Geolocation stöds ej.'); return; }

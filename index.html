@@ -511,6 +511,44 @@ const MGRS = (() => {
     return { forward };
 })();
 
+// ── Klistra in MGRS / lat-lon — auto-extrahering ────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+    const field = document.getElementById('stalle');
+    if (!field) return;
+    field.addEventListener('paste', e => {
+        const raw = (e.clipboardData || window.clipboardData).getData('text');
+        const coord = extractCoord(raw);
+        if (coord) { e.preventDefault(); field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 800); }
+    });
+});
+function extractCoord(text) {
+    // 1. MGRS: 34VCJ 56934 85565 / 34VCJ5693485565 / 34V CJ 569 855 etc.
+    const mgrs = text.match(/\d{1,2}\s?[C-X]\s?[A-Z]{2}\s?\d{3,5}\s?\d{3,5}/i);
+    if (mgrs) {
+        const digits = mgrs[0].replace(/\s+/g, '');
+        const m = digits.match(/^(\d{1,2})([C-X])([A-Z]{2})(\d+)$/i);
+        if (m) {
+            const nums = m[4];
+            const half = Math.floor(nums.length / 2);
+            const east = nums.slice(0, half).padEnd(5, '0').slice(0, 5);
+            const north = nums.slice(half).padEnd(5, '0').slice(0, 5);
+            return `${m[1]}${m[2].toUpperCase()}${m[3].toUpperCase()} ${east} ${north}`;
+        }
+    }
+    // 2. Lat/lon decimal degrees: 59.3293, 18.0686 / 59.3293/18.0686
+    const ll = text.match(/(-?\d{1,3}\.\d{2,})\s*[,/;\s]\s*(-?\d{1,3}\.\d{2,})/);
+    if (ll) {
+        const a = parseFloat(ll[1]), b = parseFloat(ll[2]);
+        // Gissa vilken som är lat vs lon (lat < 90)
+        const lat = Math.abs(a) <= 90 ? a : b;
+        const lon = Math.abs(a) <= 90 ? b : a;
+        if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            try { return MGRS.forward(lat, lon); } catch(_) {}
+        }
+    }
+    return null;
+}
+
 // ── GPS ───────────────────────────────────────────────────────────────────────
 function haversine(lat1, lon1, lat2, lon2) {
     const R = 6371000, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
