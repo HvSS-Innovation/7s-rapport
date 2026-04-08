@@ -655,8 +655,8 @@ function overpassLookup(lat, lon, addressParts) {
     const q = `[out:json][timeout:5];(
         way["place"~"^(island|islet)$"](around:500,${lat},${lon});
         relation["place"~"^(island|islet)$"](around:500,${lat},${lon});
-        way["natural"="water"]["name"](around:300,${lat},${lon});
-        relation["natural"="water"]["name"](around:300,${lat},${lon});
+        way["natural"="water"]["name"](around:1000,${lat},${lon});
+        relation["natural"="water"]["name"](around:1000,${lat},${lon});
     );out center;`;
     fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) })
         .then(r => r.json())
