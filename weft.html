@@ -561,45 +561,80 @@ function reverseGeocode(lat, lon) {
             const area = a.suburb || a.neighbourhood || a.city_district || a.village || a.town || '';
             const parts = [street, area].filter(Boolean);
             if (a.island) {
-                resolveIslandPosition(lat, lon, a.island, parts);
-            } else if (parts.length) {
-                mapSelectedAddress = parts.join(', ');
-                updateMapDisplay();
+                resolveFeaturePosition(lat, lon, a.island, 'island', parts);
+            } else {
+                overpassLookup(lat, lon, parts);
             }
         })
         .catch(() => {});
 }
 
-function resolveIslandPosition(lat, lon, islandName, addressParts) {
-    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(islandName)}&format=json&limit=1`)
+function overpassLookup(lat, lon, addressParts) {
+    const q = `[out:json][timeout:5];(
+        way["place"~"^(island|islet)$"](around:500,${lat},${lon});
+        relation["place"~"^(island|islet)$"](around:500,${lat},${lon});
+        way["natural"="water"]["name"](around:300,${lat},${lon});
+        relation["natural"="water"]["name"](around:300,${lat},${lon});
+    );out center;`;
+    fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) })
+        .then(r => r.json())
+        .then(data => {
+            const els = data.elements || [];
+            const island = els.find(e => (e.tags || {}).place && /^(island|islet)$/.test(e.tags.place) && e.tags.name);
+            const lake = els.find(e => (e.tags || {}).natural === 'water' && e.tags.name);
+            if (island) {
+                resolveFeaturePosition(lat, lon, island.tags.name, 'island', addressParts);
+            } else if (lake) {
+                resolveFeaturePosition(lat, lon, lake.tags.name, 'lake', addressParts);
+            } else if (addressParts.length) {
+                mapSelectedAddress = addressParts.join(', ');
+                updateMapDisplay();
+            }
+        })
+        .catch(() => {
+            if (addressParts.length) {
+                mapSelectedAddress = addressParts.join(', ');
+                updateMapDisplay();
+            }
+        });
+}
+
+function resolveFeaturePosition(lat, lon, name, type, addressParts) {
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`)
         .then(r => r.json())
         .then(results => {
-            let prefix = islandName;
+            let prefix = name;
             if (results.length && results[0].boundingbox) {
                 const bb = results[0].boundingbox.map(Number);
                 const cLat = (bb[0] + bb[1]) / 2, cLon = (bb[2] + bb[3]) / 2;
                 const latSpan = bb[1] - bb[0], lonSpan = bb[3] - bb[2];
                 const ns = (lat - cLat) / (latSpan || 1), ew = (lon - cLon) / (lonSpan || 1);
                 const t = 0.15;
-                let dir = '';
-                if (Math.abs(ns) < t && Math.abs(ew) < t) dir = 'Centrala';
-                else {
-                    if (ns > t) dir += 'Nord'; else if (ns < -t) dir += 'Syd';
-                    if (ew > t) dir += dir ? 'östra' : 'Östra';
-                    else if (ew < -t) dir += dir ? 'västra' : 'Västra';
-                    else if (dir === 'Nord') dir = 'Norra';
-                    else if (dir === 'Syd') dir = 'Södra';
+                const dir = computeDirection(ns, ew, t);
+                if (dir) {
+                    const label = type === 'lake' ? ' strandkanten av ' : ' delen av ';
+                    prefix = dir + label + name;
                 }
-                if (dir) prefix = dir + ' delen av ' + islandName;
             }
             const allParts = [prefix, ...addressParts].filter(Boolean);
             mapSelectedAddress = allParts.join(', ');
             updateMapDisplay();
         })
         .catch(() => {
-            mapSelectedAddress = [islandName, ...addressParts].filter(Boolean).join(', ');
+            mapSelectedAddress = [name, ...addressParts].filter(Boolean).join(', ');
             updateMapDisplay();
         });
+}
+
+function computeDirection(ns, ew, t) {
+    if (Math.abs(ns) < t && Math.abs(ew) < t) return 'Centrala';
+    let dir = '';
+    if (ns > t) dir += 'Nord'; else if (ns < -t) dir += 'Syd';
+    if (ew > t) dir += dir ? 'östra' : 'Östra';
+    else if (ew < -t) dir += dir ? 'västra' : 'Västra';
+    else if (dir === 'Nord') dir = 'Norra';
+    else if (dir === 'Syd') dir = 'Södra';
+    return dir;
 }
 
 function updateMapDisplay() {
