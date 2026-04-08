@@ -733,7 +733,7 @@ function clearMapMarker() {
 function confirmMapSelection() {
     if (!mapSelectedMgrs) return;
     const field = document.getElementById('stalle');
-    field.value = field.value.trim() ? field.value.trim() + ', ' + mapSelectedMgrs : mapSelectedMgrs;
+    field.value = mapSelectedMgrs;
     closeMapModal();
 }
 

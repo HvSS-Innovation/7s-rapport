@@ -736,7 +736,7 @@ function clearMapMarker() {
 function confirmMapSelection() {
     if (!mapSelectedMgrs) return;
     const f = document.getElementById('plats');
-    f.value = f.value.trim() ? f.value.trim() + ', ' + mapSelectedMgrs : mapSelectedMgrs;
+    f.value = mapSelectedMgrs;
     closeMapModal();
 }
 
