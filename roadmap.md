@@ -431,6 +431,71 @@ SYMBOL-fältet i 7S kan fyllas via inbäddade SCRIM/WEFT/A-H/WHAT-formulär som 
 - [ ] **6. Tillförlitlighet & Avstånd:** På långa avstånd eller med dåliga sensorer (t.ex. blurrig IR) blir observationer ofta en "bedömningssport". Möjliggör angivelse av ungefärligt avstånd och standardiserad tillförlitlighetsgrad (exempelvis gradering 1–6) så att underrättelsebefälet kan vikta rapportens värde rätt (skilja en stensäker observation från en misstanke).
 - [ ] **7. Målets Status (Rörelse):** Ett enkelt snabbval/fält för om målet är i "Rörelse" eller "Orörligt/Statiskt", då detta ofta är direkt avgörande för verkansbeslut eller uppföljning.
 
+### 🔗 [Tier 3] ATAK-kompatibilitet & TAK-ekosystemintegration (Issue #26)
+Bakgrund: Återkommande fråga om kompatibilitet med ATAK och närliggande funktioner (rapporterad av @salmi4k).  
+Utredning av teknisk genomförandeväg, uppdelad i fyra inkrementella etapper.  
+**Systemkontext:** Hemvärnets MRPAS (UAV 06 Skatan / Parrot ANAFI USA GOV) integreras redan i TAK via Sweden Dynamics. 7S Rapport kan bli bryggan mellan fältrapportör och taktisk lägesbild.
+
+#### Etapp A — CoT-export (Offline-kompatibel, ingen server krävs)
+*Komplexitet: Låg | Beroenden: Inga*
+- [ ] **CoT XML-generator:** Ny JS-funktion `generateCoT()` i varje rapportformulär som konverterar ifylld rapport till ett giltigt CoT XML-event
+  - Mappa rapporttyp → CoT type-kod: 7S infanteri → `a-h-G`, fordon → `a-h-G-E`, flygfarkost → `a-h-A`, drönare → `a-h-A-MFQ`
+  - Konvertera MGRS → lat/lon för `<point>`-elementet
+  - Tidsstämpel (TNR) → ISO 8601 för `time`/`start`/`stale`
+  - Rapportdetaljer i `<detail><remarks>` som fritext
+- [ ] **"Exportera som CoT"-knapp:** Ny sekundär knapp (grå/dashed, ej primär) bredvid "Kopiera rapport" i alla relevanta formulär. Knappen genererar CoT XML och erbjuder:
+  - Kopiera till urklipp (för paste i ATAK chat/import)
+  - Ladda ner som `.cot`-fil (kan delas via Signal/AirDrop till ATAK-enhet)
+- [ ] **CoT-validering:** Säkerställ att genererad XML följer CoT 2.0-schema och kan importeras i ATAK-CIV utan fel
+
+#### Etapp B — TAK Server REST-integration (Kräver nätverksåtkomst)
+*Komplexitet: Medel | Beroenden: Etapp A, TAK Server tillgänglig*
+- [ ] **Inställningspanel "TAK-anslutning":** Ny sektion i appen (dold bakom toggle i Om-sektionen) för:
+  - Server-URL (t.ex. `https://tak.example.com:8443`)
+  - Autentisering: klientcertifikat (upload .p12) eller API-nyckel
+  - Anslutningstest ("Ping TAK Server")
+  - QR-kod-skanning för snabb konfiguration (server + cert i en QR)
+- [ ] **"Publicera till TAK"-knapp:** Vid genererad rapport, en-klicks publicering via TAK Server Marti API:
+  - POST CoT till `/Marti/api/cot` 
+  - Valfritt: koppla till en TAK Mission via `/Marti/api/missions/{name}/contents`
+- [ ] **Offline-kö:** Om nät saknas → spara CoT-event i IndexedDB-kö → automatisk synk vid återanslutning (Service Worker bakgrundssynk)
+
+#### Etapp C — Realtidslägesbild (WebSocket / WebTAK-paritet)
+*Komplexitet: Hög | Beroenden: Etapp B*
+- [ ] **Inkommande CoT-ström:** Lyssna på TAK Server WebSocket → visa andra enheters rapporter/positioner på Leaflet-kartan i realtid
+  - Vänliga enheter (blå markörer), rapporterade mål (röda markörer), med MIL-STD-2525-ikoner
+- [ ] **Gemensam uppdragskarta:** Visa aktiv TAK Mission-data som kartöverlägg — ritade områden, rutter, intressepunkter från ATAK-klienter
+- [ ] **MRPAS-telemetri:** Om tillgängligt via TAK Server — visa drönarens realtidsposition och sensorstatus direkt i 7S-kartmodalens Leaflet-vy
+
+#### Etapp D — ATAK-plugin (Native integration)
+*Komplexitet: Mycket hög | Beroenden: Etapp A-C, Android SDK*
+- [ ] **ATAK-plugin "7S Rapport":** Android APK som lägger till ett 7S-rapportformulär direkt i ATAK:s gränssnitt
+  - Formuläret öppnas som DropDownReceiver-panel i ATAK
+  - Automatisk ifyllning av position från ATAK-kartans markör
+  - Publicering direkt till TAK Server utan att lämna ATAK
+- [ ] **Alternativ: WebView-inbäddning** — ladda 7srapport.com i en ATAK WebView-plugin för snabbare leverans utan native-utveckling
+
+#### Teknisk bedömning (sammanfattning)
+| Aspekt | Bedömning |
+|--------|-----------|
+| **Direkt integration** | Möjlig via CoT XML + TAK Server REST API. JS-bibliotek finns (`@tak-ps/node-cot`) |
+| **Export/Import** | Enklaste vägen — `.cot`-fil som delas manuellt till ATAK-enhet. Fungerar offline |
+| **Parallellt bruk** | Nuvarande läge — 7S Rapport och ATAK används sida vid sida utan datautbyte |
+| **Rekommenderad väg** | Etapp A först (CoT-export, 0 beroenden), sedan B vid behov. C och D är framtida mål |
+| **Säkerhetsaspekt** | Egen position får ALDRIG auto-delas via CoT. Explicit bekräftelse krävs vid varje publicering |
+
+#### Referensdokumentation
+- ATAK-CIV källkod: `github.com/deptofdefense/AndroidTacticalAssaultKit-CIV`
+- TAK Server: `github.com/TAK-Product-Center/Server`
+- FreeTAKServer REST API-dokumentation
+- node-cot (CoT↔JSON): `npmjs.com/package/@tak-ps/node-cot`
+- FOI-R--3981--SE: "RPAS för territoriell övervakning 2030"
+- Sweden Dynamics: TAK-integration med 7. Mekbrig/P7
+- FMV: Leverans av UAV 06 till Hemvärnet (2024)
+- Expertprompt: `verktyg/ATAK_INTEGRATION_PROMPT.md`
+
+---
+
 ### ✅ Åtgärdade
 *   **Återställd valbar passlängd i POSTSCHEMA**
     *   Fältet "Passlängd (timmar)" är tillbaka under Schema-inställningarna. Koden som tidigare slumpade passlängder (50/60/70 min) inaktiverades, och systemet respekterar nu istället användarens val fullt ut.

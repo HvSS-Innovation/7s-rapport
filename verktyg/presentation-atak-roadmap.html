@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>7S Rapport — ATAK-integration Roadmap</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #0d1f0d; color: #e0e0e0; overflow: hidden; }
+
+  .slide {
+    display: none; width: 100vw; height: 100vh; padding: 60px 80px;
+    flex-direction: column; justify-content: center;
+  }
+  .slide.active { display: flex; }
+
+  h1 { font-size: 2.8em; color: #4caf50; margin-bottom: 20px; line-height: 1.2; }
+  h2 { font-size: 2em; color: #81c784; margin-bottom: 24px; }
+  h3 { font-size: 1.4em; color: #a5d6a7; margin-bottom: 12px; }
+  p, li { font-size: 1.2em; line-height: 1.7; }
+  ul { padding-left: 30px; }
+  li { margin-bottom: 8px; }
+
+  .subtitle { font-size: 1.3em; color: #a0a0a0; margin-bottom: 40px; }
+  .highlight { color: #4caf50; font-weight: bold; }
+  .warn { color: #ff9800; }
+  .dim { color: #888; font-size: 0.85em; }
+
+  .diagram {
+    background: #12291270; border: 1px solid #2e5a2e; border-radius: 12px;
+    padding: 30px; margin: 20px 0; font-family: 'Cascadia Code', 'Consolas', monospace;
+    font-size: 1.05em; line-height: 1.8; white-space: pre; overflow-x: auto;
+  }
+
+  .card-row { display: flex; gap: 24px; margin: 20px 0; flex-wrap: wrap; }
+  .card {
+    flex: 1; min-width: 220px; background: #12291270; border: 1px solid #2e5a2e;
+    border-radius: 12px; padding: 24px;
+  }
+  .card h3 { margin-bottom: 8px; }
+  .card.active-card { border-color: #4caf50; box-shadow: 0 0 20px #4caf5030; }
+
+  .tag {
+    display: inline-block; padding: 3px 10px; border-radius: 6px;
+    font-size: 0.75em; margin-right: 6px; font-weight: 600;
+  }
+  .tag-low { background: #1b5e20; color: #a5d6a7; }
+  .tag-med { background: #e65100; color: #ffcc02; }
+  .tag-high { background: #b71c1c; color: #ef9a9a; }
+
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; }
+  th, td { padding: 12px 16px; text-align: left; border-bottom: 1px solid #2e5a2e; }
+  th { color: #4caf50; font-size: 0.9em; text-transform: uppercase; letter-spacing: 1px; }
+
+  .nav {
+    position: fixed; bottom: 30px; right: 40px; display: flex; gap: 12px; z-index: 10;
+  }
+  .nav button {
+    background: #2e5a2e; color: #e0e0e0; border: none; padding: 12px 24px;
+    border-radius: 8px; font-size: 1em; cursor: pointer; transition: background 0.2s;
+  }
+  .nav button:hover { background: #4caf50; color: #0d1f0d; }
+
+  .slide-counter {
+    position: fixed; bottom: 36px; left: 40px; color: #555; font-size: 0.9em;
+  }
+
+  .timeline { display: flex; align-items: flex-start; gap: 0; margin: 30px 0; }
+  .tl-step { flex: 1; text-align: center; position: relative; }
+  .tl-dot {
+    width: 20px; height: 20px; border-radius: 50%; background: #2e5a2e;
+    margin: 0 auto 12px; border: 3px solid #4caf50;
+  }
+  .tl-step.done .tl-dot { background: #4caf50; }
+  .tl-line {
+    position: absolute; top: 10px; left: 50%; width: 100%; height: 2px;
+    background: #2e5a2e; z-index: -1;
+  }
+  .tl-step:last-child .tl-line { display: none; }
+  .tl-label { font-size: 0.85em; color: #a5d6a7; }
+  .tl-desc { font-size: 0.75em; color: #888; margin-top: 4px; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; align-items: start; }
+
+  @media (max-width: 900px) {
+    .slide { padding: 30px 24px; }
+    h1 { font-size: 1.8em; }
+    h2 { font-size: 1.4em; }
+    .card-row { flex-direction: column; }
+    .two-col { grid-template-columns: 1fr; }
+    .diagram { font-size: 0.8em; }
+  }
+</style>
+</head>
+<body>
+
+<!-- SLIDE 1: Titel -->
+<div class="slide active" id="s1">
+  <h1>7S Rapport + ATAK</h1>
+  <p class="subtitle">Roadmap: Från fältrapport till taktisk lägesbild</p>
+  <div style="margin-top: 40px">
+    <p><span class="highlight">7srapport.com</span> — PWA för 13 militära rapportformulär (offline, &lt;60 sek per rapport)</p>
+    <p style="margin-top:12px"><span class="highlight">ATAK/TAK</span> — NATO-kompatibelt situational awareness-system (karta + realtid)</p>
+    <p style="margin-top:12px"><span class="highlight">MRPAS (UAV 06)</span> — Hemvärnets drönarsystem (Parrot ANAFI USA GOV)</p>
+  </div>
+  <p style="margin-top:50px; color:#555">Issue #26 — Utred kompatibilitet med ATAK (rapporterad av @salmi4k)</p>
+</div>
+
+<!-- SLIDE 2: Nuläge -->
+<div class="slide" id="s2">
+  <h2>Nuvarande läge: Två separata världar</h2>
+  <div class="diagram">
+    SOLDAT I FÄLT                         STAB / LEDNING
+    +-----------------+                   +------------------+
+    | 7S Rapport (PWA)|   Signal/SMS      | Mottar textrapport|
+    | Fyller i 7S     | ================> | Läser manuellt   |
+    | Kopierar text   |                   | Plottar på karta |
+    +-----------------+                   +------------------+
+                                                   |
+    +-----------------+                   +------------------+
+    | ATAK på mobil   |   TAK Server      | ATAK på skärm    |
+    | Ser lägesbild   | <===============> | Ser lägesbild    |
+    | Manuell markering|                  | Manuell markering|
+    +-----------------+                   +------------------+
+
+    Problem: INGEN koppling mellan 7S-rapporten och ATAK-lägesbilden.
+    Stabsofficeren måste MANUELLT återge rapportdata i ATAK.
+  </div>
+  <p class="warn">Resultat: Fördröjning, risk för felplotting, dubbeljobb</p>
+</div>
+
+<!-- SLIDE 3: Vision -->
+<div class="slide" id="s3">
+  <h2>Visionen: Rapport = Lägesbild</h2>
+  <div class="diagram">
+    SOLDAT I FÄLT                         STAB / LEDNING
+    +-----------------+                   +------------------+
+    | 7S Rapport (PWA)|                   | ATAK på skärm    |
+    | Fyller i 7S     |   CoT XML via     |                  |
+    | Klickar         |   TAK Server      | Rapport dyker upp|
+    | "Publicera"     | ================> | som markering på |
+    |                 |                   | kartan automatiskt|
+    +-----------------+                   +------------------+
+           |                                       |
+           |          +---------------+             |
+           +--------->| TAK Server    |<------------+
+                      | Routar CoT    |
+                      | Loggar allt   |
+                      +---------------+
+                             ^
+                             |
+                      +---------------+
+                      | MRPAS (drönare)|
+                      | Telemetri via |
+                      | TAK-integration|
+                      +---------------+
+
+    En rapport från fältet = en markering på allas kartor.
+    Noll manuellt arbete för staben.
+  </div>
+</div>
+
+<!-- SLIDE 4: Etappplan -->
+<div class="slide" id="s4">
+  <h2>Fyra etapper — inkrementell integration</h2>
+  <div class="timeline">
+    <div class="tl-step done"><div class="tl-line"></div><div class="tl-dot"></div><div class="tl-label">Etapp A</div><div class="tl-desc">CoT-export</div></div>
+    <div class="tl-step"><div class="tl-line"></div><div class="tl-dot"></div><div class="tl-label">Etapp B</div><div class="tl-desc">TAK Server API</div></div>
+    <div class="tl-step"><div class="tl-line"></div><div class="tl-dot"></div><div class="tl-label">Etapp C</div><div class="tl-desc">Realtidslagesbild</div></div>
+    <div class="tl-step"><div class="tl-line"></div><div class="tl-dot"></div><div class="tl-label">Etapp D</div><div class="tl-desc">ATAK-plugin</div></div>
+  </div>
+  <div class="card-row">
+    <div class="card active-card">
+      <span class="tag tag-low">LÅG KOMPLEXITET</span>
+      <h3>A: CoT-export</h3>
+      <ul>
+        <li>Generera CoT XML från ifylld rapport</li>
+        <li>Knapp "Exportera som CoT"</li>
+        <li>Dela .cot-fil via Signal/AirDrop</li>
+        <li><strong>Ingen server krävs</strong></li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag tag-med">MEDEL</span>
+      <h3>B: TAK Server REST</h3>
+      <ul>
+        <li>Inställningspanel för TAK-server</li>
+        <li>Ett-klicks publicering via API</li>
+        <li>Offline-kö med auto-synk</li>
+        <li>QR-kod för konfiguration</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag tag-high">HÖG</span>
+      <h3>C: Realtidsbild</h3>
+      <ul>
+        <li>WebSocket CoT-ström</li>
+        <li>Andra enheters pos. på kartan</li>
+        <li>MRPAS-telemetri i Leaflet</li>
+      </ul>
+    </div>
+    <div class="card">
+      <span class="tag tag-high">MYCKET HÖG</span>
+      <h3>D: ATAK-plugin</h3>
+      <ul>
+        <li>7S-formulär i ATAK</li>
+        <li>Auto-position från ATAK</li>
+        <li>Native Android APK</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 5: CoT-protokollet -->
+<div class="slide" id="s5">
+  <h2>Cursor on Target (CoT) — språket ATAK talar</h2>
+  <div class="two-col">
+    <div>
+      <p>CoT är ett XML-protokoll (MITRE, 2002) som beskriver <span class="highlight">vad, var, när</span> för en händelse.</p>
+      <div class="diagram" style="font-size:0.9em">
+&lt;event version="2.0"
+  uid="7S-RPT-20260409-001"
+  type="a-h-G-E"
+  how="h-e"
+  time="2026-04-09T14:30:00Z"
+  start="2026-04-09T14:30:00Z"
+  stale="2026-04-09T15:00:00Z"&gt;
+  &lt;point lat="59.3293"
+    lon="18.0686"
+    hae="0" ce="50" le="0"/&gt;
+  &lt;detail&gt;
+    &lt;remarks&gt;
+      7S: 3 st, Stridsfordon,
+      Grupperar, 32VNJ 1234 5678
+    &lt;/remarks&gt;
+  &lt;/detail&gt;
+&lt;/event&gt;</div>
+    </div>
+    <div>
+      <h3>7S-fält till CoT-mappning</h3>
+      <table>
+        <tr><th>7S</th><th>CoT</th></tr>
+        <tr><td>Storlek</td><td>remarks / contact</td></tr>
+        <tr><td>Slag</td><td>event.type (a-h-G, a-h-A...)</td></tr>
+        <tr><td>Sysselsättning</td><td>detail.remarks</td></tr>
+        <tr><td>Ställe (MGRS)</td><td>point.lat/lon</td></tr>
+        <tr><td>Stund (TNR)</td><td>event.time (ISO 8601)</td></tr>
+        <tr><td>Samverkande</td><td>detail.remarks</td></tr>
+        <tr><td>Symbol</td><td>type-kod + remarks</td></tr>
+      </table>
+      <p style="margin-top:16px" class="dim">Type-koder: a-f-G (vänligt mark), a-h-A-MFQ (fientligt UAS), a-h-G-E (fientlig utrustning)</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 6: MRPAS & TAK -->
+<div class="slide" id="s6">
+  <h2>Hemvärnets MRPAS + TAK-ekosystemet</h2>
+  <div class="two-col">
+    <div>
+      <h3>UAV 06 Skatan (Parrot ANAFI USA GOV)</h3>
+      <ul>
+        <li>Quadrocopter, ~30 min flygtid</li>
+        <li>Optisk kamera 1-32x zoom</li>
+        <li>IR/värmekamera 320x256 px</li>
+        <li>GPS + GPS-denied fallback</li>
+        <li>Autonoma förprogrammerade rutter</li>
+        <li>Dag- och nattoperationer</li>
+      </ul>
+      <p style="margin-top:16px"><span class="highlight">FMV levererar sedan 2024.</span> 5,3 mdr SEK investering i drönarförmåga (jan 2026).</p>
+    </div>
+    <div>
+      <h3>Sverige + TAK idag</h3>
+      <ul>
+        <li><strong>Sweden Dynamics</strong> har visat drönare→TAK-integration med 7. Mekbrig / P7</li>
+        <li>Realtidstelemetri från RPAS visas i ATAK-klienter</li>
+        <li>FOI-R--3981--SE: C2-kedjan måste anpassas för RPAS-sensordata</li>
+        <li>C2STRIC kompilerar sensordata till auktoriserad luftbild</li>
+      </ul>
+      <h3 style="margin-top:20px">7S Rapports roll</h3>
+      <p>RPAS-operatören ser målet i kameran — behöver rapportera SNABBT. 7S-appen med CoT-export ger en <span class="highlight">30-sekunders väg</span> från observation till TAK-lägesbild.</p>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 7: UX-design -->
+<div class="slide" id="s7">
+  <h2>UX: Noll konfiguration, ett klick</h2>
+  <div class="card-row">
+    <div class="card">
+      <h3>Zero-config anslutning</h3>
+      <p>Stabsofficer genererar QR-kod från TAK Server. Soldaten skannar — klart. Certifikat och server-URL överförs automatiskt.</p>
+      <div class="diagram" style="font-size:0.85em">
+  [TAK Server] --> QR-kod
+  [Soldat skannar] --> Auto-config
+  [7S Rapport] --> Ansluten!
+      </div>
+    </div>
+    <div class="card">
+      <h3>Publiceringsflöde</h3>
+      <p>Efter ifylld rapport — <strong>en extra knapp</strong> under "Kopiera rapport":</p>
+      <div class="diagram" style="font-size:0.85em">
+  +---------------------------+
+  | [Kopiera rapport]         |  &lt;-- befintlig
+  | [Exportera CoT-fil]       |  &lt;-- Etapp A
+  | [Publicera till TAK]      |  &lt;-- Etapp B
+  +---------------------------+
+
+  Bekräftelsedialog:
+  "Publicera rapport med position
+   32VNJ 1234 5678 till TAK?"
+   [Avbryt]  [Bekräfta]
+      </div>
+    </div>
+    <div class="card">
+      <h3>Säkerhet först</h3>
+      <ul>
+        <li class="warn">ALDRIG auto-dela egen position</li>
+        <li>Explicit bekräftelse vid varje publicering</li>
+        <li>Tydlig separation: "Min pos" vs "Målets pos"</li>
+        <li>Offline-först: fungerar utan nät</li>
+        <li>TAK-funktioner dolda tills aktiverade</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- SLIDE 8: Teknisk översikt -->
+<div class="slide" id="s8">
+  <h2>Teknisk genomförandeväg</h2>
+  <table>
+    <tr><th>Aspekt</th><th>Lösning</th><th>Bibliotek/Verktyg</th></tr>
+    <tr><td>CoT-generering</td><td>Vanilla JS-funktion i varje formulär</td><td>Egen kod, MGRS.js (redan i projektet)</td></tr>
+    <tr><td>CoT-validering</td><td>Schema-check mot CoT 2.0 XSD</td><td>DOMParser (inbyggd)</td></tr>
+    <tr><td>TAK Server REST</td><td>Fetch API mot Marti-endpoints</td><td>Fetch + mTLS via certifikat</td></tr>
+    <tr><td>Offline-kö</td><td>IndexedDB + Service Worker Background Sync</td><td>Redan i projektet (SW finns)</td></tr>
+    <tr><td>Realtid (Etapp C)</td><td>WebSocket till TAK Server</td><td>Native WebSocket API</td></tr>
+    <tr><td>Kartmarkörer</td><td>Leaflet markers med MIL-STD-2525 ikoner</td><td>Leaflet.js (redan i projektet)</td></tr>
+    <tr><td>ATAK-plugin (Etapp D)</td><td>Android APK / WebView-fallback</td><td>ATAK SDK 5.5, Jetpack Compose</td></tr>
+  </table>
+  <p style="margin-top:24px"><span class="highlight">Nollberoenden:</span> Etapp A kräver inga nya bibliotek — enbart ny JS-logik ovanpå befintlig kodbas.</p>
+  <p class="dim" style="margin-top:8px">Alternativt: @tak-ps/node-cot för avancerad CoT-hantering om komplexiteten ökar</p>
+</div>
+
+<!-- SLIDE 9: Sammanfattning -->
+<div class="slide" id="s9">
+  <h2>Sammanfattning & nästa steg</h2>
+  <div class="two-col">
+    <div>
+      <h3>Rekommendation</h3>
+      <ol style="padding-left:20px">
+        <li style="margin-bottom:12px"><span class="highlight">Börja med Etapp A</span> — CoT-export. Noll beroenden, fungerar offline, ger omedelbart värde.</li>
+        <li style="margin-bottom:12px"><strong>Etapp B</strong> vid behov — när en HV-enhet har TAK Server tillgänglig.</li>
+        <li style="margin-bottom:12px"><strong>Etapp C</strong> — realtidslägesbild är ett framtidsmål som kräver serverinfrastruktur.</li>
+        <li style="margin-bottom:12px"><strong>Etapp D</strong> — ATAK-plugin är "nice to have" men kräver Android-utveckling.</li>
+      </ol>
+    </div>
+    <div>
+      <h3>Vad finns redan</h3>
+      <ul>
+        <li>MGRS-konvertering (för CoT point-element)</li>
+        <li>TNR till tidsstämpel (för CoT time)</li>
+        <li>Leaflet-karta (för CoT-markörer)</li>
+        <li>Service Worker + IndexedDB (för offline-kö)</li>
+        <li>WEFT drönartyp-väljare (för CoT type-koder)</li>
+        <li>POSTSCHEMA RPAS-operatörspass</li>
+      </ul>
+      <h3 style="margin-top:20px">Ny prompt</h3>
+      <p><code>verktyg/ATAK_INTEGRATION_PROMPT.md</code></p>
+      <p class="dim">Expertprompt för framtida Claude-sessioner med full ATAK/CoT/MRPAS-kontext.</p>
+    </div>
+  </div>
+  <p style="margin-top:40px; text-align:center; color:#4caf50; font-size:1.3em">
+    Från fältrapport till lägesbild — en knapp i taget.
+  </p>
+</div>
+
+<div class="nav">
+  <button onclick="go(-1)">Föregående</button>
+  <button onclick="go(1)">Nästa</button>
+</div>
+<div class="slide-counter" id="counter"></div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  let current = 0;
+  function show(i) {
+    slides.forEach(s => s.classList.remove('active'));
+    current = Math.max(0, Math.min(i, slides.length - 1));
+    slides[current].classList.add('active');
+    document.getElementById('counter').textContent = `${current + 1} / ${slides.length}`;
+  }
+  function go(d) { show(current + d); }
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === ' ') go(1);
+    if (e.key === 'ArrowLeft') go(-1);
+  });
+  show(0);
+</script>
+</body>
+</html>

@@ -75,6 +75,9 @@
         .tnr-switch.is-long .lbl-lang{color:var(--bg-primary)}
         .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; }
         .btn-copy:hover { background: var(--info-hover); }
+        .btn-cot { width: 100%; background: var(--bg-secondary); color: var(--text-secondary); border: 1px dashed var(--border); margin-bottom: 8px; font-size: 0.85rem; }
+        .btn-cot:hover { background: var(--bg-card); color: var(--text-primary); border-color: var(--accent); }
+        .cot-group { margin-top: 4px; }
 
         .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
         .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
@@ -308,6 +311,10 @@
             <div class="report-output" id="reportOutput"></div>
             <button class="btn btn-copy" onclick="copyToClipboard()">Kopiera till urklipp</button>
             <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
+            <div class="cot-group">
+                <button class="btn btn-cot" onclick="copyCoT()">Kopiera CoT XML</button>
+                <button class="btn btn-cot" onclick="downloadCoT()">Ladda ner .cot-fil</button>
+            </div>
             <div class="button-group">
                 <button class="btn btn-secondary" onclick="backToEdit()">Redigera</button>
                 <button class="btn btn-danger" onclick="resetForm()">Nollställ</button>
@@ -605,6 +612,57 @@ function generateReport() {
     document.getElementById('reportOutput').textContent = lines.join('\n');
     document.getElementById('formView').classList.add('hidden');
     document.getElementById('resultView').classList.add('active');
+}
+
+// ── CoT (Cursor on Target) Export ────────────────────────────────────────────
+function parseTnrToISO(tnr) {
+    if (!tnr || tnr === '-') return new Date().toISOString();
+    const now = new Date();
+    const dd = parseInt(tnr.slice(0,2)), hh = parseInt(tnr.slice(2,4)), mm = parseInt(tnr.slice(4,6));
+    let year = now.getFullYear(), month = now.getMonth();
+    if (tnr.length > 6) {
+        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        const mi = months.indexOf(tnr.slice(7,10).toUpperCase());
+        if (mi >= 0) month = mi;
+        if (tnr.length >= 14) year = parseInt(tnr.slice(10,14));
+    }
+    const d = new Date(Date.UTC(year, month, dd, hh, mm, 0));
+    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+function generateCoTXML() {
+    const v = id => document.getElementById(id).value.trim();
+    const coords = (() => { try { return MGRS.inverse(v('stalle')); } catch(e) { return null; } })();
+    const lat = coords ? coords[0].toFixed(6) : '0';
+    const lon = coords ? coords[1].toFixed(6) : '0';
+    const time = parseTnrToISO(v('stund'));
+    const stale = new Date(new Date(time).getTime() + 30*60000).toISOString();
+    const uid = 'WHAT-' + Date.now().toString(36).toUpperCase();
+    const remarks = [
+        v('wheels') ? `Wheels: ${v('wheels')}` : null,
+        v('hull') ? `Hull: ${v('hull')}` : null,
+        v('armament') ? `Armament: ${v('armament')}` : null,
+        v('turret') ? `Turret: ${v('turret')}` : null,
+        v('sagesman') ? `Sagesman: ${v('sagesman')}` : null,
+    ].filter(Boolean).join('; ');
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="${uid}" type="a-h-G-E" how="h-e" time="${time}" start="${time}" stale="${stale}">\n  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>\n  <detail>\n    <contact callsign="WHAT Rapport"/>\n    <remarks>WHAT RAPPORT — ${remarks || '-'}</remarks>\n  </detail>\n</event>`;
+}
+function copyCoT() {
+    const xml = generateCoTXML();
+    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('✓ CoT XML kopierat')); }
+    else { const ta = document.createElement('textarea'); ta.value = xml; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showCotFeedback('✓ CoT XML kopierat'); } catch(e) { alert('Kunde inte kopiera.'); } document.body.removeChild(ta); }
+}
+function downloadCoT() {
+    const xml = generateCoTXML();
+    const blob = new Blob([xml], { type: 'application/xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `WHAT-rapport-${new Date().toISOString().slice(0,10)}.cot`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+    showCotFeedback('✓ .cot-fil nedladdad');
+}
+function showCotFeedback(msg) {
+    const el = document.getElementById('copyFeedback');
+    el.textContent = msg; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    setTimeout(() => { el.textContent = '✓ Kopierat'; }, 2500);
 }
 
 function copyToClipboard() {
