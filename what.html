@@ -78,6 +78,16 @@
         .btn-cot { width: 100%; background: var(--bg-secondary); color: var(--text-secondary); border: 1px dashed var(--border); margin-bottom: 8px; font-size: 0.85rem; }
         .btn-cot:hover { background: var(--bg-card); color: var(--text-primary); border-color: var(--accent); }
         .cot-group { margin-top: 4px; }
+        .btn-tak { width: 100%; background: var(--bg-secondary); color: var(--accent); border: 1px solid var(--accent-dim); margin-bottom: 8px; font-size: 0.9rem; }
+        .btn-tak:hover { background: var(--accent-dim); border-color: var(--accent); }
+        .confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:11000; align-items:center; justify-content:center; padding:16px; }
+        .confirm-overlay.open { display:flex; }
+        .confirm-dialog { width:100%; max-width:400px; background:var(--bg-primary); border:1px solid var(--accent); border-radius:var(--radius); padding:24px; }
+        .confirm-dialog h3 { color:var(--accent); font-size:1rem; margin-bottom:16px; }
+        .confirm-dialog .confirm-info { font-family:'Courier New',monospace; font-size:0.85rem; background:var(--bg-secondary); padding:12px; border-radius:var(--radius-sm); margin-bottom:16px; line-height:1.6; }
+        .confirm-dialog .confirm-info .label { color:var(--text-muted); }
+        .confirm-dialog .confirm-btns { display:flex; gap:10px; }
+        .confirm-dialog .confirm-btns button { flex:1; }
 
         .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
         .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
@@ -311,6 +321,7 @@
             <div class="report-output" id="reportOutput"></div>
             <button class="btn btn-copy" onclick="copyToClipboard()">Kopiera till urklipp</button>
             <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
+            <button class="btn btn-tak" onclick="showPublishDialog()">Publicera till TAK + dela via Signal</button>
             <div class="cot-group">
                 <button class="btn btn-cot" onclick="copyCoT()">Kopiera CoT XML</button>
                 <button class="btn btn-cot" onclick="downloadCoT()">Ladda ner .cot-fil</button>
@@ -321,6 +332,16 @@
             </div>
         </div>
     </main>
+    <div class="confirm-overlay" id="publishOverlay" onclick="if(event.target===this)closePublishDialog()">
+        <div class="confirm-dialog">
+            <h3>Publicera rapport</h3>
+            <div class="confirm-info" id="publishInfo"></div>
+            <div class="confirm-btns">
+                <button class="btn btn-secondary" onclick="closePublishDialog()">Avbryt</button>
+                <button class="btn btn-primary" onclick="executePublish()" style="margin-top:0">Bekräfta</button>
+            </div>
+        </div>
+    </div>
 </div>
 
 <script>
@@ -675,6 +696,36 @@ function showCotFeedback(msg) {
     el.textContent = msg; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
     setTimeout(() => { el.textContent = '✓ Kopierat'; }, 2500);
 }
+function showPublishDialog() {
+    const v = id => document.getElementById(id).value.trim();
+    document.getElementById('publishInfo').innerHTML =
+        `<span class="label">Position:</span> ${v('stalle') || '-'}\n<span class="label">TAK:</span> .cot-fil delas till ATAK\n<span class="label">Signal:</span> Textrapport delas`;
+    document.getElementById('publishOverlay').classList.add('open');
+}
+function closePublishDialog() { document.getElementById('publishOverlay').classList.remove('open'); }
+function executePublish() {
+    closePublishDialog();
+    const text = document.getElementById('reportOutput').textContent;
+    const xml = generateCoTXML();
+    const cotFile = new File([new Blob([xml], { type: 'application/xml' })], `WHAT-rapport-${new Date().toISOString().slice(0,10)}.cot`, { type: 'application/xml' });
+    const files = [cotFile];
+    if (typeof lastFotoFile !== 'undefined' && lastFotoFile) files.push(lastFotoFile);
+    if (navigator.share) {
+        const shareData = { text, files };
+        if (navigator.canShare?.(shareData)) {
+            navigator.share(shareData).then(() => showCotFeedback('✓ Rapport delad')).catch(() => { fallbackDownloadCoT(xml); shareTextOnly(text); });
+        } else { fallbackDownloadCoT(xml); shareTextOnly(text); }
+    } else {
+        fallbackDownloadCoT(xml);
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(() => showCotFeedback('✓ .cot nedladdad + text kopierad'));
+    }
+}
+function fallbackDownloadCoT(xml) {
+    const blob = new Blob([xml], { type: 'application/xml' }); const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = `WHAT-rapport-${new Date().toISOString().slice(0,10)}.cot`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+function shareTextOnly(text) { if (navigator.share) navigator.share({ text }).catch(() => {}); }
 
 function copyToClipboard() {
     const text = document.getElementById('reportOutput').textContent;
