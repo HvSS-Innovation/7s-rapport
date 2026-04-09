@@ -1269,7 +1269,7 @@ function copyCoT() {
 
 function downloadCoT() {
     const xml = generateCoTXML();
-    const blob = new Blob([xml], { type: 'application/xml' });
+    const blob = new Blob([xml], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1306,8 +1306,8 @@ function executePublish() {
     closePublishDialog();
     const text = document.getElementById('reportOutput').textContent;
     const xml = generateCoTXML();
-    const cotBlob = new Blob([xml], { type: 'application/xml' });
-    const cotFile = new File([cotBlob], `7S-rapport-${new Date().toISOString().slice(0,10)}.cot`, { type: 'application/xml' });
+    const cotBlob = new Blob([xml], { type: 'application/octet-stream' });
+    const cotFile = new File([cotBlob], `7S-rapport-${new Date().toISOString().slice(0,10)}.cot`, { type: 'application/octet-stream' });
 
     // Samla filer: alltid .cot, valfritt foto
     const files = [cotFile];
@@ -1338,7 +1338,7 @@ function executePublish() {
 }
 
 function fallbackDownloadCoT(xml) {
-    const blob = new Blob([xml], { type: 'application/xml' });
+    const blob = new Blob([xml], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url; a.download = `7S-rapport-${new Date().toISOString().slice(0,10)}.cot`;

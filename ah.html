@@ -747,7 +747,7 @@ function copyCoT() {
 }
 function downloadCoT() {
     const xml = generateCoTXML();
-    const blob = new Blob([xml], { type: 'application/xml' });
+    const blob = new Blob([xml], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `AH-rapport-${new Date().toISOString().slice(0,10)}.cot`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
@@ -769,7 +769,7 @@ function executePublish() {
     closePublishDialog();
     const text = document.getElementById('reportOutput').textContent;
     const xml = generateCoTXML();
-    const cotFile = new File([new Blob([xml], { type: 'application/xml' })], `AH-rapport-${new Date().toISOString().slice(0,10)}.cot`, { type: 'application/xml' });
+    const cotFile = new File([new Blob([xml], { type: 'application/octet-stream' })], `AH-rapport-${new Date().toISOString().slice(0,10)}.cot`, { type: 'application/octet-stream' });
     const files = [cotFile];
     if (typeof lastFotoFile !== 'undefined' && lastFotoFile) files.push(lastFotoFile);
     if (navigator.share) {
@@ -783,7 +783,7 @@ function executePublish() {
     }
 }
 function fallbackDownloadCoT(xml) {
-    const blob = new Blob([xml], { type: 'application/xml' }); const url = URL.createObjectURL(blob);
+    const blob = new Blob([xml], { type: 'application/octet-stream' }); const url = URL.createObjectURL(blob);
     const a = document.createElement('a'); a.href = url; a.download = `AH-rapport-${new Date().toISOString().slice(0,10)}.cot`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
 }
