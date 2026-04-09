@@ -190,8 +190,6 @@
                 <div class="input-row">
                     <input type="text" id="stalle" placeholder="Plats / koordinater" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="openMapModal()">🗺 Karta</button>
-                    <button class="btn btn-sm btn-time" tabindex="-1" onclick="document.getElementById('ocrInput').click()">📷 OCR</button>
-                    <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="ocrImage(this)">
                 </div>
                 <div class="saved-items" id="savedStalle"></div>
             </div>
@@ -419,38 +417,6 @@ function extractCoord(text) {
     return null;
 }
 
-// ── OCR: extrahera koordinater från bild ─────────────────────────────────────
-let _tesseractLoaded = false;
-function loadTesseract() {
-    if (_tesseractLoaded) return Promise.resolve();
-    return new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; s.integrity = 'sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F'; s.crossOrigin = 'anonymous';
-        s.onload = () => { _tesseractLoaded = true; res(); };
-        s.onerror = rej;
-        document.head.appendChild(s);
-    });
-}
-async function ocrImage(input) {
-    const file = input.files[0]; input.value = '';
-    if (!file) return;
-    const field = document.getElementById('stalle') || document.getElementById('plats');
-    if (!field) return;
-    field.value = 'Läser bild...'; field.style.outline = '2px solid var(--info)';
-    try {
-        await loadTesseract();
-        const { data: { text } } = await Tesseract.recognize(file, 'eng', { logger: () => {} });
-        const coord = extractCoord(text);
-        if (coord) {
-            field.value = coord; field.style.outline = '2px solid var(--accent)';
-            setTimeout(() => field.style.outline = '', 1500); showVerifyBtn(coord);
-        } else {
-            field.value = ''; field.style.outline = '2px solid var(--danger)';
-            setTimeout(() => field.style.outline = '', 1500);
-            alert('Kunde inte hitta koordinater i bilden.\nTips: använd en tydlig skärmbild med synliga koordinater.');
-        }
-    } catch (e) { field.value = ''; field.style.outline = ''; alert('OCR misslyckades. Kontrollera nätuppkoppling (krävs första gången).'); }
-}
 function showVerifyBtn(mgrsStr) {
     let btn = document.getElementById('verifyMapBtn');
     if (!btn) {

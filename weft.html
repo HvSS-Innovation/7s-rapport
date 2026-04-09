@@ -115,6 +115,14 @@
         .map-confirm-btn:disabled { opacity:0.4; cursor:default; }
         .field-clear { background:none; border:none; color:var(--text-muted); font-size:0.72rem; font-weight:600; letter-spacing:0.05em; cursor:pointer; padding:2px 0; text-transform:uppercase; }
         .field-clear:hover { color:var(--danger); }
+        /* ── Drönartyp-väljare ─── */
+        .drone-picker { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; }
+        .drone-card { display:flex; flex-direction:column; align-items:center; gap:6px; background:var(--bg-input); border:2px solid var(--border); border-radius:var(--radius); padding:10px 4px 8px; cursor:pointer; transition:border-color .2s, background .2s; -webkit-tap-highlight-color:transparent; }
+        .drone-card:hover { border-color:var(--border-focus); background:var(--bg-secondary); }
+        .drone-card.selected { border-color:var(--accent); background:var(--accent-dim); }
+        .drone-card svg { width:100%; height:auto; }
+        .drone-card-label { font-size:0.62rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; color:var(--text-muted); text-align:center; line-height:1.2; transition:color .2s; }
+        .drone-card.selected .drone-card-label { color:var(--accent); }
     </style>
 </head>
 <body>
@@ -190,8 +198,6 @@
                 <div class="input-row">
                     <input type="text" id="stalle" placeholder="Plats / koordinater / riktning" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="openMapModal()">🗺 Karta</button>
-                    <button class="btn btn-sm btn-time" tabindex="-1" onclick="document.getElementById('ocrInput').click()">📷 OCR</button>
-                    <input type="file" id="ocrInput" accept="image/*" style="display:none" onchange="ocrImage(this)">
                 </div>
                 <div class="saved-items" id="savedStalle"></div>
             </div>
@@ -207,6 +213,87 @@
                 </div>
             </div>
 
+            <!-- DRÖNARTYP -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label>Drönartyp</label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoDrone')">i</button>
+                </div>
+                <div class="info-text" id="infoDrone">Välj den typ som bäst matchar observationen. WEFT-fälten nedan förifyls automatiskt, men kan justeras fritt. Enligt MSB:s rapportmall (MSB2551).</div>
+                <div id="droneDesc" style="font-size:0.78rem;color:var(--text-muted);margin-bottom:8px;min-height:1.4em"></div>
+                <div class="drone-picker">
+                    <!-- Deltawing -->
+                    <div class="drone-card" onclick="selectDroneType('deltawing')">
+                        <svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                            <path d="M 6 43 Q 25 39 44 43 L 44 45 Q 25 42 6 45 Z" />
+                            <path d="M 21 44 Q 25 34 29 44 Z" />
+                            <path d="M 75 12 Q 62 35 52 64 L 98 64 Q 88 35 75 12 Z" />
+                            <rect x="72" y="12" width="6" height="22" rx="2" />
+                        </svg>
+                        <span class="drone-card-label">Deltawing</span>
+                    </div>
+                    <!-- Fixed wing -->
+                    <div class="drone-card" onclick="selectDroneType('fixedwing')">
+                        <svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                            <rect x="21" y="38" width="8" height="8" rx="3" />
+                            <rect x="5" y="41" width="40" height="3" />
+                            <rect x="24" y="26" width="2" height="12" />
+                            <rect x="16" y="26" width="18" height="3" />
+                            <path d="M 74 15 Q 75 10 76 15 L 77 65 Q 75 67 73 65 Z" />
+                            <rect x="52" y="30" width="46" height="6" />
+                            <rect x="64" y="60" width="22" height="4" />
+                        </svg>
+                        <span class="drone-card-label">Fixed wing</span>
+                    </div>
+                    <!-- Multicopter Quad -->
+                    <div class="drone-card" onclick="selectDroneType('quad')">
+                        <svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                            <rect x="18" y="38" width="14" height="8" rx="2" />
+                            <rect x="6" y="40" width="38" height="2" />
+                            <rect x="4" y="36" width="12" height="4" rx="1" />
+                            <rect x="34" y="36" width="12" height="4" rx="1" />
+                            <polygon points="20,46 16,56 12,56 14,58 20,58 24,46" />
+                            <polygon points="30,46 34,56 38,56 36,58 30,58 26,46" />
+                            <polygon points="56,22 60,18 94,54 90,58" />
+                            <polygon points="90,18 94,22 60,58 56,54" />
+                            <circle cx="75" cy="40" r="8" />
+                            <circle cx="58" cy="20" r="8" />
+                            <circle cx="92" cy="20" r="8" />
+                            <circle cx="58" cy="60" r="8" />
+                            <circle cx="92" cy="60" r="8" />
+                        </svg>
+                        <span class="drone-card-label">Multi&shy;copter Quad</span>
+                    </div>
+                    <!-- Multicopter Octo -->
+                    <div class="drone-card" onclick="selectDroneType('octo')">
+                        <svg viewBox="0 0 100 80" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+                            <rect x="18" y="38" width="14" height="10" rx="3" />
+                            <rect x="5" y="41" width="40" height="2" />
+                            <rect x="5" y="37" width="8" height="4" rx="1" />
+                            <rect x="15" y="37" width="8" height="4" rx="1" />
+                            <rect x="27" y="37" width="8" height="4" rx="1" />
+                            <rect x="37" y="37" width="8" height="4" rx="1" />
+                            <polygon points="20,48 16,58 12,58 14,60 20,60 24,48" />
+                            <polygon points="30,48 34,58 38,58 36,60 30,60 26,48" />
+                            <rect x="74" y="22" width="2" height="36" />
+                            <rect x="57" y="39" width="36" height="2" />
+                            <polygon points="61,28 63,26 89,52 87,54" />
+                            <polygon points="87,26 89,24 63,54 61,52" />
+                            <circle cx="75" cy="40" r="9" />
+                            <circle cx="75" cy="22" r="5.5" />
+                            <circle cx="88" cy="27" r="5.5" />
+                            <circle cx="93" cy="40" r="5.5" />
+                            <circle cx="88" cy="53" r="5.5" />
+                            <circle cx="75" cy="58" r="5.5" />
+                            <circle cx="62" cy="53" r="5.5" />
+                            <circle cx="57" cy="40" r="5.5" />
+                            <circle cx="62" cy="27" r="5.5" />
+                        </svg>
+                        <span class="drone-card-label">Multi&shy;copter Octo</span>
+                    </div>
+                </div>
+            </div>
+
             <!-- WINGS -->
             <div class="form-group">
                 <div class="label-row">
@@ -217,7 +304,7 @@
                 <textarea id="wings" rows="2" placeholder="Vingarnas form, antal, placering..."></textarea>
                 <div class="chip-group">
                     <button class="chip" onclick="appendChip('wings','Deltavinge')">Deltavinge</button>
-                    <button class="chip" onclick="appendChip('wings','Raktvinge')">Raktvinge</button>
+                    <button class="chip" onclick="appendChip('wings','Fast vinge')">Fast vinge</button>
                     <button class="chip" onclick="appendChip('wings','Baksvept vinge')">Baksvept</button>
                     <button class="chip" onclick="appendChip('wings','Hög vinge')">Hög vinge</button>
                     <button class="chip" onclick="appendChip('wings','Låg vinge')">Låg vinge</button>
@@ -400,17 +487,6 @@ function extractCoord(text) {
     return null;
 }
 
-let _tesseractLoaded = false;
-function loadTesseract() { if (_tesseractLoaded) return Promise.resolve(); return new Promise((res, rej) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'; s.integrity = 'sha384-GJqSu7vueQ9qN0E9yLPb3Wtpd7OrgK8KmYzC8T1IysG1bcvxvIO4qtYR/D3A991F'; s.crossOrigin = 'anonymous'; s.onload = () => { _tesseractLoaded = true; res(); }; s.onerror = rej; document.head.appendChild(s); }); }
-async function ocrImage(input) {
-    const file = input.files[0]; input.value = ''; if (!file) return;
-    const field = document.getElementById('stalle') || document.getElementById('plats'); if (!field) return;
-    field.value = 'Läser bild...'; field.style.outline = '2px solid var(--info)';
-    try { await loadTesseract(); const { data: { text } } = await Tesseract.recognize(file, 'eng', { logger: () => {} }); const coord = extractCoord(text);
-        if (coord) { field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 1500); showVerifyBtn(coord); }
-        else { field.value = ''; field.style.outline = '2px solid var(--danger)'; setTimeout(() => field.style.outline = '', 1500); alert('Kunde inte hitta koordinater i bilden.'); }
-    } catch (e) { field.value = ''; field.style.outline = ''; alert('OCR misslyckades. Kontrollera nätuppkoppling (krävs första gången).'); }
-}
 function showVerifyBtn(mgrsStr) {
     let btn = document.getElementById('verifyMapBtn');
     if (!btn) { btn = document.createElement('button'); btn.id = 'verifyMapBtn'; btn.className = 'btn btn-sm btn-time'; btn.tabIndex = -1; btn.textContent = '✓ Visa på karta'; btn.style.cssText = 'margin-top:8px;width:100%;padding:14px;font-size:1rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer'; const row = (document.getElementById('stalle') || document.getElementById('plats')).closest('.input-row'); row.parentNode.insertBefore(btn, row.nextSibling); }
@@ -506,6 +582,34 @@ async function readFoto(input) {
     input.value = '';
 }
 
+let selectedDroneType = '';
+const dronePresets = {
+    deltawing:  { wings:'Deltavinge', fuselage:'Smal kropp', tail:'Ingen stjärtfena' },
+    fixedwing:  { wings:'Fast vinge', fuselage:'Smal kropp', tail:'Konventionell' },
+    quad:       { wings:'Utan vingar (drönare)', fuselage:'', tail:'Ingen stjärtfena' },
+    octo:       { wings:'Utan vingar (drönare)', fuselage:'', tail:'Ingen stjärtfena' },
+};
+const droneDescriptions = {
+    deltawing:  'Deltawing \u2013 Triangulär vingform utan separat kropp. Ofta sm\u00e5, snabba spaningsdr\u00f6nare.',
+    fixedwing:  'Fixed wing \u2013 Konventionell flygplansform med raka vingar och stjärtfena. Lång räckvidd.',
+    quad:       'Multicopter Quad \u2013 Fyra rotorer i X-m\u00f6nster. Vanligaste dr\u00f6nartypen.',
+    octo:       'Multicopter Octo \u2013 \u00c5tta rotorer. St\u00f6rre lastkapacitet, ofta professionellt bruk.',
+};
+function selectDroneType(type) {
+    const cards = document.querySelectorAll('.drone-card');
+    const desc = document.getElementById('droneDesc');
+    if (selectedDroneType === type) {
+        selectedDroneType = '';
+        cards.forEach(c => c.classList.remove('selected'));
+        desc.textContent = '';
+        return;
+    }
+    selectedDroneType = type;
+    cards.forEach((c, i) => c.classList.toggle('selected', ['deltawing','fixedwing','quad','octo'][i] === type));
+    desc.textContent = droneDescriptions[type] || '';
+    const p = dronePresets[type];
+    if (p) { ['wings','tail'].forEach(f => { document.getElementById(f).value = p[f] || ''; }); }
+}
 function appendChip(id, val) { const el = document.getElementById(id); el.value = el.value.trim() ? el.value.trimEnd() + ', ' + val : val; el.focus(); }
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
 let tnrLong = false;
@@ -559,6 +663,46 @@ function nowTnr() {
 function generateReport() {
     const v = id => document.getElementById(id).value.trim();
     savePlaceIfNew(v('stalle')); saveSagesmanIfNew(v('sagesman'));
+    const droneLabels = { deltawing:'Deltawing', fixedwing:'Fixed wing', quad:'Multicopter Quad', octo:'Multicopter Octo' };
+    const droneAscii = {
+        deltawing: [
+            '           /\\',
+            '          /  \\',
+            '         / /\\ \\',
+            '        / /  \\ \\',
+            '       /_/____\\_\\',
+            '          \\__/'
+        ],
+        fixedwing: [
+            '              _',
+            '             / \\',
+            '            | T |',
+            '             \\_/',
+            '              |',
+            ' ______________+______________',
+            '              |',
+            '           __/ \\__',
+            '          /______\\'
+        ],
+        quad: [
+            '    (O)       (O)',
+            '       \\     /',
+            '        \\   /',
+            '         [+]',
+            '        /   \\',
+            '       /     \\',
+            '    (O)       (O)'
+        ],
+        octo: [
+            '        (o)',
+            '    (o)     (o)',
+            '       \\   /',
+            '  (o)---[+]---(o)',
+            '       /   \\',
+            '    (o)     (o)',
+            '        (o)'
+        ],
+    };
     const lines = [
         'WEFT RAPPORT',
         `Till: ${v('till') || '-'}`,
@@ -568,6 +712,7 @@ function generateReport() {
         '',
         `Stund:    ${v('stund') || '-'}`,
         `Ställe:   ${v('stalle') || '-'}`,
+        selectedDroneType ? `Drönartyp: ${droneLabels[selectedDroneType]}` : null,
         `Wings:    ${v('wings') || '-'}`,
         `Engines:  ${v('engines') || '-'}`,
         `Fuselage: ${v('fuselage') || '-'}`,
@@ -575,6 +720,9 @@ function generateReport() {
         lastFotoFilename ? `Foto: ${lastFotoFilename}` : null,
         `Sagesman: ${v('sagesman') || '-'}`,
     ].filter(Boolean);
+    if (selectedDroneType && droneAscii[selectedDroneType]) {
+        lines.push('', ...droneAscii[selectedDroneType]);
+    }
     document.getElementById('reportOutput').textContent = lines.join('\n');
     document.getElementById('formView').classList.add('hidden');
     document.getElementById('resultView').classList.add('active');
@@ -592,6 +740,8 @@ function backToEdit() { document.getElementById('formView').classList.remove('hi
 function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
     ['stund','stalle','wings','engines','fuselage','tail','sagesman'].forEach(id => document.getElementById(id).value = '');
+    selectedDroneType = '';
+    document.querySelectorAll('.drone-card').forEach(c => c.classList.remove('selected'));
     backToEdit();
 }
 
