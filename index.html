@@ -953,7 +953,7 @@ function lmLookup(lat, lon, addressParts) {
         }
         const distKm = Math.sqrt(bestDist) * 111.32;
         if (best && distKm < 5) {
-            const type = best.t === 's' ? 'lake' : 'island';
+            const type = best.t === 's' ? 'lake' : best.t === 'b' ? 'mountain' : 'island';
             resolveFeaturePosition(lat, lon, best.n, type, addressParts);
         } else { done(); }
     };
