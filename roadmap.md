@@ -438,15 +438,20 @@ Utredning av teknisk genomförandeväg, uppdelad i fyra inkrementella etapper.
 
 #### Etapp A — CoT-export (Offline-kompatibel, ingen server krävs)
 *Komplexitet: Låg | Beroenden: Inga*
-- [ ] **CoT XML-generator:** Ny JS-funktion `generateCoT()` i varje rapportformulär som konverterar ifylld rapport till ett giltigt CoT XML-event
+- [x] **CoT XML-generator:** JS-funktion `generateCoTXML()` i varje rapportformulär som konverterar ifylld rapport till giltigt CoT XML-event
   - Mappa rapporttyp → CoT type-kod: 7S infanteri → `a-h-G`, fordon → `a-h-G-E`, flygfarkost → `a-h-A`, drönare → `a-h-A-MFQ`
   - Konvertera MGRS → lat/lon för `<point>`-elementet
   - Tidsstämpel (TNR) → ISO 8601 för `time`/`start`/`stale`
   - Rapportdetaljer i `<detail><remarks>` som fritext
-- [ ] **"Exportera som CoT"-knapp:** Ny sekundär knapp (grå/dashed, ej primär) bredvid "Kopiera rapport" i alla relevanta formulär. Knappen genererar CoT XML och erbjuder:
-  - Kopiera till urklipp (för paste i ATAK chat/import)
-  - Ladda ner som `.cot`-fil (kan delas via Signal/AirDrop till ATAK-enhet)
-- [ ] **CoT-validering:** Säkerställ att genererad XML följer CoT 2.0-schema och kan importeras i ATAK-CIV utan fel
+- [x] **"Exportera som CoT"-knappar:** Kopiera CoT XML, Ladda ner Data Package, Publicera till TAK + dela via Signal — i alla 5 formulär
+- [x] **ATAK Data Package-format:** ZIP med `manifest.xml` + `cot/`-mapp istället för rå `.cot`-fil — krävs för att ATAK ska importera korrekt
+- [x] **URL-parameterstöd:** `?mgrs=` och `?lat=&lon=` för ATAK→web-integration (långtryck i ATAK → öppna 7S Rapport med förifylld position)
+- [ ] **Lokal testmiljö med Android Emulator:** Sätt upp Android Studio + Android Emulator med ATAK CIV för att verifiera import/export utan fysisk enhet
+  - Installera [Android Studio](https://developer.android.com/studio) med Device Manager
+  - Skapa virtuell enhet (Pixel 7, API 33+)
+  - Installera ATAK CIV `.apk` (Google Play i emulatorn eller `.apk` från [TAK.gov](https://tak.gov))
+  - Testa Data Package-import, URL-parametrar och CoT-validering
+- [ ] **CoT-validering:** Verifiera att genererad XML + Data Package importeras korrekt i ATAK-CIV och visar markörer på kartan
 
 #### Etapp B — TAK Server REST-integration (Kräver nätverksåtkomst)
 *Komplexitet: Medel | Beroenden: Etapp A, TAK Server tillgänglig*
