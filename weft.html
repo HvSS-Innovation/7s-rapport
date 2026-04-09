@@ -459,10 +459,21 @@ const MGRS = (() => {
     return { forward, inverse };
 })();
 
-// ── Klistra in MGRS / lat-lon — auto-extrahering ────────────────────────────
+// ── URL-parameter → förfyll Ställe (ATAK-integration) ───────────────────────
 document.addEventListener('DOMContentLoaded', () => {
     const field = document.getElementById('stalle');
     if (!field) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('mgrs')) {
+        const coord = extractCoord(params.get('mgrs'));
+        if (coord) { field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 1500); setTimeout(() => showVerifyBtn(coord), 100); }
+    } else if (params.has('lat') && params.has('lon')) {
+        const lat = parseFloat(params.get('lat')), lon = parseFloat(params.get('lon'));
+        if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            try { const coord = MGRS.forward(lat, lon); field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 1500); setTimeout(() => showVerifyBtn(coord), 100); } catch(_) {}
+        }
+    }
+    // ── Klistra in MGRS / lat-lon — auto-extrahering ────────────────────────
     field.addEventListener('paste', e => {
         const raw = (e.clipboardData || window.clipboardData).getData('text');
         const coord = extractCoord(raw);
