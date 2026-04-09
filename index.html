@@ -94,6 +94,15 @@
         .input-row { display: flex; gap: 8px; }
         .input-row input { flex: 1; min-width: 0; }
 
+        /* Compass */
+        .compass { display:grid; grid-template-columns:40px 40px 40px; grid-template-rows:40px 40px 40px; gap:4px; justify-content:center; margin-top:8px; margin-bottom:4px; }
+        .compass-btn { display:flex; align-items:center; justify-content:center; background:#1e2d45; border:1px solid #2e4a70; color:#90b8e8; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.75rem; font-weight:700; transition:all .15s; -webkit-tap-highlight-color:transparent; padding:0; }
+        .compass-btn:hover { background:#2a4a7a; border-color:#4a80c0; color:#c8e0f8; }
+        .compass-btn:active { transform:scale(0.92); }
+        .compass-btn.active { background:#4caf50; border-color:#4caf50; color:#0d1f0d; }
+        .compass-btn svg { width:18px; height:18px; }
+        .compass-center { background:var(--bg-input); border:1px solid var(--border); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); cursor:pointer; }
+        .compass-center:hover { border-color:var(--danger); color:var(--danger); }
         /* Chip buttons */
         .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
         .chip {
@@ -360,14 +369,33 @@
                 </div>
                 <div class="info-text" id="infoSyssel">Fiendens verksamhet. Vad gör de? Rörelser, gruppering, etc.</div>
                 <textarea id="sysselsattning" rows="2" placeholder="Vad gör fienden?"></textarea>
-                <div class="chip-group">
-                    <button class="chip" onclick="appendChip('sysselsattning','Rör sig N')">Rör sig N</button>
-                    <button class="chip" onclick="appendChip('sysselsattning','Rör sig S')">Rör sig S</button>
-                    <button class="chip" onclick="appendChip('sysselsattning','Rör sig Ö')">Rör sig Ö</button>
-                    <button class="chip" onclick="appendChip('sysselsattning','Rör sig V')">Rör sig V</button>
-                    <button class="chip" onclick="appendChip('sysselsattning','Spanar')">Spanar</button>
-                    <button class="chip" onclick="appendChip('sysselsattning','Saboterar')">Saboterar</button>
-                    <button class="chip" onclick="appendChip('sysselsattning','Patrull')">Patrull</button>
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+                    <div class="compass">
+                        <span></span>
+                        <button class="compass-btn" data-dir="N" onclick="toggleDir(this)">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2 L13 10 L10 7 L7 10Z"/><text x="10" y="18" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">N</text></svg>
+                        </button>
+                        <span></span>
+                        <button class="compass-btn" data-dir="V" onclick="toggleDir(this)">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 10 L10 7 L7 10 L10 13Z"/><text x="16" y="13" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">V</text></svg>
+                        </button>
+                        <button class="compass-center" onclick="clearDirs()" title="Rensa riktning">
+                            <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><line x1="10" y1="3" x2="10" y2="6"/><line x1="10" y1="14" x2="10" y2="17"/><line x1="3" y1="10" x2="6" y2="10"/><line x1="14" y1="10" x2="17" y2="10"/></svg>
+                        </button>
+                        <button class="compass-btn" data-dir="Ö" onclick="toggleDir(this)">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M18 10 L10 7 L13 10 L10 13Z"/><text x="5" y="13" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">Ö</text></svg>
+                        </button>
+                        <span></span>
+                        <button class="compass-btn" data-dir="S" onclick="toggleDir(this)">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><text x="10" y="7" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">S</text><path d="M10 18 L7 10 L10 13 L13 10Z"/></svg>
+                        </button>
+                        <span></span>
+                    </div>
+                    <div class="chip-group" style="margin-top:0">
+                        <button class="chip" onclick="appendChip('sysselsattning','Spanar')">Spanar</button>
+                        <button class="chip" onclick="appendChip('sysselsattning','Saboterar')">Saboterar</button>
+                        <button class="chip" onclick="appendChip('sysselsattning','Patrull')">Patrull</button>
+                    </div>
                 </div>
             </div>
 
@@ -430,6 +458,8 @@
                 <div class="chip-group">
                     <button class="chip" onclick="appendChip('sedan','Återgår till bas')">Återgår till bas</button>
                     <button class="chip" onclick="appendChip('sedan','Fortsätter spaning')">Fortsätter spaning</button>
+                    <button class="chip" onclick="appendChip('sedan','Fortsätter post')">Fortsätter post</button>
+                    <button class="chip" onclick="appendChip('sedan','Fortsätter patrull')">Fortsätter patrull</button>
                     <button class="chip" onclick="appendChip('sedan','Följer efter')">Följer efter</button>
                     <button class="chip" onclick="appendChip('sedan','Avbryter uppdraget')">Avbryter uppdraget</button>
                 </div>
@@ -709,10 +739,12 @@ async function getGPS() {
 
 // ── Foto EXIF ────────────────────────────────────────────────────────────────
 let lastFotoFilename = '';
+let lastFotoFile = null;
 async function readFoto(input) {
     const file = input.files[0];
     if (!file) return;
     lastFotoFilename = file.name;
+    lastFotoFile = file;
     const status = document.getElementById('fotoStatus');
     status.textContent = 'Läser metadata...';
     try {
@@ -732,6 +764,34 @@ async function readFoto(input) {
         status.textContent = 'Kunde inte läsa bilden: ' + e.message;
     }
     input.value = '';
+}
+
+// ── Kompass-riktningsväljare ──────────────────────────────────────────────────
+const compassOrder = ['N','S','Ö','V'];
+const compassOpposite = { N:'S', S:'N', Ö:'V', V:'Ö' };
+function toggleDir(btn) {
+    const dir = btn.dataset.dir;
+    const wasActive = btn.classList.contains('active');
+    if (!wasActive) {
+        const oppBtn = document.querySelector('.compass-btn[data-dir="' + compassOpposite[dir] + '"]');
+        if (oppBtn) oppBtn.classList.remove('active');
+    }
+    btn.classList.toggle('active');
+    const active = [...document.querySelectorAll('.compass-btn.active')].map(b => b.dataset.dir);
+    const field = document.getElementById('sysselsattning');
+    const current = field.value.replace(/Rör sig [NSÖV]+,?\s*/g, '').trim();
+    if (active.length === 0) {
+        field.value = current;
+        return;
+    }
+    const sorted = active.sort((a, b) => compassOrder.indexOf(a) - compassOrder.indexOf(b));
+    const dirStr = sorted.join('');
+    field.value = current ? 'Rör sig ' + dirStr + ', ' + current : 'Rör sig ' + dirStr;
+}
+function clearDirs() {
+    document.querySelectorAll('.compass-btn.active').forEach(b => b.classList.remove('active'));
+    const field = document.getElementById('sysselsattning');
+    field.value = field.value.replace(/Rör sig [NSÖV]+,?\s*/g, '').trim();
 }
 
 // ── Chip-knappar (appendar till befintligt värde) ─────────────────────────────
@@ -1082,13 +1142,26 @@ function generateReport() {
 
 function copyToClipboard() {
     const text = document.getElementById('reportOutput').textContent;
-    const afterCopy = () => {
-        showCopyFeedback();
-        if (navigator.share) navigator.share({ text }).catch(() => {});
+    const doCopy = () => {
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(() => showCopyFeedback()).catch(() => { fallbackCopy(text); });
+        } else { fallbackCopy(text); }
     };
-    if (navigator.clipboard?.writeText) {
-        navigator.clipboard.writeText(text).then(afterCopy).catch(() => { fallbackCopy(text); afterCopy(); });
-    } else { fallbackCopy(text); afterCopy(); }
+    // Om en bild laddades via EXIF och webbläsaren stödjer fildelning — erbjud att bifoga
+    if (lastFotoFile && navigator.share) {
+        const shareData = { text, files: [lastFotoFile] };
+        if (navigator.canShare?.(shareData)) {
+            doCopy();
+            if (confirm('Vill du bifoga fotot (' + lastFotoFilename + ') till meddelandet?')) {
+                navigator.share(shareData).catch(() => {});
+            } else {
+                navigator.share({ text }).catch(() => {});
+            }
+            return;
+        }
+    }
+    doCopy();
+    if (navigator.share) navigator.share({ text }).catch(() => {});
 }
 
 function fallbackCopy(text) {
@@ -1111,6 +1184,8 @@ function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
     ['stund','stalle','styrka','slag','sysselsattning','symbol','sedan','sagesman'].forEach(id =>
         document.getElementById(id).value = '');
+    lastFotoFilename = ''; lastFotoFile = null;
+    document.getElementById('fotoStatus').textContent = '';
     backToEdit();
 }
 
@@ -1275,10 +1350,22 @@ document.addEventListener('DOMContentLoaded', () => {
     linkRow.appendChild(sep);
     linkRow.appendChild(aboutToggle);
 
+    aboutBox.id = 'om';
+
     footer.appendChild(priv);
     footer.appendChild(linkRow);
     footer.appendChild(aboutBox);
     c.appendChild(footer);
+
+    // Auto-öppna Om-sektionen om URL:en innehåller #om eller #egenKopia
+    if (location.hash === '#om' || location.hash === '#egenKopia') {
+        aboutBox.style.display = 'block';
+        aboutToggle.textContent = 'St\u00e4ng';
+        setTimeout(() => {
+            const target = document.getElementById(location.hash.slice(1));
+            if (target) target.scrollIntoView({ behavior: 'smooth' });
+        }, 100);
+    }
 });
 </script>
 <script src="pwa.js"></script>
