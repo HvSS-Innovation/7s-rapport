@@ -845,7 +845,7 @@ function clearDirs() {
 function scrollFieldToTop(el) {
     const group = el.closest('.form-group') || el;
     const doScroll = () => {
-        const y = group.getBoundingClientRect().top + window.scrollY - 3;
+        const y = group.getBoundingClientRect().top + window.scrollY - 6;
         window.scrollTo({ top: y, behavior: 'smooth' });
     };
     doScroll();

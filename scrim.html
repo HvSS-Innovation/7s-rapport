@@ -546,7 +546,7 @@ async function readFoto(input) {
     input.value = '';
 }
 
-function scrollFieldToTop(el) { const g = el.closest('.form-group') || el; const f = () => window.scrollTo({ top: g.getBoundingClientRect().top + window.scrollY - 3, behavior: 'smooth' }); f(); setTimeout(f, 350); }
+function scrollFieldToTop(el) { const g = el.closest('.form-group') || el; const f = () => window.scrollTo({ top: g.getBoundingClientRect().top + window.scrollY - 6, behavior: 'smooth' }); f(); setTimeout(f, 350); }
 function appendChip(id, val) { const el = document.getElementById(id); el.value = el.value.trim() ? el.value.trimEnd() + ', ' + val : val; scrollFieldToTop(el); el.focus({ preventScroll: true }); }
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
 let tnrLong = false;
