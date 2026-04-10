@@ -700,49 +700,49 @@ function nowTnr() {
     if (tnrLong) { const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC']; const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A'; return base + tz + months[now.getMonth()] + now.getFullYear(); }
     return base;
 }
+const droneLabels = { deltawing:'Deltawing', fixedwing:'Fixed wing', quad:'Multicopter Quad', octo:'Multicopter Octo' };
+const droneAscii = {
+    deltawing: [
+        '           /\\',
+        '          /  \\',
+        '         / /\\ \\',
+        '        / /  \\ \\',
+        '       /_/____\\_\\',
+        '          \\__/'
+    ],
+    fixedwing: [
+        '              _',
+        '             / \\',
+        '            | T |',
+        '             \\_/',
+        '              |',
+        ' ______________+______________',
+        '              |',
+        '           __/ \\__',
+        '          /______\\'
+    ],
+    quad: [
+        '    (O)       (O)',
+        '       \\     /',
+        '        \\   /',
+        '         [+]',
+        '        /   \\',
+        '       /     \\',
+        '    (O)       (O)'
+    ],
+    octo: [
+        '        (o)',
+        '    (o)     (o)',
+        '       \\   /',
+        '  (o)---[+]---(o)',
+        '       /   \\',
+        '    (o)     (o)',
+        '        (o)'
+    ],
+};
 function generateReport() {
     const v = id => document.getElementById(id).value.trim();
     savePlaceIfNew(v('stalle')); saveSagesmanIfNew(v('sagesman'));
-    const droneLabels = { deltawing:'Deltawing', fixedwing:'Fixed wing', quad:'Multicopter Quad', octo:'Multicopter Octo' };
-    const droneAscii = {
-        deltawing: [
-            '           /\\',
-            '          /  \\',
-            '         / /\\ \\',
-            '        / /  \\ \\',
-            '       /_/____\\_\\',
-            '          \\__/'
-        ],
-        fixedwing: [
-            '              _',
-            '             / \\',
-            '            | T |',
-            '             \\_/',
-            '              |',
-            ' ______________+______________',
-            '              |',
-            '           __/ \\__',
-            '          /______\\'
-        ],
-        quad: [
-            '    (O)       (O)',
-            '       \\     /',
-            '        \\   /',
-            '         [+]',
-            '        /   \\',
-            '       /     \\',
-            '    (O)       (O)'
-        ],
-        octo: [
-            '        (o)',
-            '    (o)     (o)',
-            '       \\   /',
-            '  (o)---[+]---(o)',
-            '       /   \\',
-            '    (o)     (o)',
-            '        (o)'
-        ],
-    };
     const lines = [
         'WEFT RAPPORT',
         `Till: ${v('till') || '-'}`,
@@ -1191,11 +1191,15 @@ function initEmbed() {
         genBtn.onclick = function() {
             const v = id => (document.getElementById(id)?.value || '').trim();
             const lines = [
+                selectedDroneType ? `Drönartyp: ${droneLabels[selectedDroneType]}` : null,
                 `Wings:    ${v('wings') || '-'}`,
                 `Engines:  ${v('engines') || '-'}`,
                 `Fuselage: ${v('fuselage') || '-'}`,
                 `Tail:     ${v('tail') || '-'}`,
-            ];
+            ].filter(Boolean);
+            if (selectedDroneType && droneAscii[selectedDroneType]) {
+                lines.push('', ...droneAscii[selectedDroneType]);
+            }
             window.parent.postMessage({ type: 'symbol-fill', format: 'WEFT', text: lines.join('\n') }, '*');
         };
     }
