@@ -129,6 +129,7 @@
         .saved-item:hover { background: var(--border-focus); color: var(--text-primary); }
         .saved-item .delete { color: var(--text-muted); font-size: 1rem; line-height: 1; padding: 0 2px; }
         .saved-item .delete:hover { color: var(--danger-hover); }
+        #savedTill .saved-item, #savedFran .saved-item { min-width: 120px; justify-content: center; padding: 8px 12px; }
 
         /* Buttons */
         .btn {
@@ -1515,10 +1516,6 @@ function saveFranIfNew(v) {
 function loadLastSagesman() {
     const last = localStorage.getItem('7s_lastSagesman');
     if (last) document.getElementById('sagesman').value = last;
-    const lastTill = localStorage.getItem('7s_lastTill');
-    if (lastTill) document.getElementById('till').value = lastTill;
-    const lastFran = localStorage.getItem('7s_lastFran');
-    if (lastFran) document.getElementById('fran').value = lastFran;
 }
 function loadSavedItems() {
     renderSaved('savedStalle',  get('7s_places'),   'stalle',   deleteSavedPlace);
