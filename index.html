@@ -288,10 +288,12 @@
                     <div>
                         <label for="till" style="margin-bottom:6px">Till</label>
                         <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
+                        <div class="saved-items" id="savedTill"></div>
                     </div>
                     <div>
                         <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
                         <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
+                        <div class="saved-items" id="savedFran"></div>
                     </div>
                 </div>
             </div>
@@ -1175,6 +1177,8 @@ function generateReport() {
     const v = id => document.getElementById(id).value.trim();
     savePlaceIfNew(v('stalle'));
     saveSagesmanIfNew(v('sagesman'));
+    saveTillIfNew(v('till'));
+    saveFranIfNew(v('fran'));
     const lines = [
         '7S RAPPORT',
         `Till: ${v('till') || '-'}`,
@@ -1494,13 +1498,33 @@ function saveSagesmanIfNew(v) {
     localStorage.setItem('7s_lastSagesman', v);
     loadSavedItems();
 }
+function saveTillIfNew(v) {
+    if (!v?.trim()) return;
+    let items = get('7s_till');
+    if (!items.includes(v)) set('7s_till', [v,...items].slice(0,5));
+    localStorage.setItem('7s_lastTill', v);
+    loadSavedItems();
+}
+function saveFranIfNew(v) {
+    if (!v?.trim()) return;
+    let items = get('7s_fran');
+    if (!items.includes(v)) set('7s_fran', [v,...items].slice(0,5));
+    localStorage.setItem('7s_lastFran', v);
+    loadSavedItems();
+}
 function loadLastSagesman() {
     const last = localStorage.getItem('7s_lastSagesman');
     if (last) document.getElementById('sagesman').value = last;
+    const lastTill = localStorage.getItem('7s_lastTill');
+    if (lastTill) document.getElementById('till').value = lastTill;
+    const lastFran = localStorage.getItem('7s_lastFran');
+    if (lastFran) document.getElementById('fran').value = lastFran;
 }
 function loadSavedItems() {
     renderSaved('savedStalle',  get('7s_places'),   'stalle',   deleteSavedPlace);
     renderSaved('savedSagesman',get('7s_sagesman'), 'sagesman', deleteSavedSagesman);
+    renderSaved('savedTill',    get('7s_till'),     'till',     deleteSavedTill);
+    renderSaved('savedFran',    get('7s_fran'),     'fran',     deleteSavedFran);
 }
 function renderSaved(cid, items, inputId, delFn) {
     const c = document.getElementById(cid); c.innerHTML = '';
@@ -1515,6 +1539,8 @@ function renderSaved(cid, items, inputId, delFn) {
 }
 function deleteSavedPlace(v)    { set('7s_places',   get('7s_places').filter(x=>x!==v));   loadSavedItems(); }
 function deleteSavedSagesman(v) { set('7s_sagesman', get('7s_sagesman').filter(x=>x!==v)); loadSavedItems(); }
+function deleteSavedTill(v)     { set('7s_till',     get('7s_till').filter(x=>x!==v));     loadSavedItems(); }
+function deleteSavedFran(v)     { set('7s_fran',     get('7s_fran').filter(x=>x!==v));     loadSavedItems(); }
 
 document.addEventListener('DOMContentLoaded', () => { loadSavedItems(); loadLastSagesman(); setCurrentTime(); });
 
