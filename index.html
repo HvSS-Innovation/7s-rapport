@@ -801,7 +801,7 @@ async function readFoto(input) {
         const dt = exif.DateTimeOriginal || exif.DateTime;
         if (dt) {
             const d = new Date(dt), p = n => String(n).padStart(2,'0');
-            document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}A`;
+            document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
             status.textContent = '✓ Tid hämtad från foto.';
         } else {
             status.textContent = 'Ingen tidsstämpel i bilden.';
