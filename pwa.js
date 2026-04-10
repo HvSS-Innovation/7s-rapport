@@ -24,10 +24,15 @@
   }
 
   // 1) Egen install-banner med Mer info-panel (högst upp)
+  const PWA_SNOOZE_KEY = 'pwaInstallSnoozeUntil';
+  const PWA_SNOOZE_MS = 10 * 60 * 1000;
   let deferredPrompt = null;
   window.addEventListener('beforeinstallprompt', e => {
     e.preventDefault();
     deferredPrompt = e;
+
+    const snoozeUntil = parseInt(localStorage.getItem(PWA_SNOOZE_KEY) || '0', 10);
+    if (Date.now() < snoozeUntil) return;
 
     const wrapper = document.createElement('div');
     wrapper.style.cssText = 'position:fixed;top:0;left:0;right:0;z-index:99999;transition:opacity 0.4s';
@@ -65,7 +70,9 @@
           'Installation sker p\u00e5 egen risk. All k\u00e4llkod \u00e4r \u00f6ppen och kan granskas: ' +
           '<a href="https://github.com/gitjoda71/7s-rapport" target="_blank" rel="noopener" style="color:#4caf50;text-decoration:underline">github.com/gitjoda71/7s-rapport</a><br><br>' +
           '<b style="color:#c8e6c9">Hur vet jag att sidan verkligen kommer fr\u00e5n GitHub?</b><br>' +
-          'Sidan hostas via GitHub Pages, vilket inneb\u00e4r att den serveras direkt fr\u00e5n det \u00f6ppna repositoriet \u2014 ' +
+          '<b style="color:#e05050">Det kan du inte veta.</b> ' +
+          '<a href="https://7srapport.com/#egenKopia" style="color:#4caf50;text-decoration:underline">K\u00f6r din egen granskade kopia</a> f\u00f6r att vara s\u00e4ker.<br><br>' +
+          'Jag p\u00e5st\u00e5r att sidan hostas via GitHub Pages, vilket inneb\u00e4r att den serveras direkt fr\u00e5n det \u00f6ppna repositoriet \u2014 ' +
           'inget mellansteg d\u00e4r koden kan \u00e4ndras. ' +
           'L\u00e4ngst ner p\u00e5 varje sida visas ett versions-ID som l\u00e4nkar till exakt den version av k\u00e4llkoden som k\u00f6rs.' +
           verLine;
@@ -82,6 +89,7 @@
     };
     document.getElementById('pwaDismiss').onclick = () => {
       clearTimeout(autoHide);
+      localStorage.setItem(PWA_SNOOZE_KEY, String(Date.now() + PWA_SNOOZE_MS));
       wrapper.remove();
     };
   });
