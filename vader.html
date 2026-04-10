@@ -6,7 +6,8 @@
     <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0d1f0d">
-    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="alternate icon" href="favicon.ico">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="VÄDER">
     <title>VÄDER – Meteorologisk prognos</title>
@@ -36,6 +37,8 @@
         .btn:active { transform: scale(0.97); }
         .btn-primary { width: 100%; background: var(--accent); color: #fff; margin-top: 8px; font-size: 1rem; }
         .btn-primary:hover { background: var(--accent-hover); }
+        .inline-error { margin-top: 10px; padding: 10px 12px; background: rgba(198,40,40,0.12); border: 1px solid var(--danger); border-radius: var(--radius-sm); color: #ff8a80; font-size: 0.82rem; line-height: 1.4; opacity: 0; max-height: 0; overflow: hidden; transition: opacity 0.25s, max-height 0.25s, margin-top 0.25s, padding 0.25s; }
+        .inline-error.show { opacity: 1; max-height: 200px; }
         .btn-sm { min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; white-space: nowrap; flex-shrink: 0; }
         .btn-time { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--border); }
         .btn-time:hover { background: var(--border-focus); }
@@ -104,6 +107,7 @@
         </div>
 
         <button class="btn btn-primary" onclick="generera()">Generera väderrapport</button>
+        <div class="inline-error" id="formError" role="alert" aria-live="polite"></div>
     </div>
 
     <div class="result-view" id="resultView">
@@ -236,11 +240,27 @@ function frostBedomning(minTemp) {
     return `Frosthalka möjlig, marktemperatur nära 0°C (${minTemp}°C).`;
 }
 
+let formErrorTimer = null;
+function showFormError(msg) {
+    const el = document.getElementById('formError');
+    if (!el) return;
+    el.textContent = msg;
+    el.classList.add('show');
+    if (formErrorTimer) clearTimeout(formErrorTimer);
+    formErrorTimer = setTimeout(() => el.classList.remove('show'), 6000);
+}
+function clearFormError() {
+    const el = document.getElementById('formError');
+    if (el) el.classList.remove('show');
+    if (formErrorTimer) { clearTimeout(formErrorTimer); formErrorTimer = null; }
+}
+
 async function generera() {
+    clearFormError();
     const datumVal = document.getElementById('dispDatum').value.trim();
-    if (!datumVal) { alert('Ange datum (ÅÅMMDD) eller tryck "Nu".'); return; }
+    if (!datumVal) { showFormError('Ange datum (ÅÅMMDD) eller tryck "Nu".'); return; }
     const ortText = document.getElementById('ortInput').value.trim();
-    if (!ortText && !latVal) { alert('Ange en ort eller tryck på 📍 MGRS.'); return; }
+    if (!ortText && !latVal) { showFormError('Ange en ort eller tryck på 📍 MGRS.'); return; }
 
     const genBtn = document.querySelector('.btn-primary');
     genBtn.textContent = 'Hämtar väderdata…';
@@ -339,7 +359,7 @@ async function generera() {
         wxStart({ precip, tempMin, windMs, cloudPct });
         setTimeout(wxFadeOut, 5000);
     } catch(err) {
-        alert('Kunde inte hämta väderdata: ' + err.message);
+        showFormError('Kunde inte hämta väderdata: ' + err.message);
     } finally {
         genBtn.textContent = 'Generera väderrapport';
         genBtn.disabled = false;

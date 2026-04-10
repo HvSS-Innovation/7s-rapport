@@ -339,6 +339,20 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
 - **Separation:** Tydliggör skillnaden mellan "Egen position" och "Observerad position" (bör byta namn från "Ställe" till "Målets position").
 - **Ingen auto-fyll:** Kartverktyget och plats-fälten får absolut inte auto-fyllarapportörens egen position utan ett uttryckligt och tydligt bekräftelseval från användaren. Kartvalet ska enkom avse den observerade positionen.
 
+#### 🐛 [Bugg & UX] Förbättringar från Automatiserad Buggtestning
+#### ✅ ~~Väder API "Silent Failure" (Dålig Felhantering)~~ — Åtgärdat
+~~Vid ett ogiltigt datum kastar `vader.html` ett undantag vid 400 Bad Request från Open-Meteo. Detta fångades upp och renderade en traditionell JS `alert()`.~~
+- `alert()` i `vader.html` ersatt med inline-felruta under "Generera väderrapport"-knappen som fade:ar ut efter 6 s.
+
+#### ✅ ~~Rensa deprecated meta-taggar~~ — Åtgärdat
+~~`<meta name="apple-mobile-web-app-capable" content="yes">` fanns kvar i `<head>` på alla HTML-filer.~~
+- Borttagen från samtliga 13 webbfiler (index, ah, eobusare, fors, obslosa, obo, what, postschema, rassoika, scrim, weft, pedars, vader).
+
+#### ✅ ~~Saknad favicon.ico (kastar 404 error i bakgrunden)~~ — Åtgärdat
+~~Webbläsaren begärde `/favicon.ico` och konsolen dumpade 404.~~
+- `favicon.ico` (multi-size 16/32/48/64) genererad i root från `icon.svg`, och `<link rel="icon" type="image/svg+xml" href="icon.svg">` + `<link rel="alternate icon" href="favicon.ico">` inlagda i header på alla HTML-filer.
+
+
 #### ✅ ~~Karta: Dubbla/flera markörer visas på kartan~~ — Åtgärdat
 ~~Vid upprepad användning av kartmodalen kan flera markörer visas samtidigt.~~
 - Åtgärdat i alla 6 tabs med kartmodal.
