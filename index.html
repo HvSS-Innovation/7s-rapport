@@ -844,7 +844,12 @@ function clearDirs() {
 // ── Chip-knappar (appendar till befintligt värde) ─────────────────────────────
 function scrollFieldToTop(el) {
     const group = el.closest('.form-group') || el;
-    group.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    const doScroll = () => {
+        const y = group.getBoundingClientRect().top + window.scrollY - 3;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+    };
+    doScroll();
+    setTimeout(doScroll, 350);
 }
 function appendChip(fieldId, value) {
     const el = document.getElementById(fieldId);
