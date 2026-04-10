@@ -825,26 +825,32 @@ function toggleDir(btn) {
     btn.classList.toggle('active');
     const active = [...document.querySelectorAll('.compass-btn.active')].map(b => b.dataset.dir);
     const field = document.getElementById('sysselsattning');
-    const current = field.value.replace(/Rör sig [NSÖV]+,?\s*/g, '').trim();
+    const current = field.value.replace(/Rör sig [NSÖVO]+,?\s*/g, '').trim();
     if (active.length === 0) {
         field.value = current;
         return;
     }
     const sorted = active.sort((a, b) => compassOrder.indexOf(a) - compassOrder.indexOf(b));
-    const dirStr = sorted.join('');
+    const dirStr = sorted.join('').replace(/Ö/g, 'O');
     field.value = current ? 'Rör sig ' + dirStr + ', ' + current : 'Rör sig ' + dirStr;
+    scrollFieldToTop(field);
 }
 function clearDirs() {
     document.querySelectorAll('.compass-btn.active').forEach(b => b.classList.remove('active'));
     const field = document.getElementById('sysselsattning');
-    field.value = field.value.replace(/Rör sig [NSÖV]+,?\s*/g, '').trim();
+    field.value = field.value.replace(/Rör sig [NSÖVO]+,?\s*/g, '').trim();
 }
 
 // ── Chip-knappar (appendar till befintligt värde) ─────────────────────────────
+function scrollFieldToTop(el) {
+    const group = el.closest('.form-group') || el;
+    group.scrollIntoView({ block: 'start', behavior: 'smooth' });
+}
 function appendChip(fieldId, value) {
     const el = document.getElementById(fieldId);
     el.value = el.value.trim() ? el.value.trimEnd() + ', ' + value : value;
-    el.focus();
+    scrollFieldToTop(el);
+    el.focus({ preventScroll: true });
 }
 
 // ── Symbol embed (SCRIM/WHAT/WEFT/A-H i modal) ──────────────────────────────

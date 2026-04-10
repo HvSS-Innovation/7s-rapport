@@ -649,7 +649,7 @@ function selectDroneType(type) {
     const p = dronePresets[type];
     if (p) { ['wings','tail'].forEach(f => { document.getElementById(f).value = p[f] || ''; }); }
 }
-function appendChip(id, val) { const el = document.getElementById(id); el.value = el.value.trim() ? el.value.trimEnd() + ', ' + val : val; el.focus(); }
+function appendChip(id, val) { const el = document.getElementById(id); el.value = el.value.trim() ? el.value.trimEnd() + ', ' + val : val; (el.closest('.form-group') || el).scrollIntoView({ block: 'start', behavior: 'smooth' }); el.focus({ preventScroll: true }); }
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
 let tnrLong = false;
 function toggleTnrFormat() {
