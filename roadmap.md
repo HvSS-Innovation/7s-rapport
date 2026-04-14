@@ -333,6 +333,41 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
 
 ### 📝 Nya / Öppna (Arbetsfördelning)
 
+#### 📚 [Ny flik] HANDTECKEN – Interaktiv utbildning (stridstecken, larm, kolonn, helikopter)
+**Mål:** En ny flik `handtecken.html` där användaren kan lära sig och repetera FM:s signaler och tecken från *Reglemente Soldaten i Fält 2001*, kap 14 (s. 438–449). Inte en PDF-visare – en **interaktiv, sökbar och quiz-bar** utbildningsmodul som fungerar offline (PWA).
+
+**Datakälla & omfattning:** ca 50 tecken + 6 ljudsignaler, indelade i 10 kategorier:
+1. Allmänna tecken (Allt klart, Samling, Färdiga till strid, Halt, Cheferna till mig m.fl. – 12 st)
+2. Stridsformationer (Skytteled, -kolonn, -svärm, -linje, -plog – 5 st)
+3. Observation & måldata (Observation i riktning, Lyssna, Fienden synlig, Eld mot mål, Egen trupp, Fientlig fottrupp/PBV/stridsvagn – 8 st)
+4. Eldkontroll (Takgruppera, Markgruppera, Lägg om elden, Skyddsställning, Behov av ammunition, Avbryt/eld upphör – 6 st)
+5. Markeringar (Spår, Vind, Plutonchef hit, Gruppchef hit, Mina, Hinder, Byggnad – 7 st)
+6. Larmtecken (Flyglarm, Flygvarning, Faran över – 3 st)
+7. Kolonntecken för fordon (ca 14 st)
+8. Körning med ledare (Utgångsställning, Sväng H/V, Återför ratten, Centrumsväng hjul/band)
+9. Halttecken till stridsfordon (regel: endast 3 tillfällen tillåtna)
+10. Helikoptertecken (Klart att landa, Framåt, Bakåt, Stå stilla, Förflyttning åt sidan, Uppåt, Nedåt – 7 st)
+
+Ljudsignaler (separat sektion): Flyglarm, Gaslarm, Faran över, Viktigt meddelande, Beredskapslarm, Klart skepp – med signalmönster (t.ex. "14 s × 3 + 7 s × 4").
+
+**Byggordning:**
+1. **Datamodell först** – `handtecken.json` med `{id, namn, kategori, beskrivning, utförande, när_används, källa_sida}` för alla ~50 poster. Transkriberas från extraherad PDF-text.
+2. **Egenritade SVG-piktogram** – stick-figur per tecken (viewBox 0 0 120 160). Inga bitmaps från PDF:en (upphovsrätt FM). Grundbibliotek av armpositioner kan återanvändas.
+3. **Flik-layout** konsistent med övriga fliker (mörk taktisk palett, `.tab-nav-sub`). Lägg in `HANDTECKEN` i den sekundära tab-raden i samtliga HTML-filer.
+4. **Bläderläge** – kort-grid per kategori, klick öppnar detaljvy (stor SVG + beskrivning + utförande + "när används"). Swipe/piltangenter för nästa/föregående.
+5. **Sökfält** – fritext på namn + beskrivning, filter-chips per kategori.
+6. **Quiz-läge** – två varianter: (a) "Vad betyder detta tecken?" (bild → 4 namnalternativ), (b) "Välj rätt tecken för X" (namn → 4 bilder). Poäng + streak sparas i `localStorage`. Lätt spaced-repetition: felbesvarade tecken viktas upp i nästa runda.
+7. **Signaler-sektion** – egen vy med visuellt signalmönster (tidsgraf) + valfri WebAudio-uppspelning av ton/rytm.
+8. **Offline** – all data inbäddad, cachead i service worker.
+
+**Icke-mål (fas 1):** animerade rörelser, videoklipp, AR.
+
+**Juridik:** text omformuleras med egna ord, illustrationer egenritade → ingen PDF-bild publiceras. Källhänvisning i varje kort.
+
+**Leverans i inkrement:** börja med kategori 1+6 (Allmänna + Larm), publicera, bygg sedan ut resten. Quizmotor byggs efter att minst två kategorier har data.
+
+---
+
 #### ⚠️ [Tier 1 - Kritisk] Säkerhetsrisk: Förhindra ofrivilligt röjande av egen position (Issue #10)
 **FARA FÖR PROJEKTET:** Användare riskerar att oavsiktligt rapportera (och därmed röja) sin egen GPS-position när avsikten var att ange _målets/observationens_ position. Detta kan leda till svåra taktiska fel eller riskera förbandets säkerhet om t.ex. artilleri leds mot fel koordinater. 
 **Åtgärd för att lösa:**
@@ -512,6 +547,49 @@ Utredning av teknisk genomförandeväg, uppdelad i fyra inkrementella etapper.
 - Sweden Dynamics: TAK-integration med 7. Mekbrig/P7
 - FMV: Leverans av UAV 06 till Hemvärnet (2024)
 - Expertprompt: `verktyg/ATAK_INTEGRATION_PROMPT.md`
+
+---
+
+### 🗺️ KARTSKOLAN – Interaktiv utbildning i kartkunskap & orientering (ny tab)
+
+**Källmaterial:** `HV-publikationer/Lärobok Soldaten och Kartan 2023-lsok.pdf` (LSOK 2023) — hela pedagogiska strukturen hämtas ur denna, inkl. terminologi, kartexempel och övningsuppgifter.
+
+**Designfilosofi – "Topografiskt arbetsbord, ej arcade":**
+Gränssnittet ska *kännas* som att sitta vid ett kartbord på 80-talet — inte som en mobilapp. Lantmäteriets klassiska topografiska kartor (Terrängkartan/Fjällkartan 1:50 000) är förebild:
+- **Färgpalett:** Lantmäteriets kartfärger. Papper-offvit (#f2ede0), skogsgrön (#b4d5a8), sankmark-blågrön, höjdkurve-brun (#a07040), vatten-blå (#a9d3ea), gränsröd. Bakgrund/UI: kallgrå (#c8c7c2 / #a8a8a3) med svart text i monospace/grotesk.
+- **Typografi:** Teknisk, tråkig och läsbar. `Helvetica`/`Arial` för rubriker, `Courier New` eller liknande fixed-width för koordinater och mätetal. INGA ikoner från ikonpaket — använd kartografiska symboler från LSOK istället.
+- **Chrome:** Synliga ramar, raka hörn, tunna 1px-linjer, dubbellinje-rutor som fält-ifyllnadsblanketter. Knappar ser ut som kvadratiska stämplar. Ingen skuggning, ingen gradient, inga rundade hörn. Inga animationer utöver diskret papperstextur.
+- **Ljud (valfritt, av som standard):** Kort "klick" vid val, tickande stoppur under tidspress. Inga jinglar.
+
+**Spelmekanik – "Lär genom att använda kartan, inte genom att läsa om den":**
+Utbildningen är upplagd som ett *fältpass med stegrande uppdrag*, ej som flashcards. Varje modul är ett scenario man måste lösa på en riktig kartbit.
+
+1. **Modul 1 – Kartans språk (LSOK kap. 2–3):** Läs tecknet. Kartutsnitt visas, en symbol är inringad → vad är det? Svar via klickbart kartteckenregister (ej textinmatning). Gamifierat: "Patrullen behöver hitta vatten — klicka på alla källor inom rutan."
+2. **Modul 2 – Koordinatsystem (RT90/SWEREF/MGRS, LSOK kap. 4):** Drag-och-släpp en markör till given koordinat. Feedback: "47 m fel — du är i fel rutnätskvadrat". Ökande precision: 1 km → 100 m → 10 m ruta.
+3. **Modul 3 – Höjd och terrängformer (LSOK kap. 5):** 3D-"glasögon"-läge där kartan tippas och höjdkurvor extruderas när eleven klickat rätt på "krön/sadel/sänka/platå". Profildiagram ritas längs en linje eleven drar.
+4. **Modul 4 – Kompass & marschriktning (LSOK kap. 6):** Interaktiv kompassros. Räkna ut bäring mellan två punkter, kompensera för missvisning (mg-data hämtas per årtal från LSOK-tabell). Sedan: gå simulerad marsch med given bäring + avstånd.
+5. **Modul 5 – Orientering i terräng (LSOK kap. 7–8):** Ett "patrullspel" — start- och målpunkt, eleven planerar väg, får tidsberäkning enligt Naismith + LSOK:s svenska tabell (terrängklass × lutning). Felnavigering = "Du står vid fel bäck, vad gör du?" → återtagning via auffangstrategi.
+6. **Modul 6 – Kartriktning utan kompass (LSOK kap. 9):** Solens läge, klockan, stjärnbilder. Presenteras som nattövning — skärmen dimmas ned, röd belysning (nattmode som redan finns i appen återanvänds).
+7. **Modul 7 – Skarpt läge:** Slumpade blandade uppgifter på tid, som fältprov. Resultatblad ser ut som en ifylld militärblankett (A4, tjocka ramar, stämpelruta).
+
+**Teknisk lösning:**
+- Ny fil `kartskolan.html` + `kartskolan.js` + `kartskolan.css` (delar grundfont-reset med övriga men har egen färgpalett-override).
+- Kartunderlag: Lantmäteriets öppna WMTS-tjänst "Topografisk webbkarta Visning" (CC0) via Leaflet, eller förrenderade PNG-kakel för offline-bruk i PWA.
+- Övningsdata i JSON: `kartskolan/moduler/*.json` — varje uppgift innehåller `kartbladsId`, `bbox`, `facit`, `ledtrådar[]`, `LSOK-sidhänvisning`.
+- Progress sparas i IndexedDB (samma wrapper som rapporterna använder). Varje modul har en "fältbok"-sida som fylls i gradvis.
+- Helt offline-fähigt via Service Worker — förrenderade kartkakel packas med appen.
+
+**Etappindelning:**
+- [ ] **Etapp 1:** Skelett + Modul 1 (kartteckenregister) som proof-of-concept med LM-färgpalett och 80-talslayout
+- [ ] **Etapp 2:** Modul 2–3 (koordinater, höjdkurvor) med Leaflet + Lantmäteriets WMTS
+- [ ] **Etapp 3:** Modul 4–5 (kompass, navigering) — inkl. marsch-simulering och Naismith
+- [ ] **Etapp 4:** Modul 6–7 (nattnav, slutprov) + resultatblankett-export (samma stil som 7S-rapporten)
+- [ ] **Etapp 5:** Integrering mot existerande tabbar — t.ex. "öva på den MGRS du precis skrev i 7S"
+
+**Referenser:**
+- Lärobok: `HV-publikationer/Lärobok Soldaten och Kartan 2023-lsok.pdf`
+- Lantmäteriets öppna data: `lantmateriet.se/sv/geodata/vara-produkter/produktlista/topografisk-webbkarta-visning/`
+- Förebildsestetik: Terrängkartan blå serie, 1970–90-tal
 
 ---
 
