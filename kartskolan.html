@@ -6,40 +6,62 @@
 <title>KARTSKOLAN — Soldaten och Kartan (PoC)</title>
 <style>
   :root {
-    --paper:      #f2ede0;
-    --paper-dark: #e6dfcd;
-    --forest:     #b4d5a8;
-    --water:      #a9d3ea;
-    --sank:       #bcd6c4;
-    --contour:    #a07040;
-    --red:        #9a2a2a;
-    --ui-gray:    #c8c7c2;
-    --ui-gray-2:  #a8a8a3;
-    --ui-gray-3:  #7d7d78;
-    --ink:        #1a1a1a;
-    --ok:         #2d5a2d;
-    --err:        #8a1f1f;
+    /* Firewatch-inspirerad palett: varmt, illustrerat, sepiatonat */
+    --paper:      #e9d9ae;   /* varmt cremepapper */
+    --paper-dark: #d8c087;   /* åldrat papper */
+    --paper-edge: #b8965e;   /* bränd papperskant */
+    --forest:     #6f8a56;   /* mossig djup skog */
+    --forest-2:   #536b3f;   /* mörk granskog */
+    --water:      #6a8d9c;   /* dimmig sjö */
+    --sank:       #8aa377;   /* sank-grön */
+    --contour:    #8a4a24;   /* bränd sienna */
+    --rust:       #b9552c;   /* solnedgång-rost */
+    --red:        #a33418;   /* signalröd, dämpad */
+    --ui-gray:    #b7a781;   /* trä/canvas-ram */
+    --ui-gray-2:  #8a7a55;   /* mörkare canvas */
+    --ui-gray-3:  #5a4b30;   /* rökig mörk */
+    --ink:        #2b1f12;   /* bläck, ej svart */
+    --ok:         #5d7a3a;
+    --err:        #a33418;
   }
 
   * { box-sizing: border-box; }
-  html, body { margin:0; padding:0; background:var(--ui-gray); color:var(--ink);
-    font-family: Helvetica, Arial, "Nimbus Sans", sans-serif; font-size: 14px; }
+  html, body { margin:0; padding:0; color:var(--ink); font-size: 14px;
+    background: var(--ui-gray);
+    background-image:
+      radial-gradient(ellipse at 20% 10%, rgba(230,190,120,0.25), transparent 60%),
+      radial-gradient(ellipse at 80% 90%, rgba(60,40,20,0.18), transparent 55%);
+    font-family: Georgia, "Palatino Linotype", "Book Antiqua", serif; }
+  body::before {
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:999;
+    background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='200' height='200'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0.15  0 0 0 0 0.1  0 0 0 0 0.05  0 0 0 0.08 0'/></filter><rect width='100%25' height='100%25' filter='url(%23n)'/></svg>");
+    mix-blend-mode: multiply; opacity: 0.55;
+  }
 
-  /* --- Topp-ribbon: Stämplad militärblankett-look --- */
+  /* --- Topp-ribbon: Nationalparksskylt-känsla --- */
   header.topbar {
-    background: var(--ui-gray-2);
-    border-bottom: 2px solid var(--ink);
-    padding: 6px 12px;
+    background: linear-gradient(180deg, #5a4b30 0%, #3d3220 100%);
+    color: var(--paper);
+    border-bottom: 3px double var(--paper-edge);
+    padding: 10px 16px;
     display: flex; justify-content: space-between; align-items:center;
-    font-weight: bold; letter-spacing: 1px;
+    letter-spacing: 2px;
   }
   header.topbar .stamp {
-    border: 2px solid var(--ink);
-    padding: 2px 8px;
+    border: 1px solid var(--paper);
+    padding: 3px 10px;
     font-family: "Courier New", monospace;
     font-size: 11px;
+    color: var(--paper);
+    letter-spacing: 1px;
+    text-transform: uppercase;
   }
-  header.topbar h1 { margin:0; font-size: 16px; text-transform: uppercase; }
+  header.topbar h1 {
+    margin:0; font-size: 18px; text-transform: uppercase;
+    font-family: Georgia, serif; font-weight: normal;
+    font-variant: small-caps; letter-spacing: 3px;
+    text-shadow: 0 1px 0 rgba(0,0,0,0.4);
+  }
 
   /* --- Huvudlayout: Arbetsbord --- */
   main {
@@ -54,188 +76,232 @@
 
   /* Kartbord */
   section.table {
-    background: var(--ui-gray);
-    padding: 14px;
-    border-right: 2px solid var(--ink);
+    background: transparent;
+    padding: 18px;
+    border-right: 1px solid var(--ui-gray-2);
   }
   section.table h2 {
-    margin: 0 0 8px;
-    font-size: 13px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 1px solid var(--ink);
-    padding-bottom: 3px;
+    margin: 0 0 12px;
+    font-size: 15px;
+    font-family: Georgia, serif;
+    font-variant: small-caps;
+    letter-spacing: 2px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--ui-gray-2);
+    padding-bottom: 6px;
   }
 
   .map-frame {
     background: var(--paper);
-    border: 2px solid var(--ink);
-    outline: 4px solid var(--ui-gray);
-    outline-offset: 0;
+    border: 1px solid var(--paper-edge);
+    padding: 14px;
     position: relative;
-    box-shadow: none;
+    box-shadow:
+      inset 0 0 60px rgba(138,74,36,0.18),
+      inset 0 0 6px rgba(0,0,0,0.15),
+      0 6px 14px rgba(0,0,0,0.35),
+      0 1px 2px rgba(0,0,0,0.25);
+    border-radius: 2px;
   }
   .map-frame::before {
     content: attr(data-kartblad);
-    position: absolute; top: 4px; right: 6px;
-    font-family: "Courier New", monospace; font-size: 10px;
-    background: var(--paper); padding: 1px 4px; border: 1px solid var(--ink);
+    position: absolute; top: 8px; right: 12px;
+    font-family: Georgia, serif; font-size: 11px;
+    font-variant: small-caps; letter-spacing: 2px;
+    color: var(--ink); opacity: 0.75;
+    padding: 2px 8px;
+    border-top: 1px solid var(--contour);
+    border-bottom: 1px solid var(--contour);
   }
   .map-frame::after {
-    content: "SKALA 1:50 000";
-    position: absolute; bottom: 4px; left: 6px;
-    font-family: "Courier New", monospace; font-size: 10px;
-    background: var(--paper); padding: 1px 4px; border: 1px solid var(--ink);
+    content: "Skala  1 : 50 000";
+    position: absolute; bottom: 8px; left: 12px;
+    font-family: Georgia, serif; font-size: 11px;
+    font-variant: small-caps; letter-spacing: 2px;
+    color: var(--ink); opacity: 0.75;
   }
   .map-frame svg { display:block; width:100%; height:auto; }
 
   /* Uppgiftspanel */
   .task-card {
-    background: var(--paper-dark);
-    border: 2px solid var(--ink);
-    padding: 10px 12px;
-    margin-top: 14px;
-    font-size: 14px;
+    background: var(--paper);
+    border: 1px solid var(--paper-edge);
+    border-left: 4px solid var(--rust);
+    padding: 12px 16px;
+    margin-top: 16px;
+    font-size: 15px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
   .task-card .label {
-    font-family: "Courier New", monospace;
-    font-size: 10px; letter-spacing: 1px;
-    text-transform: uppercase;
-    border-bottom: 1px dashed var(--ink);
-    padding-bottom: 2px; margin-bottom: 6px;
+    font-family: Georgia, serif;
+    font-size: 11px; letter-spacing: 2px;
+    font-variant: small-caps;
+    color: var(--rust);
+    margin-bottom: 4px;
   }
-  .task-card .question { font-weight: bold; font-size: 15px; }
+  .task-card .question {
+    font-family: Georgia, serif;
+    font-weight: normal; font-size: 16px;
+    color: var(--ink);
+  }
 
   /* Teckenregister: lista av svar */
   .register {
-    margin-top: 14px;
+    margin-top: 16px;
     background: var(--paper);
-    border: 2px solid var(--ink);
+    border: 1px solid var(--paper-edge);
     padding: 0;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
   .register header {
-    background: var(--ui-gray-2);
-    border-bottom: 1px solid var(--ink);
-    padding: 4px 8px;
-    font-size: 11px; font-weight: bold; letter-spacing: 1px;
-    text-transform: uppercase;
+    background: linear-gradient(180deg, var(--ui-gray-2), var(--ui-gray-3));
+    color: var(--paper);
+    border-bottom: 1px solid var(--paper-edge);
+    padding: 6px 12px;
+    font-size: 11px; letter-spacing: 2px;
+    font-family: Georgia, serif; font-variant: small-caps;
   }
   .register-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
     gap: 0;
   }
   .reg-item {
-    border-right: 1px solid var(--ink);
-    border-bottom: 1px solid var(--ink);
-    padding: 8px;
-    display: flex; align-items: center; gap: 8px;
+    border-right: 1px dashed var(--paper-edge);
+    border-bottom: 1px dashed var(--paper-edge);
+    padding: 10px;
+    display: flex; align-items: center; gap: 10px;
     cursor: pointer;
-    background: var(--paper);
-    transition: none;
+    background: transparent;
     user-select: none;
+    transition: background 0.12s;
   }
-  .reg-item:hover { background: var(--paper-dark); }
+  .reg-item:hover { background: rgba(138,74,36,0.12); }
   .reg-item .sym {
-    width: 32px; height: 32px;
-    border: 1px solid var(--ink);
+    width: 34px; height: 34px;
+    border: 1px solid var(--paper-edge);
     background: var(--paper-dark);
     flex-shrink: 0;
     display:block;
   }
   .reg-item .name {
-    font-size: 12px;
-    font-family: Helvetica, Arial, sans-serif;
+    font-size: 13px;
+    font-family: Georgia, serif;
+    color: var(--ink);
   }
-  .reg-item.correct { background: var(--forest) !important; }
-  .reg-item.wrong   { background: #e0a8a8 !important; }
+  .reg-item.correct { background: rgba(111,138,86,0.55) !important; }
+  .reg-item.wrong   { background: rgba(163,52,24,0.25) !important; }
 
   /* Fältbok (höger panel) */
   aside.fieldbook {
-    background: var(--ui-gray);
-    padding: 14px;
-    border-left: 1px solid var(--ink);
+    background: rgba(45,35,20,0.12);
+    padding: 18px;
+    border-left: 1px solid var(--ui-gray-2);
   }
   aside.fieldbook h2 {
-    margin: 0 0 8px;
-    font-size: 12px;
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    border-bottom: 1px solid var(--ink);
-    padding-bottom: 3px;
+    margin: 0 0 10px;
+    font-size: 13px;
+    font-family: Georgia, serif;
+    font-variant: small-caps;
+    letter-spacing: 2px;
+    color: var(--ink);
+    border-bottom: 1px solid var(--ui-gray-2);
+    padding-bottom: 5px;
   }
   .modul-list { margin: 0; padding: 0; list-style: none; }
   .modul-list li {
-    border: 1px solid var(--ink);
+    border: 1px solid var(--paper-edge);
     border-bottom: none;
-    padding: 6px 8px;
+    padding: 9px 12px;
     background: var(--paper);
-    font-size: 12px;
+    font-family: Georgia, serif;
+    font-size: 13px;
     display: flex; justify-content: space-between; align-items:center;
+    cursor: pointer;
+    transition: background 0.12s;
   }
-  .modul-list li:last-child { border-bottom: 1px solid var(--ink); }
-  .modul-list li.active { background: var(--paper-dark); font-weight: bold; }
-  .modul-list li.locked { color: var(--ui-gray-3); font-style: italic; cursor: not-allowed; }
-  .modul-list li { cursor: pointer; }
+  .modul-list li:first-child { border-radius: 2px 2px 0 0; }
+  .modul-list li:last-child { border-bottom: 1px solid var(--paper-edge); border-radius: 0 0 2px 2px; }
+  .modul-list li.active {
+    background: var(--ink); color: var(--paper);
+    border-color: var(--ink);
+  }
+  .modul-list li.active .tag { color: var(--rust); border-color: var(--paper); }
+  .modul-list li.locked { color: var(--ui-gray-3); font-style: italic; cursor: not-allowed; opacity: 0.7; }
   .modul-list li.locked:hover { background: var(--paper); }
-  .modul-list li:not(.locked):hover { background: var(--paper-dark); }
+  .modul-list li:not(.locked):not(.active):hover { background: var(--paper-dark); }
   .modul-list .tag {
-    font-family: "Courier New", monospace;
-    font-size: 10px;
-    border: 1px solid var(--ink);
-    padding: 0 4px;
-    background: var(--ui-gray);
+    font-family: Georgia, serif;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    font-variant: small-caps;
+    border: 1px solid var(--paper-edge);
+    padding: 1px 6px;
+    background: transparent;
   }
 
   .progress-block {
-    margin-top: 14px;
+    margin-top: 16px;
     background: var(--paper);
-    border: 2px solid var(--ink);
-    padding: 8px;
-    font-family: "Courier New", monospace;
-    font-size: 11px;
-    line-height: 1.6;
+    border: 1px solid var(--paper-edge);
+    padding: 12px;
+    font-family: Georgia, serif;
+    font-size: 12px;
+    line-height: 1.7;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
   .progress-block .row { display: flex; justify-content: space-between; }
-  .progress-block .row b { letter-spacing: 1px; }
+  .progress-block .row b {
+    letter-spacing: 2px; font-variant: small-caps;
+    font-weight: normal; color: var(--rust);
+  }
+  .progress-block .row span {
+    font-family: "Courier New", monospace; font-weight: bold;
+  }
 
   button.stamp-btn {
-    background: var(--ui-gray-2);
-    border: 2px solid var(--ink);
-    border-radius: 0;
-    padding: 6px 14px;
-    font-family: Helvetica, Arial, sans-serif;
-    font-size: 12px;
-    font-weight: bold;
-    text-transform: uppercase;
-    letter-spacing: 1px;
+    background: linear-gradient(180deg, var(--rust), #8a3d1a);
+    color: var(--paper);
+    border: 1px solid var(--ink);
+    border-radius: 2px;
+    padding: 10px 20px;
+    font-family: Georgia, serif;
+    font-size: 13px;
+    font-variant: small-caps;
+    letter-spacing: 2px;
     cursor: pointer;
-    margin-top: 10px;
+    margin-top: 14px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.3);
   }
-  button.stamp-btn:hover { background: var(--paper-dark); }
-  button.stamp-btn:active { background: var(--ui-gray-3); color: var(--paper); }
+  button.stamp-btn:hover { background: linear-gradient(180deg, #c76a3e, #a54420); }
+  button.stamp-btn:active { transform: translateY(1px); box-shadow: 0 1px 2px rgba(0,0,0,0.3); }
 
   /* Feedback-notis */
   .feedback {
-    margin-top: 10px; padding: 8px 10px;
-    border: 2px solid var(--ink);
-    font-family: "Courier New", monospace;
-    font-size: 12px;
+    margin-top: 14px; padding: 10px 14px;
+    border: 1px solid var(--paper-edge);
+    border-left-width: 4px;
+    font-family: Georgia, serif;
+    font-size: 13px;
     display: none;
+    background: var(--paper);
+    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
   }
   .feedback.show { display:block; }
-  .feedback.ok  { background: var(--forest); }
-  .feedback.err { background: #e0a8a8; }
+  .feedback.ok  { border-left-color: var(--forest-2); background: rgba(111,138,86,0.18); }
+  .feedback.err { border-left-color: var(--red);     background: rgba(163,52,24,0.12); }
 
   /* Fotnot — sid-hänvisning LSOK */
   footer.cite {
-    font-family: "Courier New", monospace;
-    font-size: 10px;
-    color: var(--ui-gray-3);
-    padding: 6px 12px;
-    border-top: 1px solid var(--ink);
-    background: var(--ui-gray-2);
+    font-family: Georgia, serif;
+    font-size: 11px;
+    font-style: italic;
+    color: var(--paper);
+    padding: 8px 16px;
+    border-top: 1px solid var(--paper-edge);
+    background: var(--ui-gray-3);
     text-align: right;
+    letter-spacing: 0.5px;
   }
 </style>
 </head>
@@ -252,83 +318,155 @@
 
     <!-- MODUL 1 ------------------------------------------------- -->
     <div id="modul1">
-    <div class="map-frame" data-kartblad="BLAD 10I NV">
-      <!-- Enkelt kartutsnitt i SVG, med symboler i Lantmäteriets stil -->
+    <div class="map-frame" data-kartblad="Blad 10I NV · Två Stigars Höjd">
+      <!-- Firewatch-inspirerat illustrerat kartutsnitt -->
       <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
-        <!-- Pappersbotten -->
-        <rect width="600" height="400" fill="#f2ede0"/>
+        <defs>
+          <filter id="rough" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.022" numOctaves="2" seed="4"/>
+            <feDisplacementMap in="SourceGraphic" scale="3"/>
+          </filter>
+          <filter id="rougher" x="-5%" y="-5%" width="110%" height="110%">
+            <feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="7"/>
+            <feDisplacementMap in="SourceGraphic" scale="5"/>
+          </filter>
+          <filter id="paperGrain">
+            <feTurbulence type="fractalNoise" baseFrequency="1.2" numOctaves="2"/>
+            <feColorMatrix values="0 0 0 0 0.35  0 0 0 0 0.22  0 0 0 0 0.08  0 0 0 0.18 0"/>
+            <feComposite in2="SourceGraphic" operator="in"/>
+          </filter>
+          <pattern id="forestTex" width="8" height="8" patternUnits="userSpaceOnUse">
+            <rect width="8" height="8" fill="#6f8a56"/>
+            <circle cx="2" cy="2" r="0.8" fill="#536b3f" opacity="0.7"/>
+            <circle cx="6" cy="5" r="0.6" fill="#536b3f" opacity="0.6"/>
+          </pattern>
+          <pattern id="sankTex" width="12" height="10" patternUnits="userSpaceOnUse">
+            <rect width="12" height="10" fill="#8aa377"/>
+            <line x1="1" y1="3" x2="5" y2="3" stroke="#3d4d34" stroke-width="0.6"/>
+            <line x1="7" y1="7" x2="11" y2="7" stroke="#3d4d34" stroke-width="0.6"/>
+          </pattern>
+          <radialGradient id="vignette" cx="50%" cy="50%" r="75%">
+            <stop offset="70%" stop-color="transparent"/>
+            <stop offset="100%" stop-color="rgba(90,55,20,0.35)"/>
+          </radialGradient>
+        </defs>
 
-        <!-- Skogsområde -->
-        <path d="M40,40 Q200,10 380,60 L420,180 Q300,230 160,210 L40,180 Z" fill="#b4d5a8"/>
-        <!-- Öppen mark (papper syns) -->
+        <!-- Pappersbotten med varm ton -->
+        <rect width="600" height="400" fill="#e9d9ae"/>
 
-        <!-- Sjö -->
-        <ellipse cx="460" cy="280" rx="90" ry="55" fill="#a9d3ea" stroke="#3a6a8a" stroke-width="0.8"/>
-        <!-- Bäck från sjö -->
-        <path d="M370,285 Q310,300 240,320 Q190,330 140,360" fill="none" stroke="#3a6a8a" stroke-width="1.2"/>
+        <!-- Öppna fält (gulare) -->
+        <path d="M20,280 Q160,260 320,290 Q460,310 590,280 L590,400 L20,400 Z"
+              fill="#ddc888" opacity="0.6" filter="url(#rough)"/>
 
-        <!-- Sankmark (liten ruta) -->
-        <g transform="translate(140,260)">
-          <rect width="70" height="35" fill="#bcd6c4"/>
-          <g stroke="#3a6a8a" stroke-width="0.7">
-            <line x1="8" y1="10" x2="20" y2="10"/>
-            <line x1="30" y1="10" x2="42" y2="10"/>
-            <line x1="52" y1="10" x2="64" y2="10"/>
-            <line x1="14" y1="20" x2="26" y2="20"/>
-            <line x1="36" y1="20" x2="48" y2="20"/>
-            <line x1="8" y1="30" x2="20" y2="30"/>
-            <line x1="30" y1="30" x2="42" y2="30"/>
-            <line x1="52" y1="30" x2="64" y2="30"/>
-          </g>
+        <!-- Skogsområde (stor, organisk) -->
+        <path d="M30,30 Q180,5 370,50 Q440,75 440,180 Q370,220 200,215 Q90,210 30,170 Z"
+              fill="url(#forestTex)" filter="url(#rough)"/>
+        <!-- Skogsrand (mörkare kant) -->
+        <path d="M30,30 Q180,5 370,50 Q440,75 440,180 Q370,220 200,215 Q90,210 30,170 Z"
+              fill="none" stroke="#3d5034" stroke-width="1.2" opacity="0.7" filter="url(#rough)"/>
+
+        <!-- Mindre skogsdunge -->
+        <path d="M480,140 Q540,130 570,160 Q560,200 510,200 Q470,185 480,140 Z"
+              fill="url(#forestTex)" filter="url(#rough)"/>
+
+        <!-- Sjö med åldrad vattenblå -->
+        <g filter="url(#rough)">
+          <ellipse cx="460" cy="285" rx="95" ry="52" fill="#6a8d9c"/>
+          <ellipse cx="460" cy="285" rx="95" ry="52" fill="none" stroke="#3a5260" stroke-width="1.1"/>
+          <!-- vågstreck -->
+          <path d="M425,278 Q440,275 455,278" fill="none" stroke="#3a5260" stroke-width="0.5" opacity="0.6"/>
+          <path d="M470,290 Q485,287 500,290" fill="none" stroke="#3a5260" stroke-width="0.5" opacity="0.6"/>
+        </g>
+        <!-- Sjönamn handtextat -->
+        <text x="460" y="290" font-family="Georgia, serif" font-style="italic" font-size="11"
+              fill="#2b3440" text-anchor="middle" opacity="0.75">Skymningssjön</text>
+
+        <!-- Bäck från sjö - slingrande -->
+        <path d="M370,290 Q340,298 310,310 Q280,325 250,318 Q220,312 190,330 Q150,350 110,365"
+              fill="none" stroke="#3a5260" stroke-width="1.3" opacity="0.85" filter="url(#rough)"/>
+
+        <!-- Sankmark - organiskt formad -->
+        <g transform="translate(130,250)">
+          <path d="M5,5 Q40,0 75,8 Q80,25 70,38 Q35,45 10,35 Q-2,20 5,5 Z"
+                fill="url(#sankTex)" filter="url(#rough)"/>
+          <path d="M5,5 Q40,0 75,8 Q80,25 70,38 Q35,45 10,35 Q-2,20 5,5 Z"
+                fill="none" stroke="#3d4d34" stroke-width="0.8" opacity="0.6"/>
         </g>
 
-        <!-- Höjdkurvor -->
-        <g fill="none" stroke="#a07040" stroke-width="0.7">
-          <path d="M220,100 Q280,80 340,110 Q370,140 330,170 Q270,180 230,160 Q200,130 220,100 Z"/>
-          <path d="M240,115 Q280,100 325,125 Q350,145 320,165 Q275,170 245,155 Q225,135 240,115 Z"/>
-          <path d="M260,130 Q285,122 310,140 Q325,155 305,160 Q280,162 265,150 Z"/>
+        <!-- Höjdkurvor med naturliga former -->
+        <g fill="none" stroke="#8a4a24" stroke-width="0.9" opacity="0.85">
+          <path d="M220,100 Q280,75 345,108 Q378,140 332,172 Q268,185 228,162 Q195,132 220,100 Z"
+                filter="url(#rough)"/>
+          <path d="M242,115 Q282,100 325,125 Q352,145 318,168 Q275,172 245,155 Q224,136 242,115 Z"
+                filter="url(#rough)"/>
+          <path d="M262,132 Q285,122 310,140 Q325,155 303,162 Q280,162 265,150 Z"
+                filter="url(#rough)"/>
         </g>
-        <!-- Höjdsiffra -->
-        <text x="290" y="150" font-family="Courier New, monospace" font-size="10" fill="#a07040" text-anchor="middle">142</text>
+        <!-- Höjdsiffra italic -->
+        <text x="290" y="152" font-family="Georgia, serif" font-style="italic" font-size="10"
+              fill="#8a4a24" text-anchor="middle">142</text>
 
-        <!-- Väg (större) -->
-        <path d="M20,380 L200,340 L380,330 L580,320" fill="none" stroke="#c44" stroke-width="2.5"/>
-        <!-- Mindre väg -->
-        <path d="M200,340 Q260,260 340,200" fill="none" stroke="#8a5a3a" stroke-width="1.2" stroke-dasharray="0"/>
+        <!-- Väg stor (solnedgångsrost) -->
+        <path d="M15,385 Q120,360 210,345 Q330,338 400,334 Q500,330 590,322"
+              fill="none" stroke="#b9552c" stroke-width="3.2" filter="url(#rough)"/>
+        <path d="M15,385 Q120,360 210,345 Q330,338 400,334 Q500,330 590,322"
+              fill="none" stroke="#e9d9ae" stroke-width="0.8" stroke-dasharray="4 4"/>
+
+        <!-- Stig (prickad) -->
+        <path d="M210,345 Q260,270 310,210 Q330,185 360,195"
+              fill="none" stroke="#5a4b30" stroke-width="1.3" stroke-dasharray="2 4" filter="url(#rough)"/>
 
         <!-- Kraftledning -->
-        <g stroke="#1a1a1a" stroke-width="0.8">
-          <line x1="80" y1="100" x2="540" y2="70"/>
-          <g fill="#1a1a1a">
-            <circle cx="80" cy="100" r="2"/>
-            <circle cx="200" cy="91" r="2"/>
-            <circle cx="320" cy="82" r="2"/>
-            <circle cx="440" cy="75" r="2"/>
-            <circle cx="540" cy="70" r="2"/>
+        <g filter="url(#rough)">
+          <line x1="75" y1="100" x2="545" y2="72" stroke="#2b1f12" stroke-width="0.8"/>
+          <g fill="#2b1f12">
+            <polygon points="75,100 72,107 78,107" />
+            <polygon points="205,91 202,98 208,98" />
+            <polygon points="330,82 327,89 333,89" />
+            <polygon points="450,75 447,82 453,82" />
+            <polygon points="545,72 542,79 548,79" />
           </g>
         </g>
 
-        <!-- Byggnad (svart fyrkant) -->
-        <rect x="184" y="332" width="8" height="6" fill="#1a1a1a"/>
-        <rect x="350" y="325" width="10" height="7" fill="#1a1a1a"/>
+        <!-- Byggnader - små svarta rektanglar med skugga -->
+        <g>
+          <rect x="182" y="330" width="11" height="8" fill="#2b1f12"/>
+          <rect x="183" y="331" width="11" height="8" fill="#2b1f12" opacity="0.25"/>
+          <rect x="348" y="323" width="13" height="9" fill="#2b1f12"/>
+          <rect x="225" y="355" width="9" height="7" fill="#2b1f12"/>
+        </g>
 
         <!-- Trigonometrisk punkt -->
         <g transform="translate(298,138)">
-          <polygon points="0,-6 5,3 -5,3" fill="none" stroke="#1a1a1a" stroke-width="1"/>
-          <circle r="1.2" fill="#1a1a1a"/>
+          <polygon points="0,-7 6,4 -6,4" fill="none" stroke="#2b1f12" stroke-width="1.2"/>
+          <circle r="1.4" fill="#2b1f12"/>
         </g>
 
-        <!-- MÅLRINGEN — rödbrun ring kring det som ska identifieras -->
-        <!-- Default: peka på sankmark-rutan -->
+        <!-- Kompassros i nedre hörn -->
+        <g transform="translate(540,360)" opacity="0.7">
+          <circle r="22" fill="none" stroke="#5a4b30" stroke-width="0.8"/>
+          <circle r="16" fill="none" stroke="#5a4b30" stroke-width="0.4"/>
+          <polygon points="0,-20 3,0 0,-2 -3,0" fill="#b9552c" stroke="#2b1f12" stroke-width="0.4"/>
+          <polygon points="0,20 3,0 0,2 -3,0" fill="#2b1f12" opacity="0.7"/>
+          <text y="-24" text-anchor="middle" font-family="Georgia,serif" font-style="italic" font-size="9" fill="#2b1f12">N</text>
+        </g>
+
+        <!-- Vignetterings-overlay -->
+        <rect width="600" height="400" fill="url(#vignette)" pointer-events="none"/>
+        <!-- Pappersgrynighet -->
+        <rect width="600" height="400" fill="#e9d9ae" filter="url(#paperGrain)" opacity="0.4" pointer-events="none"/>
+
+        <!-- MÅLRINGEN - blyertsad cirkel -->
         <g id="target-ring">
-          <circle cx="175" cy="278" r="34" fill="none" stroke="#9a2a2a" stroke-width="2"/>
-          <line x1="175" y1="230" x2="175" y2="244" stroke="#9a2a2a" stroke-width="2"/>
-          <text x="175" y="225" font-family="Courier New, monospace" font-size="11"
-                fill="#9a2a2a" text-anchor="middle">?</text>
+          <circle cx="175" cy="278" r="36" fill="none" stroke="#a33418" stroke-width="2.2" filter="url(#rougher)"/>
+          <circle cx="175" cy="278" r="36" fill="none" stroke="#a33418" stroke-width="0.6" stroke-dasharray="1 3"/>
+          <line x1="175" y1="225" x2="175" y2="240" stroke="#a33418" stroke-width="1.8"/>
+          <text x="175" y="218" font-family="Georgia, serif" font-style="italic" font-size="13"
+                fill="#a33418" text-anchor="middle">?</text>
         </g>
 
         <!-- Rutnät svagt -->
-        <g stroke="#7d7d78" stroke-width="0.3" opacity="0.5">
+        <g stroke="#5a4b30" stroke-width="0.25" opacity="0.35">
           <line x1="0" y1="100" x2="600" y2="100"/>
           <line x1="0" y1="200" x2="600" y2="200"/>
           <line x1="0" y1="300" x2="600" y2="300"/>
@@ -356,16 +494,38 @@
 
     <!-- MODUL 2 ------------------------------------------------- -->
     <div id="modul2" style="display:none;">
-      <div class="map-frame" data-kartblad="BLAD 10I NV · RUTNÄT 1 km">
+      <div class="map-frame" data-kartblad="Blad 10I NV · Rutnät 1 km">
         <svg id="mod2svg" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
-          <rect width="600" height="400" fill="#f2ede0"/>
-          <!-- Enkel terräng -->
-          <path d="M40,40 Q200,10 380,60 L420,180 Q300,230 160,210 L40,180 Z" fill="#b4d5a8"/>
-          <ellipse cx="460" cy="280" rx="90" ry="55" fill="#a9d3ea" stroke="#3a6a8a" stroke-width="0.8"/>
-          <path d="M20,380 L200,340 L380,330 L580,320" fill="none" stroke="#c44" stroke-width="2.5"/>
+          <defs>
+            <filter id="m2rough"><feTurbulence baseFrequency="0.022" numOctaves="2" seed="3"/><feDisplacementMap in="SourceGraphic" scale="3"/></filter>
+            <pattern id="m2forest" width="8" height="8" patternUnits="userSpaceOnUse">
+              <rect width="8" height="8" fill="#6f8a56"/>
+              <circle cx="2" cy="2" r="0.7" fill="#536b3f"/>
+              <circle cx="6" cy="5" r="0.5" fill="#536b3f"/>
+            </pattern>
+            <radialGradient id="m2vignette" cx="50%" cy="50%" r="75%">
+              <stop offset="70%" stop-color="transparent"/>
+              <stop offset="100%" stop-color="rgba(90,55,20,0.35)"/>
+            </radialGradient>
+            <filter id="m2grain"><feTurbulence baseFrequency="1.2" numOctaves="2"/>
+              <feColorMatrix values="0 0 0 0 0.35  0 0 0 0 0.22  0 0 0 0 0.08  0 0 0 0.18 0"/>
+            </filter>
+          </defs>
 
-          <!-- 6x4 rutnät, 100px = 1 km vid skala 1:50 000 (förenklat) -->
-          <g id="grid" stroke="#1a1a1a" stroke-width="0.8" opacity="0.65">
+          <rect width="600" height="400" fill="#e9d9ae"/>
+
+          <!-- Skog -->
+          <path d="M40,40 Q200,10 380,60 Q430,90 420,180 Q300,225 160,210 Q80,205 40,175 Z"
+                fill="url(#m2forest)" filter="url(#m2rough)"/>
+          <!-- Sjö -->
+          <ellipse cx="460" cy="280" rx="95" ry="52" fill="#6a8d9c" stroke="#3a5260" stroke-width="1" filter="url(#m2rough)"/>
+          <text x="460" y="285" font-family="Georgia,serif" font-style="italic" font-size="10"
+                fill="#2b3440" text-anchor="middle" opacity="0.7">Skymningssjön</text>
+          <!-- Väg -->
+          <path d="M15,385 Q150,355 320,340 Q480,328 590,320" fill="none" stroke="#b9552c" stroke-width="3" filter="url(#m2rough)"/>
+
+          <!-- 6x4 rutnät i militärblå -->
+          <g id="grid" stroke="#2b3a5c" stroke-width="0.6" opacity="0.7">
             <line x1="0"   y1="0" x2="0"   y2="400"/>
             <line x1="100" y1="0" x2="100" y2="400"/>
             <line x1="200" y1="0" x2="200" y2="400"/>
@@ -381,7 +541,7 @@
           </g>
 
           <!-- Rutnummerbeteckningar (Easting 30–35, Northing 70–73) -->
-          <g font-family="Courier New, monospace" font-size="11" fill="#1a1a1a">
+          <g font-family="Georgia, serif" font-size="12" fill="#2b3a5c" font-weight="bold">
             <text x="50"  y="395" text-anchor="middle">30</text>
             <text x="150" y="395" text-anchor="middle">31</text>
             <text x="250" y="395" text-anchor="middle">32</text>
@@ -397,12 +557,17 @@
           <!-- Klickbara rutor skapas via JS -->
           <g id="cells"></g>
 
-          <!-- Markör placeras här -->
+          <!-- Markör - handtecknat hårkors -->
           <g id="mod2marker" style="display:none;">
-            <circle r="10" fill="none" stroke="#9a2a2a" stroke-width="2.5"/>
-            <line x1="-14" y1="0" x2="14" y2="0" stroke="#9a2a2a" stroke-width="2"/>
-            <line x1="0" y1="-14" x2="0" y2="14" stroke="#9a2a2a" stroke-width="2"/>
+            <circle r="12" fill="none" stroke="#a33418" stroke-width="2.5"/>
+            <circle r="12" fill="none" stroke="#a33418" stroke-width="0.6" stroke-dasharray="1 3"/>
+            <line x1="-16" y1="0" x2="16" y2="0" stroke="#a33418" stroke-width="2"/>
+            <line x1="0" y1="-16" x2="0" y2="16" stroke="#a33418" stroke-width="2"/>
           </g>
+
+          <!-- Vignette + korn -->
+          <rect width="600" height="400" fill="url(#m2vignette)" pointer-events="none"/>
+          <rect width="600" height="400" fill="#e9d9ae" filter="url(#m2grain)" opacity="0.3" pointer-events="none"/>
         </svg>
       </div>
 
@@ -459,36 +624,44 @@
   // --- Teckenregister: både riktigt svar och distraktorer ---
   // sym = inline SVG av karttecknet, name = namn
   const register = [
-    { id: "sankmark", name: "Sankmark (öppen)",
-      sym: `<rect width="32" height="32" fill="#bcd6c4"/>
-            <g stroke="#3a6a8a" stroke-width="1" fill="none">
+    { id: "sankmark", name: "Sankmark",
+      sym: `<rect width="32" height="32" fill="#8aa377"/>
+            <g stroke="#3d4d34" stroke-width="0.9" fill="none">
               <line x1="4" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="20" y2="10"/><line x1="24" y1="10" x2="30" y2="10"/>
               <line x1="7" y1="18" x2="13" y2="18"/><line x1="17" y1="18" x2="23" y2="18"/>
               <line x1="4" y1="26" x2="10" y2="26"/><line x1="14" y1="26" x2="20" y2="26"/><line x1="24" y1="26" x2="30" y2="26"/>
             </g>` },
     { id: "skog", name: "Barrskog",
-      sym: `<rect width="32" height="32" fill="#b4d5a8"/>` },
+      sym: `<rect width="32" height="32" fill="#6f8a56"/>
+            <circle cx="8" cy="10" r="1" fill="#3d5034"/>
+            <circle cx="20" cy="14" r="1" fill="#3d5034"/>
+            <circle cx="14" cy="22" r="1" fill="#3d5034"/>
+            <circle cx="26" cy="24" r="1" fill="#3d5034"/>` },
     { id: "sjo", name: "Sjö / öppet vatten",
-      sym: `<rect width="32" height="32" fill="#a9d3ea" stroke="#3a6a8a"/>` },
-    { id: "hojdkurva", name: "Höjdkurva (5 m)",
-      sym: `<rect width="32" height="32" fill="#f2ede0"/>
-            <path d="M2,22 Q10,12 22,14 Q30,16 30,22" fill="none" stroke="#a07040" stroke-width="1"/>` },
-    { id: "trigpunkt", name: "Trigonometrisk punkt",
-      sym: `<rect width="32" height="32" fill="#f2ede0"/>
-            <polygon points="16,8 22,22 10,22" fill="none" stroke="#1a1a1a" stroke-width="1.2"/>
-            <circle cx="16" cy="18" r="1.5" fill="#1a1a1a"/>` },
+      sym: `<rect width="32" height="32" fill="#6a8d9c"/>
+            <path d="M6,12 Q10,10 14,12" fill="none" stroke="#3a5260" stroke-width="0.6"/>
+            <path d="M18,20 Q22,18 26,20" fill="none" stroke="#3a5260" stroke-width="0.6"/>` },
+    { id: "hojdkurva", name: "Höjdkurva",
+      sym: `<rect width="32" height="32" fill="#e9d9ae"/>
+            <path d="M2,22 Q10,12 22,14 Q30,16 30,22" fill="none" stroke="#8a4a24" stroke-width="1.1"/>
+            <path d="M6,26 Q14,20 22,22" fill="none" stroke="#8a4a24" stroke-width="0.7" opacity="0.6"/>` },
+    { id: "trigpunkt", name: "Trig. punkt",
+      sym: `<rect width="32" height="32" fill="#e9d9ae"/>
+            <polygon points="16,8 22,22 10,22" fill="none" stroke="#2b1f12" stroke-width="1.3"/>
+            <circle cx="16" cy="18" r="1.6" fill="#2b1f12"/>` },
     { id: "kraftledning", name: "Kraftledning",
-      sym: `<rect width="32" height="32" fill="#f2ede0"/>
-            <line x1="2" y1="16" x2="30" y2="16" stroke="#1a1a1a" stroke-width="0.8"/>
-            <circle cx="6"  cy="16" r="1.8" fill="#1a1a1a"/>
-            <circle cx="16" cy="16" r="1.8" fill="#1a1a1a"/>
-            <circle cx="26" cy="16" r="1.8" fill="#1a1a1a"/>` },
+      sym: `<rect width="32" height="32" fill="#e9d9ae"/>
+            <line x1="2" y1="16" x2="30" y2="16" stroke="#2b1f12" stroke-width="0.9"/>
+            <polygon points="6,14 4,19 8,19" fill="#2b1f12"/>
+            <polygon points="16,14 14,19 18,19" fill="#2b1f12"/>
+            <polygon points="26,14 24,19 28,19" fill="#2b1f12"/>` },
     { id: "byggnad", name: "Byggnad",
-      sym: `<rect width="32" height="32" fill="#f2ede0"/>
-            <rect x="11" y="13" width="10" height="7" fill="#1a1a1a"/>` },
+      sym: `<rect width="32" height="32" fill="#e9d9ae"/>
+            <rect x="11" y="13" width="10" height="7" fill="#2b1f12"/>` },
     { id: "hogre-vag", name: "Väg, allmän",
-      sym: `<rect width="32" height="32" fill="#f2ede0"/>
-            <line x1="2" y1="16" x2="30" y2="16" stroke="#c44" stroke-width="3"/>` }
+      sym: `<rect width="32" height="32" fill="#e9d9ae"/>
+            <line x1="2" y1="16" x2="30" y2="16" stroke="#b9552c" stroke-width="3.2"/>
+            <line x1="2" y1="16" x2="30" y2="16" stroke="#e9d9ae" stroke-width="0.7" stroke-dasharray="3 3"/>` }
   ];
 
   // Uppgiftsserie för POC
@@ -651,7 +824,7 @@
         r.setAttribute("style", "cursor:crosshair;");
         r.dataset.e = e; r.dataset.n = n;
         r.addEventListener("click", () => m2Svara(e, n, r));
-        r.addEventListener("mouseenter", () => r.setAttribute("fill", "rgba(154,42,42,0.12)"));
+        r.addEventListener("mouseenter", () => r.setAttribute("fill", "rgba(185,85,44,0.18)"));
         r.addEventListener("mouseleave", () => r.setAttribute("fill", "transparent"));
         m2cells.appendChild(r);
       }
