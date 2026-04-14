@@ -137,6 +137,8 @@
     color: var(--ink) !important;
   }
   .leaflet-control-attribution a { color: var(--rust) !important; }
+  /* Dölj Leaflets inbyggda Ukraina-flagga i attribution */
+  .leaflet-attribution-flag { display: none !important; }
 
   /* Uppgiftspanel */
   .task-card {
@@ -719,7 +721,6 @@
     maxZoom: 19, minZoom: 9,
     attribution: '© OpenStreetMap-bidragsgivare'
   }).addTo(map1);
-  let targetCircle = null;
 
   function renderRegister() {
     regEl.innerHTML = "";
@@ -733,13 +734,36 @@
     });
   }
 
+  let targetGroup = null;
   function placeRing() {
     const u = uppgifter[aktivUppgift];
-    if (targetCircle) map1.removeLayer(targetCircle);
-    targetCircle = L.circleMarker([u.lat, u.lon], {
-      radius: 18, color: "#a33418", weight: 2.5,
-      fillColor: "#a33418", fillOpacity: 0
-    }).addTo(map1);
+    if (targetGroup) map1.removeLayer(targetGroup);
+    targetGroup = L.layerGroup();
+    // Ytter-ring: tydlig röd cirkel
+    L.circleMarker([u.lat, u.lon], {
+      radius: 32, color: "#e41a1a", weight: 4,
+      fillColor: "#e41a1a", fillOpacity: 0.1
+    }).addTo(targetGroup);
+    // Inner-ring
+    L.circleMarker([u.lat, u.lon], {
+      radius: 18, color: "#e41a1a", weight: 2,
+      fillColor: "#fff", fillOpacity: 0.5
+    }).addTo(targetGroup);
+    // Mittpunkt
+    L.circleMarker([u.lat, u.lon], {
+      radius: 3, color: "#e41a1a", weight: 0,
+      fillColor: "#e41a1a", fillOpacity: 1
+    }).addTo(targetGroup);
+    // "?" etikett ovanför
+    L.marker([u.lat, u.lon], {
+      icon: L.divIcon({
+        className: "",
+        html: `<div style="font-family:Georgia,serif;font-size:22px;font-weight:bold;color:#e41a1a;text-shadow:0 0 3px #fff,0 0 3px #fff,0 0 3px #fff;transform:translate(-50%,-250%);white-space:nowrap;">? vad är detta ?</div>`,
+        iconSize: [1, 1]
+      }),
+      interactive: false
+    }).addTo(targetGroup);
+    targetGroup.addTo(map1);
     map1.setView([u.lat, u.lon], u.zoom);
     setTimeout(() => map1.invalidateSize(), 50);
   }
