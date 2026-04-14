@@ -350,15 +350,19 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
 
 Ljudsignaler (separat sektion): Flyglarm, Gaslarm, Faran över, Viktigt meddelande, Beredskapslarm, Klart skepp – med signalmönster (t.ex. "14 s × 3 + 7 s × 4").
 
-**Byggordning:**
-1. **Datamodell först** – `handtecken.json` med `{id, namn, kategori, beskrivning, utförande, när_används, källa_sida}` för alla ~50 poster. Transkriberas från extraherad PDF-text.
+**Byggordning (9 steg):**
+1. **Datamodell först** – `handtecken.json` med `{id, namn, alias[], kategori, beskrivning, utförande, när_används, källa_sida}` för alla ~50 poster. `alias[]` innehåller synonymer/vardagliga namn som driver översättningsläget (t.ex. "stopp", "igelkott", "eld upphör"). Transkriberas från extraherad PDF-text.
 2. **Egenritade SVG-piktogram** – stick-figur per tecken (viewBox 0 0 120 160). Inga bitmaps från PDF:en (upphovsrätt FM). Grundbibliotek av armpositioner kan återanvändas.
 3. **Flik-layout** konsistent med övriga fliker (mörk taktisk palett, `.tab-nav-sub`). Lägg in `HANDTECKEN` i den sekundära tab-raden i samtliga HTML-filer.
 4. **Bläderläge** – kort-grid per kategori, klick öppnar detaljvy (stor SVG + beskrivning + utförande + "när används"). Swipe/piltangenter för nästa/föregående.
 5. **Sökfält** – fritext på namn + beskrivning, filter-chips per kategori.
-6. **Quiz-läge** – två varianter: (a) "Vad betyder detta tecken?" (bild → 4 namnalternativ), (b) "Välj rätt tecken för X" (namn → 4 bilder). Poäng + streak sparas i `localStorage`. Lätt spaced-repetition: felbesvarade tecken viktas upp i nästa runda.
-7. **Signaler-sektion** – egen vy med visuellt signalmönster (tidsgraf) + valfri WebAudio-uppspelning av ton/rytm.
-8. **Offline** – all data inbäddad, cachead i service worker.
+6. **Översättningsläge (bidirektionellt)** – två knappar/lägen:
+   - **Svenska → Handtecken:** skriv/välj ett ord eller en fras (t.ex. "Halt", "Samling", "Skyddsställning") → visa motsvarande SVG-piktogram + utförandebeskrivning. Autocomplete på alla namn och vanliga synonymer/alias ("stopp" → Halt, "igelkott" → Runtomkringförsvar).
+   - **Handtecken → Svenska:** välj ett tecken ur grid/lista (eller klick på en SVG) → visa svenskt namn + full beskrivning. Kan användas som snabbuppslagning i fält.
+   - Samma dataset driver båda riktningarna; ingen separat översättningsfil.
+7. **Quiz-läge** – två varianter: (a) "Vad betyder detta tecken?" (bild → 4 namnalternativ), (b) "Välj rätt tecken för X" (namn → 4 bilder). Poäng + streak sparas i `localStorage`. Lätt spaced-repetition: felbesvarade tecken viktas upp i nästa runda.
+8. **Signaler-sektion** – egen vy med visuellt signalmönster (tidsgraf) + valfri WebAudio-uppspelning av ton/rytm.
+9. **Offline** – all data inbäddad, cachead i service worker.
 
 **Icke-mål (fas 1):** animerade rörelser, videoklipp, AR.
 
