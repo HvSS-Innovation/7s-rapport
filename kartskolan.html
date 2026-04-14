@@ -715,9 +715,9 @@
   // ---- Leaflet-karta för Modul 1 ----
   const map1 = L.map("map1", { zoomControl: true, attributionControl: true })
     .setView([58.72, 14.58], 13);
-  L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-    maxZoom: 17, minZoom: 9,
-    attribution: 'Karta © OpenTopoMap (CC-BY-SA) · Data © OpenStreetMap'
+  L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+    maxZoom: 19, minZoom: 9,
+    attribution: '© OpenStreetMap-bidragsgivare'
   }).addTo(map1);
   let targetCircle = null;
 
@@ -851,9 +851,9 @@
     if (m2map) return;
     m2map = L.map("map2", { zoomControl: true, scrollWheelZoom: false })
       .setView([M2_ORIGIN_LAT + 2 * M2_DLAT, M2_ORIGIN_LON + 3 * M2_DLON], 13);
-    L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", {
-      maxZoom: 17, minZoom: 10,
-      attribution: 'Karta © OpenTopoMap · Data © OpenStreetMap'
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, minZoom: 10,
+      attribution: '© OpenStreetMap-bidragsgivare'
     }).addTo(m2map);
     m2gridLayer = L.layerGroup().addTo(m2map);
     m2markerLayer = L.layerGroup().addTo(m2map);
