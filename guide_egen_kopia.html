@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kör din egen kopia - Guide</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #a855f7;
+            --bg: #0f172a;
+            --card-bg: rgba(30, 41, 59, 0.7);
+            --text: #f8fafc;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Outfit', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            background: radial-gradient(circle at top right, #1e1b4b, #0f172a);
+            color: var(--text);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 1000px;
+            height: 80vh;
+            position: relative;
+        }
+
+        .slides-wrapper {
+            width: 100%;
+            height: 100%;
+            position: relative;
+            perspective: 1000px;
+        }
+
+        .slide {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+            transform: translateX(100px) scale(0.95);
+            display: flex;
+            flex-direction: column;
+            gap: 2rem;
+            padding: 3rem;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 24px;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+        }
+
+        .slide.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateX(0) scale(1);
+        }
+
+        .slide.prev {
+            transform: translateX(-100px) scale(0.95);
+        }
+
+        .header {
+            text-align: center;
+        }
+
+        .step-tag {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            padding: 0.5rem 1.5rem;
+            border-radius: 99px;
+            font-weight: 600;
+            font-size: 0.875rem;
+            display: inline-block;
+            margin-bottom: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            background: linear-gradient(to right, #fff, #94a3b8);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 1.5rem;
+            flex-grow: 1;
+        }
+
+        .image-container {
+            width: 100%;
+            height: 400px;
+            border-radius: 16px;
+            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            position: relative;
+        }
+
+        .image-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.5s ease;
+        }
+
+        .image-container:hover img {
+            transform: scale(1.02);
+        }
+
+        .description {
+            font-size: 1.25rem;
+            color: #94a3b8;
+            max-width: 600px;
+            text-align: center;
+            line-height: 1.6;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: -80px;
+            left: 0;
+            right: 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .nav-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .nav-btn:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            transform: translateY(-2px);
+            border-color: var(--primary);
+        }
+
+        .nav-btn:disabled {
+            opacity: 0.3;
+            cursor: not-allowed;
+        }
+
+        .dots {
+            display: flex;
+            gap: 0.75rem;
+        }
+
+        .dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dot.active {
+            background: var(--primary);
+            width: 30px;
+            border-radius: 5px;
+        }
+
+        .instruction-box {
+            position: absolute;
+            bottom: 2rem;
+            right: 2rem;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 1rem;
+            border-radius: 8px;
+            border-left: 4px solid var(--primary);
+            max-width: 300px;
+            font-size: 0.9rem;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(50px); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="slides-wrapper" id="slidesWrapper">
+        <!-- Slide 1 -->
+        <div class="slide active">
+            <div class="header">
+                <span class="step-tag">Steg 1</span>
+                <h1>Forka Projektet</h1>
+            </div>
+            <div class="content">
+                <div class="image-container">
+                    <img src="file:///C:/Users/Joels%20laptop/.gemini/antigravity/brain/4e28adeb-23c7-444b-9b7b-fd5960003bf3/github_fork_highlight_1775812395892.png" alt="Fork GitHub">
+                </div>
+                <p class="description">
+                    Skapa din egen version av repot genom att klicka på <strong>Fork</strong> uppe till höger. Detta ger dig full kontroll över koden på ditt eget konto.
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 2 -->
+        <div class="slide">
+            <div class="header">
+                <span class="step-tag">Steg 2</span>
+                <h1>Granska Koden</h1>
+            </div>
+            <div class="content">
+                <div class="image-container">
+                    <img src="file:///C:/Users/Joels%20laptop/.gemini/antigravity/brain/4e28adeb-23c7-444b-9b7b-fd5960003bf3/github_search_scan_highlight_1775812500000_png_1775812506302.png" alt="Granska kod">
+                </div>
+                <p class="description">
+                    Lita aldrig blint på kod från internet. Sök igenom filerna efter okända URL:er eller externa anrop innan du driftsätter.
+                </p>
+            </div>
+        </div>
+
+        <!-- Slide 3 -->
+        <div class="slide">
+            <div class="header">
+                <span class="step-tag">Steg 3</span>
+                <h1>Publicera Pages</h1>
+            </div>
+            <div class="content">
+                <div class="image-container">
+                    <img src="file:///C:/Users/Joels%20laptop/.gemini/antigravity/brain/4e28adeb-23c7-444b-9b7b-fd5960003bf3/github_pages_branch_selection_1775812452457.png" alt="GitHub Pages">
+                </div>
+                <p class="description">
+                    Gå till <strong>Settings > Pages</strong>. Under "Branch", välj <code>main</code> och klicka på <strong>Save</strong>. Din sajt blir live inom några minuter!
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <div class="controls">
+        <button class="nav-btn" id="prevBtn" disabled>← Föregående</button>
+        <div class="dots" id="dotsContainer">
+            <div class="dot active"></div>
+            <div class="dot"></div>
+            <div class="dot"></div>
+        </div>
+        <button class="nav-btn" id="nextBtn">Nästa →</button>
+    </div>
+</div>
+
+<script>
+    const slides = document.querySelectorAll('.slide');
+    const dots = document.querySelectorAll('.dot');
+    const prevBtn = document.getElementById('prevBtn');
+    const nextBtn = document.getElementById('nextBtn');
+    let currentSlide = 0;
+
+    function updateSlides() {
+        slides.forEach((slide, index) => {
+            slide.classList.remove('active', 'prev');
+            if (index === currentSlide) {
+                slide.classList.add('active');
+            } else if (index < currentSlide) {
+                slide.classList.add('prev');
+            }
+        });
+
+        dots.forEach((dot, index) => {
+            dot.classList.toggle('active', index === currentSlide);
+        });
+
+        prevBtn.disabled = currentSlide === 0;
+        nextBtn.disabled = currentSlide === slides.length - 1;
+    }
+
+    nextBtn.addEventListener('click', () => {
+        if (currentSlide < slides.length - 1) {
+            currentSlide++;
+            updateSlides();
+        }
+    });
+
+    prevBtn.addEventListener('click', () => {
+        if (currentSlide > 0) {
+            currentSlide--;
+            updateSlides();
+        }
+    });
+
+    dots.forEach((dot, index) => {
+        dot.addEventListener('click', () => {
+            currentSlide = index;
+            updateSlides();
+        });
+    });
+
+    // Keyboard support
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight') nextBtn.click();
+        if (e.key === 'ArrowLeft') prevBtn.click();
+    });
+</script>
+
+</body>
+</html>

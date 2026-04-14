@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>KARTSKOLAN — Soldaten och Kartan (PoC)</title>
+<style>
+  :root {
+    --paper:      #f2ede0;
+    --paper-dark: #e6dfcd;
+    --forest:     #b4d5a8;
+    --water:      #a9d3ea;
+    --sank:       #bcd6c4;
+    --contour:    #a07040;
+    --red:        #9a2a2a;
+    --ui-gray:    #c8c7c2;
+    --ui-gray-2:  #a8a8a3;
+    --ui-gray-3:  #7d7d78;
+    --ink:        #1a1a1a;
+    --ok:         #2d5a2d;
+    --err:        #8a1f1f;
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin:0; padding:0; background:var(--ui-gray); color:var(--ink);
+    font-family: Helvetica, Arial, "Nimbus Sans", sans-serif; font-size: 14px; }
+
+  /* --- Topp-ribbon: Stämplad militärblankett-look --- */
+  header.topbar {
+    background: var(--ui-gray-2);
+    border-bottom: 2px solid var(--ink);
+    padding: 6px 12px;
+    display: flex; justify-content: space-between; align-items:center;
+    font-weight: bold; letter-spacing: 1px;
+  }
+  header.topbar .stamp {
+    border: 2px solid var(--ink);
+    padding: 2px 8px;
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+  }
+  header.topbar h1 { margin:0; font-size: 16px; text-transform: uppercase; }
+
+  /* --- Huvudlayout: Arbetsbord --- */
+  main {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 0;
+    min-height: calc(100vh - 38px);
+  }
+  @media (max-width: 800px) {
+    main { grid-template-columns: 1fr; }
+  }
+
+  /* Kartbord */
+  section.table {
+    background: var(--ui-gray);
+    padding: 14px;
+    border-right: 2px solid var(--ink);
+  }
+  section.table h2 {
+    margin: 0 0 8px;
+    font-size: 13px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 3px;
+  }
+
+  .map-frame {
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    outline: 4px solid var(--ui-gray);
+    outline-offset: 0;
+    position: relative;
+    box-shadow: none;
+  }
+  .map-frame::before {
+    content: attr(data-kartblad);
+    position: absolute; top: 4px; right: 6px;
+    font-family: "Courier New", monospace; font-size: 10px;
+    background: var(--paper); padding: 1px 4px; border: 1px solid var(--ink);
+  }
+  .map-frame::after {
+    content: "SKALA 1:50 000";
+    position: absolute; bottom: 4px; left: 6px;
+    font-family: "Courier New", monospace; font-size: 10px;
+    background: var(--paper); padding: 1px 4px; border: 1px solid var(--ink);
+  }
+  .map-frame svg { display:block; width:100%; height:auto; }
+
+  /* Uppgiftspanel */
+  .task-card {
+    background: var(--paper-dark);
+    border: 2px solid var(--ink);
+    padding: 10px 12px;
+    margin-top: 14px;
+    font-size: 14px;
+  }
+  .task-card .label {
+    font-family: "Courier New", monospace;
+    font-size: 10px; letter-spacing: 1px;
+    text-transform: uppercase;
+    border-bottom: 1px dashed var(--ink);
+    padding-bottom: 2px; margin-bottom: 6px;
+  }
+  .task-card .question { font-weight: bold; font-size: 15px; }
+
+  /* Teckenregister: lista av svar */
+  .register {
+    margin-top: 14px;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    padding: 0;
+  }
+  .register header {
+    background: var(--ui-gray-2);
+    border-bottom: 1px solid var(--ink);
+    padding: 4px 8px;
+    font-size: 11px; font-weight: bold; letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .register-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 0;
+  }
+  .reg-item {
+    border-right: 1px solid var(--ink);
+    border-bottom: 1px solid var(--ink);
+    padding: 8px;
+    display: flex; align-items: center; gap: 8px;
+    cursor: pointer;
+    background: var(--paper);
+    transition: none;
+    user-select: none;
+  }
+  .reg-item:hover { background: var(--paper-dark); }
+  .reg-item .sym {
+    width: 32px; height: 32px;
+    border: 1px solid var(--ink);
+    background: var(--paper-dark);
+    flex-shrink: 0;
+    display:block;
+  }
+  .reg-item .name {
+    font-size: 12px;
+    font-family: Helvetica, Arial, sans-serif;
+  }
+  .reg-item.correct { background: var(--forest) !important; }
+  .reg-item.wrong   { background: #e0a8a8 !important; }
+
+  /* Fältbok (höger panel) */
+  aside.fieldbook {
+    background: var(--ui-gray);
+    padding: 14px;
+    border-left: 1px solid var(--ink);
+  }
+  aside.fieldbook h2 {
+    margin: 0 0 8px;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    border-bottom: 1px solid var(--ink);
+    padding-bottom: 3px;
+  }
+  .modul-list { margin: 0; padding: 0; list-style: none; }
+  .modul-list li {
+    border: 1px solid var(--ink);
+    border-bottom: none;
+    padding: 6px 8px;
+    background: var(--paper);
+    font-size: 12px;
+    display: flex; justify-content: space-between; align-items:center;
+  }
+  .modul-list li:last-child { border-bottom: 1px solid var(--ink); }
+  .modul-list li.active { background: var(--paper-dark); font-weight: bold; }
+  .modul-list li.locked { color: var(--ui-gray-3); font-style: italic; cursor: not-allowed; }
+  .modul-list li { cursor: pointer; }
+  .modul-list li.locked:hover { background: var(--paper); }
+  .modul-list li:not(.locked):hover { background: var(--paper-dark); }
+  .modul-list .tag {
+    font-family: "Courier New", monospace;
+    font-size: 10px;
+    border: 1px solid var(--ink);
+    padding: 0 4px;
+    background: var(--ui-gray);
+  }
+
+  .progress-block {
+    margin-top: 14px;
+    background: var(--paper);
+    border: 2px solid var(--ink);
+    padding: 8px;
+    font-family: "Courier New", monospace;
+    font-size: 11px;
+    line-height: 1.6;
+  }
+  .progress-block .row { display: flex; justify-content: space-between; }
+  .progress-block .row b { letter-spacing: 1px; }
+
+  button.stamp-btn {
+    background: var(--ui-gray-2);
+    border: 2px solid var(--ink);
+    border-radius: 0;
+    padding: 6px 14px;
+    font-family: Helvetica, Arial, sans-serif;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    cursor: pointer;
+    margin-top: 10px;
+  }
+  button.stamp-btn:hover { background: var(--paper-dark); }
+  button.stamp-btn:active { background: var(--ui-gray-3); color: var(--paper); }
+
+  /* Feedback-notis */
+  .feedback {
+    margin-top: 10px; padding: 8px 10px;
+    border: 2px solid var(--ink);
+    font-family: "Courier New", monospace;
+    font-size: 12px;
+    display: none;
+  }
+  .feedback.show { display:block; }
+  .feedback.ok  { background: var(--forest); }
+  .feedback.err { background: #e0a8a8; }
+
+  /* Fotnot — sid-hänvisning LSOK */
+  footer.cite {
+    font-family: "Courier New", monospace;
+    font-size: 10px;
+    color: var(--ui-gray-3);
+    padding: 6px 12px;
+    border-top: 1px solid var(--ink);
+    background: var(--ui-gray-2);
+    text-align: right;
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <h1>▨ Kartskolan — Soldaten och Kartan</h1>
+  <div class="stamp">LSOK 2023 / POC v0.1</div>
+</header>
+
+<main>
+  <section class="table">
+    <h2 id="modulRubrik">Modul 1 · Kartans språk — Identifiera tecknet</h2>
+
+    <!-- MODUL 1 ------------------------------------------------- -->
+    <div id="modul1">
+    <div class="map-frame" data-kartblad="BLAD 10I NV">
+      <!-- Enkelt kartutsnitt i SVG, med symboler i Lantmäteriets stil -->
+      <svg viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+        <!-- Pappersbotten -->
+        <rect width="600" height="400" fill="#f2ede0"/>
+
+        <!-- Skogsområde -->
+        <path d="M40,40 Q200,10 380,60 L420,180 Q300,230 160,210 L40,180 Z" fill="#b4d5a8"/>
+        <!-- Öppen mark (papper syns) -->
+
+        <!-- Sjö -->
+        <ellipse cx="460" cy="280" rx="90" ry="55" fill="#a9d3ea" stroke="#3a6a8a" stroke-width="0.8"/>
+        <!-- Bäck från sjö -->
+        <path d="M370,285 Q310,300 240,320 Q190,330 140,360" fill="none" stroke="#3a6a8a" stroke-width="1.2"/>
+
+        <!-- Sankmark (liten ruta) -->
+        <g transform="translate(140,260)">
+          <rect width="70" height="35" fill="#bcd6c4"/>
+          <g stroke="#3a6a8a" stroke-width="0.7">
+            <line x1="8" y1="10" x2="20" y2="10"/>
+            <line x1="30" y1="10" x2="42" y2="10"/>
+            <line x1="52" y1="10" x2="64" y2="10"/>
+            <line x1="14" y1="20" x2="26" y2="20"/>
+            <line x1="36" y1="20" x2="48" y2="20"/>
+            <line x1="8" y1="30" x2="20" y2="30"/>
+            <line x1="30" y1="30" x2="42" y2="30"/>
+            <line x1="52" y1="30" x2="64" y2="30"/>
+          </g>
+        </g>
+
+        <!-- Höjdkurvor -->
+        <g fill="none" stroke="#a07040" stroke-width="0.7">
+          <path d="M220,100 Q280,80 340,110 Q370,140 330,170 Q270,180 230,160 Q200,130 220,100 Z"/>
+          <path d="M240,115 Q280,100 325,125 Q350,145 320,165 Q275,170 245,155 Q225,135 240,115 Z"/>
+          <path d="M260,130 Q285,122 310,140 Q325,155 305,160 Q280,162 265,150 Z"/>
+        </g>
+        <!-- Höjdsiffra -->
+        <text x="290" y="150" font-family="Courier New, monospace" font-size="10" fill="#a07040" text-anchor="middle">142</text>
+
+        <!-- Väg (större) -->
+        <path d="M20,380 L200,340 L380,330 L580,320" fill="none" stroke="#c44" stroke-width="2.5"/>
+        <!-- Mindre väg -->
+        <path d="M200,340 Q260,260 340,200" fill="none" stroke="#8a5a3a" stroke-width="1.2" stroke-dasharray="0"/>
+
+        <!-- Kraftledning -->
+        <g stroke="#1a1a1a" stroke-width="0.8">
+          <line x1="80" y1="100" x2="540" y2="70"/>
+          <g fill="#1a1a1a">
+            <circle cx="80" cy="100" r="2"/>
+            <circle cx="200" cy="91" r="2"/>
+            <circle cx="320" cy="82" r="2"/>
+            <circle cx="440" cy="75" r="2"/>
+            <circle cx="540" cy="70" r="2"/>
+          </g>
+        </g>
+
+        <!-- Byggnad (svart fyrkant) -->
+        <rect x="184" y="332" width="8" height="6" fill="#1a1a1a"/>
+        <rect x="350" y="325" width="10" height="7" fill="#1a1a1a"/>
+
+        <!-- Trigonometrisk punkt -->
+        <g transform="translate(298,138)">
+          <polygon points="0,-6 5,3 -5,3" fill="none" stroke="#1a1a1a" stroke-width="1"/>
+          <circle r="1.2" fill="#1a1a1a"/>
+        </g>
+
+        <!-- MÅLRINGEN — rödbrun ring kring det som ska identifieras -->
+        <!-- Default: peka på sankmark-rutan -->
+        <g id="target-ring">
+          <circle cx="175" cy="278" r="34" fill="none" stroke="#9a2a2a" stroke-width="2"/>
+          <line x1="175" y1="230" x2="175" y2="244" stroke="#9a2a2a" stroke-width="2"/>
+          <text x="175" y="225" font-family="Courier New, monospace" font-size="11"
+                fill="#9a2a2a" text-anchor="middle">?</text>
+        </g>
+
+        <!-- Rutnät svagt -->
+        <g stroke="#7d7d78" stroke-width="0.3" opacity="0.5">
+          <line x1="0" y1="100" x2="600" y2="100"/>
+          <line x1="0" y1="200" x2="600" y2="200"/>
+          <line x1="0" y1="300" x2="600" y2="300"/>
+          <line x1="150" y1="0" x2="150" y2="400"/>
+          <line x1="300" y1="0" x2="300" y2="400"/>
+          <line x1="450" y1="0" x2="450" y2="400"/>
+        </g>
+      </svg>
+    </div>
+
+    <div class="task-card">
+      <div class="label">Uppgift 1 av 5</div>
+      <div class="question" id="frageText">Vad föreställer det inringade karttecknet?</div>
+    </div>
+
+    <div class="register">
+      <header>▣ Teckenregister — välj ett svar</header>
+      <div class="register-grid" id="register"></div>
+    </div>
+
+    <div class="feedback" id="feedback"></div>
+
+    <button class="stamp-btn" id="nextBtn" style="display:none;">▶ Nästa uppgift</button>
+    </div><!-- /modul1 -->
+
+    <!-- MODUL 2 ------------------------------------------------- -->
+    <div id="modul2" style="display:none;">
+      <div class="map-frame" data-kartblad="BLAD 10I NV · RUTNÄT 1 km">
+        <svg id="mod2svg" viewBox="0 0 600 400" xmlns="http://www.w3.org/2000/svg">
+          <rect width="600" height="400" fill="#f2ede0"/>
+          <!-- Enkel terräng -->
+          <path d="M40,40 Q200,10 380,60 L420,180 Q300,230 160,210 L40,180 Z" fill="#b4d5a8"/>
+          <ellipse cx="460" cy="280" rx="90" ry="55" fill="#a9d3ea" stroke="#3a6a8a" stroke-width="0.8"/>
+          <path d="M20,380 L200,340 L380,330 L580,320" fill="none" stroke="#c44" stroke-width="2.5"/>
+
+          <!-- 6x4 rutnät, 100px = 1 km vid skala 1:50 000 (förenklat) -->
+          <g id="grid" stroke="#1a1a1a" stroke-width="0.8" opacity="0.65">
+            <line x1="0"   y1="0" x2="0"   y2="400"/>
+            <line x1="100" y1="0" x2="100" y2="400"/>
+            <line x1="200" y1="0" x2="200" y2="400"/>
+            <line x1="300" y1="0" x2="300" y2="400"/>
+            <line x1="400" y1="0" x2="400" y2="400"/>
+            <line x1="500" y1="0" x2="500" y2="400"/>
+            <line x1="600" y1="0" x2="600" y2="400"/>
+            <line x1="0" y1="0"   x2="600" y2="0"/>
+            <line x1="0" y1="100" x2="600" y2="100"/>
+            <line x1="0" y1="200" x2="600" y2="200"/>
+            <line x1="0" y1="300" x2="600" y2="300"/>
+            <line x1="0" y1="400" x2="600" y2="400"/>
+          </g>
+
+          <!-- Rutnummerbeteckningar (Easting 30–35, Northing 70–73) -->
+          <g font-family="Courier New, monospace" font-size="11" fill="#1a1a1a">
+            <text x="50"  y="395" text-anchor="middle">30</text>
+            <text x="150" y="395" text-anchor="middle">31</text>
+            <text x="250" y="395" text-anchor="middle">32</text>
+            <text x="350" y="395" text-anchor="middle">33</text>
+            <text x="450" y="395" text-anchor="middle">34</text>
+            <text x="550" y="395" text-anchor="middle">35</text>
+            <text x="6" y="354" text-anchor="start">70</text>
+            <text x="6" y="254" text-anchor="start">71</text>
+            <text x="6" y="154" text-anchor="start">72</text>
+            <text x="6" y="54"  text-anchor="start">73</text>
+          </g>
+
+          <!-- Klickbara rutor skapas via JS -->
+          <g id="cells"></g>
+
+          <!-- Markör placeras här -->
+          <g id="mod2marker" style="display:none;">
+            <circle r="10" fill="none" stroke="#9a2a2a" stroke-width="2.5"/>
+            <line x1="-14" y1="0" x2="14" y2="0" stroke="#9a2a2a" stroke-width="2"/>
+            <line x1="0" y1="-14" x2="0" y2="14" stroke="#9a2a2a" stroke-width="2"/>
+          </g>
+        </svg>
+      </div>
+
+      <div class="task-card">
+        <div class="label">Uppgift <span id="m2num">1</span> av 4</div>
+        <div class="question">Placera markören i rutan <b id="m2target" style="font-family:'Courier New',monospace;">33 71</b></div>
+      </div>
+
+      <div class="progress-block" style="margin-top:14px;">
+        <b>LÄS SÅ HÄR:</b> Rutnumret skrivs <i>Easting</i> följt av <i>Northing</i>.
+        30&nbsp;70 = ruta längst ned till vänster. 34&nbsp;72 = fyra åt öster, två uppåt.
+        <br><br>Klicka på kartrutan som matchar koordinaten.
+      </div>
+
+      <div class="feedback" id="m2feedback"></div>
+      <button class="stamp-btn" id="m2nextBtn" style="display:none;">▶ Nästa uppgift</button>
+    </div><!-- /modul2 -->
+
+  </section>
+
+  <aside class="fieldbook">
+    <h2>⧉ Fältbok</h2>
+    <ul class="modul-list" id="modulLista">
+      <li class="active"    data-m="1">Modul 1 · Kartans språk <span class="tag">AKTIV</span></li>
+      <li                   data-m="2">Modul 2 · Koordinater <span class="tag">ÖPPEN</span></li>
+      <li class="locked"    data-m="3">Modul 3 · Höjd &amp; terräng <span class="tag">LÅST</span></li>
+      <li class="locked"    data-m="4">Modul 4 · Kompass <span class="tag">LÅST</span></li>
+      <li class="locked"    data-m="5">Modul 5 · Patrullspel <span class="tag">LÅST</span></li>
+      <li class="locked"    data-m="6">Modul 6 · Nattnav <span class="tag">LÅST</span></li>
+      <li class="locked"    data-m="7">Modul 7 · Fältprov <span class="tag">LÅST</span></li>
+    </ul>
+
+    <div class="progress-block">
+      <div class="row"><b>UPPG</b> <span id="pUppg">1 / 5</span></div>
+      <div class="row"><b>RÄTT</b> <span id="pRatt">0</span></div>
+      <div class="row"><b>FEL </b> <span id="pFel">0</span></div>
+      <div class="row"><b>TID </b> <span id="pTid">00:00</span></div>
+    </div>
+
+    <div class="progress-block" style="font-size:10px; line-height:1.4;">
+      <b>SYFTE</b><br>
+      Eleven ska efter modul 1 kunna läsa och tyda grundläggande karttecken
+      enligt LSOK 2023 kap. 2–3 utan stödkort.
+    </div>
+
+  </aside>
+</main>
+
+<footer class="cite">
+  Underlag: LSOK 2023 — Lärobok Soldaten och Kartan, kap. 2–3 · Kartografi: förenklad efter Lantmäteriets Terrängkarta 1:50 000
+</footer>
+
+<script>
+  // --- Teckenregister: både riktigt svar och distraktorer ---
+  // sym = inline SVG av karttecknet, name = namn
+  const register = [
+    { id: "sankmark", name: "Sankmark (öppen)",
+      sym: `<rect width="32" height="32" fill="#bcd6c4"/>
+            <g stroke="#3a6a8a" stroke-width="1" fill="none">
+              <line x1="4" y1="10" x2="10" y2="10"/><line x1="14" y1="10" x2="20" y2="10"/><line x1="24" y1="10" x2="30" y2="10"/>
+              <line x1="7" y1="18" x2="13" y2="18"/><line x1="17" y1="18" x2="23" y2="18"/>
+              <line x1="4" y1="26" x2="10" y2="26"/><line x1="14" y1="26" x2="20" y2="26"/><line x1="24" y1="26" x2="30" y2="26"/>
+            </g>` },
+    { id: "skog", name: "Barrskog",
+      sym: `<rect width="32" height="32" fill="#b4d5a8"/>` },
+    { id: "sjo", name: "Sjö / öppet vatten",
+      sym: `<rect width="32" height="32" fill="#a9d3ea" stroke="#3a6a8a"/>` },
+    { id: "hojdkurva", name: "Höjdkurva (5 m)",
+      sym: `<rect width="32" height="32" fill="#f2ede0"/>
+            <path d="M2,22 Q10,12 22,14 Q30,16 30,22" fill="none" stroke="#a07040" stroke-width="1"/>` },
+    { id: "trigpunkt", name: "Trigonometrisk punkt",
+      sym: `<rect width="32" height="32" fill="#f2ede0"/>
+            <polygon points="16,8 22,22 10,22" fill="none" stroke="#1a1a1a" stroke-width="1.2"/>
+            <circle cx="16" cy="18" r="1.5" fill="#1a1a1a"/>` },
+    { id: "kraftledning", name: "Kraftledning",
+      sym: `<rect width="32" height="32" fill="#f2ede0"/>
+            <line x1="2" y1="16" x2="30" y2="16" stroke="#1a1a1a" stroke-width="0.8"/>
+            <circle cx="6"  cy="16" r="1.8" fill="#1a1a1a"/>
+            <circle cx="16" cy="16" r="1.8" fill="#1a1a1a"/>
+            <circle cx="26" cy="16" r="1.8" fill="#1a1a1a"/>` },
+    { id: "byggnad", name: "Byggnad",
+      sym: `<rect width="32" height="32" fill="#f2ede0"/>
+            <rect x="11" y="13" width="10" height="7" fill="#1a1a1a"/>` },
+    { id: "hogre-vag", name: "Väg, allmän",
+      sym: `<rect width="32" height="32" fill="#f2ede0"/>
+            <line x1="2" y1="16" x2="30" y2="16" stroke="#c44" stroke-width="3"/>` }
+  ];
+
+  // Uppgiftsserie för POC
+  const uppgifter = [
+    { ringCx: 175, ringCy: 278, facit: "sankmark",
+      ledtrad: "Tre rader korta streck i ljusgrön ruta = stående vatten i terräng." },
+    { ringCx: 298, ringCy: 138, facit: "trigpunkt",
+      ledtrad: "Liten triangel med punkt i mitten — fast markerad höjdpunkt." },
+    { ringCx: 440, ringCy: 75,  facit: "kraftledning",
+      ledtrad: "Rak linje med prickar för master." },
+    { ringCx: 460, ringCy: 280, facit: "sjo",
+      ledtrad: "Blå yta omgiven av strandlinje." },
+    { ringCx: 290, ringCy: 150, facit: "hojdkurva",
+      ledtrad: "Brun, buktande linje — följer konstant höjd över havet." }
+  ];
+
+  let aktivUppgift = 0;
+  let ratt = 0, fel = 0, startTid = Date.now();
+
+  const regEl   = document.getElementById("register");
+  const feedEl  = document.getElementById("feedback");
+  const nextBtn = document.getElementById("nextBtn");
+  const ringG   = document.getElementById("target-ring");
+  const pUppg   = document.getElementById("pUppg");
+  const pRatt   = document.getElementById("pRatt");
+  const pFel    = document.getElementById("pFel");
+  const pTid    = document.getElementById("pTid");
+
+  function renderRegister() {
+    regEl.innerHTML = "";
+    register.forEach(r => {
+      const d = document.createElement("div");
+      d.className = "reg-item";
+      d.dataset.id = r.id;
+      d.innerHTML = `<svg class="sym" viewBox="0 0 32 32">${r.sym}</svg><span class="name">${r.name}</span>`;
+      d.addEventListener("click", () => svara(r.id, d));
+      regEl.appendChild(d);
+    });
+  }
+
+  function placeRing() {
+    const u = uppgifter[aktivUppgift];
+    ringG.querySelector("circle").setAttribute("cx", u.ringCx);
+    ringG.querySelector("circle").setAttribute("cy", u.ringCy);
+    const line = ringG.querySelector("line");
+    line.setAttribute("x1", u.ringCx);
+    line.setAttribute("x2", u.ringCx);
+    line.setAttribute("y1", u.ringCy - 48);
+    line.setAttribute("y2", u.ringCy - 34);
+    const txt = ringG.querySelector("text");
+    txt.setAttribute("x", u.ringCx);
+    txt.setAttribute("y", u.ringCy - 53);
+  }
+
+  function svara(id, cardEl) {
+    if (cardEl.classList.contains("correct") || cardEl.classList.contains("wrong")) return;
+    const u = uppgifter[aktivUppgift];
+    if (id === u.facit) {
+      cardEl.classList.add("correct");
+      ratt++;
+      feedEl.className = "feedback show ok";
+      feedEl.textContent = "✓ RÄTT. " + u.ledtrad;
+      nextBtn.style.display = "inline-block";
+      regEl.querySelectorAll(".reg-item").forEach(e => e.style.pointerEvents = "none");
+    } else {
+      cardEl.classList.add("wrong");
+      fel++;
+      feedEl.className = "feedback show err";
+      feedEl.textContent = "✗ FEL. Försök igen — läs kartan i ringen.";
+    }
+    uppdateraRader();
+  }
+
+  function nasta() {
+    aktivUppgift++;
+    if (aktivUppgift >= uppgifter.length) {
+      feedEl.className = "feedback show ok";
+      feedEl.innerHTML = `▣ MODUL 1 GENOMFÖRD — ${ratt} rätt / ${fel} fel.<br>Resultatblad arkiverat i fältboken.`;
+      nextBtn.style.display = "none";
+      document.getElementById("frageText").textContent = "Modul avslutad. Nästa modul: Koordinatsystem.";
+      return;
+    }
+    placeRing();
+    renderRegister();
+    feedEl.className = "feedback";
+    nextBtn.style.display = "none";
+    uppdateraRader();
+  }
+
+  function uppdateraRader() {
+    pUppg.textContent = Math.min(aktivUppgift + 1, uppgifter.length) + " / " + uppgifter.length;
+    pRatt.textContent = ratt;
+    pFel.textContent  = fel;
+  }
+
+  function tickTid() {
+    const s = Math.floor((Date.now() - startTid) / 1000);
+    const m = String(Math.floor(s / 60)).padStart(2, "0");
+    const sek = String(s % 60).padStart(2, "0");
+    pTid.textContent = `${m}:${sek}`;
+  }
+
+  nextBtn.addEventListener("click", nasta);
+
+  // -------- MODUL-VÄLJARE --------
+  const modulRubriker = {
+    1: "Modul 1 · Kartans språk — Identifiera tecknet",
+    2: "Modul 2 · Koordinater — Placera markör i rutnät",
+    3: "Modul 3 · Höjd & terräng (kommer snart)",
+    4: "Modul 4 · Kompass (kommer snart)",
+    5: "Modul 5 · Patrullspel (kommer snart)",
+    6: "Modul 6 · Nattnav (kommer snart)",
+    7: "Modul 7 · Fältprov (kommer snart)"
+  };
+  function visaModul(n) {
+    document.getElementById("modul1").style.display = (n === 1) ? "" : "none";
+    document.getElementById("modul2").style.display = (n === 2) ? "" : "none";
+    document.getElementById("modulRubrik").textContent = modulRubriker[n] || "";
+    document.querySelectorAll("#modulLista li").forEach(li => {
+      li.classList.toggle("active", Number(li.dataset.m) === n);
+      const tag = li.querySelector(".tag");
+      if (tag && !li.classList.contains("locked")) {
+        tag.textContent = (Number(li.dataset.m) === n) ? "AKTIV" : "ÖPPEN";
+      }
+    });
+  }
+  document.querySelectorAll("#modulLista li").forEach(li => {
+    li.addEventListener("click", () => {
+      if (li.classList.contains("locked")) return;
+      visaModul(Number(li.dataset.m));
+    });
+  });
+
+  // -------- MODUL 2: Koordinater --------
+  const m2uppgifter = [
+    { e: 33, n: 71 },
+    { e: 30, n: 70 },
+    { e: 34, n: 73 },
+    { e: 32, n: 72 }
+  ];
+  let m2idx = 0, m2ratt = 0, m2fel = 0;
+  const m2svg     = document.getElementById("mod2svg");
+  const m2cells   = document.getElementById("cells");
+  const m2marker  = document.getElementById("mod2marker");
+  const m2feed    = document.getElementById("m2feedback");
+  const m2next    = document.getElementById("m2nextBtn");
+  const m2num     = document.getElementById("m2num");
+  const m2target  = document.getElementById("m2target");
+
+  function ritaCeller() {
+    m2cells.innerHTML = "";
+    for (let e = 30; e <= 35; e++) {
+      for (let n = 70; n <= 73; n++) {
+        const x = (e - 30) * 100;
+        const y = 300 - (n - 70) * 100;
+        const r = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        r.setAttribute("x", x); r.setAttribute("y", y);
+        r.setAttribute("width", 100); r.setAttribute("height", 100);
+        r.setAttribute("fill", "transparent");
+        r.setAttribute("style", "cursor:crosshair;");
+        r.dataset.e = e; r.dataset.n = n;
+        r.addEventListener("click", () => m2Svara(e, n, r));
+        r.addEventListener("mouseenter", () => r.setAttribute("fill", "rgba(154,42,42,0.12)"));
+        r.addEventListener("mouseleave", () => r.setAttribute("fill", "transparent"));
+        m2cells.appendChild(r);
+      }
+    }
+  }
+  function m2Svara(e, n, rectEl) {
+    const u = m2uppgifter[m2idx];
+    const cx = (e - 30) * 100 + 50;
+    const cy = 300 - (n - 70) * 100 + 50;
+    m2marker.setAttribute("transform", `translate(${cx},${cy})`);
+    m2marker.style.display = "";
+    if (e === u.e && n === u.n) {
+      m2ratt++;
+      m2feed.className = "feedback show ok";
+      m2feed.textContent = `✓ RÄTT. Markören står i ruta ${u.e} ${u.n}.`;
+      m2next.style.display = "inline-block";
+      m2cells.style.pointerEvents = "none";
+    } else {
+      m2fel++;
+      m2feed.className = "feedback show err";
+      m2feed.textContent = `✗ Du klickade i ${e} ${n}. Målet var ${u.e} ${u.n}. Räkna Easting först (nertill), sedan Northing (vänster).`;
+    }
+  }
+  m2next.addEventListener("click", () => {
+    m2idx++;
+    if (m2idx >= m2uppgifter.length) {
+      m2feed.className = "feedback show ok";
+      m2feed.innerHTML = `▣ MODUL 2 GENOMFÖRD — ${m2ratt} rätt / ${m2fel} fel.`;
+      m2next.style.display = "none";
+      return;
+    }
+    m2num.textContent = m2idx + 1;
+    m2target.textContent = `${m2uppgifter[m2idx].e} ${m2uppgifter[m2idx].n}`;
+    m2marker.style.display = "none";
+    m2feed.className = "feedback";
+    m2next.style.display = "none";
+    m2cells.style.pointerEvents = "";
+  });
+
+  // Init
+  placeRing();
+  renderRegister();
+  uppdateraRader();
+  ritaCeller();
+  setInterval(tickTid, 1000);
+</script>
+</body>
+</html>
