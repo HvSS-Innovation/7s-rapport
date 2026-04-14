@@ -737,9 +737,8 @@
     const u = uppgifter[aktivUppgift];
     if (targetCircle) map1.removeLayer(targetCircle);
     targetCircle = L.circleMarker([u.lat, u.lon], {
-      radius: 28, color: "#a33418", weight: 3,
-      fillColor: "#a33418", fillOpacity: 0.08,
-      dashArray: "4 4"
+      radius: 18, color: "#a33418", weight: 2.5,
+      fillColor: "#a33418", fillOpacity: 0
     }).addTo(map1);
     map1.setView([u.lat, u.lon], u.zoom);
     setTimeout(() => map1.invalidateSize(), 50);
