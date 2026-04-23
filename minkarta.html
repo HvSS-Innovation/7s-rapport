@@ -17,6 +17,7 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="minkarta-symbols.js" defer></script>
     <script src="minkarta-export.js" defer></script>
+    <script src="minkarta-game.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -985,9 +986,20 @@ function attachProtocolActions() {
 
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
-    // Registrera kartklick för symbol-placering
+    // Exponera för spellägesmodulen
+    window.__minkartaMap = map;
+    window.toast = toast;
+    Object.defineProperty(window, 'activeTool', { get: () => activeTool, configurable: true });
+
+    // Registrera kartklick för symbol-placering.
+    // Om spelmodulen laddats, låt den wrappa vår handler så att övnings-
+    // klick hamnar i gameState istället för skarpa objects.
+    let clickHandler = handleMapClick;
+    if (window.MK_GAME && window.MK_GAME.wrapHandleMapClick) {
+        clickHandler = window.MK_GAME.wrapHandleMapClick(handleMapClick);
+    }
     if (map) {
-        map.on('click', handleMapClick);
+        map.on('click', clickHandler);
         map.on('dblclick', handleMapDblClick);
         map.doubleClickZoom.disable();             // annars stjäl den dubbelklicket
     }
@@ -996,6 +1008,7 @@ document.addEventListener('DOMContentLoaded', () => {
     attachKeyboard();
     attachProtocolActions();
     loadPersisted();
+    if (window.MK_GAME && window.MK_GAME.init) window.MK_GAME.init();
 
     const input = document.getElementById('mgrsSearch');
     input.addEventListener('paste', e => {
