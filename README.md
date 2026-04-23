@@ -40,7 +40,7 @@ Verktyget kommer nu att fungera även när du har flygplansläge eller är i rad
 | **OBO** | Orientering-Beslut-Order (*Tidigt utvecklingsstadium*) |
 | **RASSOIKA** | Patrullchefens checklista (*Tidigt utvecklingsstadium*) |
 | **VÄDER** | Meteorologisk prognos (Hämtar SMHI-data vid täckning) |
-| **MINKARTA** | Minläggningskarta & minprotokoll (OpenTopoMap+OSM z 19, halo-symboler, UP/SP-auto-inmätning, datalista, PNG + share-popover, övningsläge) |
+| **MINKARTA** | Minläggningskarta & minprotokoll (svart reglementstecken enligt PDF, UPK-numrering 001–999, UPK/SP-auto-inmätning, datalista, PNG + share-popover, övningsläge) |
 
 ## Teknisk Arkitektur
 Applikationen är byggd som en "Modern Vanilla" webbapplikation med ren HTML5, CSS3 och JavaScript (ES6). Den använder inga tunga bibliotek eller ramverk för att säkerställa extremt snabb uppstart och minimal batteriförbrukning på mobila enheter. Service Workers hanterar cachning för offline-bruk.
@@ -53,6 +53,58 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 ---
 
 ## Dagbok: Utvecklingslogg
+
+### 2026-04-25: MINKARTA v3 — svarta reglementstecken + UPK-numrering
+Sex-fas-iteration på MINKARTA (roadmap: `roadmap-minkarta-v3.md`).
+Härdar reglementstroheten i två riktningar: symbolerna följer nu PDF:en
+*Mineringar på karta – sammanställning* i svart linjearbete mot vit
+bakgrund, och utgångspunkterna byter namn till UPK med stabila
+slumpnummer 001–999 istället för sekventiella UP1..UPn.
+
+*   **Svarta reglementstecken (FAS 1):** Alla MK_SYMBOLS omritade till
+    svart linjearbete + vit fyllning. Halo-principen inverterad: 3 px
+    vit korona via `paint-order="stroke"` ersätter v2:s svarta halo.
+    Yttre `filter: drop-shadow` på `.mk-icon svg` byggd som vit aura +
+    mjuk mörk kant för läsbarhet mot både grönska, vatten och ljusa
+    OSM-tiles (z 18–19). Utförd förstöring (`forst_utf`) är enda
+    symbolen som behåller röd accent — det speglar PDF:ens eget
+    exempel. Ny färgmatris dokumenterad i `minkarta-symbols.js`.
+    Polygon-/linje-halon i canvas-exporten inverterad till vit bred
+    stroke under svart linjearbete.
+*   **Saknade beteckningar (FAS 2):** Sex nya reglementstecken från
+    PDF s. 339 + Handbok s. 86: `landmina_okand` (tom cirkel,
+    ospecificerad mina), `prov_rojskydd` (provisoriskt
+    fordonsröjningsskydd — punkter + vikning), `rojskydd` (egen
+    R-symbol), `verkansomrade` (streckad halvcirkel), `omr_verkan`
+    (områdesverkande mina med W-hake), `riktad_verkan` (cirkel +
+    pil). Varje symbol har en designbeslutskommentar som dokumenterar
+    PDF-tolkningen. Ny palett-grupp "Övriga landminor".
+*   **UPK-numrering (FAS 3):** UP-markören byter namn till UPK
+    (Utgångs-Punkt-Koordinat). Vid placering slumpas ett heltal
+    1–999, paddas till 3 siffror, unikhet kontrolleras via ett Set.
+    Etiketten under markören blir "UPK 594". Numret är **stabilt**
+    — en gång slumpat, aldrig renumrerat. Raderas en UPK försvinner
+    dess rad; övriga behåller sina nummer. Gamla v2-sessioner
+    migreras automatiskt vid `loadPersisted`: `typ: 'up'` → `typ:
+    'upk'` + tilldelat slumpnummer.
+*   **Redigeringspopup (FAS 4):** Klick på UPK-markör öppnar
+    `openEditPopup()` med ett UPK-nummer-fält (siffror, 1–3 tecken,
+    padstart till 3). Vid Save: validering 1..999, kollisionscheck
+    mot övriga UPK:er, inline-hint blir röd vid fel. SP-referenser
+    och pUp-textarean uppdateras direkt vid nummerändring.
+*   **SP-referenser (FAS 5):** Alla SP-rader refererar nu "från UPK
+    594" istället för "från UP1". `pUp`-textarean skriver "UPK 594:
+    MGRS — adress"-format. Reglementsvarningen räknar objekt i state
+    istället för rader i textarean och kräver "minst 2 UPK och 1
+    SP". Den konkurrerande textbaserade varningen i
+    `attachProtocolActions` borttagen — `syncUpTextarea` är nu enda
+    källan.
+*   **Polish (FAS 6):** `service-worker.js` CACHE bumpat stegvis
+    `_1` → `_6`, slutar på `hv-20260425_minkartav3_6`. README:s
+    MINKARTA-rad i funktionstabellen uppdaterad. Manuell test-matris
+    körd i Chrome desktop + Android Chrome. DevTools Network visar
+    bara tile-URL:er + `/reverse` för UPK-adresser — inga
+    minsymbolpositioner skickas ut.
 
 ### 2026-04-24: MINKARTA v2 — halo-kontrast, UP/SP, datalista, share-popover
 Tio-fas-iteration på MINKARTA (roadmap: `roadmap-minkarta-v2.md`). Flyttar
