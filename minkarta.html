@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="minkarta-symbols.js" defer></script>
+    <script src="minkarta-export.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -680,6 +681,14 @@ function attachToolbarActions() {
     redoBtn.addEventListener('click', redoAction);
     tb.appendChild(redoBtn);
 
+    const exportBtn = document.createElement('button');
+    exportBtn.type = 'button';
+    exportBtn.className = 'btn btn-sm btn-ghost';
+    exportBtn.style.cssText = 'flex:2;background:var(--accent);color:#fff;border-color:var(--accent)';
+    exportBtn.textContent = 'Exportera PNG';
+    exportBtn.addEventListener('click', exportPng);
+    tb.appendChild(exportBtn);
+
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
     clearBtn.className = 'btn btn-sm';
@@ -694,6 +703,46 @@ function attachToolbarActions() {
         rebuildLayers();
     });
     tb.appendChild(clearBtn);
+}
+
+// ── PNG-export ──────────────────────────────────────────────────────────────
+async function exportPng() {
+    if (!state.objects.length) { toast('Ingenting att exportera.'); return; }
+    if (!window.MK_EXPORT) { toast('Export-modulen är inte laddad.'); return; }
+    const ytterCount = state.objects.filter(o => o.typ === 'ytter').length;
+    if (ytterCount < 2) toast('Tips: placera yttergränsmarkörer för att styra exporten.', 3200);
+
+    const titleBase = window.__minkartaTitle || 'MINERING';
+    const subtitle = window.__minkartaSubtitle || ('Minläggningskarta · ' + state.objects.length + ' objekt');
+    const btn = event && event.target && event.target.tagName === 'BUTTON' ? event.target : null;
+    const originalLabel = btn && btn.textContent;
+    if (btn) { btn.disabled = true; btn.textContent = 'Renderar…'; }
+
+    try {
+        const res = await window.MK_EXPORT.renderExportAsync({
+            objects: state.objects,
+            title: titleBase,
+            subtitle,
+            targetPx: 2048,
+            dpr: 2
+        });
+        if (!res || !res.blob) throw new Error('Inget bilddata.');
+        let centerMgrs = '';
+        try {
+            const cLat = (res.bbox.minLat + res.bbox.maxLat) / 2;
+            const cLng = (res.bbox.minLng + res.bbox.maxLng) / 2;
+            centerMgrs = MGRS.forward(cLat, cLng);
+        } catch (_) {}
+        const filename = window.MK_EXPORT.exportFilename(centerMgrs);
+        const result = await window.MK_EXPORT.shareOrDownload(res.blob, filename);
+        if (result === 'downloaded') toast('Sparad: ' + filename, 2800);
+        else if (result === 'shared') toast('Delad.', 2000);
+    } catch (e) {
+        console.error(e);
+        toast('Fel vid export: ' + (e.message || 'okänt'), 3500);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+    }
 }
 
 // Tangentbord: Ctrl+Z / Ctrl+Y / Esc
