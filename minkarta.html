@@ -945,8 +945,8 @@ function generateProtocolText() {
     else lines.push(''.padEnd(30, '-') + ' ' + totalMines + ' st totalt');
     if (roj) lines.push('Röjningsskydd: ' + roj);
 
-    // Områden
-    const areas = state.objects.filter(o => ['minruta','minomrade','skenminering'].includes(o.typ));
+    // Områden (inkl. avståndslagda)
+    const areas = state.objects.filter(o => ['minruta','minomrade','skenminering','avstand_tramp','avstand_strv'].includes(o.typ));
     if (areas.length) {
         lines.push('------------------');
         areas.forEach((o, i) => {

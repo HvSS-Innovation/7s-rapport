@@ -294,6 +294,40 @@ const SYMBOLS = {
             '<text x="12" y="14" text-anchor="middle" font-family="Inter,sans-serif" font-size="7" font-weight="800" paint-order="stroke" stroke="' + MK_HALO + '" stroke-width="3" fill="' + MK_GRAY + '">SKEN</text>'
         ),
         stroke: MK_GRAY, fill: MK_GRAY, fillOpacity: 0.10, dashArray: '6 4'
+    },
+
+    // ── Avståndslagda mineringar (polygoner, PDF s.339) ──────────────────────
+    // Designbeslut: PDF visar dessa som områden (polygoner) med streckad kant
+    // som innehåller respektive mintyp-symbol i mitten. Vi ritar paletten-
+    // preview som en streckad polygon + inbäddad mintyp-symbol; själva
+    // geometrin ritas av Leaflet.Polygon. Etiketten i center blir "AVST TR"
+    // respektive "AVST SV" för snabb avläsning i protokoll.
+    avstand_tramp: {
+        label: 'Avståndslagd trampminering',
+        category: 'polygon',
+        svg: svg(
+            // streckad polygon som halo
+            '<path d="M4 6 L20 4 L21 18 L7 20 Z" fill="none" ' + haloStroke(3) + ' stroke-dasharray="3 2" stroke-linejoin="round"/>' +
+            '<path d="M4 6 L20 4 L21 18 L7 20 Z" fill="none" stroke="' + MK_YELLOW + '" stroke-width="1.3" stroke-dasharray="3 2" stroke-linejoin="round"/>' +
+            // inbäddad trampmina-symbol (liten trekant med punkt) i center
+            '<path d="M12 8 L17 17 L7 17 Z" fill="' + MK_INNER_DARK + '" ' + haloStroke(2) + '/>' +
+            '<path d="M12 8 L17 17 L7 17 Z" fill="none" stroke="' + MK_YELLOW + '" stroke-width="1.2" stroke-linejoin="round"/>' +
+            '<circle cx="12" cy="14" r="1" fill="' + MK_YELLOW + '"/>'
+        ),
+        stroke: MK_YELLOW, fill: MK_YELLOW, fillOpacity: 0.14, dashArray: '6 4'
+    },
+    avstand_strv: {
+        label: 'Avståndslagd stridsvagnsminering',
+        category: 'polygon',
+        svg: svg(
+            '<path d="M4 6 L20 4 L21 18 L7 20 Z" fill="none" ' + haloStroke(3) + ' stroke-dasharray="3 2" stroke-linejoin="round"/>' +
+            '<path d="M4 6 L20 4 L21 18 L7 20 Z" fill="none" stroke="' + MK_YELLOW + '" stroke-width="1.3" stroke-dasharray="3 2" stroke-linejoin="round"/>' +
+            // inbäddad strvmina-symbol (cirkel med inner-punkt)
+            '<circle cx="12" cy="13" r="4.2" fill="' + MK_INNER_DARK + '" ' + haloStroke(2) + '/>' +
+            '<circle cx="12" cy="13" r="3.6" fill="none" stroke="' + MK_YELLOW + '" stroke-width="1.2"/>' +
+            '<circle cx="12" cy="13" r="1.3" fill="' + MK_YELLOW + '"/>'
+        ),
+        stroke: MK_YELLOW, fill: MK_YELLOW, fillOpacity: 0.14, dashArray: '6 4'
     }
 
 };
@@ -308,7 +342,7 @@ const SYMBOL_GROUPS = [
     { title: 'Förstöring',         ids: ['forst_forb', 'forst_utf', 'forst_plan'] },
     { title: 'Linjer',             ids: ['minlinje', 'avsparrning'] },
     { title: 'Områden',            ids: ['minruta', 'minomrade', 'skenminering'] },
-    { title: 'Avståndslagda',      ids: ['avstand'] },   // fylls på i fas 3
+    { title: 'Avståndslagda',      ids: ['avstand', 'avstand_tramp', 'avstand_strv'] },
     { title: 'Export & referens',  ids: ['ytter'] }      // fylls på i fas 6 med up/sp
 ];
 
