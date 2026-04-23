@@ -282,7 +282,7 @@
                 <ul>
                     <li>OpenTopoMap-tiles (kartbilder) för zoomnivå upp till 17 — skickar zoom, x- och y-index för de rutor som ritas på skärmen.</li>
                     <li>OpenStreetMap Standard-tiles (<code>tile.openstreetmap.org</code>) för zoomnivå 18–19, eftersom OpenTopoMap inte har data där. Aktiveras automatiskt när du zoomar in närmare; status-raden visar vilket lager som används.</li>
-                    <li>Nominatim/Overpass vid adressökning — skickar endast kartans vy-center eller det du aktivt söker efter, aldrig symbolpositioner.</li>
+                    <li>Nominatim/Overpass vid adressökning och för UP-markörers reverse-geocode — skickar endast kartans vy-center, sökfras eller UP-markörens koordinat, aldrig minsymbolpositioner. UP och SP är bestämbara referenspunkter i terrängen (PDF s. 338), inte skarpa minpositioner.</li>
                 </ul>
                 <p>All ritning, lagring och export sker lokalt i webbläsaren.
                 Export (PNG) och delning är alltid användar-initierad.</p>
@@ -596,9 +596,15 @@ function addObject(obj) {
 function removeObject(id) {
     const idx = state.objects.findIndex(o => o.id === id);
     if (idx < 0) return;
+    const typ = state.objects[idx].typ;
     pushUndo();
     state.objects.splice(idx, 1);
     if (state.layers[id]) { map.removeLayer(state.layers[id]); delete state.layers[id]; }
+    // UP/SP: synkronisera textarean och omnumrera övriga
+    if (typ === 'up' || typ === 'sp') {
+        syncUpTextarea();
+        rebuildLayers();
+    }
 }
 
 function renderObject(obj) {
@@ -615,6 +621,11 @@ function renderObject(obj) {
             pushUndo();
             const ll = layer.getLatLng();
             obj.lat = ll.lat; obj.lng = ll.lng;
+            if (obj.typ === 'up') {
+                reverseGeocodeUp(obj);   // uppdaterar även textarean
+            } else if (obj.typ === 'sp') {
+                syncUpTextarea();
+            }
         });
         // Namn-bricka under markern (togglas via Lager-sektionen)
         const labelText = obj.label || sym.label;
@@ -739,13 +750,132 @@ function cancelDraft() {
     state.draft = null; state.draftLayer = null;
 }
 
+// ── UP/SP-hjälp: bäring, avstånd, reverse-geocode, textarea-sync ────────────
+function initialBearing(a, b) {
+    const φ1 = a.lat * Math.PI / 180, φ2 = b.lat * Math.PI / 180;
+    const λ1 = a.lng * Math.PI / 180, λ2 = b.lng * Math.PI / 180;
+    const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
+    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
+    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
+}
+
+function findClosestUp(sp) {
+    let best = null, bestD = Infinity;
+    for (const o of state.objects) {
+        if (o.typ !== 'up') continue;
+        const d = haversine({ lat: sp.lat, lng: sp.lng }, { lat: o.lat, lng: o.lng });
+        if (d < bestD) { bestD = d; best = o; }
+    }
+    return best ? { up: best, distanceM: bestD } : null;
+}
+
+function recomputeRefSeqAndDerived() {
+    // Omnumrera alla UP/SP i insertionsordning och räkna om SP-bäringar
+    let upSeq = 0, spSeq = 0;
+    for (const o of state.objects) {
+        if (o.typ === 'up') {
+            upSeq++;
+            o.seq = upSeq;
+            o.label = 'UP' + upSeq;
+        } else if (o.typ === 'sp') {
+            spSeq++;
+            o.seq = spSeq;
+            o.label = 'SP' + spSeq;
+            const ref = findClosestUp(o);
+            if (ref) {
+                o.refUp = ref.up.id;
+                o.refUpSeq = ref.up.seq;
+                o.bearing = Math.round(initialBearing(ref.up, o));
+                o.distanceM = Math.round(ref.distanceM);
+            } else {
+                o.refUp = null; o.refUpSeq = null; o.bearing = null; o.distanceM = null;
+            }
+        }
+    }
+}
+
+function formatUpLine(o) {
+    const mgrs = safeMgrs(o.lat, o.lng) || '—';
+    const adress = o.adress || (o.reverseLoading ? '(hämtar adress…)' : '');
+    return 'UP' + o.seq + ': ' + mgrs + (adress ? ' — ' + adress : '');
+}
+function formatSpLine(o) {
+    const mgrs = safeMgrs(o.lat, o.lng) || '—';
+    if (o.refUpSeq && o.bearing != null && o.distanceM != null) {
+        return 'SP' + o.seq + ': ' + mgrs + ' (från UP' + o.refUpSeq + ', ' + o.bearing + '° ' + o.distanceM + ' m)';
+    }
+    return 'SP' + o.seq + ': ' + mgrs;
+}
+
+function syncUpTextarea() {
+    const ta = document.getElementById('pUp');
+    if (!ta) return;
+    recomputeRefSeqAndDerived();
+    // Bevara rader som inte ser ut som UP<n>: eller SP<n>: (manuell fri text)
+    const keptManual = (ta.value || '').split(/\r?\n/).filter(line => {
+        return line.trim() !== '' && !/^\s*(UP|SP)\d+\s*:/i.test(line);
+    });
+    const autoLines = [];
+    for (const o of state.objects) {
+        if (o.typ === 'up') autoLines.push(formatUpLine(o));
+        else if (o.typ === 'sp') autoLines.push(formatSpLine(o));
+    }
+    ta.value = [...autoLines, ...keptManual].join('\n');
+
+    // Uppdatera reglements-varningen
+    const nUp = state.objects.filter(o => o.typ === 'up').length;
+    const nSp = state.objects.filter(o => o.typ === 'sp').length;
+    const warn = document.getElementById('pUpWarn');
+    if (warn) {
+        if (nUp < 2 || nSp < 1) {
+            warn.style.display = 'block';
+            const needs = [];
+            if (nUp < 2) needs.push('minst 2 utgångspunkter');
+            if (nSp < 1) needs.push('minst 1 startpunkt');
+            warn.textContent = 'Obs: reglementet kräver ' + needs.join(' och ') + '.';
+        } else {
+            warn.style.display = 'none';
+        }
+    }
+}
+
+function reverseGeocodeUp(obj) {
+    if (!navigator.onLine) { obj.adress = ''; obj.reverseLoading = false; syncUpTextarea(); return; }
+    obj.reverseLoading = true;
+    syncUpTextarea();
+    fetch('https://nominatim.openstreetmap.org/reverse?lat=' + obj.lat + '&lon=' + obj.lng + '&format=json&accept-language=sv&zoom=18')
+        .then(r => r.json())
+        .then(d => {
+            const a = d.address || {};
+            const street = (a.road || '') + (a.house_number ? ' ' + a.house_number : '');
+            const local  = a.suburb || a.neighbourhood || a.city_district || a.hamlet || '';
+            const town   = a.village || a.town || a.city || '';
+            const parts  = [street.trim(), local, town].filter((v, i, arr) => v && arr.indexOf(v) === i);
+            obj.adress = parts.slice(0, 2).join(', ') || (d.display_name ? d.display_name.split(',').slice(0, 2).join(',').trim() : '');
+            obj.reverseLoading = false;
+            syncUpTextarea();
+        })
+        .catch(() => { obj.adress = ''; obj.reverseLoading = false; syncUpTextarea(); });
+}
+
 // ── Klickhanterare (placering eller draft-bygge) ────────────────────────────
 function handleMapClick(e) {
     if (!activeTool) return;
     const sym = window.MK_SYMBOLS[activeTool];
     if (!sym) return;
     if (sym.category === 'point' || sym.category === 'meta') {
-        addObject({ id: uid(), typ: activeTool, lat: e.latlng.lat, lng: e.latlng.lng, created: Date.now() });
+        const obj = { id: uid(), typ: activeTool, lat: e.latlng.lat, lng: e.latlng.lng, created: Date.now() };
+        if (activeTool === 'up' || activeTool === 'sp') {
+            // seq/label sätts av recomputeRefSeqAndDerived(), men labelen behöver
+            // finnas redan vid första render för tooltip — vi ger en temporär
+            addObject(obj);
+            syncUpTextarea();
+            // Uppdatera marker-tooltip till rätt label (UP1/SP1 etc.)
+            rebuildLayers();
+            if (activeTool === 'up') reverseGeocodeUp(obj);
+            return;
+        }
+        addObject(obj);
         return;
     }
     // Linje/polygon
@@ -802,6 +932,10 @@ async function loadPersisted() {
         if (saved && Array.isArray(saved.objects)) {
             state.objects = saved.objects;
             rebuildLayers();
+            // Om tidigare session hade UP/SP — uppdatera textarea och varningar
+            if (state.objects.some(o => o.typ === 'up' || o.typ === 'sp')) {
+                syncUpTextarea();
+            }
         }
     } catch (_) { /* ignorera */ }
 }

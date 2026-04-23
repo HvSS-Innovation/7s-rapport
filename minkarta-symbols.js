@@ -296,6 +296,30 @@ const SYMBOLS = {
         stroke: MK_GRAY, fill: MK_GRAY, fillOpacity: 0.10, dashArray: '6 4'
     },
 
+    // ── Referenspunkter (UP / SP) — icke-reglementsbunden designval ──────────
+    // UP och SP är bestämbara terrängpunkter (PDF s.338), inte skarpa
+    // minpositioner. De används för inmätning. Vi ritar dem som cyan
+    // fyllda piktogram med vit text för tydlig visuell separation från
+    // minsymboler.
+    up: {
+        label: 'UP',
+        category: 'meta',
+        svg: svg(
+            '<circle cx="12" cy="12" r="9" fill="' + MK_CYAN + '" ' + haloStroke(3) + '/>' +
+            '<circle cx="12" cy="12" r="8" fill="none" stroke="' + MK_HALO + '" stroke-width="0.8"/>' +
+            '<text x="12" y="15.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="800" paint-order="stroke" stroke="' + MK_HALO + '" stroke-width="3" fill="' + MK_WHITE + '">UP</text>'
+        )
+    },
+    sp: {
+        label: 'SP',
+        category: 'meta',
+        svg: svg(
+            '<rect x="3" y="3" width="18" height="18" rx="2" fill="' + MK_CYAN + '" ' + haloStroke(3) + '/>' +
+            '<rect x="4" y="4" width="16" height="16" rx="1.5" fill="none" stroke="' + MK_HALO + '" stroke-width="0.8"/>' +
+            '<text x="12" y="15.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="800" paint-order="stroke" stroke="' + MK_HALO + '" stroke-width="3" fill="' + MK_WHITE + '">SP</text>'
+        )
+    },
+
     // ── Avståndslagda mineringar (polygoner, PDF s.339) ──────────────────────
     // Designbeslut: PDF visar dessa som områden (polygoner) med streckad kant
     // som innehåller respektive mintyp-symbol i mitten. Vi ritar paletten-
@@ -343,7 +367,8 @@ const SYMBOL_GROUPS = [
     { title: 'Linjer',             ids: ['minlinje', 'avsparrning'] },
     { title: 'Områden',            ids: ['minruta', 'minomrade', 'skenminering'] },
     { title: 'Avståndslagda',      ids: ['avstand', 'avstand_tramp', 'avstand_strv'] },
-    { title: 'Export & referens',  ids: ['ytter'] }      // fylls på i fas 6 med up/sp
+    { title: 'Referenspunkter',    ids: ['up', 'sp'] },
+    { title: 'Export',             ids: ['ytter'] }
 ];
 
 // Skapa en Leaflet-divIcon från ett SYMBOLS-entry
