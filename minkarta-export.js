@@ -191,8 +191,9 @@
                     const p = project(pt.lat, pt.lng);
                     if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
                 });
+                // v3: vit halo under, svart linjearbete ovanpå (inverterat från v2)
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = (sym.weight || 4) + 2;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = (sym.weight || 4) + 2.5;
                 ctx.stroke();
                 if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
                 ctx.strokeStyle = sym.stroke; ctx.lineWidth = (sym.weight || 4);
@@ -208,9 +209,9 @@
                 // Fyllning
                 ctx.fillStyle = hexToRgba(sym.fill, sym.fillOpacity || 0.2);
                 ctx.fill();
-                // Halo-bred mörk under + färgad ovanpå
+                // v3: vit halo bred under + svart linjearbete ovanpå
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 4.5;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5;
                 ctx.stroke();
                 if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
                 ctx.strokeStyle = sym.stroke; ctx.lineWidth = 2;
@@ -487,8 +488,9 @@
                     const p = project(pt.lat, pt.lng);
                     if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
                 });
+                // v3: vit halo under, svart linjearbete ovanpå (inverterat från v2)
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = (sym.weight || 4) + 2;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = (sym.weight || 4) + 2.5;
                 ctx.stroke();
                 if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
                 ctx.strokeStyle = sym.stroke; ctx.lineWidth = (sym.weight || 4);
@@ -504,9 +506,9 @@
                 // Fyllning
                 ctx.fillStyle = hexToRgba(sym.fill, sym.fillOpacity || 0.2);
                 ctx.fill();
-                // Halo-bred mörk under + färgad ovanpå
+                // v3: vit halo bred under + svart linjearbete ovanpå
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 4.5;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5;
                 ctx.stroke();
                 if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
                 ctx.strokeStyle = sym.stroke; ctx.lineWidth = 2;

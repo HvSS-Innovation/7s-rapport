@@ -126,12 +126,14 @@
         .palette-toolbar button { flex: 1; min-width: 90px; }
 
         /* Leaflet-ikonen (ingen bakgrund, bara SVG:n syns).
-           Halo-kontrast mot ljusa kartblad: tre staplade drop-shadows ger
-           en hård svart rand även där SVG-en själv inte har bred stroke. */
+           v3: vit korona (halo) runt svart linjearbete för att matcha PDF:en.
+           Tre staplade vita drop-shadows ger en mjuk vit aura utanför SVG-
+           ens egen paint-order-stroke; en sista mörk skugga ger kant mot
+           mycket ljusa kartpartier (vita vägar i OSM Standard z 18–19). */
         .mk-icon { background: transparent !important; border: none !important; }
         .mk-icon svg {
             width: 34px; height: 34px; display: block;
-            filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 1px 2px rgba(0,0,0,0.85));
+            filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 1.5px rgba(0,0,0,0.45));
         }
 
         /* Namn-etiketter under markers (Leaflet-tooltip som bricka) */
