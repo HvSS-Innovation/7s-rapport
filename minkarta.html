@@ -180,6 +180,69 @@
             <div class="palette-body" id="paletteBody"></div>
         </section>
 
+        <!-- Minprotokoll-panel -->
+        <details class="about" id="protoPanel">
+            <summary>Minprotokoll</summary>
+            <div class="about-body">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <div>
+                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">Mineringsnr</label>
+                        <input type="text" id="pNr" placeholder="201">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">Ambition</label>
+                        <select id="pAmbition" style="width:100%;padding:10px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit">
+                            <option value="">— välj —</option>
+                            <option value="Störande">Störande (300/km)</option>
+                            <option value="Fördröjande">Fördröjande (600/km)</option>
+                            <option value="Hindrande">Hindrande (900/km)</option>
+                            <option value="Avståndslagd">Avståndslagd</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+                    <div>
+                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">Förband</label>
+                        <input type="text" id="pForband" placeholder="Ex: 2. hvplut">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">Chef</label>
+                        <input type="text" id="pChef" placeholder="Ex: fk Svensson">
+                    </div>
+                </div>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+                    <div>
+                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">TNR</label>
+                        <input type="text" id="pTnr" placeholder="DDHHMMZMånÅÅÅÅ">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">Röjningsskydd</label>
+                        <select id="pRojskydd" style="width:100%;padding:10px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit">
+                            <option value="">—</option>
+                            <option value="Nej">Nej</option>
+                            <option value="Delvis">Delvis</option>
+                            <option value="Ja">Ja</option>
+                        </select>
+                    </div>
+                </div>
+                <label style="display:block;font-size:0.68rem;margin-top:8px;margin-bottom:4px">Utgångspunkter (en per rad: MGRS, ev. kompass° avstånd m)</label>
+                <textarea id="pUp" rows="3" placeholder="33VUH 23567 45678 — Rött hus, 180° 140 m&#10;33VUH 24012 45902 — Träddunge"
+                    style="width:100%;padding:10px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem"></textarea>
+                <div id="pUpWarn" style="display:none;color:var(--warn);font-size:0.72rem;margin-top:4px">Obs: reglementet kräver minst två utgångspunkter.</div>
+
+                <label style="display:block;font-size:0.68rem;margin-top:8px;margin-bottom:4px">Anteckningar</label>
+                <textarea id="pNote" rows="2" placeholder="Fria anteckningar…"
+                    style="width:100%;padding:10px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem"></textarea>
+
+                <div style="display:flex;gap:6px;margin-top:10px">
+                    <button type="button" class="btn btn-sm btn-accent" id="pGen" style="flex:2">Generera sammanställning</button>
+                    <button type="button" class="btn btn-sm btn-ghost" id="pCount">Räkna minor</button>
+                </div>
+                <pre id="pOut" style="display:none;margin-top:10px;padding:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Courier New',monospace;font-size:0.82rem;line-height:1.6;color:var(--text-primary);white-space:pre-wrap"></pre>
+                <button type="button" class="btn btn-sm btn-ghost" id="pCopy" style="display:none;width:100%;margin-top:6px">Kopiera till urklipp</button>
+            </div>
+        </details>
+
         <details class="about">
             <summary>Om MINKARTA &amp; integritet</summary>
             <div class="about-body">
@@ -761,6 +824,165 @@ function attachKeyboard() {
     });
 }
 
+// ── Minprotokoll: räkning, generator, kopiering ─────────────────────────────
+function countMinesByType() {
+    const counts = {};
+    for (const o of state.objects) {
+        if (!o.typ) continue;
+        const sym = window.MK_SYMBOLS[o.typ];
+        if (!sym) continue;
+        if (sym.category !== 'point') continue;       // ytter/meta räknas inte
+        if (o.typ === 'forst_forb' || o.typ === 'forst_utf' || o.typ === 'forst_plan') continue;
+        counts[o.typ] = (counts[o.typ] || 0) + 1;
+    }
+    return counts;
+}
+
+function polylineLengthMeters() {
+    // Grov längd för minlinje-objekt (haversine)
+    let total = 0;
+    for (const o of state.objects) {
+        if (o.typ !== 'minlinje' || !o.path || o.path.length < 2) continue;
+        for (let i = 1; i < o.path.length; i++) {
+            total += haversine(o.path[i-1], o.path[i]);
+        }
+    }
+    return total;
+}
+
+function haversine(a, b) {
+    const R = 6371000;
+    const la1 = a.lat * Math.PI / 180, la2 = b.lat * Math.PI / 180;
+    const dla = la2 - la1;
+    const dlo = (b.lng - a.lng) * Math.PI / 180;
+    const h = Math.sin(dla / 2) ** 2 + Math.cos(la1) * Math.cos(la2) * Math.sin(dlo / 2) ** 2;
+    return 2 * R * Math.asin(Math.sqrt(h));
+}
+
+function ambitionDensity(amb) {
+    if (amb === 'Störande') return 300;
+    if (amb === 'Fördröjande') return 600;
+    if (amb === 'Hindrande') return 900;
+    return null;
+}
+
+function generateProtocolText() {
+    const nr = document.getElementById('pNr').value.trim() || '—';
+    const amb = document.getElementById('pAmbition').value;
+    const forband = document.getElementById('pForband').value.trim();
+    const chef = document.getElementById('pChef').value.trim();
+    const tnr = document.getElementById('pTnr').value.trim().toUpperCase();
+    const roj = document.getElementById('pRojskydd').value;
+    const up = document.getElementById('pUp').value.trim();
+    const note = document.getElementById('pNote').value.trim();
+
+    const upLines = up.split(/\r?\n/).filter(Boolean);
+    const counts = countMinesByType();
+    const lineMeters = polylineLengthMeters();
+
+    const lines = [];
+    lines.push('MINERING ' + nr);
+    if (forband || chef) lines.push((forband ? 'Förband: ' + forband : '') + (chef ? (forband ? ' · ' : '') + 'Chef: ' + chef : ''));
+    if (tnr) lines.push('TNR: ' + tnr);
+    lines.push('==================');
+    if (amb) lines.push('Ambition: ' + amb + (ambitionDensity(amb) ? ' (' + ambitionDensity(amb) + ' strvmina/km)' : ''));
+    if (lineMeters > 0) {
+        lines.push('Minlinje-längd: ' + Math.round(lineMeters) + ' m');
+        const dens = ambitionDensity(amb);
+        if (dens) lines.push('Beräknat behov: ' + Math.round(dens * lineMeters / 1000) + ' strvmina');
+    }
+    lines.push('------------------');
+    if (upLines.length) {
+        upLines.forEach((l, i) => lines.push('UP' + (i + 1) + ': ' + l));
+        if (upLines.length < 2) lines.push('(obs: reglementet kräver minst 2 utgångspunkter)');
+    }
+    lines.push('------------------');
+    const labelMap = {
+        strv_tryck: 'Strv-mina tryckutlöst',
+        strv_full:  'Strv-mina fullbreddsverkande',
+        strv_rojskydd: 'Strv-mina m. röjskydd',
+        tramp: 'Trampmina',
+        trad:  'Trådmina',
+        larm:  'Larmmina',
+        fordonsmina: 'Fordonsmina',
+        fordon_sid:  'Sidverkande fordonsmina',
+        forsvar: 'Försvarsladdning',
+        avstand: 'Avståndslagd'
+    };
+    const typOrder = ['strv_tryck','strv_full','strv_rojskydd','tramp','trad','larm','fordonsmina','fordon_sid','forsvar','avstand'];
+    let totalMines = 0;
+    for (const t of typOrder) {
+        if (counts[t]) {
+            const label = labelMap[t] || t;
+            lines.push(label.padEnd(30, '.') + ' ' + counts[t]);
+            totalMines += counts[t];
+        }
+    }
+    if (totalMines === 0) lines.push('(inga punktsymboler registrerade)');
+    else lines.push(''.padEnd(30, '-') + ' ' + totalMines + ' st totalt');
+    if (roj) lines.push('Röjningsskydd: ' + roj);
+
+    // Områden
+    const areas = state.objects.filter(o => ['minruta','minomrade','skenminering'].includes(o.typ));
+    if (areas.length) {
+        lines.push('------------------');
+        areas.forEach((o, i) => {
+            const s = window.MK_SYMBOLS[o.typ];
+            const label = s ? s.label : o.typ;
+            const extra = (o.etikett ? ' ' + o.etikett : '') + (o.antal ? ' ' + o.antal : '');
+            lines.push((i + 1) + '. ' + label + extra);
+        });
+    }
+    if (note) { lines.push('------------------'); lines.push(note); }
+
+    return lines.join('\n');
+}
+
+function attachProtocolActions() {
+    const up = document.getElementById('pUp');
+    const warn = document.getElementById('pUpWarn');
+    const checkUp = () => {
+        const n = (up.value.trim().split(/\r?\n/).filter(Boolean)).length;
+        warn.style.display = n < 2 ? 'block' : 'none';
+    };
+    up.addEventListener('input', checkUp);
+    checkUp();
+
+    document.getElementById('pCount').addEventListener('click', () => {
+        const c = countMinesByType();
+        const total = Object.values(c).reduce((s, v) => s + v, 0);
+        toast('Totalt ' + total + ' punktminor i kartan.');
+    });
+
+    document.getElementById('pGen').addEventListener('click', () => {
+        const txt = generateProtocolText();
+        const out = document.getElementById('pOut');
+        out.textContent = txt;
+        out.style.display = 'block';
+        document.getElementById('pCopy').style.display = 'block';
+        // Uppdatera även PNG-exportens titel
+        const nr = document.getElementById('pNr').value.trim();
+        window.__minkartaTitle = 'MINERING ' + (nr || '—');
+        const amb = document.getElementById('pAmbition').value;
+        window.__minkartaSubtitle = [amb, document.getElementById('pForband').value.trim(), document.getElementById('pTnr').value.trim()].filter(Boolean).join(' · ');
+    });
+
+    document.getElementById('pCopy').addEventListener('click', async () => {
+        const txt = document.getElementById('pOut').textContent;
+        try {
+            await navigator.clipboard.writeText(txt);
+            toast('Kopierat.');
+        } catch (_) {
+            // Fallback: markera och låt användaren kopiera
+            const r = document.createRange();
+            r.selectNode(document.getElementById('pOut'));
+            getSelection().removeAllRanges();
+            getSelection().addRange(r);
+            toast('Markerat — tryck Ctrl+C.');
+        }
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     // Registrera kartklick för symbol-placering
@@ -772,6 +994,7 @@ document.addEventListener('DOMContentLoaded', () => {
     renderPalette();
     attachToolbarActions();
     attachKeyboard();
+    attachProtocolActions();
     loadPersisted();
 
     const input = document.getElementById('mgrsSearch');
