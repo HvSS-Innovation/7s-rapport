@@ -1144,8 +1144,33 @@ function attachToolbarActions() {
         pushUndo();
         state.objects = [];
         rebuildLayers();
+        // v4: rensa även hela protokoll-panelen + PNG-cachen
+        resetProtocolPanel();
+        _lastExport = null;
     });
     tb.appendChild(clearBtn);
+}
+
+// v4: Nollställer alla fält i minprotokoll-panelen. Auto-TNR prefillas
+// igen med ny Zulu-kort så nästa minering har färsk TNR från start.
+function resetProtocolPanel() {
+    const textIds = ['pNr','pForband','pChef','pTnr','pUp','pNote'];
+    textIds.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const selects = ['pAmbition','pRojskydd'];
+    selects.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const out = document.getElementById('pOut');
+    if (out) { out.textContent = ''; out.style.display = 'none'; }
+    const shareOrCopy = document.getElementById('pShare') || document.getElementById('pCopy');
+    if (shareOrCopy) shareOrCopy.style.display = 'none';
+    const warn = document.getElementById('pUpWarn');
+    if (warn) warn.style.display = 'none';
+    // Auto-TNR restart
+    const tnr = document.getElementById('pTnr');
+    const badge = document.getElementById('pTnrAutoBadge');
+    if (tnr && badge) {
+        tnr.value = zuluShortNow();
+        badge.style.display = '';
+    }
 }
 
 // ── PNG-export ──────────────────────────────────────────────────────────────
