@@ -406,26 +406,324 @@ function toast(msg, ms) {
     setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, ms || 2200);
 }
 
-// Placera en punktsymbol vid kartklick om ett punktverktyg är aktivt.
-// Linje/polygon hanteras i FAS B3 — här bara feedback.
+// ─────────────────────────────────────────────────────────────────────────────
+//  Datamodell + Leaflet-rendering
+//
+//  state.objects är källan; state.layers[id] är tillhörande Leaflet-lager.
+//  Allt ritas om från objects vid undo/redo/reload — lagren är avledda.
+// ─────────────────────────────────────────────────────────────────────────────
+const state = {
+    objects: [],
+    layers: {},       // id -> Leaflet layer
+    draft: null,      // pågående linje/polygon i uppritning
+    draftLayer: null
+};
+
+const undoStack = [];
+const redoStack = [];
+const UNDO_LIMIT = 50;
+
+function snapshot() {
+    return JSON.stringify(state.objects);
+}
+function pushUndo() {
+    undoStack.push(snapshot());
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+    redoStack.length = 0;
+    scheduleAutosave();
+}
+function undo() {
+    if (undoStack.length < 1) return;
+    redoStack.push(snapshot());
+    const prev = undoStack.pop();
+    state.objects = JSON.parse(prev);
+    rebuildLayers();
+    scheduleAutosave();
+}
+function redoAction() {
+    if (redoStack.length < 1) return;
+    undoStack.push(snapshot());
+    const next = redoStack.pop();
+    state.objects = JSON.parse(next);
+    rebuildLayers();
+    scheduleAutosave();
+}
+
+function uid() {
+    return 'o_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+function addObject(obj) {
+    pushUndo();
+    state.objects.push(obj);
+    renderObject(obj);
+}
+
+function removeObject(id) {
+    const idx = state.objects.findIndex(o => o.id === id);
+    if (idx < 0) return;
+    pushUndo();
+    state.objects.splice(idx, 1);
+    if (state.layers[id]) { map.removeLayer(state.layers[id]); delete state.layers[id]; }
+}
+
+function renderObject(obj) {
+    const sym = window.MK_SYMBOLS[obj.typ];
+    if (!sym) return;
+    let layer;
+    if (sym.category === 'point' || sym.category === 'meta') {
+        layer = L.marker([obj.lat, obj.lng], {
+            icon: window.mkMakeIcon(obj.typ),
+            title: sym.label,
+            draggable: true
+        });
+        layer.on('dragend', () => {
+            pushUndo();
+            const ll = layer.getLatLng();
+            obj.lat = ll.lat; obj.lng = ll.lng;
+        });
+    } else if (sym.category === 'line') {
+        layer = L.polyline(obj.path.map(p => [p.lat, p.lng]), {
+            color: sym.stroke, weight: sym.weight || 3, dashArray: sym.dashArray || null
+        });
+    } else if (sym.category === 'polygon') {
+        layer = L.polygon(obj.path.map(p => [p.lat, p.lng]), {
+            color: sym.stroke, weight: 2, fillColor: sym.fill, fillOpacity: sym.fillOpacity || 0.3,
+            dashArray: sym.dashArray || null
+        });
+        if (obj.etikett) {
+            layer.bindTooltip(obj.etikett + (obj.antal ? ' ' + obj.antal : ''), {
+                permanent: true, direction: 'center', className: 'mk-label'
+            });
+        }
+    }
+    if (!layer) return;
+    layer.addTo(map);
+    state.layers[obj.id] = layer;
+
+    // Radera via klick på befintligt objekt (i pan-läge)
+    layer.on('click', e => {
+        if (activeTool) return;                      // ritningsläge — ignorera
+        if (L.DomEvent) L.DomEvent.stopPropagation(e);
+        openEditPopup(obj, layer, e);
+    });
+    // Long-press (mobile): två sekunder → radera med bekräftelse
+    let pressTimer = null;
+    layer.on('mousedown touchstart', () => {
+        pressTimer = setTimeout(() => {
+            if (confirm('Ta bort ' + (window.MK_SYMBOLS[obj.typ]?.label || obj.typ) + '?')) removeObject(obj.id);
+        }, 800);
+    });
+    layer.on('mouseup mouseout touchend touchmove', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+}
+
+function openEditPopup(obj, layer, e) {
+    const sym = window.MK_SYMBOLS[obj.typ];
+    const wrap = document.createElement('div');
+    wrap.style.cssText = 'min-width:180px;font-family:Inter,sans-serif;color:#e8f0e8';
+    let html = '<div style="font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4caf50;margin-bottom:6px">' + sym.label + '</div>';
+    if (sym.ambitionChoices) {
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:4px">Ambition</label>';
+        html += '<select id="edAmb" style="width:100%;margin-top:2px;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">' +
+            sym.ambitionChoices.map(c => '<option value="' + c + '"' + (obj.etikett === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
+    }
+    html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Antal</label>';
+    html += '<input id="edAntal" type="number" min="0" value="' + (obj.antal || '') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Anteckning</label>';
+    html += '<input id="edNote" type="text" value="' + (obj.anteckning || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    html += '<div style="display:flex;gap:6px;margin-top:8px">';
+    html += '<button id="edSave" style="flex:1;padding:6px;background:#4caf50;border:none;color:#fff;border-radius:4px;font-family:inherit;cursor:pointer">Spara</button>';
+    html += '<button id="edDel" style="padding:6px 10px;background:#c62828;border:none;color:#fff;border-radius:4px;font-family:inherit;cursor:pointer">Ta bort</button>';
+    html += '</div>';
+    wrap.innerHTML = html;
+
+    const popup = L.popup({ className: 'mk-popup', closeButton: true, autoClose: true })
+        .setLatLng(e && e.latlng ? e.latlng : (layer.getLatLng ? layer.getLatLng() : layer.getBounds().getCenter()))
+        .setContent(wrap)
+        .openOn(map);
+
+    setTimeout(() => {
+        const amb = wrap.querySelector('#edAmb');
+        wrap.querySelector('#edSave').addEventListener('click', () => {
+            pushUndo();
+            if (amb) obj.etikett = amb.value;
+            const an = wrap.querySelector('#edAntal').value;
+            obj.antal = an ? Number(an) : null;
+            obj.anteckning = wrap.querySelector('#edNote').value || '';
+            map.closePopup(popup);
+            rebuildLayers();
+        });
+        wrap.querySelector('#edDel').addEventListener('click', () => {
+            map.closePopup(popup);
+            if (confirm('Ta bort ' + sym.label + '?')) removeObject(obj.id);
+        });
+    }, 0);
+}
+
+function rebuildLayers() {
+    Object.values(state.layers).forEach(l => map.removeLayer(l));
+    state.layers = {};
+    state.objects.forEach(renderObject);
+}
+
+// ── Ritning av linje/polygon (draft-läge) ───────────────────────────────────
+function beginDraft(typ, firstLatLng) {
+    const sym = window.MK_SYMBOLS[typ];
+    if (!sym) return;
+    state.draft = { id: uid(), typ, path: [firstLatLng], category: sym.category };
+    state.draftLayer = (sym.category === 'polygon'
+        ? L.polygon([firstLatLng], { color: sym.stroke, weight: 2, fillColor: sym.fill, fillOpacity: (sym.fillOpacity || 0.3), dashArray: sym.dashArray || null })
+        : L.polyline([firstLatLng], { color: sym.stroke, weight: sym.weight || 3, dashArray: sym.dashArray || null })
+    ).addTo(map);
+    toast('Klicka för fler punkter. Dubbelklick avslutar. Esc avbryter.', 2400);
+}
+function extendDraft(latlng) {
+    if (!state.draft) return;
+    state.draft.path.push(latlng);
+    state.draftLayer.setLatLngs(state.draft.path.map(p => [p.lat, p.lng]));
+}
+function finishDraft() {
+    if (!state.draft) return;
+    const d = state.draft;
+    if (d.path.length < 2) { cancelDraft(); return; }
+    const obj = { id: d.id, typ: d.typ, path: d.path.map(p => ({ lat: p.lat, lng: p.lng })), created: Date.now() };
+    if (d.category === 'polygon' && obj.path.length < 3) { cancelDraft(); return; }
+    map.removeLayer(state.draftLayer);
+    state.draft = null; state.draftLayer = null;
+    addObject(obj);
+}
+function cancelDraft() {
+    if (state.draftLayer) map.removeLayer(state.draftLayer);
+    state.draft = null; state.draftLayer = null;
+}
+
+// ── Klickhanterare (placering eller draft-bygge) ────────────────────────────
 function handleMapClick(e) {
     if (!activeTool) return;
     const sym = window.MK_SYMBOLS[activeTool];
     if (!sym) return;
     if (sym.category === 'point' || sym.category === 'meta') {
-        const icon = window.mkMakeIcon(activeTool);
-        L.marker(e.latlng, { icon, title: sym.label, draggable: false }).addTo(map);
-        // Håll verktyget aktivt så att fler kan placeras i samma svep.
-    } else {
-        toast('Linje- och ytverktyg kommer i nästa fas.', 2500);
+        addObject({ id: uid(), typ: activeTool, lat: e.latlng.lat, lng: e.latlng.lng, created: Date.now() });
+        return;
     }
+    // Linje/polygon
+    if (!state.draft) beginDraft(activeTool, e.latlng);
+    else if (state.draft.typ === activeTool) extendDraft(e.latlng);
+    else { cancelDraft(); beginDraft(activeTool, e.latlng); }
+}
+
+function handleMapDblClick(e) {
+    if (state.draft) {
+        if (L.DomEvent) L.DomEvent.stopPropagation(e);
+        finishDraft();
+    }
+}
+
+// ── Persist (IndexedDB) ─────────────────────────────────────────────────────
+const DB_NAME = 'minkarta', DB_STORE = 'state', DB_KEY = 'current';
+let _db = null, _saveTimer = null;
+function openDB() {
+    return new Promise((resolve, reject) => {
+        if (_db) return resolve(_db);
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = () => req.result.createObjectStore(DB_STORE);
+        req.onsuccess = () => { _db = req.result; resolve(_db); };
+        req.onerror = () => reject(req.error);
+    });
+}
+function dbPut(key, value) {
+    return openDB().then(db => new Promise((res, rej) => {
+        const tx = db.transaction(DB_STORE, 'readwrite');
+        tx.objectStore(DB_STORE).put(value, key);
+        tx.oncomplete = () => res();
+        tx.onerror = () => rej(tx.error);
+    }));
+}
+function dbGet(key) {
+    return openDB().then(db => new Promise((res, rej) => {
+        const tx = db.transaction(DB_STORE, 'readonly');
+        const r = tx.objectStore(DB_STORE).get(key);
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+    }));
+}
+function scheduleAutosave() {
+    if (_saveTimer) return;
+    _saveTimer = setTimeout(() => {
+        _saveTimer = null;
+        dbPut(DB_KEY, { objects: state.objects, savedAt: Date.now() }).catch(() => {});
+    }, 400);
+}
+async function loadPersisted() {
+    try {
+        const saved = await dbGet(DB_KEY);
+        if (saved && Array.isArray(saved.objects)) {
+            state.objects = saved.objects;
+            rebuildLayers();
+        }
+    } catch (_) { /* ignorera */ }
+}
+
+// ── Verktygsrad-knappar (Undo/Redo/Rensa) ───────────────────────────────────
+function attachToolbarActions() {
+    const body = document.getElementById('paletteBody');
+    const tb = body.querySelector('.palette-toolbar');
+    if (!tb) return;
+
+    const undoBtn = document.createElement('button');
+    undoBtn.type = 'button'; undoBtn.className = 'btn btn-sm btn-ghost'; undoBtn.textContent = '↶ Ångra';
+    undoBtn.addEventListener('click', undo);
+    tb.appendChild(undoBtn);
+
+    const redoBtn = document.createElement('button');
+    redoBtn.type = 'button'; redoBtn.className = 'btn btn-sm btn-ghost'; redoBtn.textContent = '↷ Gör om';
+    redoBtn.addEventListener('click', redoAction);
+    tb.appendChild(redoBtn);
+
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'btn btn-sm';
+    clearBtn.style.cssText = 'flex:1;background:#c62828;color:#fff';
+    clearBtn.textContent = 'Rensa allt';
+    clearBtn.addEventListener('click', () => {
+        if (!state.objects.length) return toast('Kartan är redan tom.');
+        if (!confirm('Radera alla ' + state.objects.length + ' objekt? (dubbel­bekräftelse följer)')) return;
+        if (!confirm('Säker? Alla minsymboler, linjer och områden försvinner.')) return;
+        pushUndo();
+        state.objects = [];
+        rebuildLayers();
+    });
+    tb.appendChild(clearBtn);
+}
+
+// Tangentbord: Ctrl+Z / Ctrl+Y / Esc
+function attachKeyboard() {
+    window.addEventListener('keydown', e => {
+        if (e.key === 'Escape') { if (state.draft) cancelDraft(); setActiveTool(null); }
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+        if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); redoAction(); }
+    });
+    // Varna vid navigation bort om något är oskavt (senaste autospar har kört men user kan ändå vilja)
+    window.addEventListener('beforeunload', e => {
+        if (state.objects.length > 0) {
+            e.preventDefault();
+            e.returnValue = '';
+        }
+    });
 }
 
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     // Registrera kartklick för symbol-placering
-    if (map) map.on('click', handleMapClick);
+    if (map) {
+        map.on('click', handleMapClick);
+        map.on('dblclick', handleMapDblClick);
+        map.doubleClickZoom.disable();             // annars stjäl den dubbelklicket
+    }
     renderPalette();
+    attachToolbarActions();
+    attachKeyboard();
+    loadPersisted();
 
     const input = document.getElementById('mgrsSearch');
     input.addEventListener('paste', e => {
