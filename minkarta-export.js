@@ -310,20 +310,23 @@
 
     // Namn-bricka under en punkt-symbol. Matchar .mk-label i minkarta.html:
     // mörk bakgrund, vit text, 1 px border i accent-grön.
-    function drawNameBadge(ctx, cx, cy, text) {
+    // v4: `scale`-param (default 1) skalar font + padding + höjd så att
+    // brickan följer med den förstorade PNG-symbolen (136×136 vid scale 4).
+    function drawNameBadge(ctx, cx, cy, text, scale) {
+        const s = scale || 1;
         ctx.save();
-        ctx.font = '600 11px Inter, sans-serif';
+        ctx.font = '600 ' + (11 * s) + 'px Inter, sans-serif';
         ctx.textBaseline = 'middle';
-        const padX = 5, padY = 3;
+        const padX = 5 * s, padY = 3 * s;
         const tw = ctx.measureText(text).width;
         const bw = tw + padX * 2;
-        const bh = 16;
+        const bh = 16 * s;
         const x = cx - bw / 2;
         const y = cy;
         ctx.fillStyle = 'rgba(13, 31, 13, 0.92)';
         ctx.fillRect(x, y, bw, bh);
         ctx.strokeStyle = '#4caf50';
-        ctx.lineWidth = 1;
+        ctx.lineWidth = Math.max(1, s);
         ctx.strokeRect(x + 0.5, y + 0.5, bw - 1, bh - 1);
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
@@ -469,31 +472,41 @@
         }));
 
         // 5) Rita objekt
+        // v4: point/meta-symboler förstoras 4× (34→136 px) så de syns tydligt
+        // när mottagaren öppnar PNG:n i Signal. Namn-brickan skalas med scale=4
+        // så texten "UPK 594", "HIND" osv. blir läsbar utan inzoom.
+        // Linje-/polygon-strokes skalas proportionellt så haloen ser kraftig
+        // ut bredvid jumbo-symbolerna.
         const drawLabels = opts.drawLabels !== false;
+        const SYMBOL_SCALE = 4;
+        const SYMBOL_SIZE = 34 * SYMBOL_SCALE;         // 136 px
+        const SYMBOL_HALF = SYMBOL_SIZE / 2;           // 68 px
+        const LABEL_OFFSET = SYMBOL_HALF + 16;         // ~84 px under symbol-center
         for (const o of objects) {
             const sym = SYM[o.typ];
             if (!sym) continue;
             if (sym.category === 'point' || sym.category === 'meta') {
                 const p = project(o.lat, o.lng);
                 const img = symbolImages[o.typ];
-                if (img) ctx.drawImage(img, p.x - 17, p.y - 17, 34, 34);
-                // Namn-bricka under markern (samma bild som skärmen)
+                if (img) ctx.drawImage(img, p.x - SYMBOL_HALF, p.y - SYMBOL_HALF, SYMBOL_SIZE, SYMBOL_SIZE);
+                // Namn-bricka under markern (samma bild som skärmen, 4× skalad)
                 if (drawLabels && o.typ !== 'ytter') {
-                    drawNameBadge(ctx, p.x, p.y + 22, o.label || sym.label);
+                    drawNameBadge(ctx, p.x, p.y + LABEL_OFFSET, o.label || sym.label, SYMBOL_SCALE);
                 }
             } else if (sym.category === 'line') {
-                // Halo-dubbel: mörk bred underst, färgad smalare ovanpå
+                // v4: vit halo bred under, svart linjearbete ovanpå — skalat
+                // så linjen inte ser tunn ut bredvid jumbo-symbolerna.
                 ctx.beginPath();
                 o.path.forEach((pt, i) => {
                     const p = project(pt.lat, pt.lng);
                     if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
                 });
-                // v3: vit halo under, svart linjearbete ovanpå (inverterat från v2)
+                const baseW = (sym.weight || 4);
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = (sym.weight || 4) + 2.5;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = baseW * 2 + 2;
                 ctx.stroke();
                 if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
-                ctx.strokeStyle = sym.stroke; ctx.lineWidth = (sym.weight || 4);
+                ctx.strokeStyle = sym.stroke; ctx.lineWidth = baseW * 2;
                 ctx.stroke();
                 ctx.setLineDash([]);
             } else if (sym.category === 'polygon') {
@@ -506,12 +519,12 @@
                 // Fyllning
                 ctx.fillStyle = hexToRgba(sym.fill, sym.fillOpacity || 0.2);
                 ctx.fill();
-                // v3: vit halo bred under + svart linjearbete ovanpå
+                // v4: bredare halo + stroke för kontrast mot jumbo-symbolerna
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 5;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 10;
                 ctx.stroke();
                 if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
-                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 2;
+                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 4;
                 ctx.stroke();
                 ctx.setLineDash([]);
                 if (o.etikett || o.antal) {
@@ -519,7 +532,7 @@
                     const cy = o.path.reduce((s, p) => s + p.lat, 0) / o.path.length;
                     const c = project(cy, cx);
                     ctx.fillStyle = '#e8f0e8';
-                    ctx.font = '700 12px Inter, sans-serif';
+                    ctx.font = '700 24px Inter, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.fillText(((o.etikett || '') + ' ' + (o.antal || '')).trim(), c.x, c.y);
                     ctx.textAlign = 'start';
