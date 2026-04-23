@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="fonts/inter.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+    <script src="minkarta-symbols.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -95,6 +96,40 @@
             .container { max-width: 100%; }
             #mapContainer { height: 62vh; min-height: 360px; }
         }
+
+        /* Symbolpalett */
+        .palette { margin-top: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .palette-head { padding: 10px 14px; background: var(--bg-secondary); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+        .palette-head-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+        .palette-active { font-size: 0.78rem; color: var(--accent); font-weight: 600; letter-spacing: 0.03em; }
+        .palette-body { padding: 10px 12px 14px; }
+        .palette-group { margin-top: 8px; }
+        .palette-group:first-child { margin-top: 0; }
+        .palette-group-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; padding-left: 2px; }
+        .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; }
+        .mk-tool {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 60px; padding: 6px 4px; gap: 4px;
+            background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            color: var(--text-secondary); font-family: inherit; font-size: 0.62rem; font-weight: 600;
+            letter-spacing: 0.02em; text-align: center; cursor: pointer; transition: border-color 0.12s, background 0.12s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .mk-tool:hover { border-color: var(--border-focus); background: var(--bg-secondary); }
+        .mk-tool.is-active { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+        .mk-tool svg { width: 28px; height: 28px; display: block; }
+        .mk-tool span { line-height: 1.15; }
+
+        .palette-toolbar { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+        .palette-toolbar button { flex: 1; min-width: 90px; }
+
+        /* Leaflet-ikonen (ingen bakgrund, bara SVG:n syns) */
+        .mk-icon { background: transparent !important; border: none !important; }
+        .mk-icon svg { width: 32px; height: 32px; display: block; filter: drop-shadow(0 1px 1px rgba(0,0,0,0.8)); }
+
+        /* Toast */
+        .mk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 0.82rem; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
+        .mk-toast.show { opacity: 1; }
     </style>
 </head>
 <body>
@@ -134,6 +169,15 @@
                 <span id="statusZoom" style="color:var(--text-muted)">z —</span>
             </div>
         </div>
+
+        <!-- Symbolpalett -->
+        <section class="palette" id="paletteRoot">
+            <div class="palette-head">
+                <span class="palette-head-title">Symbolpalett</span>
+                <span class="palette-active" id="paletteActive">Verktyg: pan</span>
+            </div>
+            <div class="palette-body" id="paletteBody"></div>
+        </section>
 
         <details class="about">
             <summary>Om MINKARTA &amp; integritet</summary>
@@ -294,8 +338,95 @@ function handleSearch(text) {
     }
 }
 
+// ── Aktivt verktyg (null = pan/ingen ritning) ───────────────────────────────
+let activeTool = null;
+
+function setActiveTool(id) {
+    activeTool = id;
+    const label = id ? (window.MK_SYMBOLS[id] ? window.MK_SYMBOLS[id].label : id) : 'pan';
+    document.getElementById('paletteActive').textContent = 'Verktyg: ' + label;
+    document.querySelectorAll('.mk-tool').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.tool === id);
+    });
+    // Pekare och cursor-feedback
+    const mapEl = document.getElementById('mapContainer');
+    if (mapEl) mapEl.style.cursor = id ? 'crosshair' : '';
+}
+
+function renderPalette() {
+    const body = document.getElementById('paletteBody');
+    if (!body || !window.MK_SYMBOL_GROUPS) return;
+    body.innerHTML = '';
+    window.MK_SYMBOL_GROUPS.forEach(group => {
+        const wrap = document.createElement('div');
+        wrap.className = 'palette-group';
+        const title = document.createElement('div');
+        title.className = 'palette-group-title';
+        title.textContent = group.title;
+        wrap.appendChild(title);
+        const grid = document.createElement('div');
+        grid.className = 'palette-grid';
+        group.ids.forEach(id => {
+            const sym = window.MK_SYMBOLS[id];
+            if (!sym) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'mk-tool';
+            btn.dataset.tool = id;
+            btn.title = sym.label;
+            btn.setAttribute('aria-label', sym.label);
+            btn.innerHTML = sym.svg + '<span>' + sym.label.replace(/[,(].*$/, '').trim() + '</span>';
+            btn.addEventListener('click', () => {
+                setActiveTool(activeTool === id ? null : id);
+            });
+            grid.appendChild(btn);
+        });
+        wrap.appendChild(grid);
+        body.appendChild(wrap);
+    });
+
+    // Verktygsfält: rensa aktivt val
+    const tb = document.createElement('div');
+    tb.className = 'palette-toolbar';
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'btn btn-sm btn-ghost';
+    clearBtn.textContent = 'Pan-läge';
+    clearBtn.addEventListener('click', () => setActiveTool(null));
+    tb.appendChild(clearBtn);
+    body.appendChild(tb);
+}
+
+function toast(msg, ms) {
+    const el = document.createElement('div');
+    el.className = 'mk-toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, ms || 2200);
+}
+
+// Placera en punktsymbol vid kartklick om ett punktverktyg är aktivt.
+// Linje/polygon hanteras i FAS B3 — här bara feedback.
+function handleMapClick(e) {
+    if (!activeTool) return;
+    const sym = window.MK_SYMBOLS[activeTool];
+    if (!sym) return;
+    if (sym.category === 'point' || sym.category === 'meta') {
+        const icon = window.mkMakeIcon(activeTool);
+        L.marker(e.latlng, { icon, title: sym.label, draggable: false }).addTo(map);
+        // Håll verktyget aktivt så att fler kan placeras i samma svep.
+    } else {
+        toast('Linje- och ytverktyg kommer i nästa fas.', 2500);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
+    // Registrera kartklick för symbol-placering
+    if (map) map.on('click', handleMapClick);
+    renderPalette();
+
     const input = document.getElementById('mgrsSearch');
     input.addEventListener('paste', e => {
         const raw = (e.clipboardData || window.clipboardData).getData('text');
