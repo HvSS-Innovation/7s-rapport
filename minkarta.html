@@ -229,17 +229,17 @@
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
                     <div>
                         <label style="display:block;font-size:0.68rem;margin-bottom:4px">Förband</label>
-                        <input type="text" id="pForband" placeholder="Ex: 2. hvplut">
+                        <input type="text" id="pForband" placeholder="Ex: 2. HVPLUT" oninput="this.value=this.value.toUpperCase()" style="text-transform:uppercase">
                     </div>
                     <div>
                         <label style="display:block;font-size:0.68rem;margin-bottom:4px">Chef</label>
-                        <input type="text" id="pChef" placeholder="Ex: fk Svensson">
+                        <input type="text" id="pChef" placeholder="Ex: FK SVENSSON" oninput="this.value=this.value.toUpperCase()" style="text-transform:uppercase">
                     </div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
                     <div>
-                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">TNR</label>
-                        <input type="text" id="pTnr" placeholder="DDHHMMZMånÅÅÅÅ">
+                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">TNR <span id="pTnrAutoBadge" style="display:none;font-style:italic;color:var(--text-muted);text-transform:none;letter-spacing:0;font-weight:400">(auto)</span></label>
+                        <input type="text" id="pTnr" placeholder="DDHHMM (Zulu)">
                     </div>
                     <div>
                         <label style="display:block;font-size:0.68rem;margin-bottom:4px">Röjningsskydd</label>
@@ -948,8 +948,8 @@ function ambitionDensity(amb) {
 function generateProtocolText() {
     const nr = document.getElementById('pNr').value.trim() || '—';
     const amb = document.getElementById('pAmbition').value;
-    const forband = document.getElementById('pForband').value.trim();
-    const chef = document.getElementById('pChef').value.trim();
+    const forband = document.getElementById('pForband').value.trim().toUpperCase();
+    const chef = document.getElementById('pChef').value.trim().toUpperCase();
     const tnr = document.getElementById('pTnr').value.trim().toUpperCase();
     const roj = document.getElementById('pRojskydd').value;
     const up = document.getElementById('pUp').value.trim();
@@ -1017,6 +1017,51 @@ function generateProtocolText() {
     return lines.join('\n');
 }
 
+// Auto-TNR: Zulu-kort DDHHMM (UTC). Skiljer sig från obslosa.setNow()
+// som använder lokal tid — minprotokoll rapporteras i UTC per reglementet.
+function zuluShortNow() {
+    const now = new Date();
+    const p = n => String(n).padStart(2, '0');
+    return p(now.getUTCDate()) + p(now.getUTCHours()) + p(now.getUTCMinutes());
+}
+
+function attachAutoTnr() {
+    const tnr = document.getElementById('pTnr');
+    const badge = document.getElementById('pTnrAutoBadge');
+    if (!tnr || !badge) return;
+    let tnrAuto = true;
+    let tnrAutoLast = '';
+
+    const setAuto = () => {
+        tnrAutoLast = zuluShortNow();
+        tnr.value = tnrAutoLast;
+        badge.style.display = '';
+    };
+    const clearAuto = () => {
+        tnrAuto = false;
+        badge.style.display = 'none';
+    };
+
+    // Init: bara sätt om fältet är tomt
+    if (!tnr.value.trim()) {
+        setAuto();
+    } else {
+        clearAuto();
+    }
+
+    // Refresh var 60:e sekund medan auto-läget är på
+    setInterval(() => {
+        if (!tnrAuto) return;
+        tnrAutoLast = zuluShortNow();
+        tnr.value = tnrAutoLast;
+    }, 60_000);
+
+    // Användarändring släcker auto-läget
+    tnr.addEventListener('input', () => {
+        if (tnr.value !== tnrAutoLast) clearAuto();
+    });
+}
+
 function attachProtocolActions() {
     const up = document.getElementById('pUp');
     const warn = document.getElementById('pUpWarn');
@@ -1026,6 +1071,8 @@ function attachProtocolActions() {
     };
     up.addEventListener('input', checkUp);
     checkUp();
+
+    attachAutoTnr();
 
     document.getElementById('pCount').addEventListener('click', () => {
         const c = countMinesByType();
@@ -1043,7 +1090,7 @@ function attachProtocolActions() {
         const nr = document.getElementById('pNr').value.trim();
         window.__minkartaTitle = 'MINERING ' + (nr || '—');
         const amb = document.getElementById('pAmbition').value;
-        window.__minkartaSubtitle = [amb, document.getElementById('pForband').value.trim(), document.getElementById('pTnr').value.trim()].filter(Boolean).join(' · ');
+        window.__minkartaSubtitle = [amb, document.getElementById('pForband').value.trim().toUpperCase(), document.getElementById('pTnr').value.trim()].filter(Boolean).join(' · ');
     });
 
     document.getElementById('pCopy').addEventListener('click', async () => {
