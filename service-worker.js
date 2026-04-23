@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260424_minkartav2_6';
+const CACHE = 'hv-20260424_minkartav2_7';
 const FILES = [
   './',
   './index.html',

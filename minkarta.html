@@ -260,6 +260,11 @@
                 <textarea id="pNote" rows="2" placeholder="Fria anteckningar…"
                     style="width:100%;padding:10px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem"></textarea>
 
+                <label style="display:flex;align-items:center;gap:6px;margin-top:8px;font-size:0.78rem;color:var(--text-secondary);text-transform:none;letter-spacing:0;font-weight:500;cursor:pointer">
+                    <input type="checkbox" id="pIncludeData" checked style="accent-color:var(--accent);width:16px;height:16px">
+                    Inkludera datalista (fullständiga MGRS-positioner) i sammanställningen
+                </label>
+
                 <div style="display:flex;gap:6px;margin-top:10px">
                     <button type="button" class="btn btn-sm btn-accent" id="pGen" style="flex:2">Generera sammanställning</button>
                     <button type="button" class="btn btn-sm btn-ghost" id="pCount">Räkna minor</button>
@@ -1148,6 +1153,56 @@ function generateProtocolText() {
     }
     if (note) { lines.push('------------------'); lines.push(note); }
 
+    // === DATALISTA (fullständiga positioner) ===
+    const inclEl = document.getElementById('pIncludeData');
+    const includeData = inclEl ? inclEl.checked : true;
+    try { localStorage.setItem('minkarta.includeData', includeData ? '1' : '0'); } catch (_) {}
+    if (includeData && state.objects.length) {
+        lines.push('');
+        lines.push('=== DATALISTA (fullständiga positioner) ===');
+        lines.push(' #  TYP                         MGRS               ETIKETT   ANTECKNING');
+        const labelMapFull = Object.assign({}, labelMap, {
+            minruta: 'Minruta',
+            minomrade: 'Minerat område',
+            skenminering: 'Skenminering',
+            avstand_tramp: 'Avståndslagd trampmin.',
+            avstand_strv: 'Avståndslagd strvmin.',
+            minlinje: 'Minlinje',
+            avsparrning: 'Avspärrning',
+            ytter: 'Yttergränsmarkör',
+            up: 'UP-markör',
+            sp: 'SP-markör'
+        });
+        let idx = 0;
+        for (const o of state.objects) {
+            idx++;
+            const sym = window.MK_SYMBOLS[o.typ];
+            if (!sym) continue;
+            let centerLat, centerLng, suffix = '';
+            if (sym.category === 'point' || sym.category === 'meta') {
+                centerLat = o.lat; centerLng = o.lng;
+            } else if (o.path && o.path.length) {
+                centerLat = o.path.reduce((s, p) => s + p.lat, 0) / o.path.length;
+                centerLng = o.path.reduce((s, p) => s + p.lng, 0) / o.path.length;
+                suffix = ' (' + o.path.length + ' noder, ' + (sym.category === 'line' ? 'center' : 'center') + ')';
+            } else { continue; }
+            const mgrs = safeMgrs(centerLat, centerLng) || '—';
+            const rawLabel = (labelMapFull[o.typ] || o.typ) + suffix;
+            let etikett = o.label || o.etikett || '';
+            if (o.typ === 'sp' && o.refUpSeq && o.bearing != null) {
+                etikett = (etikett || 'SP' + (o.seq || '')) + ' fr UP' + o.refUpSeq;
+            } else if (o.typ === 'up' && o.adress) {
+                etikett = (etikett || 'UP' + (o.seq || ''));
+            }
+            const anteckning = o.anteckning || o.adress || (o.antal ? String(o.antal) : '');
+            const n = String(idx).padStart(2, ' ');
+            const typ = rawLabel.padEnd(26, ' ').slice(0, 26);
+            const m = mgrs.padEnd(18, ' ').slice(0, 18);
+            const e = (etikett || '').padEnd(9, ' ').slice(0, 9);
+            lines.push(' ' + n + '  ' + typ + '  ' + m + '  ' + e + ' ' + anteckning);
+        }
+    }
+
     return lines.join('\n');
 }
 
@@ -1207,6 +1262,15 @@ function attachProtocolActions() {
     checkUp();
 
     attachAutoTnr();
+
+    // Återställ "Inkludera datalista"-preferensen
+    try {
+        const saved = localStorage.getItem('minkarta.includeData');
+        if (saved !== null) {
+            const el = document.getElementById('pIncludeData');
+            if (el) el.checked = saved === '1';
+        }
+    } catch (_) {}
 
     document.getElementById('pCount').addEventListener('click', () => {
         const c = countMinesByType();
