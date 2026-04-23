@@ -165,18 +165,6 @@
         .map-controls .btn-sm { margin-left: auto; }
         @media (max-width: 360px) { .map-controls .btn-sm { margin-left: 0; } }
 
-        /* Bifoga-karta-modal (text + PNG) */
-        .mk-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 16px; }
-        .mk-modal {
-            background: var(--bg-secondary); border: 1px solid var(--accent);
-            border-radius: var(--radius); padding: 16px; max-width: 420px;
-            box-shadow: 0 8px 24px rgba(0,0,0,0.8); z-index: 9999;
-        }
-        .mk-modal-title { font-size: 0.95rem; font-weight: 700; color: var(--accent); letter-spacing: 0.04em; text-transform: uppercase; margin-bottom: 8px; }
-        .mk-modal-body  { font-size: 0.85rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px; }
-        .mk-modal-actions { display: flex; gap: 6px; flex-wrap: wrap; }
-        .mk-modal-actions .btn { flex: 1; min-width: 100px; }
-
         /* Export-popover (Ladda ner / Dela) */
         .mk-share-popover {
             position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%);
@@ -311,7 +299,7 @@
                     <button type="button" class="btn btn-sm btn-ghost" id="pCount">Räkna minor</button>
                 </div>
                 <pre id="pOut" style="display:none;margin-top:10px;padding:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Courier New',monospace;font-size:0.82rem;line-height:1.6;color:var(--text-primary);white-space:pre-wrap"></pre>
-                <button type="button" class="btn btn-sm btn-ghost" id="pCopy" style="display:none;width:100%;margin-top:6px">Kopiera till urklipp</button>
+                <button type="button" class="btn btn-sm btn-accent" id="pShare" style="display:none;width:100%;margin-top:6px">Dela protokoll</button>
             </div>
         </details>
 
@@ -1160,8 +1148,8 @@ function resetProtocolPanel() {
     selects.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
     const out = document.getElementById('pOut');
     if (out) { out.textContent = ''; out.style.display = 'none'; }
-    const shareOrCopy = document.getElementById('pShare') || document.getElementById('pCopy');
-    if (shareOrCopy) shareOrCopy.style.display = 'none';
+    const share = document.getElementById('pShare');
+    if (share) share.style.display = 'none';
     const warn = document.getElementById('pUpWarn');
     if (warn) warn.style.display = 'none';
     // Auto-TNR restart
@@ -1531,7 +1519,7 @@ function attachProtocolActions() {
         const out = document.getElementById('pOut');
         out.textContent = txt;
         out.style.display = 'block';
-        document.getElementById('pCopy').style.display = 'block';
+        document.getElementById('pShare').style.display = 'block';
         // Uppdatera även PNG-exportens titel
         const nr = document.getElementById('pNr').value.trim();
         window.__minkartaTitle = 'MINERING ' + (nr || '—');
@@ -1539,81 +1527,47 @@ function attachProtocolActions() {
         window.__minkartaSubtitle = [amb, document.getElementById('pForband').value.trim().toUpperCase(), document.getElementById('pTnr').value.trim()].filter(Boolean).join(' · ');
     });
 
-    document.getElementById('pCopy').addEventListener('click', () => {
+    // v4: "Dela protokoll" genererar alltid PNG automatiskt och försöker
+    // navigator.share({files, text}). Ingen fråga-först-modal längre.
+    document.getElementById('pShare').addEventListener('click', async () => {
         const txt = document.getElementById('pOut').textContent;
         if (!txt) return;
-        showAttachMapModal(txt);
-    });
-}
-
-// ── Modal: Bifoga kartbild vid kopiera/dela? ────────────────────────────────
-function showAttachMapModal(text) {
-    closeAttachMapModal();
-    const backdrop = document.createElement('div');
-    backdrop.className = 'mk-modal-backdrop';
-    backdrop.id = 'mkAttachBackdrop';
-    backdrop.innerHTML = `
-        <div class="mk-modal" role="dialog" aria-modal="true" aria-labelledby="mkAttachTitle">
-            <div class="mk-modal-title" id="mkAttachTitle">Bifoga kartbild?</div>
-            <div class="mk-modal-body">Protokollet är klart att kopieras. Vill du även bifoga en PNG av kartan?</div>
-            <div class="mk-modal-actions">
-                <button type="button" class="btn btn-sm btn-ghost" id="mkAttachText">Bara text</button>
-                <button type="button" class="btn btn-sm btn-accent" id="mkAttachBoth">Text + karta</button>
-                <button type="button" class="btn btn-sm" id="mkAttachCancel" style="background:#c62828;color:#fff">Avbryt</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(backdrop);
-
-    async function copyTextOnly() {
+        const btn = document.getElementById('pShare');
+        const originalLabel = btn.textContent;
+        btn.disabled = true; btn.textContent = 'Renderar…';
         try {
-            await navigator.clipboard.writeText(text);
-            toast('Kopierat.');
-            if (navigator.share) { try { await navigator.share({ text }); } catch (_) {} }
-        } catch (_) {
-            const r = document.createRange();
-            r.selectNode(document.getElementById('pOut'));
-            getSelection().removeAllRanges();
-            getSelection().addRange(r);
-            toast('Markerat — tryck Ctrl+C.');
-        }
-    }
-
-    async function copyTextAndShareMap() {
-        try { await navigator.clipboard.writeText(text); } catch (_) {}
-        let blobInfo = _lastExport;
-        if (!blobInfo) {
-            try { blobInfo = await prepareExportBlob(); }
-            catch (e) { toast('Kunde inte rendera karta: ' + (e.message || 'okänt'), 3200); return; }
-        }
-        if (!blobInfo) return;
-        const shareRes = await window.MK_EXPORT.shareBlob(blobInfo.blob, blobInfo.filename, text);
-        if (shareRes === 'shared') { toast('Delad (text + karta).', 2200); return; }
-        if (shareRes === 'unsupported') {
+            // Generera PNG (använd cache om den finns)
+            let blobInfo = _lastExport;
+            if (!blobInfo) {
+                try { blobInfo = await prepareExportBlob(); }
+                catch (e) { toast('Kunde inte rendera karta: ' + (e.message || 'okänt'), 3200); return; }
+            }
+            if (!blobInfo) {
+                // Ingen karta att bifoga — dela bara text
+                await shareTextOnly(txt);
+                return;
+            }
+            // Försök Web Share med fil + text
+            const shareRes = await window.MK_EXPORT.shareBlob(blobInfo.blob, blobInfo.filename, txt);
+            if (shareRes === 'shared') { toast('Delad (text + karta).', 2200); return; }
+            // Fallback: clipboard + PNG-download
+            try { await navigator.clipboard.writeText(txt); } catch (_) {}
             window.MK_EXPORT.downloadBlob(blobInfo.blob, blobInfo.filename);
             toast('Text kopierad. PNG nedladdad — bifoga manuellt i Signal.', 4000);
+        } finally {
+            btn.disabled = false; btn.textContent = originalLabel;
         }
-    }
-
-    document.getElementById('mkAttachText').addEventListener('click', async () => {
-        closeAttachMapModal();
-        await copyTextOnly();
     });
-    document.getElementById('mkAttachBoth').addEventListener('click', async () => {
-        closeAttachMapModal();
-        await copyTextAndShareMap();
-    });
-    document.getElementById('mkAttachCancel').addEventListener('click', closeAttachMapModal);
-    backdrop.addEventListener('click', e => { if (e.target === backdrop) closeAttachMapModal(); });
-
-    // Esc-tangenten = Avbryt
-    const onKey = e => { if (e.key === 'Escape') { closeAttachMapModal(); document.removeEventListener('keydown', onKey); } };
-    document.addEventListener('keydown', onKey);
 }
 
-function closeAttachMapModal() {
-    const el = document.getElementById('mkAttachBackdrop');
-    if (el) el.remove();
+async function shareTextOnly(txt) {
+    try {
+        await navigator.clipboard.writeText(txt);
+        toast('Text kopierad (ingen karta att bifoga).', 2400);
+        if (navigator.share) { try { await navigator.share({ text: txt }); } catch (_) {} }
+    } catch (_) {
+        toast('Kunde inte kopiera. Markera texten manuellt.', 3200);
+    }
 }
 
 document.addEventListener('DOMContentLoaded', () => {
