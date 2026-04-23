@@ -280,10 +280,10 @@
                         </select>
                     </div>
                 </div>
-                <label style="display:block;font-size:0.68rem;margin-top:8px;margin-bottom:4px">Utgångspunkter (en per rad: MGRS, ev. kompass° avstånd m)</label>
-                <textarea id="pUp" rows="3" placeholder="33VUH 23567 45678 — Rött hus, 180° 140 m&#10;33VUH 24012 45902 — Träddunge"
+                <label style="display:block;font-size:0.68rem;margin-top:8px;margin-bottom:4px">Utgångspunkter (autogenereras från UPK/SP på kartan — manuella rader bevaras)</label>
+                <textarea id="pUp" rows="3" placeholder="UPK 594: 33VUH 23567 45678 — Rött hus&#10;UPK 142: 33VUH 24012 45902 — Träddunge&#10;SP1: 33VUH 23471 45684 (från UPK 594, 170° 140 m)"
                     style="width:100%;padding:10px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem"></textarea>
-                <div id="pUpWarn" style="display:none;color:var(--warn);font-size:0.72rem;margin-top:4px">Obs: reglementet kräver minst två utgångspunkter.</div>
+                <div id="pUpWarn" style="display:none;color:var(--warn);font-size:0.72rem;margin-top:4px">Obs: reglementet kräver minst 2 UPK och 1 SP.</div>
 
                 <label style="display:block;font-size:0.68rem;margin-top:8px;margin-bottom:4px">Anteckningar</label>
                 <textarea id="pNote" rows="2" placeholder="Fria anteckningar…"
@@ -316,7 +316,7 @@
                 <ul>
                     <li>OpenTopoMap-tiles (kartbilder) för zoomnivå upp till 17 — skickar zoom, x- och y-index för de rutor som ritas på skärmen.</li>
                     <li>OpenStreetMap Standard-tiles (<code>tile.openstreetmap.org</code>) för zoomnivå 18–19, eftersom OpenTopoMap inte har data där. Aktiveras automatiskt när du zoomar in närmare; status-raden visar vilket lager som används.</li>
-                    <li>Nominatim/Overpass vid adressökning och för UP-markörers reverse-geocode — skickar endast kartans vy-center, sökfras eller UP-markörens koordinat, aldrig minsymbolpositioner. UP och SP är bestämbara referenspunkter i terrängen (PDF s. 338), inte skarpa minpositioner.</li>
+                    <li>Nominatim/Overpass vid adressökning och för UPK-markörers reverse-geocode — skickar endast kartans vy-center, sökfras eller UPK-markörens koordinat, aldrig minsymbolpositioner. UPK (Utgångs-Punkt-Koordinat) och SP är bestämbara referenspunkter i terrängen (PDF s. 338), inte skarpa minpositioner.</li>
                 </ul>
                 <p>All ritning, lagring och export sker lokalt i webbläsaren.
                 Export (PNG) och delning är alltid användar-initierad.</p>
@@ -929,7 +929,7 @@ function syncUpTextarea() {
     }
     ta.value = [...autoLines, ...keptManual].join('\n');
 
-    // Reglementsvarning (text uppdateras till UPK-terminologi i FAS 5).
+    // Reglementsvarning: räknar UPK på kartan (inte textbaserat) + SP.
     const nUpk = state.objects.filter(o => o.typ === 'upk').length;
     const nSp  = state.objects.filter(o => o.typ === 'sp').length;
     const warn = document.getElementById('pUpWarn');
@@ -937,8 +937,8 @@ function syncUpTextarea() {
         if (nUpk < 2 || nSp < 1) {
             warn.style.display = 'block';
             const needs = [];
-            if (nUpk < 2) needs.push('minst 2 utgångspunkter');
-            if (nSp < 1) needs.push('minst 1 startpunkt');
+            if (nUpk < 2) needs.push('minst 2 UPK');
+            if (nSp < 1) needs.push('minst 1 SP');
             warn.textContent = 'Obs: reglementet kräver ' + needs.join(' och ') + '.';
         } else {
             warn.style.display = 'none';
@@ -1299,8 +1299,11 @@ function generateProtocolText() {
     }
     lines.push('------------------');
     if (upLines.length) {
-        upLines.forEach((l, i) => lines.push('UP' + (i + 1) + ': ' + l));
-        if (upLines.length < 2) lines.push('(obs: reglementet kräver minst 2 utgångspunkter)');
+        // Textarean innehåller redan autogenererade "UPK xxx:"-rader och ev.
+        // manuell text — skriv ut oförändrat för att bevara UPK-numreringen.
+        upLines.forEach(l => lines.push(l));
+        const nUpk = state.objects.filter(o => o.typ === 'upk').length;
+        if (nUpk < 2) lines.push('(obs: reglementet kräver minst 2 UPK)');
     }
     lines.push('------------------');
     const labelMap = {
@@ -1446,15 +1449,9 @@ function attachAutoTnr() {
 }
 
 function attachProtocolActions() {
-    const up = document.getElementById('pUp');
-    const warn = document.getElementById('pUpWarn');
-    const checkUp = () => {
-        const n = (up.value.trim().split(/\r?\n/).filter(Boolean)).length;
-        warn.style.display = n < 2 ? 'block' : 'none';
-    };
-    up.addEventListener('input', checkUp);
-    checkUp();
-
+    // pUp-textarean är nu auto-genererad från UPK/SP på kartan.
+    // Reglementsvarningen sätts av syncUpTextarea() baserat på antal
+    // objekt i state — inte på antal rader i textarean.
     attachAutoTnr();
 
     // Återställ "Inkludera datalista"-preferensen
