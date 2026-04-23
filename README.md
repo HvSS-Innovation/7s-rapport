@@ -40,7 +40,7 @@ Verktyget kommer nu att fungera även när du har flygplansläge eller är i rad
 | **OBO** | Orientering-Beslut-Order (*Tidigt utvecklingsstadium*) |
 | **RASSOIKA** | Patrullchefens checklista (*Tidigt utvecklingsstadium*) |
 | **VÄDER** | Meteorologisk prognos (Hämtar SMHI-data vid täckning) |
-| **MINKARTA** | Minläggningskarta & minprotokoll (svart reglementstecken enligt PDF, UPK-numrering 001–999, UPK/SP-auto-inmätning, datalista, PNG + share-popover, övningsläge) |
+| **MINKARTA** | Minläggningskarta & minprotokoll (reglementstecken från stab-paketet 2026-04-26, UPK-numrering 001–999, UPK/SP-auto-inmätning, datalista, automatisk dela-med-karta, jumbo-symboler i PNG-export, övningsläge) |
 
 ## Teknisk Arkitektur
 Applikationen är byggd som en "Modern Vanilla" webbapplikation med ren HTML5, CSS3 och JavaScript (ES6). Den använder inga tunga bibliotek eller ramverk för att säkerställa extremt snabb uppstart och minimal batteriförbrukning på mobila enheter. Service Workers hanterar cachning för offline-bruk.
@@ -53,6 +53,49 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 ---
 
 ## Dagbok: Utvecklingslogg
+
+### 2026-04-26: MINKARTA v4 — nya SVG-symboler + dela-med-karta
+Sex-fas-iteration på MINKARTA (roadmap: `roadmap-minkarta-v4.md`). v3-
+grunden med svarta reglementstecken och UPK-numrering ligger kvar; v4 är
+en visuell och interaktionsmässig finputs som byter ut själva symbol-
+renderingen mot ett nytt SVG-paket från staben och förenklar dela-flödet.
+
+*   **Nya SVG-symboler (FAS 1):** 20 reglementstecken från
+    `stab/Ny mapp (2)/` ersätter v3:s inline-SVG:er. Filnamn städas:
+    `" (N)"`-suffix bort, `_` → space. Ny nyckel `forst_forb_sakrad`
+    (Förberedd förstöring, säkrad) som eget reglementsbegrepp —
+    skiljer passage-möjlig säkring från rå förberedd förstöring.
+    Sju v3-nycklar tas bort (`strv_full`, `strv_rojskydd`, `trad`,
+    `avstand`, `skenminering`, `landmina_okand`, `riktad_verkan`) —
+    ingen motsvarighet i nya paketet. Migration i `loadPersisted()`
+    filtrerar bort gamla typer i IndexedDB-state och visar en toast
+    så användaren ser vad som hände. Palett-bakgrunden vitnas så de
+    svarta symbolerna syns tydligt.
+*   **Jumbo-symboler i PNG (FAS 2):** `renderExportAsync()` skalar upp
+    point/meta-symbolerna 4× (34→136 px) i exporten. Namn-brickan,
+    linje-/polygon-strokes och polygon-etiketterna skalas
+    proportionellt (`drawNameBadge` får en `scale`-parameter). Texten
+    "UPK 594", "HIND" osv. blir läsbar utan inzoom när mottagaren
+    öppnar PNG:n i Signal. Skärmvisningen är oförändrad.
+*   **Genvägsrad under kartan (FAS 3):** `.palette-layers` (Namn-
+    etiketter-toggle) och Pan-läge-knappen flyttas ut ur paletten till
+    en ny `.map-controls`-rad direkt under `.map-wrap`, ovanför paletten.
+    De mest frekventa UI-kontrollerna är nu åtkomliga utan scroll.
+    Ångra/Gör om/Exportera/Rensa ligger kvar i palette-toolbaren.
+*   **Utökad Rensa (FAS 4):** "Rensa allt" nollställer nu även hela
+    protokoll-panelen — `#pNr`, `#pAmbition`, `#pForband`, `#pChef`,
+    `#pTnr`, `#pRojskydd`, `#pUp`, `#pNote`, `#pOut`, `#pShare`,
+    `#pUpWarn`. Auto-TNR prefillas om med ny Zulu-kort, badge visas
+    igen. PNG-cachen `_lastExport` rensas. Dubbel-bekräftelsen bevaras.
+*   **Dela protokoll (FAS 5):** `showAttachMapModal`-dialogen
+    elimineras (död kod, CSS och funktioner borttagna). "Kopiera till
+    urklipp" döps om till "Dela protokoll" och blir accent-grön. Klick
+    genererar alltid PNG + försöker `navigator.share({files, text})`.
+    Fallback: clipboard + PNG-download + toast
+    "Text kopierad. PNG nedladdad — bifoga manuellt i Signal."
+*   **Polish (FAS 6):** `service-worker.js` CACHE bumpat stegvis
+    `_1` → `_6`, slutar på `hv-20260426_minkartav4_6`. README:s
+    MINKARTA-rad uppdaterad. Manuell test-matris körd.
 
 ### 2026-04-25: MINKARTA v3 — svarta reglementstecken + UPK-numrering
 Sex-fas-iteration på MINKARTA (roadmap: `roadmap-minkarta-v3.md`).
