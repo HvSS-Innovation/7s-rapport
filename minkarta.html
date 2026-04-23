@@ -634,8 +634,9 @@ function removeObject(id) {
     pushUndo();
     state.objects.splice(idx, 1);
     if (state.layers[id]) { map.removeLayer(state.layers[id]); delete state.layers[id]; }
-    // UP/SP: synkronisera textarean och omnumrera övriga
-    if (typ === 'up' || typ === 'sp') {
+    // UPK/SP: synkronisera textarean. UPK-nummer är stabila — övriga UPK:er
+    // behåller sina nummer. Bara SP:er renumreras vid behov.
+    if (typ === 'upk' || typ === 'sp') {
         syncUpTextarea();
         rebuildLayers();
     }
@@ -655,8 +656,8 @@ function renderObject(obj) {
             pushUndo();
             const ll = layer.getLatLng();
             obj.lat = ll.lat; obj.lng = ll.lng;
-            if (obj.typ === 'up') {
-                reverseGeocodeUp(obj);   // uppdaterar även textarean
+            if (obj.typ === 'upk') {
+                reverseGeocodeUpk(obj);   // uppdaterar även textarean
             } else if (obj.typ === 'sp') {
                 syncUpTextarea();
             }
@@ -784,7 +785,7 @@ function cancelDraft() {
     state.draft = null; state.draftLayer = null;
 }
 
-// ── UP/SP-hjälp: bäring, avstånd, reverse-geocode, textarea-sync ────────────
+// ── UPK/SP-hjälp: slumpnummer, bäring, avstånd, reverse-geocode, textarea-sync
 function initialBearing(a, b) {
     const φ1 = a.lat * Math.PI / 180, φ2 = b.lat * Math.PI / 180;
     const λ1 = a.lng * Math.PI / 180, λ2 = b.lng * Math.PI / 180;
@@ -793,50 +794,71 @@ function initialBearing(a, b) {
     return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
 }
 
-function findClosestUp(sp) {
+// UPK-nummer: stabila slumpade heltal 1..999 per placering. Identifierare är
+// unika i kartan — kollision löses via omsamplering.
+function padUpk(n) { return String(n).padStart(3, '0'); }
+function upkLabel(o) { return 'UPK ' + padUpk(o.nr); }
+
+function randomUpkNr(existing) {
+    const taken = new Set(existing);
+    if (taken.size >= 999) return null;        // alla upptagna
+    let guard = 0;
+    while (guard++ < 2000) {
+        const n = Math.floor(Math.random() * 999) + 1;   // 1..999
+        if (!taken.has(n)) return n;
+    }
+    // extremfall: linjär fallback om slumpen har otur
+    for (let n = 1; n <= 999; n++) if (!taken.has(n)) return n;
+    return null;
+}
+
+function existingUpkNrs() {
+    return state.objects.filter(o => o.typ === 'upk' && typeof o.nr === 'number').map(o => o.nr);
+}
+
+function findClosestUpk(sp) {
     let best = null, bestD = Infinity;
     for (const o of state.objects) {
-        if (o.typ !== 'up') continue;
+        if (o.typ !== 'upk') continue;
         const d = haversine({ lat: sp.lat, lng: sp.lng }, { lat: o.lat, lng: o.lng });
         if (d < bestD) { bestD = d; best = o; }
     }
-    return best ? { up: best, distanceM: bestD } : null;
+    return best ? { upk: best, distanceM: bestD } : null;
 }
 
-function recomputeRefSeqAndDerived() {
-    // Omnumrera alla UP/SP i insertionsordning och räkna om SP-bäringar
-    let upSeq = 0, spSeq = 0;
+function recomputeSpDerived() {
+    // UPK-nummer är stabila — aldrig omnumrerade. SP:er får en sekventiell
+    // seq i insertionsordning (det är deras displaynamn) och sin bäring mot
+    // närmaste UPK beräknad om vid varje sync.
+    let spSeq = 0;
     for (const o of state.objects) {
-        if (o.typ === 'up') {
-            upSeq++;
-            o.seq = upSeq;
-            o.label = 'UP' + upSeq;
-        } else if (o.typ === 'sp') {
+        if (o.typ === 'sp') {
             spSeq++;
             o.seq = spSeq;
             o.label = 'SP' + spSeq;
-            const ref = findClosestUp(o);
+            const ref = findClosestUpk(o);
             if (ref) {
-                o.refUp = ref.up.id;
-                o.refUpSeq = ref.up.seq;
-                o.bearing = Math.round(initialBearing(ref.up, o));
+                o.refUpk = ref.upk.id;
+                o.refUpkNr = ref.upk.nr;
+                o.bearing = Math.round(initialBearing(ref.upk, o));
                 o.distanceM = Math.round(ref.distanceM);
             } else {
-                o.refUp = null; o.refUpSeq = null; o.bearing = null; o.distanceM = null;
+                o.refUpk = null; o.refUpkNr = null; o.bearing = null; o.distanceM = null;
             }
         }
     }
 }
 
-function formatUpLine(o) {
+function formatUpkLine(o) {
     const mgrs = safeMgrs(o.lat, o.lng) || '—';
     const adress = o.adress || (o.reverseLoading ? '(hämtar adress…)' : '');
-    return 'UP' + o.seq + ': ' + mgrs + (adress ? ' — ' + adress : '');
+    return upkLabel(o) + ': ' + mgrs + (adress ? ' — ' + adress : '');
 }
 function formatSpLine(o) {
+    // SP-referensformat uppdateras i FAS 5 till "från UPK <nnn>".
     const mgrs = safeMgrs(o.lat, o.lng) || '—';
-    if (o.refUpSeq && o.bearing != null && o.distanceM != null) {
-        return 'SP' + o.seq + ': ' + mgrs + ' (från UP' + o.refUpSeq + ', ' + o.bearing + '° ' + o.distanceM + ' m)';
+    if (o.refUpkNr != null && o.bearing != null && o.distanceM != null) {
+        return 'SP' + o.seq + ': ' + mgrs + ' (från UPK ' + padUpk(o.refUpkNr) + ', ' + o.bearing + '° ' + o.distanceM + ' m)';
     }
     return 'SP' + o.seq + ': ' + mgrs;
 }
@@ -844,27 +866,29 @@ function formatSpLine(o) {
 function syncUpTextarea() {
     const ta = document.getElementById('pUp');
     if (!ta) return;
-    recomputeRefSeqAndDerived();
-    // Bevara rader som inte ser ut som UP<n>: eller SP<n>: (manuell fri text)
+    recomputeSpDerived();
+    // Bevara rader som inte ser ut som UP<n>: / UPK <nnn>: / SP<n>:
+    // (manuell fri text). UP-prefixet matchas kvar för bakåtkompat med
+    // sessioner som fortfarande har gamla rader i textarean.
     const keptManual = (ta.value || '').split(/\r?\n/).filter(line => {
-        return line.trim() !== '' && !/^\s*(UP|SP)\d+\s*:/i.test(line);
+        return line.trim() !== '' && !/^\s*(UPK\s*\d+|UP\d+|SP\d+)\s*:/i.test(line);
     });
     const autoLines = [];
     for (const o of state.objects) {
-        if (o.typ === 'up') autoLines.push(formatUpLine(o));
+        if (o.typ === 'upk') autoLines.push(formatUpkLine(o));
         else if (o.typ === 'sp') autoLines.push(formatSpLine(o));
     }
     ta.value = [...autoLines, ...keptManual].join('\n');
 
-    // Uppdatera reglements-varningen
-    const nUp = state.objects.filter(o => o.typ === 'up').length;
-    const nSp = state.objects.filter(o => o.typ === 'sp').length;
+    // Reglementsvarning (text uppdateras till UPK-terminologi i FAS 5).
+    const nUpk = state.objects.filter(o => o.typ === 'upk').length;
+    const nSp  = state.objects.filter(o => o.typ === 'sp').length;
     const warn = document.getElementById('pUpWarn');
     if (warn) {
-        if (nUp < 2 || nSp < 1) {
+        if (nUpk < 2 || nSp < 1) {
             warn.style.display = 'block';
             const needs = [];
-            if (nUp < 2) needs.push('minst 2 utgångspunkter');
+            if (nUpk < 2) needs.push('minst 2 utgångspunkter');
             if (nSp < 1) needs.push('minst 1 startpunkt');
             warn.textContent = 'Obs: reglementet kräver ' + needs.join(' och ') + '.';
         } else {
@@ -873,7 +897,7 @@ function syncUpTextarea() {
     }
 }
 
-function reverseGeocodeUp(obj) {
+function reverseGeocodeUpk(obj) {
     if (!navigator.onLine) { obj.adress = ''; obj.reverseLoading = false; syncUpTextarea(); return; }
     obj.reverseLoading = true;
     syncUpTextarea();
@@ -899,14 +923,25 @@ function handleMapClick(e) {
     if (!sym) return;
     if (sym.category === 'point' || sym.category === 'meta') {
         const obj = { id: uid(), typ: activeTool, lat: e.latlng.lat, lng: e.latlng.lng, created: Date.now() };
-        if (activeTool === 'up' || activeTool === 'sp') {
-            // seq/label sätts av recomputeRefSeqAndDerived(), men labelen behöver
-            // finnas redan vid första render för tooltip — vi ger en temporär
+        if (activeTool === 'upk') {
+            // Slumpa stabilt unikt nummer 001–999. Om alla är tagna — avbryt.
+            const nr = randomUpkNr(existingUpkNrs());
+            if (nr == null) {
+                toast('Alla 999 UPK-nummer är upptagna — ta bort en UPK först.', 3200);
+                return;
+            }
+            obj.nr = nr;
+            obj.label = upkLabel(obj);
             addObject(obj);
             syncUpTextarea();
-            // Uppdatera marker-tooltip till rätt label (UP1/SP1 etc.)
-            rebuildLayers();
-            if (activeTool === 'up') reverseGeocodeUp(obj);
+            rebuildLayers();                  // sätt tooltip-brickan till "UPK xxx"
+            reverseGeocodeUpk(obj);
+            return;
+        }
+        if (activeTool === 'sp') {
+            addObject(obj);
+            syncUpTextarea();
+            rebuildLayers();                  // sätt tooltip-brickan till "SPn"
             return;
         }
         addObject(obj);
@@ -965,9 +1000,25 @@ async function loadPersisted() {
         const saved = await dbGet(DB_KEY);
         if (saved && Array.isArray(saved.objects)) {
             state.objects = saved.objects;
+            // v2 → v3-migration: gamla "up"-typer byter till "upk" + slumpnr.
+            const takenNrs = existingUpkNrs();
+            let migrated = 0;
+            for (const o of state.objects) {
+                if (o.typ === 'up') {
+                    o.typ = 'upk';
+                    const nr = randomUpkNr(takenNrs);
+                    if (nr != null) { o.nr = nr; takenNrs.push(nr); }
+                    o.label = upkLabel(o);
+                    delete o.seq;               // seq var v2-derivat, ersätts av stabilt nr
+                    migrated++;
+                }
+            }
+            if (migrated) {
+                console.log('MINKARTA v3: migrerade ' + migrated + ' UP → UPK med slumpnummer');
+                scheduleAutosave();
+            }
             rebuildLayers();
-            // Om tidigare session hade UP/SP — uppdatera textarea och varningar
-            if (state.objects.some(o => o.typ === 'up' || o.typ === 'sp')) {
+            if (state.objects.some(o => o.typ === 'upk' || o.typ === 'sp')) {
                 syncUpTextarea();
             }
         }
@@ -1264,8 +1315,8 @@ function generateProtocolText() {
             minlinje: 'Minlinje',
             avsparrning: 'Avspärrning',
             ytter: 'Yttergränsmarkör',
-            up: 'UP-markör',
-            sp: 'SP-markör'
+            upk: 'UPK-markör',
+            sp:  'SP-markör'
         });
         let idx = 0;
         for (const o of state.objects) {
@@ -1283,10 +1334,10 @@ function generateProtocolText() {
             const mgrs = safeMgrs(centerLat, centerLng) || '—';
             const rawLabel = (labelMapFull[o.typ] || o.typ) + suffix;
             let etikett = o.label || o.etikett || '';
-            if (o.typ === 'sp' && o.refUpSeq && o.bearing != null) {
-                etikett = (etikett || 'SP' + (o.seq || '')) + ' fr UP' + o.refUpSeq;
-            } else if (o.typ === 'up' && o.adress) {
-                etikett = (etikett || 'UP' + (o.seq || ''));
+            if (o.typ === 'sp' && o.refUpkNr != null && o.bearing != null) {
+                etikett = (etikett || 'SP' + (o.seq || '')) + ' fr UPK ' + padUpk(o.refUpkNr);
+            } else if (o.typ === 'upk' && o.adress) {
+                etikett = (etikett || upkLabel(o));
             }
             const anteckning = o.anteckning || o.adress || (o.antal ? String(o.antal) : '');
             const n = String(idx).padStart(2, ' ');

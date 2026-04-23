@@ -303,16 +303,18 @@ const SYMBOLS = {
         stroke: MK_GRAY, fill: MK_GRAY, fillOpacity: 0.08, dashArray: '6 4'
     },
 
-    // ── Referenspunkter (UP / SP) ────────────────────────────────────────────
-    // UP och SP är bestämbara terrängpunkter (PDF s.338), inte skarpa
-    // minpositioner. v3 renderar dem som svart fylld form med vit text +
-    // vit halo för konsekvens med övriga beteckningar.
-    up: {
-        label: 'UP',
+    // ── Referenspunkter (UPK / SP) ───────────────────────────────────────────
+    // UPK (Utgångs-Punkt-Koordinat) och SP är bestämbara terrängpunkter
+    // (PDF s.338), inte skarpa minpositioner. v3 byter namn från "UP" till
+    // "UPK" och tilldelar ett stabilt slumpnummer 001–999 per placering
+    // (hanteras i minkarta.html handleMapClick). Renderas som svart fylld
+    // form med vit text + vit halo för konsekvens med övriga beteckningar.
+    upk: {
+        label: 'UPK',
         category: 'meta',
         svg: svg(
-            '<circle cx="12" cy="12" r="8.5" fill="' + MK_INK + '" ' + haloStroke(3) + '/>' +
-            '<text x="12" y="15.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="800" fill="' + MK_WHITE + '">UP</text>'
+            '<circle cx="12" cy="12" r="9" fill="' + MK_INK + '" ' + haloStroke(3) + '/>' +
+            '<text x="12" y="15.3" text-anchor="middle" font-family="Inter,sans-serif" font-size="7.8" font-weight="800" fill="' + MK_WHITE + '">UPK</text>'
         )
     },
     sp: {
@@ -440,7 +442,7 @@ const SYMBOL_GROUPS = [
     { title: 'Linjer',             ids: ['minlinje', 'avsparrning'] },
     { title: 'Områden',            ids: ['minruta', 'minomrade', 'skenminering'] },
     { title: 'Avståndslagda',      ids: ['avstand', 'avstand_tramp', 'avstand_strv'] },
-    { title: 'Referenspunkter',    ids: ['up', 'sp'] },
+    { title: 'Referenspunkter',    ids: ['upk', 'sp'] },
     { title: 'Export',             ids: ['ytter'] }
 ];
 
