@@ -185,26 +185,35 @@
                 const p = project(o.lat, o.lng);
                 drawSvgAt(ctx, sym.svg, p.x, p.y, 32);
             } else if (sym.category === 'line') {
-                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 3;
-                if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray)); else ctx.setLineDash([]);
+                // Halo-dubbel: mörk bred underst, färgad smalare ovanpå
                 ctx.beginPath();
                 o.path.forEach((pt, i) => {
                     const p = project(pt.lat, pt.lng);
                     if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
                 });
+                ctx.setLineDash([]);
+                ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = (sym.weight || 4) + 2;
+                ctx.stroke();
+                if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
+                ctx.strokeStyle = sym.stroke; ctx.lineWidth = (sym.weight || 4);
                 ctx.stroke();
                 ctx.setLineDash([]);
             } else if (sym.category === 'polygon') {
-                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 2;
-                ctx.fillStyle = hexToRgba(sym.fill, sym.fillOpacity || 0.3);
-                if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray)); else ctx.setLineDash([]);
                 ctx.beginPath();
                 o.path.forEach((pt, i) => {
                     const p = project(pt.lat, pt.lng);
                     if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
                 });
                 ctx.closePath();
+                // Fyllning
+                ctx.fillStyle = hexToRgba(sym.fill, sym.fillOpacity || 0.2);
                 ctx.fill();
+                // Halo-bred mörk under + färgad ovanpå
+                ctx.setLineDash([]);
+                ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 4.5;
+                ctx.stroke();
+                if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
+                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 2;
                 ctx.stroke();
                 ctx.setLineDash([]);
                 if (o.etikett || o.antal) {
@@ -442,26 +451,35 @@
                 const img = symbolImages[o.typ];
                 if (img) ctx.drawImage(img, p.x - 16, p.y - 16, 32, 32);
             } else if (sym.category === 'line') {
-                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 3;
-                if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray)); else ctx.setLineDash([]);
+                // Halo-dubbel: mörk bred underst, färgad smalare ovanpå
                 ctx.beginPath();
                 o.path.forEach((pt, i) => {
                     const p = project(pt.lat, pt.lng);
                     if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
                 });
+                ctx.setLineDash([]);
+                ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = (sym.weight || 4) + 2;
+                ctx.stroke();
+                if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
+                ctx.strokeStyle = sym.stroke; ctx.lineWidth = (sym.weight || 4);
                 ctx.stroke();
                 ctx.setLineDash([]);
             } else if (sym.category === 'polygon') {
-                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 2;
-                ctx.fillStyle = hexToRgba(sym.fill, sym.fillOpacity || 0.3);
-                if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray)); else ctx.setLineDash([]);
                 ctx.beginPath();
                 o.path.forEach((pt, i) => {
                     const p = project(pt.lat, pt.lng);
                     if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
                 });
                 ctx.closePath();
+                // Fyllning
+                ctx.fillStyle = hexToRgba(sym.fill, sym.fillOpacity || 0.2);
                 ctx.fill();
+                // Halo-bred mörk under + färgad ovanpå
+                ctx.setLineDash([]);
+                ctx.strokeStyle = '#0a0a0a'; ctx.lineWidth = 4.5;
+                ctx.stroke();
+                if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
+                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 2;
                 ctx.stroke();
                 ctx.setLineDash([]);
                 if (o.etikett || o.antal) {
