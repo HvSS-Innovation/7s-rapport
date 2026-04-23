@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260414_191537';
+const CACHE = 'hv-20260423_minkarta1';
 const FILES = [
   './',
   './index.html',
@@ -16,6 +16,7 @@ const FILES = [
   './scrim.html',
   './weft.html',
   './ah.html',
+  './minkarta.html',
   './version.js',
   './pwa.js',
   './ortnamn.json',
