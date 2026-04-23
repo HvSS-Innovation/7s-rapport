@@ -16,11 +16,24 @@
 
 (function (global) {
 
-    const TILE_URL = 'https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png';
     const TILE_SUBDOMAINS = ['a', 'b', 'c'];
     const TILE_SIZE = 256;
     const MAX_TILES = 180;     // säkerhetslås — stora exporter sprängs annars
     const SCALE_BAR_TARGET_PX = 180;
+
+    // Hybrid tile-URL: OpenTopoMap upp till z 17, OSM Standard för z 18–19
+    // (speglar HybridTileLayer i minkarta.html). OSM Standard har inga
+    // subdomäner längre; OpenTopoMap roterar a/b/c.
+    function tileUrl(z, x, y) {
+        if (z <= 17) {
+            const s = TILE_SUBDOMAINS[(x + y) % TILE_SUBDOMAINS.length];
+            return 'https://' + s + '.tile.opentopomap.org/' + z + '/' + x + '/' + y + '.png';
+        }
+        return 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png';
+    }
+    function tileLayerLabel(z) {
+        return z <= 17 ? 'OpenTopoMap (CC-BY-SA)' : 'OSM Standard (ODbL)';
+    }
 
     function lon2x(lon, z) { return (lon + 180) / 360 * Math.pow(2, z); }
     function lat2y(lat, z) {
@@ -59,7 +72,7 @@
     }
 
     function pickZoom(bbox, targetPx) {
-        for (let z = 17; z >= 3; z--) {
+        for (let z = 19; z >= 3; z--) {
             const xMin = lon2x(bbox.minLng, z) * TILE_SIZE;
             const xMax = lon2x(bbox.maxLng, z) * TILE_SIZE;
             const yMin = lat2y(bbox.maxLat, z) * TILE_SIZE;
@@ -137,8 +150,7 @@
         const tilePromises = [];
         for (let ty = tileYMin; ty <= tileYMax; ty++) {
             for (let tx = tileXMin; tx <= tileXMax; tx++) {
-                const s = TILE_SUBDOMAINS[(tx + ty) % TILE_SUBDOMAINS.length];
-                const url = TILE_URL.replace('{s}', s).replace('{z}', z).replace('{x}', tx).replace('{y}', ty);
+                const url = tileUrl(z, tx, ty);
                 const dx = (tx - tileXMin) * TILE_SIZE;
                 const dy = (ty - tileYMin) * TILE_SIZE + 60;
                 tilePromises.push(
@@ -248,7 +260,7 @@
             ctx.fillText('Center ' + centerMgrs, 16, canvasH + 82);
             ctx.fillStyle = '#8aaa8a';
             ctx.font = '500 12px Inter, sans-serif';
-            ctx.fillText('Zoom ' + z + ' · OpenTopoMap (CC-BY-SA) · ' + new Date().toLocaleString('sv-SE'), 16, canvasH + 104);
+            ctx.fillText('Zoom ' + z + ' · ' + tileLayerLabel(z) + ' · ' + new Date().toLocaleString('sv-SE'), 16, canvasH + 104);
         }
 
         // Norrpil (nedre höger)
@@ -381,8 +393,7 @@
         const tilePromises = [];
         for (let ty = tileYMin; ty <= tileYMax; ty++) {
             for (let tx = tileXMin; tx <= tileXMax; tx++) {
-                const s = TILE_SUBDOMAINS[(tx + ty) % TILE_SUBDOMAINS.length];
-                const url = TILE_URL.replace('{s}', s).replace('{z}', z).replace('{x}', tx).replace('{y}', ty);
+                const url = tileUrl(z, tx, ty);
                 const dx = (tx - tileXMin) * TILE_SIZE;
                 const dy = (ty - tileYMin) * TILE_SIZE + 60;
                 tilePromises.push(
@@ -504,7 +515,7 @@
             ctx.fillText('Center ' + centerMgrs, 16, canvasH + 82);
             ctx.fillStyle = '#8aaa8a';
             ctx.font = '500 12px Inter, sans-serif';
-            ctx.fillText('Zoom ' + z + ' · OpenTopoMap (CC-BY-SA) · ' + new Date().toLocaleString('sv-SE'), 16, canvasH + 104);
+            ctx.fillText('Zoom ' + z + ' · ' + tileLayerLabel(z) + ' · ' + new Date().toLocaleString('sv-SE'), 16, canvasH + 104);
         }
 
         // 7) Norrpil + skalstock

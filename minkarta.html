@@ -255,7 +255,8 @@
                 skickas någonsin till någon server. De enda utgående nätverksanrop
                 som tabben gör är:</p>
                 <ul>
-                    <li>OpenTopoMap-tiles (kartbilder) — skickar zoom, x- och y-index för de rutor som ritas på skärmen.</li>
+                    <li>OpenTopoMap-tiles (kartbilder) för zoomnivå upp till 17 — skickar zoom, x- och y-index för de rutor som ritas på skärmen.</li>
+                    <li>OpenStreetMap Standard-tiles (<code>tile.openstreetmap.org</code>) för zoomnivå 18–19, eftersom OpenTopoMap inte har data där. Aktiveras automatiskt när du zoomar in närmare; status-raden visar vilket lager som används.</li>
                     <li>Nominatim/Overpass vid adressökning — skickar endast kartans vy-center eller det du aktivt söker efter, aldrig symbolpositioner.</li>
                 </ul>
                 <p>All ritning, lagring och export sker lokalt i webbläsaren.
@@ -327,10 +328,24 @@ const STORAGE_KEY = 'minkarta.lastView';
 let map = null;
 let jumpMarker = null;
 
+// Hybrid-lager: OpenTopoMap för z ≤ 17 (topografi), OSM Standard för
+// z 18–19 där OTM inte har data. Byggt som subklass för att Leaflet ska
+// hantera ett enhetligt lager (slipper dubbla setVisible-event).
+const HybridTileLayer = L.TileLayer.extend({
+    getTileUrl: function (coords) {
+        if (coords.z <= 17) {
+            const s = ['a', 'b', 'c'][(coords.x + coords.y) % 3];
+            return 'https://' + s + '.tile.opentopomap.org/' + coords.z + '/' + coords.x + '/' + coords.y + '.png';
+        }
+        return 'https://tile.openstreetmap.org/' + coords.z + '/' + coords.x + '/' + coords.y + '.png';
+    }
+});
+
 function initMap() {
     map = L.map('mapContainer', { zoomControl: true, worldCopyJump: true });
-    const tiles = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
-        maxZoom: 17, attribution: '© OpenTopoMap (CC-BY-SA), kartdata © OpenStreetMap-bidragsgivare'
+    const tiles = new HybridTileLayer('', {
+        maxZoom: 19,
+        attribution: '© OpenTopoMap (z ≤ 17, CC-BY-SA) / © OpenStreetMap (z ≥ 18, ODbL)'
     }).addTo(map);
     const spinner = document.getElementById('mapSpinner');
     tiles.on('load', () => spinner.classList.add('hidden'));
@@ -368,9 +383,11 @@ function initMap() {
 function updateStatus() {
     if (!map) return;
     const c = map.getCenter();
+    const z = map.getZoom();
     const mgrs = safeMgrs(c.lat, c.lng);
     document.getElementById('statusMgrs').textContent = mgrs || '—';
-    document.getElementById('statusZoom').textContent = 'z ' + map.getZoom();
+    const layerLabel = z <= 17 ? 'OpenTopoMap' : 'OSM Standard';
+    document.getElementById('statusZoom').textContent = 'z ' + z + ' — ' + layerLabel;
 }
 
 function safeMgrs(lat, lng) {
