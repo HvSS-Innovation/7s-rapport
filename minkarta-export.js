@@ -307,6 +307,31 @@
         return 'rgba(' + ((n >> 16) & 255) + ',' + ((n >> 8) & 255) + ',' + (n & 255) + ',' + alpha + ')';
     }
 
+    // Namn-bricka under en punkt-symbol. Matchar .mk-label i minkarta.html:
+    // mörk bakgrund, vit text, 1 px border i accent-grön.
+    function drawNameBadge(ctx, cx, cy, text) {
+        ctx.save();
+        ctx.font = '600 11px Inter, sans-serif';
+        ctx.textBaseline = 'middle';
+        const padX = 5, padY = 3;
+        const tw = ctx.measureText(text).width;
+        const bw = tw + padX * 2;
+        const bh = 16;
+        const x = cx - bw / 2;
+        const y = cy;
+        ctx.fillStyle = 'rgba(13, 31, 13, 0.92)';
+        ctx.fillRect(x, y, bw, bh);
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, bw - 1, bh - 1);
+        ctx.fillStyle = '#ffffff';
+        ctx.textAlign = 'center';
+        ctx.fillText(text, cx, y + bh / 2 + 0.5);
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+        ctx.restore();
+    }
+
     function drawNorthArrow(ctx, cx, cy) {
         ctx.save();
         ctx.translate(cx, cy);
@@ -443,13 +468,18 @@
         }));
 
         // 5) Rita objekt
+        const drawLabels = opts.drawLabels !== false;
         for (const o of objects) {
             const sym = SYM[o.typ];
             if (!sym) continue;
             if (sym.category === 'point' || sym.category === 'meta') {
                 const p = project(o.lat, o.lng);
                 const img = symbolImages[o.typ];
-                if (img) ctx.drawImage(img, p.x - 16, p.y - 16, 32, 32);
+                if (img) ctx.drawImage(img, p.x - 17, p.y - 17, 34, 34);
+                // Namn-bricka under markern (samma bild som skärmen)
+                if (drawLabels && o.typ !== 'ytter') {
+                    drawNameBadge(ctx, p.x, p.y + 22, o.label || sym.label);
+                }
             } else if (sym.category === 'line') {
                 // Halo-dubbel: mörk bred underst, färgad smalare ovanpå
                 ctx.beginPath();

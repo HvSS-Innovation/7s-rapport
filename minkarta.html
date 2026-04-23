@@ -134,6 +134,26 @@
             filter: drop-shadow(0 0 1px #000) drop-shadow(0 0 1px #000) drop-shadow(0 1px 2px rgba(0,0,0,0.85));
         }
 
+        /* Namn-etiketter under markers (Leaflet-tooltip som bricka) */
+        .leaflet-tooltip.mk-label {
+            font: 600 11px Inter, sans-serif;
+            background: rgba(13, 31, 13, 0.90);
+            color: #fff;
+            border: 1px solid var(--accent);
+            border-radius: 3px;
+            padding: 2px 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.7);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .leaflet-tooltip.mk-label::before { display: none; }
+
+        /* Lager-sektion i paletten */
+        .palette-layers { margin-top: 10px; padding: 8px 10px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+        .palette-layers-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+        .palette-layers label { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; letter-spacing: 0.02em; text-transform: none; font-weight: 500; }
+        .palette-layers input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+
         /* Toast */
         .mk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 0.82rem; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
         .mk-toast.show { opacity: 1; }
@@ -472,6 +492,25 @@ function renderPalette() {
         body.appendChild(wrap);
     });
 
+    // Lager-sektion (togglar namn-etiketter m.m.)
+    const layers = document.createElement('div');
+    layers.className = 'palette-layers';
+    layers.innerHTML = '<div class="palette-layers-title">Lager</div>';
+    const labelsLabel = document.createElement('label');
+    const labelsCb = document.createElement('input');
+    labelsCb.type = 'checkbox';
+    labelsCb.id = 'mkToggleLabels';
+    labelsCb.checked = state.showLabels;
+    labelsCb.addEventListener('change', () => {
+        state.showLabels = labelsCb.checked;
+        saveLayerState();
+        rebuildLayers();
+    });
+    labelsLabel.appendChild(labelsCb);
+    labelsLabel.appendChild(document.createTextNode(' Namn-etiketter under symboler'));
+    layers.appendChild(labelsLabel);
+    body.appendChild(layers);
+
     // Verktygsfält: rensa aktivt val
     const tb = document.createElement('div');
     tb.className = 'palette-toolbar';
@@ -499,12 +538,20 @@ function toast(msg, ms) {
 //  state.objects är källan; state.layers[id] är tillhörande Leaflet-lager.
 //  Allt ritas om från objects vid undo/redo/reload — lagren är avledda.
 // ─────────────────────────────────────────────────────────────────────────────
+const LAYERS_KEY = 'minkarta.layers';
 const state = {
     objects: [],
     layers: {},       // id -> Leaflet layer
     draft: null,      // pågående linje/polygon i uppritning
-    draftLayer: null
+    draftLayer: null,
+    showLabels: (function(){
+        try { const s = JSON.parse(localStorage.getItem(LAYERS_KEY) || 'null'); return s ? !!s.labels : true; }
+        catch(_) { return true; }
+    })()
 };
+function saveLayerState() {
+    try { localStorage.setItem(LAYERS_KEY, JSON.stringify({ labels: state.showLabels })); } catch(_) {}
+}
 
 const undoStack = [];
 const redoStack = [];
@@ -569,6 +616,14 @@ function renderObject(obj) {
             const ll = layer.getLatLng();
             obj.lat = ll.lat; obj.lng = ll.lng;
         });
+        // Namn-bricka under markern (togglas via Lager-sektionen)
+        const labelText = obj.label || sym.label;
+        if (state.showLabels) {
+            layer.bindTooltip(labelText, {
+                permanent: true, direction: 'bottom', offset: [0, 14],
+                className: 'mk-label', interactive: false
+            });
+        }
     } else if (sym.category === 'line') {
         layer = L.polyline(obj.path.map(p => [p.lat, p.lng]), {
             color: sym.stroke, weight: sym.weight || 3, dashArray: sym.dashArray || null
@@ -810,7 +865,8 @@ async function exportPng() {
             title: titleBase,
             subtitle,
             targetPx: 2048,
-            dpr: 2
+            dpr: 2,
+            drawLabels: state.showLabels
         });
         if (!res || !res.blob) throw new Error('Inget bilddata.');
         let centerMgrs = '';
