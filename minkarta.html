@@ -1213,9 +1213,15 @@ function generateProtocolText() {
         fordonsmina: 'Fordonsmina',
         fordon_sid:  'Sidverkande fordonsmina',
         forsvar: 'Försvarsladdning',
-        avstand: 'Avståndslagd'
+        avstand: 'Avståndslagd',
+        landmina_okand: 'Landmina, okänd typ',
+        omr_verkan:     'Områdesverkande mina',
+        riktad_verkan:  'Riktad verkan',
+        verkansomrade:  'Verkansområde',
+        rojskydd:       'Röjningsskydd',
+        prov_rojskydd:  'Prov. fordonsröjskydd'
     };
-    const typOrder = ['strv_tryck','strv_full','strv_rojskydd','tramp','trad','larm','fordonsmina','fordon_sid','forsvar','avstand'];
+    const typOrder = ['strv_tryck','strv_full','strv_rojskydd','tramp','trad','larm','landmina_okand','omr_verkan','riktad_verkan','fordonsmina','fordon_sid','forsvar','avstand','rojskydd','prov_rojskydd','verkansomrade'];
     let totalMines = 0;
     for (const t of typOrder) {
         if (counts[t]) {

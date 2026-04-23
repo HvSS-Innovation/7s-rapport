@@ -346,16 +346,96 @@ const SYMBOLS = {
             '<circle cx="12" cy="13" r="0.9" fill="' + MK_WHITE + '"/>'
         ),
         stroke: MK_INK, fill: MK_INK, fillOpacity: 0.08, dashArray: '6 4'
+    },
+
+    // ── Saknade beteckningar från PDF (tillägg v3 FAS 2) ─────────────────────
+    // Efter v2 saknades sex beteckningar från PDF s.339 + Handbok s.86.
+    // Var och en har ett designbeslutskommentar nedan som förklarar tolkningen.
+
+    landmina_okand: {
+        label: 'Landmina, okänd typ',
+        // PDF s.339 + Handbok s.86 ("Ospecificerad mina"): ritas som en tom
+        // liten svart cirkel-outline utan fyllning (dvs. typen är okänd,
+        // symbolen markerar bara att det finns en mina). Vi ritar den som
+        // outlined cirkel med vit fyllning — särskiljer sig från
+        // strv_tryck (fylld) genom avsaknad av fyllnad.
+        category: 'point',
+        svg: svg(
+            '<circle cx="12" cy="12" r="7" fill="' + MK_WHITE + '" stroke="' + MK_INK + '" stroke-width="1.8" ' + haloStroke(3) + '/>'
+        )
+    },
+
+    prov_rojskydd: {
+        label: 'Provisoriskt fordonsröjningsskydd',
+        // PDF s.339: kort linjesegment med punkt i båda ändarna och en vikning
+        // i mitten (< • — • >) — representerar en provisorisk uppläggning.
+        // Vi ritar det som två svarta cirklar Ø 2.2 px i ändpunkterna
+        // sammanbundna med ett svart streck med en lätt vinkling.
+        category: 'point',
+        svg: svg(
+            '<polyline points="4,16 12,8 20,16" fill="none" stroke="' + MK_INK + '" stroke-width="1.8" ' + haloStroke(3) + ' stroke-linejoin="round"/>' +
+            '<circle cx="4" cy="16" r="2.2" fill="' + MK_INK + '" ' + haloStroke(2) + '/>' +
+            '<circle cx="20" cy="16" r="2.2" fill="' + MK_INK + '" ' + haloStroke(2) + '/>'
+        )
+    },
+
+    rojskydd: {
+        label: 'Röjningsskydd',
+        // PDF s.339: stor svart "R"-text som egen beteckning (inte kombinerad
+        // med annan symbol). Vi ritar R centrerat i SVG:n med vit halo.
+        category: 'point',
+        svg: svg(
+            '<text x="12" y="17" text-anchor="middle" font-family="Inter,sans-serif" font-size="16" font-weight="800" paint-order="stroke" stroke="' + MK_HALO + '" stroke-width="3" fill="' + MK_INK + '">R</text>'
+        )
+    },
+
+    verkansomrade: {
+        label: 'Verkansområde',
+        // PDF s.339: streckad halvcirkel (cirkelbåge) som visar verkansområde.
+        // Vi ritar en halvcirkelbåge med svart streckad linje, vit halo.
+        // Kategori 'point' — en enskild markör som representerar riktningen.
+        category: 'point',
+        svg: svg(
+            '<path d="M3 18 A9 9 0 0 1 21 18" fill="' + MK_WHITE + '" stroke="' + MK_INK + '" stroke-width="1.6" stroke-dasharray="3 2" ' + haloStroke(3) + '/>' +
+            '<line x1="3" y1="18" x2="21" y2="18" stroke="' + MK_INK + '" stroke-width="1.2"/>'
+        )
+    },
+
+    omr_verkan: {
+        label: 'Områdesverkande mina',
+        // Handbok s.86 (9.5 Ammunition): fylld svart cirkel med W-hake under
+        // (symboliserar spridd verkan). Vi ritar svart cirkel + svart W
+        // under, vit halo.
+        category: 'point',
+        svg: svg(
+            '<circle cx="12" cy="9" r="4.5" fill="' + MK_INK + '" ' + haloStroke(3) + '/>' +
+            '<path d="M6 15 L9 20 L12 16 L15 20 L18 15" fill="none" stroke="' + MK_INK + '" stroke-width="1.6" ' + haloStroke(2.6) + ' stroke-linejoin="round"/>'
+        )
+    },
+
+    riktad_verkan: {
+        label: 'Riktad verkan',
+        // Handbok s.86: fylld svart cirkel med pil åt höger = riktad verkan
+        // (generisk variant av fordon_sid, men utan fordon-specifik form).
+        // Vi ritar en mindre svart cirkel + svart pil, vit halo.
+        category: 'point',
+        svg: svg(
+            '<circle cx="9" cy="12" r="4.2" fill="' + MK_INK + '" ' + haloStroke(3) + '/>' +
+            '<line x1="13" y1="12" x2="19" y2="12" stroke="' + MK_INK + '" stroke-width="1.6" ' + haloStroke(2.6) + '/>' +
+            '<path d="M20 12 L17 10 L17 14 Z" fill="' + MK_INK + '" ' + haloStroke(2) + '/>'
+        )
     }
 
 };
 
-// Paletten-grupper (för UI-layout). v3 har samma grupper som v2; FAS 2
-// (saknade beteckningar) fyller på i de grupper där de hör hemma.
+// Paletten-grupper (för UI-layout). v3 FAS 2 lägger till "Övriga landminor"
+// för de beteckningar som inte hör hemma i strv/trupp-grupperna, plus
+// utökningar i befintliga grupper (rojskydd + prov_rojskydd i fordon-gruppen).
 const SYMBOL_GROUPS = [
     { title: 'Strv-minor',         ids: ['strv_tryck', 'strv_full', 'strv_rojskydd'] },
     { title: 'Truppminor',         ids: ['tramp', 'trad', 'larm'] },
-    { title: 'Fordon & verkan',    ids: ['fordonsmina', 'fordon_sid', 'forsvar'] },
+    { title: 'Övriga landminor',   ids: ['landmina_okand', 'omr_verkan', 'riktad_verkan', 'verkansomrade'] },
+    { title: 'Fordon & skydd',     ids: ['fordonsmina', 'fordon_sid', 'forsvar', 'rojskydd', 'prov_rojskydd'] },
     { title: 'Förstöring',         ids: ['forst_forb', 'forst_utf', 'forst_plan'] },
     { title: 'Linjer',             ids: ['minlinje', 'avsparrning'] },
     { title: 'Områden',            ids: ['minruta', 'minomrade', 'skenminering'] },
