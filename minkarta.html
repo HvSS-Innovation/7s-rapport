@@ -154,6 +154,21 @@
         .palette-layers label { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; letter-spacing: 0.02em; text-transform: none; font-weight: 500; }
         .palette-layers input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
 
+        /* Export-popover (Ladda ner / Dela) */
+        .mk-share-popover {
+            position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%);
+            background: var(--bg-secondary); border: 1px solid var(--accent);
+            border-radius: var(--radius); padding: 12px 14px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.7);
+            z-index: 10000; min-width: 260px; max-width: 92%;
+            display: flex; flex-direction: column; gap: 10px;
+            animation: mkFadeIn 0.18s ease-out;
+        }
+        @keyframes mkFadeIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        .mk-share-popover-title { font-size: 0.82rem; color: var(--text-primary); text-align: center; font-weight: 600; }
+        .mk-share-popover-actions { display: flex; gap: 6px; }
+        .mk-share-popover-actions .btn { flex: 1; }
+
         /* Toast */
         .mk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 0.82rem; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
         .mk-toast.show { opacity: 1; }
@@ -986,38 +1001,97 @@ function attachToolbarActions() {
 }
 
 // ── PNG-export ──────────────────────────────────────────────────────────────
-async function exportPng() {
-    if (!state.objects.length) { toast('Ingenting att exportera.'); return; }
-    if (!window.MK_EXPORT) { toast('Export-modulen är inte laddad.'); return; }
+// Cache av senaste render så att "Ladda ner" och "Dela" kan använda samma
+// blob utan att re-rendera. Revokas när popovern stängs.
+let _lastExport = null;       // { blob, filename }
+let _popoverTimer = null;
+
+async function prepareExportBlob() {
+    if (!state.objects.length) { toast('Ingenting att exportera.'); return null; }
+    if (!window.MK_EXPORT) { toast('Export-modulen är inte laddad.'); return null; }
     const ytterCount = state.objects.filter(o => o.typ === 'ytter').length;
     if (ytterCount < 2) toast('Tips: placera yttergränsmarkörer för att styra exporten.', 3200);
 
     const titleBase = window.__minkartaTitle || 'MINERING';
     const subtitle = window.__minkartaSubtitle || ('Minläggningskarta · ' + state.objects.length + ' objekt');
+    const res = await window.MK_EXPORT.renderExportAsync({
+        objects: state.objects,
+        title: titleBase,
+        subtitle,
+        targetPx: 2048,
+        dpr: 2,
+        drawLabels: state.showLabels
+    });
+    if (!res || !res.blob) throw new Error('Inget bilddata.');
+    let centerMgrs = '';
+    try {
+        const cLat = (res.bbox.minLat + res.bbox.maxLat) / 2;
+        const cLng = (res.bbox.minLng + res.bbox.maxLng) / 2;
+        centerMgrs = MGRS.forward(cLat, cLng);
+    } catch (_) {}
+    const filename = window.MK_EXPORT.exportFilename(centerMgrs);
+    _lastExport = { blob: res.blob, filename };
+    return _lastExport;
+}
+
+function showExportPopover() {
+    closeExportPopover();
+    const pop = document.createElement('div');
+    pop.className = 'mk-share-popover';
+    pop.id = 'mkSharePopover';
+    pop.innerHTML = `
+        <div class="mk-share-popover-title">Karta renderad (${_lastExport ? _lastExport.filename : '—'})</div>
+        <div class="mk-share-popover-actions">
+            <button type="button" class="btn btn-sm btn-accent" id="mkDownloadBtn">Ladda ner PNG</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="mkShareBtn">Dela via app</button>
+        </div>
+    `;
+    document.body.appendChild(pop);
+
+    pop.querySelector('#mkDownloadBtn').addEventListener('click', () => {
+        if (_lastExport) window.MK_EXPORT.downloadBlob(_lastExport.blob, _lastExport.filename);
+        toast('Sparad: ' + (_lastExport ? _lastExport.filename : ''), 2400);
+        closeExportPopover();
+    });
+    pop.querySelector('#mkShareBtn').addEventListener('click', async () => {
+        if (!_lastExport) return;
+        const res = await window.MK_EXPORT.shareBlob(_lastExport.blob, _lastExport.filename, null);
+        if (res === 'shared') toast('Delad.', 2000);
+        else if (res === 'unsupported') {
+            toast('Delning stöds inte — filen laddades ner.', 3200);
+            window.MK_EXPORT.downloadBlob(_lastExport.blob, _lastExport.filename);
+        }
+        closeExportPopover();
+    });
+
+    // Stäng automatiskt efter 8 s
+    _popoverTimer = setTimeout(closeExportPopover, 8000);
+    // Stäng vid klick utanför
+    setTimeout(() => {
+        document.addEventListener('click', outsideExportClick, true);
+    }, 0);
+}
+
+function outsideExportClick(e) {
+    const pop = document.getElementById('mkSharePopover');
+    if (pop && !pop.contains(e.target)) closeExportPopover();
+}
+
+function closeExportPopover() {
+    const pop = document.getElementById('mkSharePopover');
+    if (pop) pop.remove();
+    if (_popoverTimer) { clearTimeout(_popoverTimer); _popoverTimer = null; }
+    document.removeEventListener('click', outsideExportClick, true);
+}
+
+async function exportPng() {
     const btn = event && event.target && event.target.tagName === 'BUTTON' ? event.target : null;
     const originalLabel = btn && btn.textContent;
     if (btn) { btn.disabled = true; btn.textContent = 'Renderar…'; }
-
     try {
-        const res = await window.MK_EXPORT.renderExportAsync({
-            objects: state.objects,
-            title: titleBase,
-            subtitle,
-            targetPx: 2048,
-            dpr: 2,
-            drawLabels: state.showLabels
-        });
-        if (!res || !res.blob) throw new Error('Inget bilddata.');
-        let centerMgrs = '';
-        try {
-            const cLat = (res.bbox.minLat + res.bbox.maxLat) / 2;
-            const cLng = (res.bbox.minLng + res.bbox.maxLng) / 2;
-            centerMgrs = MGRS.forward(cLat, cLng);
-        } catch (_) {}
-        const filename = window.MK_EXPORT.exportFilename(centerMgrs);
-        const result = await window.MK_EXPORT.shareOrDownload(res.blob, filename);
-        if (result === 'downloaded') toast('Sparad: ' + filename, 2800);
-        else if (result === 'shared') toast('Delad.', 2000);
+        const prepared = await prepareExportBlob();
+        if (!prepared) return;
+        showExportPopover();
     } catch (e) {
         console.error(e);
         toast('Fel vid export: ' + (e.message || 'okänt'), 3500);

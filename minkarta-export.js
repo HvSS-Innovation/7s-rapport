@@ -583,6 +583,32 @@
         return 'minkarta_' + mgrsSafe + '_' + ts + '.png';
     }
 
+    // Explicit download — används av popover när användaren valt "Ladda ner"
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url; a.download = filename; a.style.display = 'none';
+        document.body.appendChild(a); a.click(); a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 5000);
+        return 'downloaded';
+    }
+
+    async function shareBlob(blob, filename, textOrNull) {
+        const file = new File([blob], filename, { type: 'image/png' });
+        const payload = { files: [file], title: 'Minkarta' };
+        if (textOrNull) payload.text = textOrNull;
+        if (navigator.canShare && navigator.canShare(payload)) {
+            try {
+                await navigator.share(payload);
+                return 'shared';
+            } catch (e) {
+                if (e && e.name === 'AbortError') return 'cancelled';
+                return null;
+            }
+        }
+        return 'unsupported';
+    }
+
     async function shareOrDownload(blob, filename) {
         const file = new File([blob], filename, { type: 'image/png' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
@@ -606,6 +632,8 @@
         renderExportAsync,
         exportFilename,
         shareOrDownload,
+        downloadBlob,
+        shareBlob,
         computeBBox
     };
 
