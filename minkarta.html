@@ -150,11 +150,20 @@
         }
         .leaflet-tooltip.mk-label::before { display: none; }
 
-        /* Lager-sektion i paletten */
-        .palette-layers { margin-top: 10px; padding: 8px 10px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); }
-        .palette-layers-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
-        .palette-layers label { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: var(--text-secondary); cursor: pointer; letter-spacing: 0.02em; text-transform: none; font-weight: 500; }
-        .palette-layers input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+        /* Genvägsrad under kartan (v4): Namn-etiketter-toggle + Pan-läge */
+        .map-controls {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            margin-top: 8px; padding: 8px 10px;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+        }
+        .map-controls label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.78rem; color: var(--text-secondary);
+            cursor: pointer; letter-spacing: 0.02em; text-transform: none; font-weight: 500;
+        }
+        .map-controls input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+        .map-controls .btn-sm { margin-left: auto; }
+        @media (max-width: 360px) { .map-controls .btn-sm { margin-left: 0; } }
 
         /* Bifoga-karta-modal (text + PNG) */
         .mk-modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 9998; display: flex; align-items: center; justify-content: center; padding: 16px; }
@@ -225,6 +234,9 @@
                 <span id="statusZoom" style="color:var(--text-muted)">z —</span>
             </div>
         </div>
+
+        <!-- Genvägsrad (v4): Namn-etiketter + Pan-läge direkt under kartan -->
+        <div class="map-controls" id="mapControls"></div>
 
         <!-- Symbolpalett -->
         <section class="palette" id="paletteRoot">
@@ -526,10 +538,20 @@ function renderPalette() {
         body.appendChild(wrap);
     });
 
-    // Lager-sektion (togglar namn-etiketter m.m.)
-    const layers = document.createElement('div');
-    layers.className = 'palette-layers';
-    layers.innerHTML = '<div class="palette-layers-title">Lager</div>';
+    // v4: Lager-sektion + Pan-läge flyttas ut ur paletten till map-controls-
+    // raden direkt under kartan. Paletten behåller bara Ångra/Gör om/
+    // Exportera/Rensa i palette-toolbaren.
+    const tb = document.createElement('div');
+    tb.className = 'palette-toolbar';
+    body.appendChild(tb);
+}
+
+function renderMapControls() {
+    const host = document.getElementById('mapControls');
+    if (!host) return;
+    host.innerHTML = '';
+
+    // Namn-etiketter-toggle (samma logik som v3 .palette-layers)
     const labelsLabel = document.createElement('label');
     const labelsCb = document.createElement('input');
     labelsCb.type = 'checkbox';
@@ -541,20 +563,16 @@ function renderPalette() {
         rebuildLayers();
     });
     labelsLabel.appendChild(labelsCb);
-    labelsLabel.appendChild(document.createTextNode(' Namn-etiketter under symboler'));
-    layers.appendChild(labelsLabel);
-    body.appendChild(layers);
+    labelsLabel.appendChild(document.createTextNode(' Namn-etiketter'));
+    host.appendChild(labelsLabel);
 
-    // Verktygsfält: rensa aktivt val
-    const tb = document.createElement('div');
-    tb.className = 'palette-toolbar';
-    const clearBtn = document.createElement('button');
-    clearBtn.type = 'button';
-    clearBtn.className = 'btn btn-sm btn-ghost';
-    clearBtn.textContent = 'Pan-läge';
-    clearBtn.addEventListener('click', () => setActiveTool(null));
-    tb.appendChild(clearBtn);
-    body.appendChild(tb);
+    // Pan-läge-knappen (samma styrlogik som v3)
+    const panBtn = document.createElement('button');
+    panBtn.type = 'button';
+    panBtn.className = 'btn btn-sm btn-ghost';
+    panBtn.textContent = 'Pan-läge';
+    panBtn.addEventListener('click', () => setActiveTool(null));
+    host.appendChild(panBtn);
 }
 
 function toast(msg, ms) {
@@ -1593,6 +1611,7 @@ document.addEventListener('DOMContentLoaded', () => {
         map.doubleClickZoom.disable();             // annars stjäl den dubbelklicket
     }
     renderPalette();
+    renderMapControls();
     attachToolbarActions();
     attachKeyboard();
     attachProtocolActions();
