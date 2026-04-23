@@ -40,7 +40,7 @@ Verktyget kommer nu att fungera även när du har flygplansläge eller är i rad
 | **OBO** | Orientering-Beslut-Order (*Tidigt utvecklingsstadium*) |
 | **RASSOIKA** | Patrullchefens checklista (*Tidigt utvecklingsstadium*) |
 | **VÄDER** | Meteorologisk prognos (Hämtar SMHI-data vid täckning) |
-| **MINKARTA** | Minläggningskarta & minprotokoll (OpenTopoMap, PNG-export, övningsläge) |
+| **MINKARTA** | Minläggningskarta & minprotokoll (OpenTopoMap+OSM z 19, halo-symboler, UP/SP-auto-inmätning, datalista, PNG + share-popover, övningsläge) |
 
 ## Teknisk Arkitektur
 Applikationen är byggd som en "Modern Vanilla" webbapplikation med ren HTML5, CSS3 och JavaScript (ES6). Den använder inga tunga bibliotek eller ramverk för att säkerställa extremt snabb uppstart och minimal batteriförbrukning på mobila enheter. Service Workers hanterar cachning för offline-bruk.
@@ -53,6 +53,56 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 ---
 
 ## Dagbok: Utvecklingslogg
+
+### 2026-04-24: MINKARTA v2 — halo-kontrast, UP/SP, datalista, share-popover
+Tio-fas-iteration på MINKARTA (roadmap: `roadmap-minkarta-v2.md`). Flyttar
+tabben från BETA mot stabil. Ingen förändring i integritetskontraktet utöver
+tydlig not om OSM-fallback och UP-reverse-geocode.
+
+*   **Djupare zoom (FAS 1):** Hybrid-lager växlar automatiskt till
+    OpenStreetMap Standard vid z 18–19 där OpenTopoMap inte har data.
+    Status-raden visar `z 18 — OSM Standard` etc. Exporten följer med.
+*   **Kontraststark färgpalett (FAS 2):** Halo-princip via SVG
+    `paint-order="stroke"` + 3 px mörk outline + dubbla `drop-shadow`-
+    filter på marker-ikonen. Huvudfärger: gul `#ffc107` (neutral), röd
+    `#e53935` (farligt), cyan `#00e5ff` (styr/referens), grå `#b0bec5`
+    (sken). Läses mot vita vägar, gröna skogsytor och blå vattendrag.
+    Färgmatris dokumenterad i `minkarta-symbols.js`.
+*   **Saknade symboler (FAS 3):** `avstand_tramp` (avståndslagd trampmin.)
+    och `avstand_strv` (avståndslagd strvmin.) som streckade polygoner
+    med inbäddad mintyp-preview. Egen grupp "Avståndslagda".
+*   **Namn-etiketter (FAS 4):** Kompakt svart bricka med vit text under
+    varje punkt/meta-symbol. Togglas via ny "Lager"-ruta i paletten
+    (`[✓] Namn-etiketter`). Persisteras till localStorage. PNG-export
+    matchar pixel-exakt.
+*   **Versaler + auto-TNR (FAS 5):** `Förband` och `Chef` tvingas till
+    versaler via `oninput` + CSS `text-transform`. TNR prefillas med
+    Zulu-kort DDHHMM (UTC, ej lokal tid — avviker från obslosa.setNow()).
+    Liten *(auto)*-indikator släcks vid manuell ändring.
+*   **UP/SP-verktyg (FAS 6):** Nya `UP-markör` och `SP-markör` i egen
+    grupp. UP:er auto-numreras (UP1, UP2…) och reverse-geocodas via
+    Nominatim. SP:er mäts automatiskt in mot närmaste UP med bäring + m.
+    `pUp`-textarean synkroniseras icke-destruktivt: auto-rader på
+    `UP<n>:`/`SP<n>:`-mönstret regenereras, allt annat bevaras. Drag,
+    radering och omnumrering hanteras. Reglementsvarning ≥ 2 UP + ≥ 1 SP.
+*   **Datalista i protokoll (FAS 7):** Ny sektion efter Anteckningar:
+    `=== DATALISTA (fullständiga positioner) ===` med radbaserad tabell
+    av idx, typ, MGRS (center för polygoner), etikett, anteckning.
+    Togglas via kryssruta `[✓] Inkludera datalista`, default ON.
+*   **Ladda ner / Dela-popover (FAS 8):** Exportera PNG visar nu en
+    popover med två knappar (Ladda ner, Dela via app) istället för att
+    dela direkt. Auto-stäng efter 8 s eller klick utanför.
+    `shareBlob`/`downloadBlob` exporteras från `minkarta-export.js`.
+*   **Bifoga karta vid delning (FAS 9):** Kopiera-knappen visar en modal
+    "Bifoga kartbild?" med tre val. `Text + karta` försöker
+    `navigator.share({files, text})` och faller tillbaka till
+    clipboard-copy + PNG-download för browsers utan Web Share.
+*   **Polish (FAS 10):** `service-worker.js` CACHE bumpat tio gånger
+    (`_1` → `_10`) längs vägen, slutar på `hv-20260424_minkartav2_10`.
+    README uppdaterad, BETA-markering finns kvar men fas-arbetet är
+    klart. Manuell test-matris i Chrome desktop + Android Chrome.
+    DevTools Network visar bara tile-URL:er (z/x/y) + Nominatim/Overpass
+    för UP-markörer — inga minsymbol-koordinater någonsin.
 
 ### 2026-04-23: MINKARTA
 Ny tabb för minläggningskartor enligt *Mineringar på karta – sammanställning*
