@@ -707,16 +707,29 @@ function renderObject(obj) {
 
 function openEditPopup(obj, layer, e) {
     const sym = window.MK_SYMBOLS[obj.typ];
+    const isUpk = obj.typ === 'upk';
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'min-width:180px;font-family:Inter,sans-serif;color:#e8f0e8';
-    let html = '<div style="font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4caf50;margin-bottom:6px">' + sym.label + '</div>';
+    wrap.style.cssText = 'min-width:200px;font-family:Inter,sans-serif;color:#e8f0e8';
+    let html = '<div style="font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4caf50;margin-bottom:6px">' +
+        (isUpk ? 'Utgångspunktskoordinat' : sym.label) + '</div>';
+
+    if (isUpk) {
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:4px">UPK-nummer</label>';
+        html += '<input id="edUpkNr" type="text" inputmode="numeric" pattern="\\d{1,3}" maxlength="3" ' +
+                'value="' + padUpk(obj.nr) + '" ' +
+                'style="width:100%;padding:6px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d;font-family:inherit;font-size:0.95rem;letter-spacing:0.05em">';
+        html += '<div id="edUpkHint" style="font-size:0.68rem;color:#8aaa8a;margin-top:2px">001–999, unikt i kartan</div>';
+    }
+
     if (sym.ambitionChoices) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:4px">Ambition</label>';
         html += '<select id="edAmb" style="width:100%;margin-top:2px;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">' +
             sym.ambitionChoices.map(c => '<option value="' + c + '"' + (obj.etikett === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
     }
-    html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Antal</label>';
-    html += '<input id="edAntal" type="number" min="0" value="' + (obj.antal || '') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    if (!isUpk) {
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Antal</label>';
+        html += '<input id="edAntal" type="number" min="0" value="' + (obj.antal || '') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    }
     html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Anteckning</label>';
     html += '<input id="edNote" type="text" value="' + (obj.anteckning || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
     html += '<div style="display:flex;gap:6px;margin-top:8px">';
@@ -732,18 +745,54 @@ function openEditPopup(obj, layer, e) {
 
     setTimeout(() => {
         const amb = wrap.querySelector('#edAmb');
+        const nrInput = wrap.querySelector('#edUpkNr');
+        const hint = wrap.querySelector('#edUpkHint');
+
+        // UPK-nummer: tillåt bara siffror, max 3 tecken live
+        if (nrInput) {
+            nrInput.addEventListener('input', () => {
+                const cleaned = nrInput.value.replace(/\D/g, '').slice(0, 3);
+                if (cleaned !== nrInput.value) nrInput.value = cleaned;
+            });
+            nrInput.focus();
+            nrInput.select();
+        }
+
         wrap.querySelector('#edSave').addEventListener('click', () => {
-            pushUndo();
+            // Validera UPK-nummer om tillämpligt
+            if (isUpk && nrInput) {
+                const raw = nrInput.value.trim();
+                const n = parseInt(raw, 10);
+                if (!raw || !Number.isFinite(n) || n < 1 || n > 999) {
+                    if (hint) { hint.style.color = '#e53935'; hint.textContent = 'Ange ett heltal 1–999.'; }
+                    return;
+                }
+                // Kollisionscheck mot andra UPK:er (ej sig själv)
+                const clash = state.objects.some(o => o.typ === 'upk' && o.id !== obj.id && o.nr === n);
+                if (clash) {
+                    if (hint) { hint.style.color = '#e53935'; hint.textContent = 'UPK ' + padUpk(n) + ' är upptaget. Välj ett annat nummer.'; }
+                    return;
+                }
+                if (n !== obj.nr) {
+                    pushUndo();
+                    obj.nr = n;
+                    obj.label = upkLabel(obj);
+                }
+            } else {
+                pushUndo();
+            }
             if (amb) obj.etikett = amb.value;
-            const an = wrap.querySelector('#edAntal').value;
-            obj.antal = an ? Number(an) : null;
+            const antalInput = wrap.querySelector('#edAntal');
+            if (antalInput) obj.antal = antalInput.value ? Number(antalInput.value) : null;
             obj.anteckning = wrap.querySelector('#edNote').value || '';
             map.closePopup(popup);
+            if (isUpk) syncUpTextarea();         // uppdatera pUp-raden + SP-referenser
             rebuildLayers();
         });
         wrap.querySelector('#edDel').addEventListener('click', () => {
             map.closePopup(popup);
-            if (confirm('Ta bort ' + sym.label + '?')) removeObject(obj.id);
+            const delLabel = isUpk ? upkLabel(obj) : sym.label;
+            if (confirm('Ta bort ' + delLabel + '?')) removeObject(obj.id);
         });
     }, 0);
 }
