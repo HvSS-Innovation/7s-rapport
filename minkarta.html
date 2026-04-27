@@ -99,6 +99,32 @@
             #mapContainer { height: 62vh; min-height: 360px; }
         }
 
+        /* Sido-paletter på desktop ─ visas bara när viewport är bred nog
+           att rymma container (980 px) + två 160 px-kolumner + paddings.
+           Under brytpunkten ligger paletten kvar under kartan som vanligt. */
+        .palette-side { display: none; }
+        @media (min-width: 1320px) {
+            .palette-side {
+                display: block;
+                position: fixed;
+                top: 130px;
+                width: 168px;
+                max-height: calc(100vh - 160px);
+                overflow-y: auto;
+                background: var(--bg-card);
+                border: 1px solid var(--border);
+                border-radius: var(--radius);
+                padding: 10px 12px 14px;
+                z-index: 200;
+            }
+            .palette-side-left  { left: 12px; }
+            .palette-side-right { right: 12px; }
+            .palette-side .palette-group { margin-top: 10px; }
+            .palette-side .palette-group:first-child { margin-top: 0; }
+            /* I sido-paletten: en kolumn knappar (max ~144 px innehåll). */
+            .palette-side .palette-grid { grid-template-columns: 1fr; }
+        }
+
         /* Symbolpalett */
         .palette { margin-top: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
         .palette-head { padding: 10px 14px; background: var(--bg-secondary); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
@@ -268,6 +294,8 @@
     </style>
 </head>
 <body>
+<aside id="paletteSideLeft" class="palette-side"></aside>
+<aside id="paletteSideRight" class="palette-side"></aside>
 <div class="container">
 
     <header><h1>MINKARTA <span style="color:var(--accent-hover);font-weight:500;letter-spacing:0.04em">(BETA)</span></h1><p>Minläggningskarta &amp; minprotokoll</p></header>
@@ -630,7 +658,40 @@ function renderPalette() {
     const tb = document.createElement('div');
     tb.className = 'palette-toolbar';
     body.appendChild(tb);
+
+    applyPaletteLayout();
 }
+
+// ── Sido-paletter på desktop (≥ 1320 px) ────────────────────────────────────
+// Vid breda skärmar flyttas palette-grupperna ut till två fixed-positionerade
+// asides (vänster + höger om .container). Vid mindre skärmar går grupperna
+// tillbaka in i .palette-body. INGEN duplicering av knapparna — DOM-noderna
+// flyttas via appendChild. Grupp 0+1 → vänster, 2+3 → höger.
+const _mqDesktopPalette = window.matchMedia('(min-width: 1320px)');
+function applyPaletteLayout() {
+    const body = document.getElementById('paletteBody');
+    const left = document.getElementById('paletteSideLeft');
+    const right = document.getElementById('paletteSideRight');
+    if (!body || !left || !right) return;
+    const all = [
+        ...body.querySelectorAll(':scope > .palette-group'),
+        ...left.querySelectorAll(':scope > .palette-group'),
+        ...right.querySelectorAll(':scope > .palette-group')
+    ];
+    if (_mqDesktopPalette.matches) {
+        left.innerHTML = '';
+        right.innerHTML = '';
+        if (all[0]) left.appendChild(all[0]);
+        if (all[1]) left.appendChild(all[1]);
+        if (all[2]) right.appendChild(all[2]);
+        if (all[3]) right.appendChild(all[3]);
+        for (let i = 4; i < all.length; i++) right.appendChild(all[i]);
+    } else {
+        const tb = body.querySelector('.palette-toolbar');
+        all.forEach(g => body.insertBefore(g, tb));
+    }
+}
+_mqDesktopPalette.addEventListener('change', applyPaletteLayout);
 
 function renderMapControls() {
     const host = document.getElementById('mapControls');
