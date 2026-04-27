@@ -202,6 +202,24 @@
         /* Toast */
         .mk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 0.82rem; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
         .mk-toast.show { opacity: 1; }
+
+        /* Flytande Ångra-knapp (visas direkt efter "Ta bort"). Sitter nere
+           till vänster så den inte krockar med toast (mitten) eller export-
+           popovern (mitten lite högre upp). pointerdown utanför knappen
+           stänger den (se hideUndoButton). */
+        .mk-undo-floating {
+            position: fixed; left: 16px; bottom: 16px; z-index: 9998;
+            background: var(--accent); color: #fff;
+            border: 1px solid var(--accent-hover);
+            border-radius: var(--radius);
+            padding: 10px 16px;
+            font-family: inherit; font-size: 0.85rem; font-weight: 600;
+            letter-spacing: 0.04em; cursor: pointer;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+            -webkit-tap-highlight-color: transparent;
+            animation: mkFadeIn 0.18s ease-out;
+        }
+        .mk-undo-floating:hover { background: var(--accent-hover); }
     </style>
 </head>
 <body>
@@ -709,6 +727,52 @@ function removeObject(id) {
     }
 }
 
+// Soft-delete: tar bort utan confirm() och visar en flytande Ångra-knapp.
+// removeObject() har redan kallat pushUndo() innan splice, så undo()
+// återställer symbolen exakt.
+function softDelete(obj) {
+    const sym = window.MK_SYMBOLS[obj.typ];
+    const label = (obj.typ === 'upk' ? upkLabel(obj) : (sym ? sym.label : obj.typ));
+    removeObject(obj.id);
+    showUndoButton(label);
+}
+
+let _undoBtnEl = null;
+let _undoBtnOutsideHandler = null;
+function showUndoButton(label) {
+    hideUndoButton();
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'mk-undo-floating';
+    btn.textContent = '↶ Ångra (Ta bort ' + label + ')';
+    btn.addEventListener('click', () => {
+        undo();
+        hideUndoButton();
+    });
+    document.body.appendChild(btn);
+    _undoBtnEl = btn;
+
+    // pointerdown på document {capture:true} — om klick utanför knappen,
+    // stäng. Registreras i setTimeout så att samma klick som öppnade
+    // knappen inte direkt stänger den.
+    _undoBtnOutsideHandler = (e) => {
+        if (_undoBtnEl && !_undoBtnEl.contains(e.target)) hideUndoButton();
+    };
+    setTimeout(() => {
+        document.addEventListener('pointerdown', _undoBtnOutsideHandler, true);
+    }, 0);
+}
+function hideUndoButton() {
+    if (_undoBtnOutsideHandler) {
+        document.removeEventListener('pointerdown', _undoBtnOutsideHandler, true);
+        _undoBtnOutsideHandler = null;
+    }
+    if (_undoBtnEl) {
+        _undoBtnEl.remove();
+        _undoBtnEl = null;
+    }
+}
+
 // Centroid (genomsnitt av lat/lng) för en path. Räcker för
 // minomrade-centermarker — exakt centroid behöver vi inte här.
 function polygonCentroid(path) {
@@ -882,12 +946,10 @@ function renderObject(obj) {
         if (L.DomEvent) L.DomEvent.stopPropagation(e);
         openEditPopup(obj, layer, e);
     });
-    // Long-press (mobile): två sekunder → radera med bekräftelse
+    // Long-press (mobile): ~800 ms → radera direkt + visa Ångra-knappen
     let pressTimer = null;
     layer.on('mousedown touchstart', () => {
-        pressTimer = setTimeout(() => {
-            if (confirm('Ta bort ' + (window.MK_SYMBOLS[obj.typ]?.label || obj.typ) + '?')) removeObject(obj.id);
-        }, 800);
+        pressTimer = setTimeout(() => { softDelete(obj); }, 800);
     });
     layer.on('mouseup mouseout touchend touchmove', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
 
@@ -1040,8 +1102,7 @@ function openEditPopup(obj, layer, e) {
         });
         wrap.querySelector('#edDel').addEventListener('click', () => {
             map.closePopup(popup);
-            const delLabel = isUpk ? upkLabel(obj) : sym.label;
-            if (confirm('Ta bort ' + delLabel + '?')) removeObject(obj.id);
+            softDelete(obj);
         });
     }, 0);
 }
