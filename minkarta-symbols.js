@@ -360,10 +360,10 @@ const SYMBOL_GROUPS = [
     { title: 'Referenspunkter',    ids: ['upk', 'ytter'] },
     { title: 'Mineringar',         ids: [
         'strv_tryck', 'fordonsmina', 'fordon_sid', 'tramp', 'forsvar',
-        'omr_verkan', 'minomrade', 'larm'
+        'omr_verkan', 'larm'
     ] },
     { title: 'Linjer & ytor',      ids: [
-        'avstand_tramp', 'avstand_strv', 'minlinje', 'minruta', 'verkansomrade'
+        'avstand_tramp', 'avstand_strv', 'minlinje', 'minruta', 'minomrade', 'verkansomrade'
     ] },
     { title: 'Förstöring & spärr', ids: [
         'forst_forb', 'forst_forb_sakrad', 'forst_plan', 'prov_rojskydd',
