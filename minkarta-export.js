@@ -478,10 +478,18 @@
         // Linje-/polygon-strokes skalas proportionellt så haloen ser kraftig
         // ut bredvid jumbo-symbolerna.
         const drawLabels = opts.drawLabels !== false;
+        const showModel = !!opts.showModel;            // v4.1: spegla skärmens toggle
         const SYMBOL_SCALE = 4;
         const SYMBOL_SIZE = 34 * SYMBOL_SCALE;         // 136 px
         const SYMBOL_HALF = SYMBOL_SIZE / 2;           // 68 px
         const LABEL_OFFSET = SYMBOL_HALF + 16;         // ~84 px under symbol-center
+        // Komponera bricka likadant som minkarta.html brickaText():
+        // UPK/SP behåller obj.label; övriga ärver sym.label + ev. modell-suffix.
+        function composeLabel(o, sym) {
+            if (o.label) return o.label;
+            if (showModel && o.modell) return sym.label + ' ' + o.modell;
+            return sym.label;
+        }
         for (const o of objects) {
             const sym = SYM[o.typ];
             if (!sym) continue;
@@ -491,7 +499,7 @@
                 if (img) ctx.drawImage(img, p.x - SYMBOL_HALF, p.y - SYMBOL_HALF, SYMBOL_SIZE, SYMBOL_SIZE);
                 // Namn-bricka under markern (samma bild som skärmen, 4× skalad)
                 if (drawLabels && o.typ !== 'ytter') {
-                    drawNameBadge(ctx, p.x, p.y + LABEL_OFFSET, o.label || sym.label, SYMBOL_SCALE);
+                    drawNameBadge(ctx, p.x, p.y + LABEL_OFFSET, composeLabel(o, sym), SYMBOL_SCALE);
                 }
             } else if (sym.category === 'line') {
                 // v4: vit halo bred under, svart linjearbete ovanpå — skalat

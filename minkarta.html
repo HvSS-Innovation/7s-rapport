@@ -554,6 +554,22 @@ function renderMapControls() {
     labelsLabel.appendChild(document.createTextNode(' Namn-etiketter'));
     host.appendChild(labelsLabel);
 
+    // Visa modell-toggle (v4.1) — när på + obj.modell finns blir brickan
+    // "Stridsvagnsmina 5" istället för bara "Stridsvagnsmina".
+    const modelLabel = document.createElement('label');
+    const modelCb = document.createElement('input');
+    modelCb.type = 'checkbox';
+    modelCb.id = 'mkToggleModel';
+    modelCb.checked = state.showModel;
+    modelCb.addEventListener('change', () => {
+        state.showModel = modelCb.checked;
+        saveLayerState();
+        rebuildLayers();
+    });
+    modelLabel.appendChild(modelCb);
+    modelLabel.appendChild(document.createTextNode(' Visa modell'));
+    host.appendChild(modelLabel);
+
     // Pan-läge-knappen (samma styrlogik som v3)
     const panBtn = document.createElement('button');
     panBtn.type = 'button';
@@ -587,10 +603,22 @@ const state = {
     showLabels: (function(){
         try { const s = JSON.parse(localStorage.getItem(LAYERS_KEY) || 'null'); return s ? !!s.labels : true; }
         catch(_) { return true; }
+    })(),
+    showModel: (function(){
+        try { const s = JSON.parse(localStorage.getItem(LAYERS_KEY) || 'null'); return s ? !!s.showModel : false; }
+        catch(_) { return false; }
     })()
 };
 function saveLayerState() {
-    try { localStorage.setItem(LAYERS_KEY, JSON.stringify({ labels: state.showLabels })); } catch(_) {}
+    try { localStorage.setItem(LAYERS_KEY, JSON.stringify({ labels: state.showLabels, showModel: state.showModel })); } catch(_) {}
+}
+
+// v4.1: brickans text. UPK/SP har sitt eget label; övriga ärver sym.label,
+// med valfritt suffix " <modell>" om toggle är på och obj.modell är satt.
+function brickaText(obj, sym) {
+    if (obj.label) return obj.label;                            // UPK xxx / SPn
+    if (state.showModel && obj.modell) return sym.label + ' ' + obj.modell;
+    return sym.label;
 }
 
 const undoStack = [];
@@ -668,8 +696,8 @@ function renderObject(obj) {
                 syncUpTextarea();
             }
         });
-        // Namn-bricka under markern (togglas via Lager-sektionen)
-        const labelText = obj.label || sym.label;
+        // Namn-bricka under markern (togglas via map-controls-raden)
+        const labelText = brickaText(obj, sym);
         if (state.showLabels) {
             layer.bindTooltip(labelText, {
                 permanent: true, direction: 'bottom', offset: [0, 14],
@@ -736,6 +764,14 @@ function openEditPopup(obj, layer, e) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Antal</label>';
         html += '<input id="edAntal" type="number" min="0" value="' + (obj.antal || '') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
     }
+    // v4.1: Modell + Plats — fri text för icke-meta-objekt (UPK/SP/ytter har egna fält)
+    const showExtraFields = (obj.typ !== 'upk' && obj.typ !== 'sp' && obj.typ !== 'ytter');
+    if (showExtraFields) {
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Modell</label>';
+        html += '<input id="edModell" type="text" placeholder="Ex: 5" value="' + (obj.modell || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Plats</label>';
+        html += '<input id="edPlats" type="text" placeholder="Ex: 2m öster om stora stenen" value="' + (obj.plats || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    }
     html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Anteckning</label>';
     html += '<input id="edNote" type="text" value="' + (obj.anteckning || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
     html += '<div style="display:flex;gap:6px;margin-top:8px">';
@@ -790,6 +826,10 @@ function openEditPopup(obj, layer, e) {
             if (amb) obj.etikett = amb.value;
             const antalInput = wrap.querySelector('#edAntal');
             if (antalInput) obj.antal = antalInput.value ? Number(antalInput.value) : null;
+            const modellInput = wrap.querySelector('#edModell');
+            if (modellInput) obj.modell = (modellInput.value || '').trim();
+            const platsInput = wrap.querySelector('#edPlats');
+            if (platsInput) obj.plats = (platsInput.value || '').trim();
             obj.anteckning = wrap.querySelector('#edNote').value || '';
             map.closePopup(popup);
             if (isUpk) syncUpTextarea();         // uppdatera pUp-raden + SP-referenser
@@ -1181,7 +1221,8 @@ async function prepareExportBlob() {
         subtitle,
         targetPx: 2048,
         dpr: 2,
-        drawLabels: state.showLabels
+        drawLabels: state.showLabels,
+        showModel: state.showModel
     });
     if (!res || !res.blob) throw new Error('Inget bilddata.');
     let centerMgrs = '';
@@ -1436,7 +1477,14 @@ function generateProtocolText() {
             } else if (o.typ === 'upk' && o.adress) {
                 etikett = (etikett || upkLabel(o));
             }
-            const anteckning = o.anteckning || o.adress || (o.antal ? String(o.antal) : '');
+            // v4.1: modell + plats prepended till anteckningskolumnen
+            const extras = [];
+            if (o.modell) extras.push('mod ' + o.modell);
+            if (o.plats) extras.push(o.plats);
+            if (o.anteckning) extras.push(o.anteckning);
+            else if (o.adress) extras.push(o.adress);
+            else if (o.antal) extras.push(String(o.antal));
+            const anteckning = extras.join(' · ');
             const n = String(idx).padStart(2, ' ');
             const typ = rawLabel.padEnd(26, ' ').slice(0, 26);
             const m = mgrs.padEnd(18, ' ').slice(0, 18);
