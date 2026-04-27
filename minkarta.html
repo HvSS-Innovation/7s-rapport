@@ -587,6 +587,11 @@ function setActiveTool(id) {
             if (map.boxZoom) map.boxZoom.enable();
         }
     }
+    if (id === 'frihand') {
+        toast('Dra på kartan för att rita. Esc avbryter.', 2400);
+    } else if (id === 'text') {
+        toast('Klicka och skriv. Enter sparar, Shift+Enter ny rad, Esc avbryter.', 3000);
+    }
 }
 
 function renderPalette() {
