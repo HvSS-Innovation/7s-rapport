@@ -703,6 +703,25 @@
                         ctx.fillText(String(n), cp.x, cp.y + yOff);
                         ctx.restore();
                     }
+                    // Ambitions-etikett (HIND/FÖRDR/STÖR/AVST) ritas inuti
+                    // polygonen — speglar skärmens center-tooltip. Annars
+                    // tappas etikettinformationen helt vid PNG-export.
+                    if (o.etikett) {
+                        const cx = o.path.reduce((s, p) => s + p.lng, 0) / o.path.length;
+                        const cy = o.path.reduce((s, p) => s + p.lat, 0) / o.path.length;
+                        const c = project(cy, cx);
+                        ctx.save();
+                        ctx.font = '700 14px Inter, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.lineJoin = 'round';
+                        ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+                        ctx.lineWidth = 4;
+                        ctx.strokeText(o.etikett, c.x, c.y);
+                        ctx.fillStyle = '#000000';
+                        ctx.fillText(o.etikett, c.x, c.y);
+                        ctx.restore();
+                    }
                 } else if (o.etikett || o.antal) {
                     const cx = o.path.reduce((s, p) => s + p.lng, 0) / o.path.length;
                     const cy = o.path.reduce((s, p) => s + p.lat, 0) / o.path.length;
