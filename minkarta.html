@@ -1252,6 +1252,9 @@ function finishDraft() {
 function cancelDraft() {
     if (state.draftLayer) map.removeLayer(state.draftLayer);
     state.draft = null; state.draftLayer = null;
+    // Defensivt: avbruten frihand-stroke får inte lämna kvar drawing-flagga
+    // som annars skulle göra nästa mousemove till en push på null-draft.
+    _frihandDrawing = false;
 }
 
 // ── Fri-rita (penna) ────────────────────────────────────────────────────────
