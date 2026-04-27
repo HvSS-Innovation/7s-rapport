@@ -771,3 +771,29 @@ diskret (samma muted-färg som palette-group-titlarna).
   som idag bara är text. Skulle kräva HTML + click-handler-injection.
 - Hint-varianten är minst invasiv och självläker (försvinner när den
   inte längre behövs).
+
+### Framtida (uppskjutet från redigerings-/rotations-puckeln 2026-04-28)
+
+**A. Polygon-fyll med SVG-`<pattern>` för avstand_tramp / avstand_strv.**
+Reglementet visar dashes (trampminering) respektive små bullets (strvmin.)
+inne i polygonen. Idag har vi enbart en svartfyllning på 8 % opacitet —
+mönstret förmedlas inte. Kräver:
+- Custom Leaflet SVG-renderer som lägger en `<defs><pattern></pattern></defs>`-
+  block i kart-pane:s SVG-element och refererar `fill="url(#mk-dashpattern)"`
+  på berörda polygoner. Eller injicering av defs vid layer-skapande.
+- Motsvarande pattern-implementation i PNG-export: rita patternet i en
+  off-screen canvas, registrera som `ctx.createPattern()` och använd som
+  fillStyle vid polygonritning.
+- Skiss: två separata mönster (dash 12 px @ 45°, bullet 6 px med 14 px
+  spacing) konfigurerbara via SYMBOLS-entryt. Egen commit.
+
+**B. Riktningsindikator för `minlinje`.**
+Rotation passar inte naturligt på en flernods-polyline (rotation runt
+centrum flyttar fysiska koordinater och tappar lat/lng-semantiken).
+Tolka istället som `obj.arrowAt = 'start' | 'end' | 'none'` och rita en
+liten reglements-pilspets vid vald ände. Kräver:
+- Edit-popup-fält: select med tre val.
+- Leaflet-rendering: extra L.marker vid path[0] eller path[N-1] med
+  pilspets-SVG vriden längs lokala segmentets bäring.
+- PNG-export: motsvarande draw vid path-änden.
+- Egen commit.

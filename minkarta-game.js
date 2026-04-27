@@ -152,7 +152,14 @@
                 </div>
             </div>
         `;
-        root.appendChild(panel);
+        // Sätt in FÖRE "Om MINKARTA"-detailset så spel-panelen kommer
+        // direkt efter minprotokollet i läsordningen (2026-04-28).
+        const about = document.getElementById('aboutPanel');
+        if (about && about.parentNode === root) {
+            root.insertBefore(panel, about);
+        } else {
+            root.appendChild(panel);
+        }
 
         document.getElementById('gStart').addEventListener('click', onStart);
         document.getElementById('gRoleToggle').addEventListener('click', onRoleToggle);

@@ -59,6 +59,32 @@ function svg(inner, extra) {
     return '<svg ' + attrs + '>' + inner + '</svg>';
 }
 
+// Gemensam linje-SVG för båda linjesymbolerna i paletten. Rak svart linje
+// med klassisk pilspets — Leaflet-renderingen på kartan får skilja sig
+// (dashArray etc.) men palettknappen är identisk.
+const MK_LINE_SVG =
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 200">' +
+        '<line x1="60" y1="100" x2="980" y2="100" stroke="black" stroke-width="22" stroke-linecap="round"/>' +
+        '<polygon points="980,55 1080,100 980,145" fill="black"/>' +
+    '</svg>';
+
+// Bygger minomrade-SVG:n med valfri text i M-positionerna. När ingen
+// antal-siffra är satt visas reglementets "M" — annars siffran.
+function minomradeSvg(antal) {
+    const n = (antal != null && antal !== '' && Number(antal) > 0) ? String(antal) : 'M';
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 580">' +
+        '<ellipse cx="460" cy="290" rx="370" ry="215" fill="white" stroke="black" stroke-width="14"/>' +
+        '<rect x="405" y="68" width="115" height="22" fill="white"/>' +
+        '<rect x="405" y="490" width="115" height="22" fill="white"/>' +
+        '<rect x="78" y="248" width="22" height="84" fill="white"/>' +
+        '<rect x="820" y="248" width="22" height="84" fill="white"/>' +
+        '<text x="460" y="115" font-family="Arial Black, Arial, sans-serif" font-size="115" font-weight="900" fill="black" text-anchor="middle">' + n + '</text>' +
+        '<text x="460" y="565" font-family="Arial Black, Arial, sans-serif" font-size="115" font-weight="900" fill="black" text-anchor="middle">' + n + '</text>' +
+        '<text x="18" y="345" font-family="Arial Black, Arial, sans-serif" font-size="115" font-weight="900" fill="black" text-anchor="start">' + n + '</text>' +
+        '<text x="902" y="345" font-family="Arial Black, Arial, sans-serif" font-size="115" font-weight="900" fill="black" text-anchor="end">' + n + '</text>' +
+    '</svg>';
+}
+
 const SYMBOLS = {
 
     // ── Strv-minor ───────────────────────────────────────────────────────────
@@ -220,23 +246,22 @@ const SYMBOLS = {
     },
 
     // ── Linjer ───────────────────────────────────────────────────────────────
+    // 2026-04-27: enhetlig palett-SVG för båda linjesymbolerna (rak svart
+    // linje + pilspets). Minlinjens bukiga pil och avspärrningens taggiga
+    // kant gjorde paletten visuellt rörig — knappens uppgift är att visa
+    // "det här är en linje", inte att simulera Leaflet-renderingen. Skill-
+    // naden mellan dem framgår fortfarande på kartan via Leaflet-stilen
+    // (stroke/dashArray) som lämnas oförändrad.
     minlinje: {
         label: 'Minlinje',
         category: 'line',
-        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1100 400">' +
-            '<circle cx="90" cy="220" r="72" fill="black"/>' +
-            '<path d="M 162,220 C 400,220 500,100 600,220 C 720,340 900,340 978,178" fill="none" stroke="black" stroke-width="18" stroke-linecap="round"/>' +
-            '<polygon points="1040,105  1013,212  943,169" fill="black"/>' +
-        '</svg>',
+        svg: MK_LINE_SVG,
         stroke: MK_INK, weight: 4, dashArray: null
     },
     avsparrning: {
         label: 'Avspärrning, minvarning',
         category: 'line',
-        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 900 185">' +
-            '<line x1="0" y1="6" x2="900" y2="6" stroke="black" stroke-width="5" stroke-linecap="square"/>' +
-            '<polygon points="0,8 900,8 900,35 850,165 800,35 750,165 700,35 650,165 600,35 550,165 500,35 450,165 400,35 350,165 300,35 250,165 200,35 150,165 100,35 50,165 0,35" fill="black"/>' +
-        '</svg>',
+        svg: MK_LINE_SVG,
         stroke: MK_INK, weight: 4, dashArray: '6 3'
     },
 
@@ -254,17 +279,9 @@ const SYMBOLS = {
     minomrade: {
         label: 'Minerat område',
         category: 'polygon',
-        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 580">' +
-            '<ellipse cx="460" cy="290" rx="370" ry="215" fill="white" stroke="black" stroke-width="14"/>' +
-            '<rect x="405" y="68" width="115" height="22" fill="white"/>' +
-            '<rect x="405" y="490" width="115" height="22" fill="white"/>' +
-            '<rect x="78" y="248" width="22" height="84" fill="white"/>' +
-            '<rect x="820" y="248" width="22" height="84" fill="white"/>' +
-            '<text x="460" y="115" font-family="Arial Black, Arial, sans-serif" font-size="115" font-weight="900" fill="black" text-anchor="middle">M</text>' +
-            '<text x="460" y="565" font-family="Arial Black, Arial, sans-serif" font-size="115" font-weight="900" fill="black" text-anchor="middle">M</text>' +
-            '<text x="18" y="345" font-family="Arial Black, Arial, sans-serif" font-size="115" font-weight="900" fill="black" text-anchor="start">M</text>' +
-            '<text x="902" y="345" font-family="Arial Black, Arial, sans-serif" font-size="115" font-weight="900" fill="black" text-anchor="end">M</text>' +
-        '</svg>',
+        // Statisk fallback (med "M") för paletten. Centrum-markörens SVG
+        // genereras dynamiskt via minomradeSvg(obj.antal) i mkMakeIcon().
+        svg: minomradeSvg(null),
         stroke: MK_INK, fill: MK_INK, fillOpacity: 0.06,
         ambitionChoices: ['HIND', 'FÖRDR', 'STÖR', 'AVST']
     },
@@ -334,30 +351,44 @@ const SYMBOLS = {
 
 };
 
-// Palett-grupper (för UI-layout). v4 efter 2026-04-27: 2 grupper, 22 symboler.
-// Rad 1 (närmast kartan): referenspunkter — UPK + yttergränsmarkör.
-// Rad 2: alla mineringssymboler i en grupp, ingen subuppdelning.
+// Palett-grupper (för UI-layout). v4 efter 2026-04-28: 4 grupper.
+// Rad 1: referenspunkter (UPK + yttergränsmarkör).
+// Rad 2: mineringar (Block A) — pjäser + larm + områdesverkan + minerat omr.
+// Rad 3: linjer & ytor (Block B).
+// Rad 4: förstöring & spärr (Block C).
 const SYMBOL_GROUPS = [
-    { title: 'Referenspunkter', ids: ['upk', 'ytter'] },
-    { title: 'Minor',           ids: [
-        'strv_tryck',
-        'tramp', 'larm',
-        'fordonsmina', 'fordon_sid', 'forsvar', 'prov_rojskydd', 'rojskydd',
-        'forst_forb', 'forst_forb_sakrad', 'forst_utf', 'forst_plan',
-        'omr_verkan', 'verkansomrade',
-        'minlinje', 'avsparrning',
-        'minruta', 'minomrade',
-        'avstand_tramp', 'avstand_strv'
+    { title: 'Referenspunkter',    ids: ['upk', 'ytter'] },
+    { title: 'Mineringar',         ids: [
+        'strv_tryck', 'fordonsmina', 'fordon_sid', 'tramp', 'forsvar',
+        'omr_verkan', 'minomrade', 'larm'
+    ] },
+    { title: 'Linjer & ytor',      ids: [
+        'avstand_tramp', 'avstand_strv', 'minlinje', 'minruta', 'verkansomrade'
+    ] },
+    { title: 'Förstöring & spärr', ids: [
+        'forst_forb', 'forst_forb_sakrad', 'forst_plan', 'prov_rojskydd',
+        'rojskydd', 'forst_utf', 'avsparrning'
     ] }
 ];
 
-// Skapa en Leaflet-divIcon från ett SYMBOLS-entry
-function makeIcon(id) {
+// Vridbara symboler — rotation appliceras på inre wrapper-div så att
+// Leaflet-ikonen visas vriden. Lagras på obj.rotation (heltal grader).
+const ROTATABLE_TYPES = new Set(['fordon_sid', 'forsvar']);
+
+// Skapa en Leaflet-divIcon från ett SYMBOLS-entry. obj är valfritt och
+// används bara för objekt-specifik rendering (minomrade-antal, rotation).
+function makeIcon(id, obj) {
     const sym = SYMBOLS[id];
     if (!sym) return null;
+    let svgStr = sym.svg;
+    if (id === 'minomrade' && obj) svgStr = minomradeSvg(obj.antal);
+    let html = svgStr;
+    if (obj && obj.rotation && ROTATABLE_TYPES.has(id)) {
+        html = '<div class="mk-rot" style="width:100%;height:100%;transform:rotate(' + obj.rotation + 'deg)">' + svgStr + '</div>';
+    }
     return L.divIcon({
         className: 'mk-icon mk-icon-' + id,
-        html: sym.svg,
+        html: html,
         iconSize: [34, 34],
         iconAnchor: [17, 17]
     });
@@ -366,4 +397,6 @@ function makeIcon(id) {
 window.MK_SYMBOLS = SYMBOLS;
 window.MK_SYMBOL_GROUPS = SYMBOL_GROUPS;
 window.mkMakeIcon = makeIcon;
+window.minomradeSvg = minomradeSvg;
+window.MK_ROTATABLE_TYPES = ROTATABLE_TYPES;
 window.MK_COLORS = { MK_INK, MK_HALO, MK_WHITE, MK_GRAY, MK_RED };

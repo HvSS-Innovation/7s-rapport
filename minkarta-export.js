@@ -35,6 +35,27 @@
         return z <= 17 ? 'OpenTopoMap (CC-BY-SA)' : 'OSM Standard (ODbL)';
     }
 
+    // Sektor-polygon för verkansomrade — ska matcha sectorPath() i
+    // minkarta.html. apex = (lat,lng). 24 noder + apex.
+    function sectorPath(lat, lng, rangeM, spreadDeg, rotationDeg) {
+        const range = rangeM || 200;
+        const half = (spreadDeg || 60) / 2;
+        const start = (rotationDeg || 0) - half;
+        const end   = (rotationDeg || 0) + half;
+        const N = 24;
+        const R = 6378137;
+        const cosLat = Math.cos(lat * Math.PI / 180);
+        const path = [[lat, lng]];
+        for (let i = 0; i <= N; i++) {
+            const bearing = start + (end - start) * (i / N);
+            const br = bearing * Math.PI / 180;
+            const dLat = (range * Math.cos(br)) / R * 180 / Math.PI;
+            const dLng = (range * Math.sin(br)) / (R * cosLat) * 180 / Math.PI;
+            path.push([lat + dLat, lng + dLng]);
+        }
+        return path;
+    }
+
     function lon2x(lon, z) { return (lon + 180) / 360 * Math.pow(2, z); }
     function lat2y(lat, z) {
         const r = lat * Math.PI / 180;
@@ -51,7 +72,15 @@
         const use = (ytter.length >= 2) ? ytter : objects;
         let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
         for (const o of use) {
-            const pts = o.path ? o.path : [{ lat: o.lat, lng: o.lng }];
+            // Verkansomrade representeras som en sektor-polygon — använd dess
+            // hela utbredning, inte bara apex-punkten, vid bbox-fallback.
+            let pts;
+            if (o.typ === 'verkansomrade') {
+                pts = sectorPath(o.lat, o.lng, o.range || 200, o.spread || 60, o.rotation || 0)
+                    .map(([la, ln]) => ({ lat: la, lng: ln }));
+            } else {
+                pts = o.path ? o.path : [{ lat: o.lat, lng: o.lng }];
+            }
             for (const p of pts) {
                 if (p.lat < minLat) minLat = p.lat;
                 if (p.lat > maxLat) maxLat = p.lat;
@@ -486,20 +515,41 @@
             return { x: px, y: py };
         }
 
-        // 4) Pre-load SVG-symboler som bilder
+        // 4) Pre-load SVG-symboler som bilder. Två spår:
+        //    - typ-nivå för "vanliga" point/meta-symboler
+        //    - obj-nivå för minomrade (SVG:n innehåller obj.antal)
+        // Verkansomrade hoppas över helt — det ritas som sektor-polygon i
+        // ritloopen, inte som SVG-bild.
         const uniqueTyps = [...new Set(objects.map(o => o.typ))];
         const symbolImages = {};
-        await Promise.all(uniqueTyps.map(typ => {
-            const sym = SYM[typ];
-            if (!sym || !(sym.category === 'point' || sym.category === 'meta')) return Promise.resolve();
-            const src = 'data:image/svg+xml;utf8,' + encodeURIComponent(sym.svg);
-            return new Promise(res => {
-                const img = new Image();
-                img.onload = () => { symbolImages[typ] = img; res(); };
-                img.onerror = () => res();
-                img.src = src;
-            });
-        }));
+        const objectImages = new Map();
+        const minomradeSvgFn = global.minomradeSvg;
+        await Promise.all([
+            ...uniqueTyps.map(typ => {
+                const sym = SYM[typ];
+                if (!sym) return Promise.resolve();
+                if (typ === 'verkansomrade') return Promise.resolve();
+                if (typ === 'minomrade') return Promise.resolve();
+                if (!(sym.category === 'point' || sym.category === 'meta')) return Promise.resolve();
+                const src = 'data:image/svg+xml;utf8,' + encodeURIComponent(sym.svg);
+                return new Promise(res => {
+                    const img = new Image();
+                    img.onload = () => { symbolImages[typ] = img; res(); };
+                    img.onerror = () => res();
+                    img.src = src;
+                });
+            }),
+            ...objects.filter(o => o.typ === 'minomrade').map(o => {
+                if (!minomradeSvgFn) return Promise.resolve();
+                const src = 'data:image/svg+xml;utf8,' + encodeURIComponent(minomradeSvgFn(o.antal));
+                return new Promise(res => {
+                    const img = new Image();
+                    img.onload = () => { objectImages.set(o.id, img); res(); };
+                    img.onerror = () => res();
+                    img.src = src;
+                });
+            })
+        ]);
 
         // 5) Rita objekt
         // v4: point/meta-symboler förstoras 4× (34→136 px) så de syns tydligt
@@ -523,10 +573,48 @@
         for (const o of objects) {
             const sym = SYM[o.typ];
             if (!sym) continue;
+
+            // Verkansomrade ritas som sektor-polygon, identiskt med skärmen
+            if (o.typ === 'verkansomrade') {
+                const sect = sectorPath(o.lat, o.lng,
+                    o.range || 200, o.spread || 60, o.rotation || 0);
+                ctx.beginPath();
+                sect.forEach((pt, i) => {
+                    const p = project(pt[0], pt[1]);
+                    if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y);
+                });
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(0,0,0,0.10)';
+                ctx.fill();
+                ctx.setLineDash([]);
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 10;
+                ctx.stroke();
+                ctx.setLineDash([12, 8]);
+                ctx.strokeStyle = '#000000'; ctx.lineWidth = 4;
+                ctx.stroke();
+                ctx.setLineDash([]);
+                if (drawLabels) {
+                    const apex = project(o.lat, o.lng);
+                    drawNameBadge(ctx, apex.x, apex.y + LABEL_OFFSET, composeLabel(o, sym), SYMBOL_SCALE);
+                }
+                continue;
+            }
+
             if (sym.category === 'point' || sym.category === 'meta') {
                 const p = project(o.lat, o.lng);
                 const img = symbolImages[o.typ];
-                if (img) ctx.drawImage(img, p.x - SYMBOL_HALF, p.y - SYMBOL_HALF, SYMBOL_SIZE, SYMBOL_SIZE);
+                if (img) {
+                    const rotDeg = o.rotation || 0;
+                    if (rotDeg && (o.typ === 'fordon_sid' || o.typ === 'forsvar')) {
+                        ctx.save();
+                        ctx.translate(p.x, p.y);
+                        ctx.rotate(rotDeg * Math.PI / 180);
+                        ctx.drawImage(img, -SYMBOL_HALF, -SYMBOL_HALF, SYMBOL_SIZE, SYMBOL_SIZE);
+                        ctx.restore();
+                    } else {
+                        ctx.drawImage(img, p.x - SYMBOL_HALF, p.y - SYMBOL_HALF, SYMBOL_SIZE, SYMBOL_SIZE);
+                    }
+                }
                 // Namn-bricka under markern (samma bild som skärmen, 4× skalad)
                 if (drawLabels && o.typ !== 'ytter') {
                     drawNameBadge(ctx, p.x, p.y + LABEL_OFFSET, composeLabel(o, sym), SYMBOL_SCALE);
@@ -565,7 +653,17 @@
                 ctx.strokeStyle = sym.stroke; ctx.lineWidth = 4;
                 ctx.stroke();
                 ctx.setLineDash([]);
-                if (o.etikett || o.antal) {
+                // Centrum-SVG för minomrade — visar antal eller "M" i ellips-
+                // symbolen, samma som Leaflet-renderingen.
+                if (o.typ === 'minomrade') {
+                    const objImg = objectImages.get(o.id);
+                    if (objImg) {
+                        const cxLng = o.path.reduce((s, p) => s + p.lng, 0) / o.path.length;
+                        const cyLat = o.path.reduce((s, p) => s + p.lat, 0) / o.path.length;
+                        const cp = project(cyLat, cxLng);
+                        ctx.drawImage(objImg, cp.x - SYMBOL_HALF, cp.y - SYMBOL_HALF, SYMBOL_SIZE, SYMBOL_SIZE);
+                    }
+                } else if (o.etikett || o.antal) {
                     const cx = o.path.reduce((s, p) => s + p.lng, 0) / o.path.length;
                     const cy = o.path.reduce((s, p) => s + p.lat, 0) / o.path.length;
                     const c = project(cy, cx);

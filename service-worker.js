@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260427_113013';
+const CACHE = 'hv-20260428_minkarta_edit_rotation';
 const FILES = [
   './',
   './index.html',

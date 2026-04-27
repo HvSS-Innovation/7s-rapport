@@ -143,6 +143,18 @@
             filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 1.5px rgba(0,0,0,0.45));
         }
 
+        /* Drag-handtag för polylines/polygoner — en liten grön prick som
+           sitter på första noden (eller apex för verkansomrade) och låter
+           användaren flytta hela formen. Leaflet saknar inbyggt drag-stöd
+           för Path-lager. */
+        .mk-drag-handle { background: transparent !important; border: none !important; }
+        .mk-drag-handle .dot {
+            width: 14px; height: 14px;
+            background: #4caf50; border: 2px solid #fff; border-radius: 50%;
+            box-shadow: 0 0 4px rgba(0,0,0,0.7);
+            cursor: move;
+        }
+
         /* Namn-etiketter under markers (Leaflet-tooltip som bricka) */
         .leaflet-tooltip.mk-label {
             font: 600 11px Inter, sans-serif;
@@ -310,7 +322,7 @@
             </div>
         </details>
 
-        <details class="about">
+        <details class="about" id="aboutPanel">
             <summary>Om MINKARTA &amp; integritet</summary>
             <div class="about-body">
                 <p><b>Syfte.</b> MINKARTA används för att rita upp och dokumentera
@@ -678,7 +690,14 @@ function removeObject(id) {
     const typ = state.objects[idx].typ;
     pushUndo();
     state.objects.splice(idx, 1);
-    if (state.layers[id]) { map.removeLayer(state.layers[id]); delete state.layers[id]; }
+    // Ta bort huvudlagret + alla sublagernycklar (drag-handtag, centrum-
+    // markör m.m.) som börjar med "<id>_".
+    Object.keys(state.layers).forEach(k => {
+        if (k === id || k.startsWith(id + '_')) {
+            map.removeLayer(state.layers[k]);
+            delete state.layers[k];
+        }
+    });
     // UPK: synkronisera textarean. UPK-nummer är stabila — övriga UPK:er
     // behåller sina nummer.
     if (typ === 'upk') {
@@ -687,13 +706,131 @@ function removeObject(id) {
     }
 }
 
+// Centroid (genomsnitt av lat/lng) för en path. Räcker för
+// minomrade-centermarker — exakt centroid behöver vi inte här.
+function polygonCentroid(path) {
+    let cLat = 0, cLng = 0;
+    for (const p of path) { cLat += p.lat; cLng += p.lng; }
+    return [cLat / path.length, cLng / path.length];
+}
+
+// Cirkulär sektor approximerad med 24 noder. apex = (lat,lng).
+// rangeM är räckvidd i meter, spreadDeg är öppningsvinkel (sektorns total-
+// vinkel), rotationDeg är bäring där sektorns mittaxel pekar (0 = norr,
+// medurs). Returnerar en latlng-array som börjar och slutar i apex så
+// L.polygon stänger formen korrekt.
+function sectorPath(lat, lng, rangeM, spreadDeg, rotationDeg) {
+    const range = rangeM || 200;
+    const half = (spreadDeg || 60) / 2;
+    const start = (rotationDeg || 0) - half;
+    const end   = (rotationDeg || 0) + half;
+    const N = 24;
+    const R = 6378137;
+    const cosLat = Math.cos(lat * Math.PI / 180);
+    const path = [[lat, lng]];
+    for (let i = 0; i <= N; i++) {
+        const bearing = start + (end - start) * (i / N);
+        const br = bearing * Math.PI / 180;
+        const dLat = (range * Math.cos(br)) / R * 180 / Math.PI;
+        const dLng = (range * Math.sin(br)) / (R * cosLat) * 180 / Math.PI;
+        path.push([lat + dLat, lng + dLng]);
+    }
+    return path;
+}
+
+// Drag-handtag (liten grön prick) för polylines/polygoner. Leaflet saknar
+// inbyggt drag-stöd för Path-lager, så vi syntetiserar det via en marker
+// vars dragging översätts till translation av hela formen. För
+// verkansomrade flyttas apex (obj.lat/obj.lng); för andra polygoner/
+// linjer flyttas alla noder med samma delta.
+function addDragHandle(obj, layer) {
+    let handleLatLng;
+    if (obj.typ === 'verkansomrade') handleLatLng = [obj.lat, obj.lng];
+    else if (obj.path && obj.path.length) handleLatLng = [obj.path[0].lat, obj.path[0].lng];
+    else return;
+
+    const handle = L.marker(handleLatLng, {
+        icon: L.divIcon({
+            className: 'mk-drag-handle',
+            html: '<div class="dot"></div>',
+            iconSize: [14, 14], iconAnchor: [7, 7]
+        }),
+        draggable: true,
+        zIndexOffset: 1000
+    });
+    let orig = null;
+    handle.on('dragstart', () => { orig = handle.getLatLng(); });
+    handle.on('drag', () => {
+        if (!orig) return;
+        const cur = handle.getLatLng();
+        if (obj.typ === 'verkansomrade') {
+            layer.setLatLngs(sectorPath(cur.lat, cur.lng,
+                obj.range || 200, obj.spread || 60, obj.rotation || 0));
+        } else if (obj.path && obj.path.length) {
+            const dLat = cur.lat - orig.lat;
+            const dLng = cur.lng - orig.lng;
+            layer.setLatLngs(obj.path.map(p => [p.lat + dLat, p.lng + dLng]));
+            // Centrum-markören för minomrade följer med synkroniserat
+            if (obj.typ === 'minomrade') {
+                const cm = state.layers[obj.id + '_c'];
+                if (cm) cm.setLatLng([
+                    obj.path.reduce((s, p) => s + p.lat, 0) / obj.path.length + dLat,
+                    obj.path.reduce((s, p) => s + p.lng, 0) / obj.path.length + dLng
+                ]);
+            }
+        }
+    });
+    handle.on('dragend', () => {
+        if (!orig) return;
+        const cur = handle.getLatLng();
+        const dLat = cur.lat - orig.lat;
+        const dLng = cur.lng - orig.lng;
+        if (Math.abs(dLat) < 1e-12 && Math.abs(dLng) < 1e-12) return;
+        pushUndo();
+        if (obj.typ === 'verkansomrade') {
+            obj.lat = cur.lat; obj.lng = cur.lng;
+        } else if (obj.path && obj.path.length) {
+            obj.path = obj.path.map(p => ({ lat: p.lat + dLat, lng: p.lng + dLng }));
+        }
+    });
+    handle.addTo(map);
+    state.layers[obj.id + '_h'] = handle;
+}
+
+// Centrum-markör för minomrade — visar SVG:n (med antal eller "M") inne
+// i polygonen. Inte interaktiv (klick går igenom till polygonen).
+function addCenterMarker(obj) {
+    if (!obj.path || obj.path.length < 1) return;
+    const m = L.marker(polygonCentroid(obj.path), {
+        icon: window.mkMakeIcon(obj.typ, obj),
+        interactive: false
+    });
+    m.addTo(map);
+    state.layers[obj.id + '_c'] = m;
+}
+
 function renderObject(obj) {
     const sym = window.MK_SYMBOLS[obj.typ];
     if (!sym) return;
     let layer;
-    if (sym.category === 'point' || sym.category === 'meta') {
+
+    if (obj.typ === 'verkansomrade') {
+        // Specialfall: ritas som sektor-polygon i stället för punktmarker.
+        const path = sectorPath(obj.lat, obj.lng,
+            obj.range || 200, obj.spread || 60, obj.rotation || 0);
+        layer = L.polygon(path, {
+            color: '#000', weight: 2,
+            fillColor: '#000', fillOpacity: 0.10,
+            dashArray: '6 4'
+        });
+        if (obj.etikett || obj.antal) {
+            layer.bindTooltip((obj.etikett || sym.label) + (obj.antal ? ' ' + obj.antal : ''), {
+                permanent: true, direction: 'center', className: 'mk-label'
+            });
+        }
+    } else if (sym.category === 'point' || sym.category === 'meta') {
         layer = L.marker([obj.lat, obj.lng], {
-            icon: window.mkMakeIcon(obj.typ),
+            icon: window.mkMakeIcon(obj.typ, obj),
             title: sym.label,
             draggable: true
         });
@@ -705,7 +842,6 @@ function renderObject(obj) {
                 reverseGeocodeUpk(obj);   // uppdaterar även textarean
             }
         });
-        // Namn-bricka under markern (togglas via map-controls-raden)
         const labelText = brickaText(obj, sym);
         if (state.showLabels) {
             layer.bindTooltip(labelText, {
@@ -717,6 +853,11 @@ function renderObject(obj) {
         layer = L.polyline(obj.path.map(p => [p.lat, p.lng]), {
             color: sym.stroke, weight: sym.weight || 3, dashArray: sym.dashArray || null
         });
+        if (obj.etikett || obj.antal) {
+            layer.bindTooltip((obj.etikett || '') + (obj.antal ? ' ' + obj.antal : ''), {
+                permanent: true, direction: 'center', className: 'mk-label'
+            });
+        }
     } else if (sym.category === 'polygon') {
         layer = L.polygon(obj.path.map(p => [p.lat, p.lng]), {
             color: sym.stroke, weight: 2, fillColor: sym.fill, fillOpacity: sym.fillOpacity || 0.3,
@@ -732,7 +873,7 @@ function renderObject(obj) {
     layer.addTo(map);
     state.layers[obj.id] = layer;
 
-    // Radera via klick på befintligt objekt (i pan-läge)
+    // Klick öppnar edit-popup i pan-läge (alla symboltyper)
     layer.on('click', e => {
         if (activeTool) return;                      // ritningsläge — ignorera
         if (L.DomEvent) L.DomEvent.stopPropagation(e);
@@ -746,13 +887,25 @@ function renderObject(obj) {
         }, 800);
     });
     layer.on('mouseup mouseout touchend touchmove', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
+
+    // Drag-handtag för flyttning av linjer/polygoner och verkansomrade
+    if (sym.category === 'line' || sym.category === 'polygon' || obj.typ === 'verkansomrade') {
+        addDragHandle(obj, layer);
+    }
+    // Centrum-markör för minomrade (M eller antal)
+    if (obj.typ === 'minomrade') {
+        addCenterMarker(obj);
+    }
 }
 
 function openEditPopup(obj, layer, e) {
     const sym = window.MK_SYMBOLS[obj.typ];
     const isUpk = obj.typ === 'upk';
+    const isRotatable = (obj.typ === 'fordon_sid' || obj.typ === 'forsvar' || obj.typ === 'verkansomrade');
+    const isVerkans  = obj.typ === 'verkansomrade';
+    const escAttr = s => String(s == null ? '' : s).replace(/"/g, '&quot;');
     const wrap = document.createElement('div');
-    wrap.style.cssText = 'min-width:200px;font-family:Inter,sans-serif;color:#e8f0e8';
+    wrap.style.cssText = 'min-width:220px;font-family:Inter,sans-serif;color:#e8f0e8';
     let html = '<div style="font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4caf50;margin-bottom:6px">' +
         (isUpk ? 'Utgångspunktskoordinat' : sym.label) + '</div>';
 
@@ -768,21 +921,41 @@ function openEditPopup(obj, layer, e) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:4px">Ambition</label>';
         html += '<select id="edAmb" style="width:100%;margin-top:2px;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">' +
             sym.ambitionChoices.map(c => '<option value="' + c + '"' + (obj.etikett === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
+    } else if (!isUpk) {
+        // Fri-text-etikett för symboler utan ambitionChoices (linjer, ytor,
+        // mineringar). Tom = ingen bricka.
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:4px">Etikett</label>';
+        html += '<input id="edEtikett" type="text" value="' + escAttr(obj.etikett) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
     }
     if (!isUpk) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Antal</label>';
         html += '<input id="edAntal" type="number" min="0" value="' + (obj.antal || '') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
     }
-    // v4.1: Modell + Plats — fri text för icke-meta-objekt (UPK/ytter har egna fält)
-    const showExtraFields = (obj.typ !== 'upk' && obj.typ !== 'ytter');
-    if (showExtraFields) {
+    // 2026-04-28: Modell + Plats görs tillgängliga för alla icke-UPK-symboler
+    // (även ytter, linjer, ytor) så hela symbolfloran kan redigeras likvärdigt.
+    if (!isUpk) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Modell</label>';
-        html += '<input id="edModell" type="text" placeholder="Ex: 5" value="' + (obj.modell || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '<input id="edModell" type="text" placeholder="Ex: 5" value="' + escAttr(obj.modell) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Plats</label>';
-        html += '<input id="edPlats" type="text" placeholder="Ex: 2m öster om stora stenen" value="' + (obj.plats || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '<input id="edPlats" type="text" placeholder="Ex: 2m öster om stora stenen" value="' + escAttr(obj.plats) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    }
+    // Verkansområde-specifika fält: räckvidd + öppningsvinkel.
+    if (isVerkans) {
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Räckvidd (m)</label>';
+        html += '<input id="edRange" type="number" min="10" max="5000" value="' + (obj.range || 200) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Öppningsvinkel (°)</label>';
+        html += '<input id="edSpread" type="number" min="5" max="360" value="' + (obj.spread || 60) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    }
+    // Rotationsslider för vridbara symboler (fordon_sid, forsvar, verkansomrade).
+    if (isRotatable) {
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Rotation (°)</label>';
+        html += '<div style="display:flex;gap:6px;align-items:center;margin-top:2px">';
+        html += '<input id="edRot" type="range" min="0" max="359" step="1" value="' + (obj.rotation || 0) + '" style="flex:1">';
+        html += '<input id="edRotN" type="number" min="0" max="359" step="1" value="' + (obj.rotation || 0) + '" style="width:64px;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '</div>';
     }
     html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Anteckning</label>';
-    html += '<input id="edNote" type="text" value="' + (obj.anteckning || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    html += '<input id="edNote" type="text" value="' + escAttr(obj.anteckning) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
     html += '<div style="display:flex;gap:6px;margin-top:8px">';
     html += '<button id="edSave" style="flex:1;padding:6px;background:#4caf50;border:none;color:#fff;border-radius:4px;font-family:inherit;cursor:pointer">Spara</button>';
     html += '<button id="edDel" style="padding:6px 10px;background:#c62828;border:none;color:#fff;border-radius:4px;font-family:inherit;cursor:pointer">Ta bort</button>';
@@ -809,6 +982,17 @@ function openEditPopup(obj, layer, e) {
             nrInput.select();
         }
 
+        // Synka rotation-slidern och numret med varandra (ren UI-bekvämlighet)
+        const rotSlider = wrap.querySelector('#edRot');
+        const rotNumber = wrap.querySelector('#edRotN');
+        if (rotSlider && rotNumber) {
+            rotSlider.addEventListener('input', () => { rotNumber.value = rotSlider.value; });
+            rotNumber.addEventListener('input', () => {
+                const v = Math.max(0, Math.min(359, parseInt(rotNumber.value, 10) || 0));
+                rotSlider.value = v;
+            });
+        }
+
         wrap.querySelector('#edSave').addEventListener('click', () => {
             // Validera UPK-nummer om tillämpligt
             if (isUpk && nrInput) {
@@ -833,12 +1017,19 @@ function openEditPopup(obj, layer, e) {
                 pushUndo();
             }
             if (amb) obj.etikett = amb.value;
+            const etikettInput = wrap.querySelector('#edEtikett');
+            if (etikettInput) obj.etikett = (etikettInput.value || '').trim();
             const antalInput = wrap.querySelector('#edAntal');
             if (antalInput) obj.antal = antalInput.value ? Number(antalInput.value) : null;
             const modellInput = wrap.querySelector('#edModell');
             if (modellInput) obj.modell = (modellInput.value || '').trim();
             const platsInput = wrap.querySelector('#edPlats');
             if (platsInput) obj.plats = (platsInput.value || '').trim();
+            const rangeInput = wrap.querySelector('#edRange');
+            if (rangeInput) obj.range = Math.max(10, Math.min(5000, parseInt(rangeInput.value, 10) || 200));
+            const spreadInput = wrap.querySelector('#edSpread');
+            if (spreadInput) obj.spread = Math.max(5, Math.min(360, parseInt(spreadInput.value, 10) || 60));
+            if (rotSlider) obj.rotation = Math.max(0, Math.min(359, parseInt(rotSlider.value, 10) || 0));
             obj.anteckning = wrap.querySelector('#edNote').value || '';
             map.closePopup(popup);
             if (isUpk) syncUpTextarea();         // uppdatera pUp-raden
@@ -1616,6 +1807,23 @@ document.addEventListener('DOMContentLoaded', () => {
         if (e.key === 'Enter') { e.preventDefault(); handleSearch(input.value); }
     });
     document.getElementById('goBtn').addEventListener('click', () => handleSearch(input.value));
+
+    // Footer (samma stil som fors.html). Appendas FÖRE version.js:s
+    // DOMContentLoaded-handler hinner sätta versionsraden, så slutordningen
+    // i DOM blir: integritet-text → feedback-länk → version.
+    const c = document.querySelector('.container');
+    if (c) {
+        const p = document.createElement('p');
+        p.textContent = 'Ingen data skickas eller lagras utanfor din enhet.';
+        p.style.cssText = 'text-align:center;padding:8px 0 0;font-size:0.65rem;color:#3a5a3a;';
+        c.appendChild(p);
+        const a = document.createElement('a');
+        a.href = 'https://github.com/gitjoda71/7s-rapport/issues/new?title=%5BBeta-Feedback%5D%20MINKARTA&body=**Form%3A**%20MINKARTA%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**';
+        a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.textContent = 'Bugg eller förslag? Lämna feedback →';
+        a.style.cssText = 'display:block;text-align:center;padding:24px 0 12px;font-size:0.7rem;color:#5a7a5a;text-decoration:none';
+        c.appendChild(a);
+    }
 });
 </script>
 <script src="pwa.js"></script>
