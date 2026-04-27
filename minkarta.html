@@ -1322,8 +1322,18 @@ function startTextInput(e) {
     const mapEl = map.getContainer();
     const ta = document.createElement('textarea');
     ta.className = 'mk-text-input';
-    ta.style.left = (cp.x - 100) + 'px';
-    ta.style.top  = (cp.y - 20) + 'px';
+    // Klampa textarean inom kart-containern så den inte klipps av
+    // .map-wrap { overflow: hidden } när användaren klickar nära kanten.
+    // Approx-mått: bredd 200 (min-width), höjd 60 (rows=2 + padding).
+    const taW = 200, taH = 60, pad = 4;
+    const mapW = mapEl.clientWidth, mapH = mapEl.clientHeight;
+    let x = cp.x - 100, y = cp.y - 20;
+    if (x < pad) x = pad;
+    if (x + taW > mapW - pad) x = mapW - taW - pad;
+    if (y < pad) y = pad;
+    if (y + taH > mapH - pad) y = mapH - taH - pad;
+    ta.style.left = x + 'px';
+    ta.style.top  = y + 'px';
     ta.rows = 2;
     mapEl.appendChild(ta);
     _textInputEl = ta;
