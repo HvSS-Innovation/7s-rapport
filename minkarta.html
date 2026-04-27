@@ -1258,8 +1258,17 @@ function cancelDraft() {
 // Använder map.on('mousedown'/'mousemove'/'mouseup') — Leaflet syntheter
 // touch-events till samma trio, så samma kod hanterar mus + finger.
 let _frihandDrawing = false;
+function gameActive() {
+    return !!(window.MK_GAME && window.MK_GAME.state && window.MK_GAME.state.active);
+}
 function onFrihandStart(e) {
     if (activeTool !== 'frihand') return;
+    // Övningsläget får aldrig ta emot frihand-objekt — handlas inte i
+    // wrapHandleMapClick eftersom frihand drivs av map.mousedown, inte click.
+    if (gameActive()) {
+        toast('Fri-rita stöds inte i övningsläget.', 2200);
+        return;
+    }
     if (state.draft && state.draft.typ !== 'frihand') cancelDraft();
     _frihandDrawing = true;
     state.draft = {

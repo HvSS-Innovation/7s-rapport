@@ -279,6 +279,14 @@
         return function (e) {
             if (!gameState.active) return origHandler(e);
             if (!global.activeTool) return origHandler(e);
+            // Annoteringssymboler (text/frihand) hör inte hemma i övningens
+            // BLIND/FACIT-export och har dessutom egna ritflöden som inte
+            // kan rutas till gameState. Avvisa explicit för att aldrig
+            // kontaminera skarpa state.objects via game-mode.
+            if (global.activeTool === 'text' || global.activeTool === 'frihand') {
+                if (global.toast) global.toast('Text och fri-rita stöds inte i övningsläget.', 2200);
+                return;
+            }
             const sym = global.MK_SYMBOLS[global.activeTool];
             if (!sym) return origHandler(e);
             if (sym.category === 'point' || sym.category === 'meta') {
