@@ -157,6 +157,37 @@
             pointer-events: none;
         }
 
+        /* Fri-text-symbol: svart text med vit halo direkt på kartan. */
+        .mk-text-symbol { background: transparent !important; border: none !important; overflow: visible !important; }
+        .mk-text-symbol span {
+            display: inline-block;
+            color: #000;
+            font: 800 14px Inter, sans-serif;
+            line-height: 1.15;
+            white-space: pre;
+            text-align: center;
+            filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 1.5px rgba(0,0,0,0.45));
+        }
+
+        /* Text-cursor-input som visas vid kart-klick när Text-verktyget är
+           aktivt. Absolut-positionerad inuti map-container. */
+        .mk-text-input {
+            position: absolute;
+            z-index: 1500;
+            min-width: 200px;
+            min-height: 40px;
+            padding: 4px 6px;
+            background: rgba(255, 255, 255, 0.96);
+            border: 2px solid var(--accent);
+            border-radius: 3px;
+            color: #000;
+            font: 800 14px Inter, sans-serif;
+            line-height: 1.15;
+            resize: none;
+            outline: none;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+        }
+
         /* Drag-handtag för polylines/polygoner — en liten grön prick som
            sitter på första noden (eller apex för verkansomrade) och låter
            användaren flytta hela formen. Leaflet saknar inbyggt drag-stöd
@@ -725,6 +756,12 @@ function uid() {
     return 'o_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
 }
 
+function escapeHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
 function addObject(obj) {
     pushUndo();
     state.objects.push(obj);
@@ -946,8 +983,20 @@ function renderObject(obj) {
             });
         }
     } else if (sym.category === 'point' || sym.category === 'meta') {
+        // Fri-text: text-marker med användarens text som ikon-innehåll
+        // (svart text + vit halo via CSS-filter). Övriga punkt-/meta-
+        // symboler får sin SVG via mkMakeIcon().
+        const isText = obj.typ === 'text';
+        const icon = isText
+            ? L.divIcon({
+                className: 'mk-text-symbol',
+                html: '<span>' + escapeHtml(obj.text || '') + '</span>',
+                iconSize: [240, 60],
+                iconAnchor: [120, 30]
+            })
+            : window.mkMakeIcon(obj.typ, obj);
         layer = L.marker([obj.lat, obj.lng], {
-            icon: window.mkMakeIcon(obj.typ, obj),
+            icon,
             title: sym.label,
             draggable: true
         });
@@ -959,8 +1008,9 @@ function renderObject(obj) {
                 reverseGeocodeUpk(obj);   // uppdaterar även textarean
             }
         });
-        const labelText = brickaText(obj, sym);
-        if (state.showLabels) {
+        // Tooltip-bricka: ej för text (texten är sin egen "bricka").
+        if (state.showLabels && !isText) {
+            const labelText = brickaText(obj, sym);
             layer.bindTooltip(labelText, {
                 permanent: true, direction: 'bottom', offset: [0, 14],
                 className: 'mk-label', interactive: false
@@ -1016,9 +1066,11 @@ function renderObject(obj) {
 function openEditPopup(obj, layer, e) {
     const sym = window.MK_SYMBOLS[obj.typ];
     const isUpk = obj.typ === 'upk';
+    const isText = obj.typ === 'text';
     const isRotatable = (obj.typ === 'fordon_sid' || obj.typ === 'forsvar' || obj.typ === 'verkansomrade');
     const isVerkans  = obj.typ === 'verkansomrade';
     const escAttr = s => String(s == null ? '' : s).replace(/"/g, '&quot;');
+    const escTextarea = s => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
     const wrap = document.createElement('div');
     wrap.style.cssText = 'min-width:220px;font-family:Inter,sans-serif;color:#e8f0e8';
     let html = '<div style="font-size:0.78rem;font-weight:700;letter-spacing:0.06em;text-transform:uppercase;color:#4caf50;margin-bottom:6px">' +
@@ -1032,7 +1084,13 @@ function openEditPopup(obj, layer, e) {
         html += '<div id="edUpkHint" style="font-size:0.68rem;color:#8aaa8a;margin-top:2px">001–999, unikt i kartan</div>';
     }
 
-    if (sym.ambitionChoices) {
+    if (isText) {
+        // Fri-text-symbolen redigeras enbart via en textarea — Antal/
+        // Modell/Plats är meningslösa här. Shift+Enter ger radbrytning,
+        // raderna sparas exakt som de står.
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:4px">Text</label>';
+        html += '<textarea id="edText" rows="3" style="width:100%;padding:6px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d;font-family:inherit;font-size:0.95rem;resize:vertical">' + escTextarea(obj.text) + '</textarea>';
+    } else if (sym.ambitionChoices) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:4px">Ambition</label>';
         html += '<select id="edAmb" style="width:100%;margin-top:2px;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">' +
             sym.ambitionChoices.map(c => '<option value="' + c + '"' + (obj.etikett === c ? ' selected' : '') + '>' + c + '</option>').join('') + '</select>';
@@ -1042,13 +1100,13 @@ function openEditPopup(obj, layer, e) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:4px">Etikett</label>';
         html += '<input id="edEtikett" type="text" value="' + escAttr(obj.etikett) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
     }
-    if (!isUpk) {
+    if (!isUpk && !isText) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Antal</label>';
         html += '<input id="edAntal" type="number" min="0" value="' + (obj.antal || '') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
     }
     // 2026-04-28: Modell + Plats görs tillgängliga för alla icke-UPK-symboler
     // (även ytter, linjer, ytor) så hela symbolfloran kan redigeras likvärdigt.
-    if (!isUpk) {
+    if (!isUpk && !isText) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Modell</label>';
         html += '<input id="edModell" type="text" placeholder="Ex: 5" value="' + escAttr(obj.modell) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Plats</label>';
@@ -1134,6 +1192,8 @@ function openEditPopup(obj, layer, e) {
             if (amb) obj.etikett = amb.value;
             const etikettInput = wrap.querySelector('#edEtikett');
             if (etikettInput) obj.etikett = (etikettInput.value || '').trim();
+            const textInput = wrap.querySelector('#edText');
+            if (textInput) obj.text = textInput.value.replace(/\s+$/, '');
             const antalInput = wrap.querySelector('#edAntal');
             if (antalInput) obj.antal = antalInput.value ? Number(antalInput.value) : null;
             const modellInput = wrap.querySelector('#edModell');
@@ -1230,6 +1290,57 @@ function onFrihandEnd() {
     addObject({ id: d.id, typ: 'frihand', path: d.path, created: Date.now() });
 }
 
+// ── Fri-text (textinmatning vid klick) ──────────────────────────────────────
+// Visar en textarea direkt på kart-pixeln där användaren klickade. Enter
+// (utan Shift) eller Tab sparar. Shift+Enter ger radbrytning. Esc avbryter.
+// Blur sparar om text finns, annars avbryter.
+let _textInputEl = null;
+function startTextInput(e) {
+    if (_textInputEl) return;            // redan en text-input öppen
+    const lat = e.latlng.lat, lng = e.latlng.lng;
+    const cp = map.latLngToContainerPoint(e.latlng);
+    const mapEl = map.getContainer();
+    const ta = document.createElement('textarea');
+    ta.className = 'mk-text-input';
+    ta.style.left = (cp.x - 100) + 'px';
+    ta.style.top  = (cp.y - 20) + 'px';
+    ta.rows = 2;
+    mapEl.appendChild(ta);
+    _textInputEl = ta;
+
+    // Stoppa Leaflet från att tolka klick i textarean som kart-events
+    if (L.DomEvent) {
+        L.DomEvent.disableClickPropagation(ta);
+        L.DomEvent.disableScrollPropagation(ta);
+    }
+
+    let committed = false;
+    function cleanup() {
+        committed = true;
+        if (_textInputEl === ta) _textInputEl = null;
+        ta.remove();
+    }
+    function commit() {
+        if (committed) return;
+        const text = ta.value.replace(/\s+$/, '');
+        cleanup();
+        if (text) {
+            addObject({ id: uid(), typ: 'text', lat, lng, text, created: Date.now() });
+        }
+    }
+    function cancel() { if (!committed) cleanup(); }
+
+    ta.addEventListener('keydown', ev => {
+        if (ev.key === 'Enter' && !ev.shiftKey) { ev.preventDefault(); commit(); }
+        else if (ev.key === 'Tab')              { ev.preventDefault(); commit(); }
+        else if (ev.key === 'Escape')           { ev.preventDefault(); cancel(); }
+    });
+    ta.addEventListener('blur', () => {
+        if (ta.value.trim()) commit(); else cancel();
+    });
+    setTimeout(() => ta.focus(), 0);
+}
+
 // ── UPK-hjälp: slumpnummer, reverse-geocode, textarea-sync
 
 // UPK-nummer: stabila slumpade heltal 1..999 per placering. Identifierare är
@@ -1312,6 +1423,10 @@ function reverseGeocodeUpk(obj) {
 function handleMapClick(e) {
     if (!activeTool) return;
     if (activeTool === 'frihand') return;          // hanteras via mousedown/move/up
+    if (activeTool === 'text') {                   // hanteras via inline textarea
+        startTextInput(e);
+        return;
+    }
     const sym = window.MK_SYMBOLS[activeTool];
     if (!sym) return;
     if (sym.category === 'point' || sym.category === 'meta') {
@@ -1751,7 +1866,9 @@ function generateProtocolText() {
             minlinje:          'Minlinje',
             avsparrning:       'Avspärrning',
             ytter:             'Yttergränsmarkör',
-            upk:               'UPK-markör'
+            upk:               'UPK-markör',
+            frihand:           'Fri-rita',
+            text:              'Text'
         });
         let idx = 0;
         for (const o of state.objects) {
@@ -1771,6 +1888,9 @@ function generateProtocolText() {
             let etikett = o.label || o.etikett || '';
             if (o.typ === 'upk' && o.adress) {
                 etikett = (etikett || upkLabel(o));
+            }
+            if (o.typ === 'text' && o.text) {
+                etikett = o.text.replace(/\n/g, ' / ');
             }
             // v4.1: modell + plats prepended till anteckningskolumnen
             const extras = [];

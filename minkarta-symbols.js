@@ -344,6 +344,20 @@ const SYMBOLS = {
         )
     },
 
+    // ── Fri-text ─────────────────────────────────────────────────────────────
+    // Punktsymbol som istället för en SVG-piktogram visar en användarens
+    // egen text på kartan. Text-skrivflödet (text-cursor, Shift+Enter,
+    // Enter/Tab för att avsluta) hanteras i minkarta.html. Sparas som
+    // { typ:'text', lat, lng, text, … }.
+    text: {
+        label: 'Text',
+        category: 'point',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+            '<line x1="5" y1="6" x2="19" y2="6" stroke="' + MK_INK + '" stroke-width="3.2" stroke-linecap="round"/>' +
+            '<line x1="12" y1="6" x2="12" y2="20" stroke="' + MK_INK + '" stroke-width="3.2" stroke-linecap="round"/>' +
+        '</svg>'
+    },
+
     // ── Fri-rita-penna ───────────────────────────────────────────────────────
     // Frihandsritad polyline. Ritas via mousedown→mousemove→mouseup i
     // minkarta.html (inte vanlig click-flow), men sparas som vilken linje
@@ -372,7 +386,7 @@ const SYMBOLS = {
 // Rad 3: linjer & ytor (Block B).
 // Rad 4: förstöring & spärr (Block C).
 const SYMBOL_GROUPS = [
-    { title: 'Referenspunkter',    ids: ['upk', 'ytter', 'frihand'] },
+    { title: 'Referenspunkter',    ids: ['upk', 'ytter', 'frihand', 'text'] },
     { title: 'Mineringar',         ids: [
         'strv_tryck', 'fordonsmina', 'fordon_sid', 'tramp', 'forsvar',
         'omr_verkan', 'larm'

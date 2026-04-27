@@ -598,6 +598,32 @@
                 continue;
             }
 
+            // Fri-text: rita användarens text direkt på canvasen med vit
+            // strokeText under svart fillText (paint-order-halo). Skala
+            // skärmens font 14 px med SYMBOL_SCALE → 21 px i export.
+            if (o.typ === 'text') {
+                const txt = String(o.text || '');
+                if (!txt) continue;
+                const p = project(o.lat, o.lng);
+                const fontPx = 14 * SYMBOL_SCALE;
+                const lines = txt.split('\n');
+                const lineHeight = fontPx * 1.15;
+                const totalH = lines.length * lineHeight;
+                const startY = p.y - totalH / 2 + lineHeight / 2;
+                ctx.save();
+                ctx.font = '800 ' + fontPx + 'px Inter, sans-serif';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 4;
+                lines.forEach((ln, i) => ctx.strokeText(ln, p.x, startY + i * lineHeight));
+                ctx.fillStyle = '#000000';
+                lines.forEach((ln, i) => ctx.fillText(ln, p.x, startY + i * lineHeight));
+                ctx.restore();
+                continue;
+            }
+
             if (sym.category === 'point' || sym.category === 'meta') {
                 const p = project(o.lat, o.lng);
                 const img = symbolImages[o.typ];
