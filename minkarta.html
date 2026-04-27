@@ -1762,9 +1762,12 @@ function attachKeyboard() {
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
         if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); redoAction(); }
     });
-    // Varna vid navigation bort om något är oskavt (senaste autospar har kört men user kan ändå vilja)
+    // Varna vid navigation bort BARA om autosave har osparat arbete i kö
+    // (_saveTimer != null betyder ändring inom senaste 400 ms). Tidigare
+    // varnades alltid när det fanns objekt i kartan, även när IndexedDB
+    // var helt synkad.
     window.addEventListener('beforeunload', e => {
-        if (state.objects.length > 0) {
+        if (_saveTimer) {
             e.preventDefault();
             e.returnValue = '';
         }
