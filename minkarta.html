@@ -741,6 +741,10 @@ function undo() {
     const prev = undoStack.pop();
     state.objects = JSON.parse(prev);
     rebuildLayers();
+    // UPK-rader och reglementsvarningen härleds ur state.objects — utan
+    // detta blir protokollets textarea och varningen ur synk efter undo
+    // av en UPK-radering eller -ändring.
+    syncUpTextarea();
     scheduleAutosave();
 }
 function redoAction() {
@@ -749,6 +753,7 @@ function redoAction() {
     const next = redoStack.pop();
     state.objects = JSON.parse(next);
     rebuildLayers();
+    syncUpTextarea();
     scheduleAutosave();
 }
 
