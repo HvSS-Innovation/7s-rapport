@@ -143,6 +143,20 @@
             filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 1.5px rgba(0,0,0,0.45));
         }
 
+        /* Siffer-bricka för minerat område — placeras utanför polygonens
+           nordliga kant. Svart text med vit halo (drop-shadow) så den syns
+           mot både ljust och mörkt kart-underlag. */
+        .mk-numeric-badge { background: transparent !important; border: none !important; }
+        .mk-numeric-badge span {
+            display: inline-block;
+            color: #000;
+            font: 800 20px Inter, sans-serif;
+            line-height: 1;
+            white-space: nowrap;
+            filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 1.5px rgba(0,0,0,0.45));
+            pointer-events: none;
+        }
+
         /* Drag-handtag för polylines/polygoner — en liten grön prick som
            sitter på första noden (eller apex för verkansomrade) och låter
            användaren flytta hela formen. Leaflet saknar inbyggt drag-stöd
@@ -837,13 +851,13 @@ function addDragHandle(obj, layer) {
             const dLat = cur.lat - orig.lat;
             const dLng = cur.lng - orig.lng;
             layer.setLatLngs(obj.path.map(p => [p.lat + dLat, p.lng + dLng]));
-            // Centrum-markören för minomrade följer med synkroniserat
+            // Siffer-brickan för minomrade följer med synkroniserat
             if (obj.typ === 'minomrade') {
                 const cm = state.layers[obj.id + '_c'];
-                if (cm) cm.setLatLng([
-                    obj.path.reduce((s, p) => s + p.lat, 0) / obj.path.length + dLat,
-                    obj.path.reduce((s, p) => s + p.lng, 0) / obj.path.length + dLng
-                ]);
+                if (cm) {
+                    const base = minomradeBadgePos(obj.path);
+                    cm.setLatLng([base[0] + dLat, base[1] + dLng]);
+                }
             }
         }
     });
@@ -864,13 +878,37 @@ function addDragHandle(obj, layer) {
     state.layers[obj.id + '_h'] = handle;
 }
 
-// Centrum-markör för minomrade — visar SVG:n (med antal eller "M") inne
-// i polygonen. Inte interaktiv (klick går igenom till polygonen).
+// Position för minomrade-siffran: lng-mitten, max-latitud (norra kanten).
+// Drag-handlern flyttar markören med samma delta som hela polygonen, så
+// här räknar vi alltid mot ursprungs-path:en (inte den translated layern).
+function minomradeBadgePos(path) {
+    let minLng = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+    for (const p of path) {
+        if (p.lat > maxLat) maxLat = p.lat;
+        if (p.lng < minLng) minLng = p.lng;
+        if (p.lng > maxLng) maxLng = p.lng;
+    }
+    return [maxLat, (minLng + maxLng) / 2];
+}
+
+// Siffer-bricka för minerat område — placeras strax utanför polygonens
+// nordliga kant. Visas bara när obj.antal > 0 (annars helt utan markör).
+// Inte interaktiv (klick går igenom till polygonen). 2026-04-27: ersätter
+// tidigare centrum-SVG med ellips/M som ritades inuti polygonen.
 function addCenterMarker(obj) {
     if (!obj.path || obj.path.length < 1) return;
-    const m = L.marker(polygonCentroid(obj.path), {
-        icon: window.mkMakeIcon(obj.typ, obj),
-        interactive: false
+    if (obj.typ !== 'minomrade') return;
+    const n = Number(obj.antal);
+    if (!Number.isFinite(n) || n <= 0) return;
+    const m = L.marker(minomradeBadgePos(obj.path), {
+        icon: L.divIcon({
+            className: 'mk-numeric-badge',
+            html: '<span>' + n + '</span>',
+            iconSize: [60, 24],
+            iconAnchor: [30, 36]              // lyfter siffran ~24 px ovanför kant-punkten
+        }),
+        interactive: false,
+        keyboard: false
     });
     m.addTo(map);
     state.layers[obj.id + '_c'] = m;

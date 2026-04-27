@@ -526,17 +526,14 @@
             return { x: px, y: py };
         }
 
-        // 4) Pre-load SVG-symboler som bilder. Två spår:
-        //    - typ-nivå för "vanliga" point/meta-symboler
-        //    - obj-nivå för minomrade (SVG:n innehåller obj.antal)
-        // Verkansomrade hoppas över helt — det ritas som sektor-polygon i
-        // ritloopen, inte som SVG-bild.
+        // 4) Pre-load SVG-symboler som bilder. Bara typ-nivå för "vanliga"
+        //    point/meta-symboler. Verkansomrade hoppas över (sektor-polygon
+        //    i ritloopen). Minomrade har ingen centrum-SVG längre — bara
+        //    polygonens gränslinje + en siffer-bricka utanför kanten.
         const uniqueTyps = [...new Set(objects.map(o => o.typ))];
         const symbolImages = {};
-        const objectImages = new Map();
-        const minomradeSvgFn = global.minomradeSvg;
-        await Promise.all([
-            ...uniqueTyps.map(typ => {
+        await Promise.all(
+            uniqueTyps.map(typ => {
                 const sym = SYM[typ];
                 if (!sym) return Promise.resolve();
                 if (typ === 'verkansomrade') return Promise.resolve();
@@ -549,18 +546,8 @@
                     img.onerror = () => res();
                     img.src = src;
                 });
-            }),
-            ...objects.filter(o => o.typ === 'minomrade').map(o => {
-                if (!minomradeSvgFn) return Promise.resolve();
-                const src = 'data:image/svg+xml;utf8,' + encodeURIComponent(minomradeSvgFn(o.antal));
-                return new Promise(res => {
-                    const img = new Image();
-                    img.onload = () => { objectImages.set(o.id, img); res(); };
-                    img.onerror = () => res();
-                    img.src = src;
-                });
             })
-        ]);
+        );
 
         // 5) Rita objekt
         // v4.2: Exporten ska se ut som ett "rent foto" av skärmen. Symbolerna
@@ -664,15 +651,31 @@
                 ctx.strokeStyle = sym.stroke; ctx.lineWidth = 1.5;
                 ctx.stroke();
                 ctx.setLineDash([]);
-                // Centrum-SVG för minomrade — visar antal eller "M" i ellips-
-                // symbolen, samma som Leaflet-renderingen.
+                // Minerat område: ingen centrum-SVG — bara polygonens
+                // gränslinje (redan ritad ovan) + en siffra utanför nordliga
+                // kanten om obj.antal > 0. Skalas 1.5× mot skärmens 20 px.
                 if (o.typ === 'minomrade') {
-                    const objImg = objectImages.get(o.id);
-                    if (objImg) {
-                        const cxLng = o.path.reduce((s, p) => s + p.lng, 0) / o.path.length;
-                        const cyLat = o.path.reduce((s, p) => s + p.lat, 0) / o.path.length;
-                        const cp = project(cyLat, cxLng);
-                        ctx.drawImage(objImg, cp.x - SYMBOL_HALF, cp.y - SYMBOL_HALF, SYMBOL_SIZE, SYMBOL_SIZE);
+                    const n = Number(o.antal);
+                    if (Number.isFinite(n) && n > 0) {
+                        let minLng = Infinity, maxLng = -Infinity, maxLat = -Infinity;
+                        for (const p of o.path) {
+                            if (p.lat > maxLat) maxLat = p.lat;
+                            if (p.lng < minLng) minLng = p.lng;
+                            if (p.lng > maxLng) maxLng = p.lng;
+                        }
+                        const cp = project(maxLat, (minLng + maxLng) / 2);
+                        const yOff = -28;             // ovanför nordliga kanten
+                        ctx.save();
+                        ctx.font = '800 30px Inter, sans-serif';
+                        ctx.textAlign = 'center';
+                        ctx.textBaseline = 'middle';
+                        ctx.lineJoin = 'round';
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 6;
+                        ctx.strokeText(String(n), cp.x, cp.y + yOff);
+                        ctx.fillStyle = '#000000';
+                        ctx.fillText(String(n), cp.x, cp.y + yOff);
+                        ctx.restore();
                     }
                 } else if (o.etikett || o.antal) {
                     const cx = o.path.reduce((s, p) => s + p.lng, 0) / o.path.length;
