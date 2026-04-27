@@ -735,3 +735,39 @@ För varje fas (1–6), innan commit:
 **Push** sker först när användaren explicit bekräftar hela puckeln.
 Efter push — skriv ut samtliga short commit-hashar (memory-policy
 `feedback_push_version`).
+
+---
+
+## Kommande arbete (efter v4-puckeln)
+
+Idéer som inte hör hemma i v4-faserna men ska göras vid nästa iteration:
+
+### Discoverability: redigera-hint i map-controls-raden
+Användartest 2026-04-26 visade att fri-text-fälten (modell, plats) är
+gömda bakom flödet "tryck Pan-läge → klicka markör". Det är inte
+upptäckbart för förstagångsanvändare.
+
+**Förslag:** Lägg till en kort hint-text i `.map-controls`-raden:
+> 💡 Tryck Pan-läge → klicka markör för att redigera
+
+Hinten visas tills användaren har öppnat `openEditPopup()` minst en
+gång (persisteras till localStorage som
+`minkarta.editHintSeen = '1'`). Då försvinner den permanent. Stylas
+diskret (samma muted-färg som palette-group-titlarna).
+
+**Implementation-skiss:**
+- I `renderMapControls()` lägg till ett `<span class="map-hint">…</span>`-
+  element efter Pan-läge-knappen, dolt med `display:none` om
+  `localStorage.getItem('minkarta.editHintSeen') === '1'`.
+- I `openEditPopup()`: vid första öppning sätt flaggan + ta bort
+  hint-spannen.
+- CSS: `.map-hint { font-size:0.72rem; color:var(--text-muted);
+  margin-left:auto; }` (auto-margin trycker den till höger).
+
+**Alternativa lösningar som övervägdes och valdes bort:**
+- *Auto-switch till pan-läge efter Spara* — för aggressivt; bryter
+  flödet när man vill placera flera av samma typ.
+- *Redigera-länk i tooltip-brickan* — komplicerar Leaflet-tooltipen,
+  som idag bara är text. Skulle kräva HTML + click-handler-injection.
+- Hint-varianten är minst invasiv och självläker (försvinner när den
+  inte längre behövs).
