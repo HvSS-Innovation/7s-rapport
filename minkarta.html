@@ -1358,7 +1358,10 @@ async function prepareExportBlob() {
     if (ytterCount < 2) toast('Tips: placera yttergränsmarkörer för att styra exporten.', 3200);
 
     const titleBase = window.__minkartaTitle || 'MINERING';
-    const subtitle = window.__minkartaSubtitle || ('Minläggningskarta · ' + state.objects.length + ' objekt');
+    // Räkna bara minor/markörer i subtitlen — yttergränsmarkörer är bbox-hjälpare,
+    // inte "objekt" i operativ mening.
+    const exportableCount = state.objects.filter(o => o.typ !== 'ytter').length;
+    const subtitle = window.__minkartaSubtitle || ('Minläggningskarta · ' + exportableCount + ' objekt');
     const res = await window.MK_EXPORT.renderExportAsync({
         objects: state.objects,
         title: titleBase,
