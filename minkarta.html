@@ -1046,9 +1046,12 @@ function renderObject(obj) {
         if (L.DomEvent) L.DomEvent.stopPropagation(e);
         openEditPopup(obj, layer, e);
     });
-    // Long-press (mobile): ~800 ms → radera direkt + visa Ångra-knappen
+    // Long-press (mobile): ~800 ms → radera direkt + visa Ångra-knappen.
+    // Ignorera när ett ritverktyg är aktivt — annars triggas radering mitt
+    // i en frihand-stroke / draft-bygge som råkar starta över en symbol.
     let pressTimer = null;
     layer.on('mousedown touchstart', () => {
+        if (activeTool) return;
         pressTimer = setTimeout(() => { softDelete(obj); }, 800);
     });
     layer.on('mouseup mouseout touchend touchmove', () => { if (pressTimer) { clearTimeout(pressTimer); pressTimer = null; } });
