@@ -1475,11 +1475,13 @@ function syncUpTextarea() {
     const nUpk = state.objects.filter(o => o.typ === 'upk').length;
     const warn = document.getElementById('pUpWarn');
     if (warn) {
+        warn.style.display = 'block';
         if (nUpk < 2) {
-            warn.style.display = 'block';
-            warn.textContent = 'Obs: reglementet kräver minst 2 UPK.';
+            warn.style.color = 'var(--warn)';
+            warn.textContent = nUpk + ' / 2 UPK — reglementet kräver minst 2.';
         } else {
-            warn.style.display = 'none';
+            warn.style.color = 'var(--text-secondary)';
+            warn.textContent = nUpk + ' / 2 UPK ✓';
         }
     }
 }
