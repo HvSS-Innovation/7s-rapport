@@ -1440,7 +1440,7 @@ function generateProtocolText() {
     if (includeData && state.objects.length) {
         lines.push('');
         lines.push('=== DATALISTA (fullständiga positioner) ===');
-        lines.push(' #  TYP                         MGRS               ETIKETT   ANTECKNING');
+        lines.push(' #  TYP                         MGRS               INFO');
         const labelMapFull = Object.assign({}, labelMap, {
             forst_forb:        'Förberedd förstöring',
             forst_forb_sakrad: 'Förberedd förstöring, säkrad',
@@ -1489,8 +1489,13 @@ function generateProtocolText() {
             const n = String(idx).padStart(2, ' ');
             const typ = rawLabel.padEnd(26, ' ').slice(0, 26);
             const m = mgrs.padEnd(18, ' ').slice(0, 18);
-            const e = (etikett || '').padEnd(9, ' ').slice(0, 9);
-            lines.push(' ' + n + '  ' + typ + '  ' + m + '  ' + e + ' ' + anteckning);
+            // INFO = etikett + anteckning sammanslagna med " · ", utan
+            // trailing whitespace om båda är tomma. Tidigare var det två
+            // separata kolumner som blev 13 tecken breda tomma luckor när
+            // bara en rad hade innehåll.
+            const info = [etikett, anteckning].filter(Boolean).join(' · ');
+            const baseRow = ' ' + n + '  ' + typ + '  ' + m;
+            lines.push(info ? baseRow + '  ' + info : baseRow);
         }
     }
 
