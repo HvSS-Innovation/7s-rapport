@@ -603,10 +603,14 @@ function setActiveTool(id) {
     if (map) {
         if (id === 'frihand') {
             map.dragging.disable();
-            if (map.boxZoom) map.boxZoom.disable();
+            if (map.boxZoom)   map.boxZoom.disable();
+            if (map.tap)       map.tap.disable();
+            if (map.touchZoom) map.touchZoom.disable();
         } else {
             map.dragging.enable();
-            if (map.boxZoom) map.boxZoom.enable();
+            if (map.boxZoom)   map.boxZoom.enable();
+            if (map.tap)       map.tap.enable();
+            if (map.touchZoom) map.touchZoom.enable();
         }
     }
     if (id === 'frihand') {
@@ -1300,8 +1304,9 @@ function cancelDraft() {
 }
 
 // ── Fri-rita (penna) ────────────────────────────────────────────────────────
-// Använder map.on('mousedown'/'mousemove'/'mouseup') — Leaflet syntheter
-// touch-events till samma trio, så samma kod hanterar mus + finger.
+// Mushantering via Leaflets event-system. Touch hanteras separat via
+// DOM-lyssnare (touchstart/touchmove/touchend) eftersom Leaflet 1.9.x inte
+// syntetiserar pointermove till mousemove. Se onFrihandTouchStart/Move.
 let _frihandDrawing = false;
 function gameActive() {
     return !!(window.MK_GAME && window.MK_GAME.state && window.MK_GAME.state.active);
@@ -1346,6 +1351,25 @@ function onFrihandEnd() {
     // undoStack och PNG-rendering inte sväller utan synlig kvalitetsförlust.
     const simplified = simplifyPath(d.path, pixelEpsilonInDegrees());
     addObject({ id: d.id, typ: 'frihand', path: simplified, created: Date.now() });
+}
+
+// Touch-stöd: Leaflet 1.9.x syntetiserar inte pointermove till mousemove,
+// så touch-drag når aldrig onFrihandMove via map.on(). Wrappers nedan
+// konverterar touch-koordinater till latlng och delegerar till befintliga handlers.
+function _touchLatLng(e) {
+    const t = e.touches[0] || e.changedTouches[0];
+    const rect = map.getContainer().getBoundingClientRect();
+    return map.containerPointToLatLng(L.point(t.clientX - rect.left, t.clientY - rect.top));
+}
+function onFrihandTouchStart(e) {
+    if (activeTool !== 'frihand') return;
+    e.preventDefault();
+    onFrihandStart({ latlng: _touchLatLng(e) });
+}
+function onFrihandTouchMove(e) {
+    if (!_frihandDrawing || activeTool !== 'frihand') return;
+    e.preventDefault();
+    onFrihandMove({ latlng: _touchLatLng(e) });
 }
 
 // Approximerar 0.7 skärm-pixlar i lat/lng-grader vid nuvarande zoom-nivå —
@@ -2209,12 +2233,15 @@ document.addEventListener('DOMContentLoaded', () => {
         map.on('click', clickHandler);
         map.on('dblclick', handleMapDblClick);
         map.doubleClickZoom.disable();             // annars stjäl den dubbelklicket
-        // Fri-rita: ritas via drag (mousedown/move/up). Avbryts även om
-        // pekaren lämnar kart-containern mitt i ritningen.
+        // Fri-rita: mus via Leaflets event-system, touch via DOM-lyssnare
+        // (passive:false krävs för att preventDefault() ska fungera i Chrome).
         map.on('mousedown', onFrihandStart);
         map.on('mousemove', onFrihandMove);
         map.on('mouseup', onFrihandEnd);
         map.getContainer().addEventListener('mouseleave', onFrihandEnd);
+        map.getContainer().addEventListener('touchstart', onFrihandTouchStart, { passive: false });
+        map.getContainer().addEventListener('touchmove',  onFrihandTouchMove,  { passive: false });
+        map.getContainer().addEventListener('touchend',   onFrihandEnd);
     }
     renderPalette();
     renderMapControls();
