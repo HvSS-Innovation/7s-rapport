@@ -100,17 +100,20 @@
         return { minLat, maxLat, minLng, maxLng, usedYtter: ytter.length >= 2 };
     }
 
-    function pickZoom(bbox, targetPx) {
-        for (let z = 19; z >= 3; z--) {
-            const xMin = lon2x(bbox.minLng, z) * TILE_SIZE;
-            const xMax = lon2x(bbox.maxLng, z) * TILE_SIZE;
-            const yMin = lat2y(bbox.maxLat, z) * TILE_SIZE;
-            const yMax = lat2y(bbox.minLat, z) * TILE_SIZE;
-            const w = Math.abs(xMax - xMin);
-            const h = Math.abs(yMax - yMin);
-            if (w <= targetPx && h <= targetPx) return z;
+    // v4.2: Låst till z 17 i normalfallet — speglar skärm-vyn och OpenTopoMap-
+    // detaljnivån som mottagaren förväntar sig. Klampar bara nedåt om bbox inte
+    // ryms inom MAX_TILES (180). Aldrig under z 14 i export.
+    function pickZoom(bbox) {
+        for (let z = 17; z >= 14; z--) {
+            const xMin = lon2x(bbox.minLng, z);
+            const xMax = lon2x(bbox.maxLng, z);
+            const yMin = lat2y(bbox.maxLat, z);
+            const yMax = lat2y(bbox.minLat, z);
+            const tilesW = Math.floor(xMax) - Math.floor(xMin) + 1;
+            const tilesH = Math.floor(yMax) - Math.floor(yMin) + 1;
+            if (tilesW * tilesH <= MAX_TILES) return z;
         }
-        return 3;
+        return 14;
     }
 
     function loadImage(url) {
@@ -153,7 +156,6 @@
 
     async function renderExport(opts) {
         const objects = opts.objects || [];
-        const targetPx = opts.targetPx || 2048;
         const title = opts.title || 'MINERING';
         const subtitle = opts.subtitle || '';
         const dpr = opts.dpr || 2;
@@ -162,7 +164,7 @@
         const bbox = computeBBox(objects);
         if (!bbox) throw new Error('Kan inte räkna ut utsträckning.');
 
-        const z = pickZoom(bbox, targetPx);
+        const z = pickZoom(bbox);
 
         const xMinF = lon2x(bbox.minLng, z);
         const xMaxF = lon2x(bbox.maxLng, z);
@@ -367,23 +369,27 @@
 
     // Namn-bricka under en punkt-symbol. Matchar .mk-label i minkarta.html:
     // mörk bakgrund, vit text, 1 px border i accent-grön.
-    // v4: `scale`-param (default 1) skalar font + padding + höjd så att
-    // brickan följer med den förstorade PNG-symbolen (136×136 vid scale 4).
-    function drawNameBadge(ctx, cx, cy, text, scale) {
-        const s = scale || 1;
+    // v4.2: `opts = { fontPx, padX, padY }` — explicita pixelvärden istället
+    // för en skala. Default speglar skärmens .mk-label (font 600 11px,
+    // padding 2/6 ≈ padX 5, padY 3). Exporten höjer fontPx till 14 så
+    // texten är läsbar i PNG-skala utan att bli jumbo.
+    function drawNameBadge(ctx, cx, cy, text, opts) {
+        opts = opts || {};
+        const fontPx = opts.fontPx || 11;
+        const padX = opts.padX != null ? opts.padX : 5;
+        const padY = opts.padY != null ? opts.padY : 3;
         ctx.save();
-        ctx.font = '600 ' + (11 * s) + 'px Inter, sans-serif';
+        ctx.font = '600 ' + fontPx + 'px Inter, sans-serif';
         ctx.textBaseline = 'middle';
-        const padX = 5 * s, padY = 3 * s;
         const tw = ctx.measureText(text).width;
         const bw = tw + padX * 2;
-        const bh = 16 * s;
+        const bh = fontPx + padY * 2;
         const x = cx - bw / 2;
         const y = cy;
         ctx.fillStyle = 'rgba(13, 31, 13, 0.92)';
         ctx.fillRect(x, y, bw, bh);
         ctx.strokeStyle = '#4caf50';
-        ctx.lineWidth = Math.max(1, s);
+        ctx.lineWidth = 1;
         ctx.strokeRect(x + 0.5, y + 0.5, bw - 1, bh - 1);
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
@@ -442,7 +448,6 @@
     // ── Asynk render — laddar alla SVG till bilder FÖRE toBlob ──────────────
     async function renderExportAsync(opts) {
         const objects = opts.objects || [];
-        const targetPx = opts.targetPx || 2048;
         const title = opts.title || 'MINERING';
         const subtitle = opts.subtitle || '';
         const dpr = opts.dpr || 2;
@@ -451,7 +456,13 @@
         const bbox = computeBBox(objects);
         if (!bbox) throw new Error('Kan inte räkna ut utsträckning.');
 
-        const z = pickZoom(bbox, targetPx);
+        // v4.2: pickZoom låser z 17 i normalfallet. Om bbox är för stor och
+        // klampning sker, säg ifrån — annars ser användaren tyst en lågdetalj-
+        // erad export.
+        const z = pickZoom(bbox);
+        if (z < 17 && typeof global.toast === 'function') {
+            global.toast('Bbox för stor — sänker zoom till z ' + z, 3200);
+        }
         const xMinF = lon2x(bbox.minLng, z), xMaxF = lon2x(bbox.maxLng, z);
         const yMinF = lat2y(bbox.maxLat, z), yMaxF = lat2y(bbox.minLat, z);
         const tileXMin = Math.floor(xMinF), tileXMax = Math.floor(xMaxF);
@@ -552,17 +563,17 @@
         ]);
 
         // 5) Rita objekt
-        // v4: point/meta-symboler förstoras 4× (34→136 px) så de syns tydligt
-        // när mottagaren öppnar PNG:n i Signal. Namn-brickan skalas med scale=4
-        // så texten "UPK 594", "HIND" osv. blir läsbar utan inzoom.
-        // Linje-/polygon-strokes skalas proportionellt så haloen ser kraftig
-        // ut bredvid jumbo-symbolerna.
+        // v4.2: Exporten ska se ut som ett "rent foto" av skärmen. Symbolerna
+        // skalas 1.5× (34→51 px) — knappt större än skärmens 34 px men tydliga
+        // i 2× DPR-PNG. Namn-brickan får font 14 px (skärmen 11 px) med samma
+        // padding-proportioner som .mk-label, så den landar lika kompakt.
         const drawLabels = opts.drawLabels !== false;
         const showModel = !!opts.showModel;            // v4.1: spegla skärmens toggle
-        const SYMBOL_SCALE = 4;
-        const SYMBOL_SIZE = 34 * SYMBOL_SCALE;         // 136 px
-        const SYMBOL_HALF = SYMBOL_SIZE / 2;           // 68 px
-        const LABEL_OFFSET = SYMBOL_HALF + 16;         // ~84 px under symbol-center
+        const SYMBOL_SCALE = 1.5;
+        const SYMBOL_SIZE = 34 * SYMBOL_SCALE;         // 51 px
+        const SYMBOL_HALF = SYMBOL_SIZE / 2;           // 25.5 px
+        const LABEL_OFFSET = SYMBOL_HALF + 10;         // ~35 px under symbol-center
+        const LABEL_OPTS = { fontPx: 14, padX: 5, padY: 3 };
         // Komponera bricka likadant som minkarta.html brickaText():
         // UPK/SP behåller obj.label; övriga ärver sym.label + ev. modell-suffix.
         function composeLabel(o, sym) {
@@ -587,15 +598,15 @@
                 ctx.fillStyle = 'rgba(0,0,0,0.10)';
                 ctx.fill();
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 10;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4;
                 ctx.stroke();
-                ctx.setLineDash([12, 8]);
-                ctx.strokeStyle = '#000000'; ctx.lineWidth = 4;
+                ctx.setLineDash([6, 4]);
+                ctx.strokeStyle = '#000000'; ctx.lineWidth = 1.5;
                 ctx.stroke();
                 ctx.setLineDash([]);
                 if (drawLabels) {
                     const apex = project(o.lat, o.lng);
-                    drawNameBadge(ctx, apex.x, apex.y + LABEL_OFFSET, composeLabel(o, sym), SYMBOL_SCALE);
+                    drawNameBadge(ctx, apex.x, apex.y + LABEL_OFFSET, composeLabel(o, sym), LABEL_OPTS);
                 }
                 continue;
             }
@@ -615,13 +626,13 @@
                         ctx.drawImage(img, p.x - SYMBOL_HALF, p.y - SYMBOL_HALF, SYMBOL_SIZE, SYMBOL_SIZE);
                     }
                 }
-                // Namn-bricka under markern (samma bild som skärmen, 4× skalad)
+                // Namn-bricka under markern — kompakt, motsvarar skärmens
                 if (drawLabels && o.typ !== 'ytter') {
-                    drawNameBadge(ctx, p.x, p.y + LABEL_OFFSET, composeLabel(o, sym), SYMBOL_SCALE);
+                    drawNameBadge(ctx, p.x, p.y + LABEL_OFFSET, composeLabel(o, sym), LABEL_OPTS);
                 }
             } else if (sym.category === 'line') {
-                // v4: vit halo bred under, svart linjearbete ovanpå — skalat
-                // så linjen inte ser tunn ut bredvid jumbo-symbolerna.
+                // v4.2: vit halo + färgad linje, skalat ~1.5× mot skärmens
+                // baseW så linjen syns men inte dominerar bilden.
                 ctx.beginPath();
                 o.path.forEach((pt, i) => {
                     const p = project(pt.lat, pt.lng);
@@ -629,10 +640,10 @@
                 });
                 const baseW = (sym.weight || 4);
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = baseW * 2 + 2;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = baseW * SYMBOL_SCALE + 1.5;
                 ctx.stroke();
                 if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
-                ctx.strokeStyle = sym.stroke; ctx.lineWidth = baseW * 2;
+                ctx.strokeStyle = sym.stroke; ctx.lineWidth = baseW * SYMBOL_SCALE;
                 ctx.stroke();
                 ctx.setLineDash([]);
             } else if (sym.category === 'polygon') {
@@ -645,12 +656,12 @@
                 // Fyllning
                 ctx.fillStyle = hexToRgba(sym.fill, sym.fillOpacity || 0.2);
                 ctx.fill();
-                // v4: bredare halo + stroke för kontrast mot jumbo-symbolerna
+                // v4.2: smal halo + tunn stroke — proportionellt mot 1.5×-symboler
                 ctx.setLineDash([]);
-                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 10;
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4;
                 ctx.stroke();
                 if (sym.dashArray) ctx.setLineDash(parseDash(sym.dashArray));
-                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 4;
+                ctx.strokeStyle = sym.stroke; ctx.lineWidth = 1.5;
                 ctx.stroke();
                 ctx.setLineDash([]);
                 // Centrum-SVG för minomrade — visar antal eller "M" i ellips-
@@ -668,7 +679,7 @@
                     const cy = o.path.reduce((s, p) => s + p.lat, 0) / o.path.length;
                     const c = project(cy, cx);
                     ctx.fillStyle = '#e8f0e8';
-                    ctx.font = '700 24px Inter, sans-serif';
+                    ctx.font = '700 14px Inter, sans-serif';
                     ctx.textAlign = 'center';
                     ctx.fillText(((o.etikett || '') + ' ' + (o.antal || '')).trim(), c.x, c.y);
                     ctx.textAlign = 'start';
