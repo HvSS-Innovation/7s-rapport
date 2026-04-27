@@ -342,6 +342,21 @@ const SYMBOLS = {
             '<line x1="21" y1="21" x2="15" y2="21" stroke="' + MK_INK + '" stroke-width="2.4"/>' +
             '<line x1="21" y1="21" x2="21" y2="15" stroke="' + MK_INK + '" stroke-width="2.4"/>'
         )
+    },
+
+    // ── Fri-rita-penna ───────────────────────────────────────────────────────
+    // Frihandsritad polyline. Ritas via mousedown→mousemove→mouseup i
+    // minkarta.html (inte vanlig click-flow), men sparas som vilken linje
+    // som helst (category 'line') så att render, drag-handtag, persistens
+    // och PNG-export ärver befintlig kod.
+    frihand: {
+        label: 'Fri-rita',
+        category: 'line',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+            '<path d="M3.2 18.5l1.3-3.6 11-11 3.3 3.3-11 11L4 19.8z" fill="' + MK_INK + '" stroke="' + MK_HALO + '" stroke-width="0.7" paint-order="stroke" stroke-linejoin="round"/>' +
+            '<path d="M14.5 3.9l3.3 3.3" stroke="' + MK_HALO + '" stroke-width="0.6"/>' +
+        '</svg>',
+        stroke: MK_INK, weight: 3, dashArray: null
     }
 
     // BORTTAGNA v3-nycklar (ingen motsvarighet i nya SVG-paketet från
@@ -357,7 +372,7 @@ const SYMBOLS = {
 // Rad 3: linjer & ytor (Block B).
 // Rad 4: förstöring & spärr (Block C).
 const SYMBOL_GROUPS = [
-    { title: 'Referenspunkter',    ids: ['upk', 'ytter'] },
+    { title: 'Referenspunkter',    ids: ['upk', 'ytter', 'frihand'] },
     { title: 'Mineringar',         ids: [
         'strv_tryck', 'fordonsmina', 'fordon_sid', 'tramp', 'forsvar',
         'omr_verkan', 'larm'

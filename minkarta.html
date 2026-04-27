@@ -544,6 +544,18 @@ function setActiveTool(id) {
     // Pekare och cursor-feedback
     const mapEl = document.getElementById('mapContainer');
     if (mapEl) mapEl.style.cursor = id ? 'crosshair' : '';
+    // Frihand: slå av panorering så drag blir ritning. Övriga lägen har
+    // panorering på (även när ett ritverktyg är aktivt — där bygger man
+    // path med klick, inte drag).
+    if (map) {
+        if (id === 'frihand') {
+            map.dragging.disable();
+            if (map.boxZoom) map.boxZoom.disable();
+        } else {
+            map.dragging.enable();
+            if (map.boxZoom) map.boxZoom.enable();
+        }
+    }
 }
 
 function renderPalette() {
@@ -1182,6 +1194,42 @@ function cancelDraft() {
     state.draft = null; state.draftLayer = null;
 }
 
+// ── Fri-rita (penna) ────────────────────────────────────────────────────────
+// Använder map.on('mousedown'/'mousemove'/'mouseup') — Leaflet syntheter
+// touch-events till samma trio, så samma kod hanterar mus + finger.
+let _frihandDrawing = false;
+function onFrihandStart(e) {
+    if (activeTool !== 'frihand') return;
+    if (state.draft && state.draft.typ !== 'frihand') cancelDraft();
+    _frihandDrawing = true;
+    state.draft = {
+        id: uid(), typ: 'frihand',
+        path: [{ lat: e.latlng.lat, lng: e.latlng.lng }],
+        category: 'line'
+    };
+    const sym = window.MK_SYMBOLS.frihand;
+    state.draftLayer = L.polyline(
+        [[e.latlng.lat, e.latlng.lng]],
+        { color: sym.stroke, weight: sym.weight || 3 }
+    ).addTo(map);
+}
+function onFrihandMove(e) {
+    if (!_frihandDrawing || activeTool !== 'frihand') return;
+    if (!state.draft) return;
+    state.draft.path.push({ lat: e.latlng.lat, lng: e.latlng.lng });
+    state.draftLayer.setLatLngs(state.draft.path.map(p => [p.lat, p.lng]));
+}
+function onFrihandEnd() {
+    if (!_frihandDrawing) return;
+    _frihandDrawing = false;
+    if (!state.draft) return;
+    const d = state.draft;
+    if (d.path.length < 2) { cancelDraft(); return; }
+    if (state.draftLayer) map.removeLayer(state.draftLayer);
+    state.draft = null; state.draftLayer = null;
+    addObject({ id: d.id, typ: 'frihand', path: d.path, created: Date.now() });
+}
+
 // ── UPK-hjälp: slumpnummer, reverse-geocode, textarea-sync
 
 // UPK-nummer: stabila slumpade heltal 1..999 per placering. Identifierare är
@@ -1263,6 +1311,7 @@ function reverseGeocodeUpk(obj) {
 // ── Klickhanterare (placering eller draft-bygge) ────────────────────────────
 function handleMapClick(e) {
     if (!activeTool) return;
+    if (activeTool === 'frihand') return;          // hanteras via mousedown/move/up
     const sym = window.MK_SYMBOLS[activeTool];
     if (!sym) return;
     if (sym.category === 'point' || sym.category === 'meta') {
@@ -1887,6 +1936,12 @@ document.addEventListener('DOMContentLoaded', () => {
         map.on('click', clickHandler);
         map.on('dblclick', handleMapDblClick);
         map.doubleClickZoom.disable();             // annars stjäl den dubbelklicket
+        // Fri-rita: ritas via drag (mousedown/move/up). Avbryts även om
+        // pekaren lämnar kart-containern mitt i ritningen.
+        map.on('mousedown', onFrihandStart);
+        map.on('mousemove', onFrihandMove);
+        map.on('mouseup', onFrihandEnd);
+        map.getContainer().addEventListener('mouseleave', onFrihandEnd);
     }
     renderPalette();
     renderMapControls();
