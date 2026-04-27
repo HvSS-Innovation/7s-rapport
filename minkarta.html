@@ -1736,8 +1736,18 @@ async function exportPng() {
 }
 
 // Tangentbord: Ctrl+Z / Ctrl+Y / Esc
+function isTextInputFocused() {
+    const ae = document.activeElement;
+    if (!ae) return false;
+    const tag = ae.tagName;
+    return tag === 'TEXTAREA' || tag === 'INPUT' || tag === 'SELECT' || ae.isContentEditable;
+}
 function attachKeyboard() {
     window.addEventListener('keydown', e => {
+        // Tangenttryck i textfält ska följa native-beteende (textarea-undo,
+        // textinmatningens egen Esc-abort, sökrutans Enter osv) — globala
+        // map-genvägar gäller inte här.
+        if (isTextInputFocused()) return;
         if (e.key === 'Escape') { if (state.draft) cancelDraft(); setActiveTool(null); }
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
         if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); redoAction(); }
