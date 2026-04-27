@@ -1307,7 +1307,49 @@ function onFrihandEnd() {
     if (d.path.length < 2) { cancelDraft(); return; }
     if (state.draftLayer) map.removeLayer(state.draftLayer);
     state.draft = null; state.draftLayer = null;
-    addObject({ id: d.id, typ: 'frihand', path: d.path, created: Date.now() });
+    // RDP-simplifiering: en typisk frihand-stroke samlar 200-600 noder
+    // (mousemove vid 60 fps). Förenkla under skärm-pixelnivån så IndexedDB,
+    // undoStack och PNG-rendering inte sväller utan synlig kvalitetsförlust.
+    const simplified = simplifyPath(d.path, pixelEpsilonInDegrees());
+    addObject({ id: d.id, typ: 'frihand', path: simplified, created: Date.now() });
+}
+
+// Approximerar 0.7 skärm-pixlar i lat/lng-grader vid nuvarande zoom-nivå —
+// används som epsilon-tröskel för RDP. Knuten till zoom vid ritningstillfället;
+// inzoom efteråt kan visa polylinje-segment men 0.7 px ligger långt under
+// synbarhet vid normal användning.
+function pixelEpsilonInDegrees() {
+    if (!map) return 0;
+    const b = map.getBounds();
+    const size = map.getSize();
+    const dLat = (b.getNorth() - b.getSouth()) / size.y;
+    const dLng = (b.getEast()  - b.getWest())  / size.x;
+    return Math.max(dLat, dLng) * 0.7;
+}
+
+// Standard Ramer-Douglas-Peucker. path = [{lat,lng}, ...].
+function simplifyPath(path, epsilon) {
+    if (!Array.isArray(path) || path.length < 3 || !(epsilon > 0)) return path;
+    function perpDist(p, a, b) {
+        const dx = b.lng - a.lng, dy = b.lat - a.lat;
+        const len = Math.hypot(dx, dy);
+        if (len === 0) return Math.hypot(p.lng - a.lng, p.lat - a.lat);
+        return Math.abs(dy * p.lng - dx * p.lat + b.lng * a.lat - b.lat * a.lng) / len;
+    }
+    function rdp(start, end) {
+        let maxD = 0, idx = -1;
+        for (let i = start + 1; i < end; i++) {
+            const d = perpDist(path[i], path[start], path[end]);
+            if (d > maxD) { maxD = d; idx = i; }
+        }
+        if (maxD > epsilon && idx > -1) {
+            const left  = rdp(start, idx);
+            const right = rdp(idx, end);
+            return left.slice(0, -1).concat(right);
+        }
+        return [path[start], path[end]];
+    }
+    return rdp(0, path.length - 1);
 }
 
 // ── Fri-text (textinmatning vid klick) ──────────────────────────────────────
