@@ -4,11 +4,13 @@
 //  Reglementsreferens: "Mineringar på karta — sammanställning"
 //  (Fältarbeten s. 338–342, Handbok 11.7.1 + Handbok 9.5 s. 86).
 //
-//  v4-paketet har 20 nya symbol-SVG:er + 3 behållna från v3 (upk, sp, ytter)
-//  = totalt 23 symboler. Sju v3-nycklar är borttagna (strv_full,
+//  v4-paketet har 20 nya symbol-SVG:er + 2 behållna från v3 (upk, ytter)
+//  = totalt 22 symboler. Åtta v3-nycklar är borttagna (strv_full,
 //  strv_rojskydd, trad, avstand, skenminering, landmina_okand,
-//  riktad_verkan) — ingen motsvarighet i nya SVG-paketet från 2026-04-26.
-//  Migration av gammalt state sker i minkarta.html loadPersisted().
+//  riktad_verkan, sp) — ingen motsvarighet i nya SVG-paketet från
+//  2026-04-26. SP slopades 2026-04-27: reglementsvarningen kräver nu
+//  bara minst 2 UPK. Migration av gammalt state sker i
+//  minkarta.html loadPersisted().
 //
 //  Kategorier:
 //    'point'   — engångsklick placerar en punktsymbol
@@ -31,7 +33,7 @@
 //    Röd  #c62828   — UNDANTAG (ej använd i v4-SVG:erna; behålls som konstant
 //                     för framtida behov, t.ex. incident-flagga)
 //
-//    Paint-order-halo inom SVG finns kvar för upk/sp/ytter (v3-stilen).
+//    Paint-order-halo inom SVG finns kvar för upk/ytter (v3-stilen).
 //  -------------------------------------------------------------------------->
 
 const MK_INK   = '#000000';
@@ -107,7 +109,8 @@ const SYMBOLS = {
         '</svg>'
     },
     fordon_sid: {
-        label: 'Sidverkande fordonsmina',
+        // ­ = mjukt bindestreck — bryts bara om det behövs (svensk stavelse).
+        label: 'Sid­verkande fordons­mina',
         category: 'point',
         svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 850 420">' +
             '<circle cx="195" cy="210" r="185" fill="black"/>' +
@@ -128,7 +131,7 @@ const SYMBOLS = {
         '</svg>'
     },
     prov_rojskydd: {
-        label: 'Provisoriskt fordonsröjningsskydd',
+        label: 'Provi­soriskt fordons­röjnings­skydd',
         category: 'point',
         svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 520 580">' +
             '<line x1="115" y1="295" x2="430" y2="75" stroke="black" stroke-width="12"/>' +
@@ -158,7 +161,7 @@ const SYMBOLS = {
     forst_forb_sakrad: {
         // NY i v4: "Förberedd förstöring, säkrad" (passage möjlig) — eget
         // reglementsbegrepp, får inte slås ihop med forst_forb eller rojskydd.
-        label: 'Förberedd förstöring, säkrad',
+        label: 'Förberedd för­störing, säkrad',
         category: 'point',
         svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 500 490">' +
             '<circle cx="250" cy="245" r="220" fill="white" stroke="black" stroke-width="2"/>' +
@@ -268,7 +271,7 @@ const SYMBOLS = {
 
     // ── Avståndslagda (polygoner) ────────────────────────────────────────────
     avstand_tramp: {
-        label: 'Avståndslagd trampminering',
+        label: 'Avstånds­lagd tramp­minering',
         category: 'polygon',
         svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 580">' +
             '<path d="M 240,45 C 400,5 660,15 790,80 C 875,130 905,230 885,350 C 865,455 775,535 615,555 C 445,575 270,562 155,498 C 55,445 35,355 50,265 C 68,155 125,75 240,45 Z" fill="white" stroke="black" stroke-width="16" stroke-linejoin="round"/>' +
@@ -281,7 +284,7 @@ const SYMBOLS = {
         stroke: MK_INK, fill: MK_INK, fillOpacity: 0.08, dashArray: null
     },
     avstand_strv: {
-        label: 'Avståndslagd stridsvagnsminering',
+        label: 'Avstånds­lagd stridsvagns­minering',
         category: 'polygon',
         svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 500">' +
             '<polygon points="20,292.5 546.3,292.5 819.4,19.4 934.6,134.6 613.7,455.5 20,455.5" fill="white" stroke="black" stroke-width="11" stroke-linejoin="miter"/>' +
@@ -295,24 +298,17 @@ const SYMBOLS = {
         stroke: MK_INK, fill: MK_INK, fillOpacity: 0.08, dashArray: null
     },
 
-    // ── Referenspunkter (UPK / SP) — BEHÅLLNA från v3 ────────────────────────
-    // UPK (Utgångs-Punkt-Koordinat) och SP är bestämbara terrängpunkter
-    // (PDF s.338), inte skarpa minpositioner. Stabilt slumpnummer 001–999
-    // hanteras i minkarta.html. Svartmålad v3-stil, oförändrad i v4.
+    // ── Referenspunkter (UPK) — BEHÅLLEN från v3 ─────────────────────────────
+    // UPK (Utgångs-Punkt-Koordinat) är en bestämbar terrängpunkt (PDF s.338),
+    // inte en skarp minposition. Stabilt slumpnummer 001–999 hanteras i
+    // minkarta.html. Svartmålad v3-stil, oförändrad i v4.
+    // SP-symbolen togs bort 2026-04-27 — reglementsvarningen kräver bara UPK.
     upk: {
         label: 'UPK',
         category: 'meta',
         svg: svg(
             '<circle cx="12" cy="12" r="9" fill="' + MK_INK + '" ' + haloStroke(3) + '/>' +
             '<text x="12" y="15.3" text-anchor="middle" font-family="Inter,sans-serif" font-size="7.8" font-weight="800" fill="' + MK_WHITE + '">UPK</text>'
-        )
-    },
-    sp: {
-        label: 'SP',
-        category: 'meta',
-        svg: svg(
-            '<rect x="3.5" y="3.5" width="17" height="17" rx="2" fill="' + MK_INK + '" ' + haloStroke(3) + '/>' +
-            '<text x="12" y="15.5" text-anchor="middle" font-family="Inter,sans-serif" font-size="9" font-weight="800" fill="' + MK_WHITE + '">SP</text>'
         )
     },
 
@@ -333,23 +329,26 @@ const SYMBOLS = {
 
     // BORTTAGNA v3-nycklar (ingen motsvarighet i nya SVG-paketet från
     // 2026-04-26): strv_full, strv_rojskydd, trad, avstand, skenminering,
-    // landmina_okand, riktad_verkan. Migration av gammalt state sker i
-    // minkarta.html loadPersisted().
+    // landmina_okand, riktad_verkan. Borttaget 2026-04-27: sp.
+    // Migration av gammalt state sker i minkarta.html loadPersisted().
 
 };
 
-// Palett-grupper (för UI-layout). v4: 10 grupper, 23 symboler.
+// Palett-grupper (för UI-layout). v4 efter 2026-04-27: 2 grupper, 22 symboler.
+// Rad 1 (närmast kartan): referenspunkter — UPK + yttergränsmarkör.
+// Rad 2: alla mineringssymboler i en grupp, ingen subuppdelning.
 const SYMBOL_GROUPS = [
-    { title: 'Strv-minor',         ids: ['strv_tryck'] },
-    { title: 'Truppminor',         ids: ['tramp', 'larm'] },
-    { title: 'Fordon & skydd',     ids: ['fordonsmina', 'fordon_sid', 'forsvar', 'prov_rojskydd', 'rojskydd'] },
-    { title: 'Förstöring',         ids: ['forst_forb', 'forst_forb_sakrad', 'forst_utf', 'forst_plan'] },
-    { title: 'Områdesverkan',      ids: ['omr_verkan', 'verkansomrade'] },
-    { title: 'Linjer',             ids: ['minlinje', 'avsparrning'] },
-    { title: 'Områden',            ids: ['minruta', 'minomrade'] },
-    { title: 'Avståndslagda',      ids: ['avstand_tramp', 'avstand_strv'] },
-    { title: 'Referenspunkter',    ids: ['upk', 'sp'] },
-    { title: 'Export',             ids: ['ytter'] }
+    { title: 'Referenspunkter', ids: ['upk', 'ytter'] },
+    { title: 'Minor',           ids: [
+        'strv_tryck',
+        'tramp', 'larm',
+        'fordonsmina', 'fordon_sid', 'forsvar', 'prov_rojskydd', 'rojskydd',
+        'forst_forb', 'forst_forb_sakrad', 'forst_utf', 'forst_plan',
+        'omr_verkan', 'verkansomrade',
+        'minlinje', 'avsparrning',
+        'minruta', 'minomrade',
+        'avstand_tramp', 'avstand_strv'
+    ] }
 ];
 
 // Skapa en Leaflet-divIcon från ett SYMBOLS-entry

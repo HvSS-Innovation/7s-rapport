@@ -108,19 +108,26 @@
         .palette-group { margin-top: 8px; }
         .palette-group:first-child { margin-top: 0; }
         .palette-group-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; padding-left: 2px; }
-        .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(60px, 1fr)); gap: 6px; }
+        /* Bredare knappar (minmax 100px) så långa etiketter ryms utan att
+           klippas. Höjden får växa fritt — flexen håller SVG + text staplade. */
+        .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
         .mk-tool {
             display: flex; flex-direction: column; align-items: center; justify-content: center;
-            min-height: 60px; padding: 6px 4px; gap: 4px;
+            min-height: 64px; padding: 8px 6px; gap: 4px;
             background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-sm);
-            color: #1a321a; font-family: inherit; font-size: 0.62rem; font-weight: 600;
+            color: #1a321a; font-family: inherit; font-size: 0.66rem; font-weight: 600;
             letter-spacing: 0.02em; text-align: center; cursor: pointer; transition: border-color 0.12s, background 0.12s;
             -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
         }
         .mk-tool:hover { border-color: var(--accent); background: #f0f7f0; }
         .mk-tool.is-active { border-color: var(--accent); background: #c8e6c9; color: #0d1f0d; }
         .mk-tool svg { width: 28px; height: 28px; display: block; }
-        .mk-tool span { line-height: 1.15; }
+        /* Tillåt radbrytning + svensk stavelseuppdelning vid mjuka bindestreck. */
+        .mk-tool span {
+            line-height: 1.15; white-space: normal; word-break: normal;
+            overflow-wrap: break-word; hyphens: auto;
+        }
 
         .palette-toolbar { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
         .palette-toolbar button { flex: 1; min-width: 90px; }
@@ -280,10 +287,10 @@
                         </select>
                     </div>
                 </div>
-                <label style="display:block;font-size:0.68rem;margin-top:8px;margin-bottom:4px">Utgångspunkter (autogenereras från UPK/SP på kartan — manuella rader bevaras)</label>
-                <textarea id="pUp" rows="3" placeholder="UPK 594: 33VUH 23567 45678 — Rött hus&#10;UPK 142: 33VUH 24012 45902 — Träddunge&#10;SP1: 33VUH 23471 45684 (från UPK 594, 170° 140 m)"
+                <label style="display:block;font-size:0.68rem;margin-top:8px;margin-bottom:4px">Utgångspunkter (autogenereras från UPK på kartan — manuella rader bevaras)</label>
+                <textarea id="pUp" rows="3" placeholder="UPK 594: 33VUH 23567 45678 — Rött hus&#10;UPK 142: 33VUH 24012 45902 — Träddunge"
                     style="width:100%;padding:10px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem"></textarea>
-                <div id="pUpWarn" style="display:none;color:var(--warn);font-size:0.72rem;margin-top:4px">Obs: reglementet kräver minst 2 UPK och 1 SP.</div>
+                <div id="pUpWarn" style="display:none;color:var(--warn);font-size:0.72rem;margin-top:4px">Obs: reglementet kräver minst 2 UPK.</div>
 
                 <label style="display:block;font-size:0.68rem;margin-top:8px;margin-bottom:4px">Anteckningar</label>
                 <textarea id="pNote" rows="2" placeholder="Fria anteckningar…"
@@ -316,7 +323,7 @@
                 <ul>
                     <li>OpenTopoMap-tiles (kartbilder) för zoomnivå upp till 17 — skickar zoom, x- och y-index för de rutor som ritas på skärmen.</li>
                     <li>OpenStreetMap Standard-tiles (<code>tile.openstreetmap.org</code>) för zoomnivå 18–19, eftersom OpenTopoMap inte har data där. Aktiveras automatiskt när du zoomar in närmare; status-raden visar vilket lager som används.</li>
-                    <li>Nominatim/Overpass vid adressökning och för UPK-markörers reverse-geocode — skickar endast kartans vy-center, sökfras eller UPK-markörens koordinat, aldrig minsymbolpositioner. UPK (Utgångs-Punkt-Koordinat) och SP är bestämbara referenspunkter i terrängen (PDF s. 338), inte skarpa minpositioner.</li>
+                    <li>Nominatim/Overpass vid adressökning och för UPK-markörers reverse-geocode — skickar endast kartans vy-center, sökfras eller UPK-markörens koordinat, aldrig minsymbolpositioner. UPK (Utgångs-Punkt-Koordinat) är en bestämbar referenspunkt i terrängen (PDF s. 338), inte en skarp minposition.</li>
                 </ul>
                 <p>All ritning, lagring och export sker lokalt i webbläsaren.
                 Export (PNG) och delning är alltid användar-initierad.</p>
@@ -517,7 +524,10 @@ function renderPalette() {
             btn.dataset.tool = id;
             btn.title = sym.label;
             btn.setAttribute('aria-label', sym.label);
-            btn.innerHTML = sym.svg + '<span>' + sym.label.replace(/[,(].*$/, '').trim() + '</span>';
+            // Visa hela labeln (inkl. mjuka bindestreck) och låt CSS:en bryta
+            // den vid behov — tidigare kapades vid första "," eller "(" vilket
+            // gjorde "Förberedd förstöring, säkrad" oläsbar.
+            btn.innerHTML = sym.svg + '<span>' + sym.label + '</span>';
             btn.addEventListener('click', () => {
                 setActiveTool(activeTool === id ? null : id);
             });
@@ -614,10 +624,10 @@ function saveLayerState() {
     try { localStorage.setItem(LAYERS_KEY, JSON.stringify({ labels: state.showLabels, showModel: state.showModel })); } catch(_) {}
 }
 
-// v4.1: brickans text. UPK/SP har sitt eget label; övriga ärver sym.label,
+// v4.1: brickans text. UPK har sitt eget label; övriga ärver sym.label,
 // med valfritt suffix " <modell>" om toggle är på och obj.modell är satt.
 function brickaText(obj, sym) {
-    if (obj.label) return obj.label;                            // UPK xxx / SPn
+    if (obj.label) return obj.label;                            // UPK xxx
     if (state.showModel && obj.modell) return sym.label + ' ' + obj.modell;
     return sym.label;
 }
@@ -669,9 +679,9 @@ function removeObject(id) {
     pushUndo();
     state.objects.splice(idx, 1);
     if (state.layers[id]) { map.removeLayer(state.layers[id]); delete state.layers[id]; }
-    // UPK/SP: synkronisera textarean. UPK-nummer är stabila — övriga UPK:er
-    // behåller sina nummer. Bara SP:er renumreras vid behov.
-    if (typ === 'upk' || typ === 'sp') {
+    // UPK: synkronisera textarean. UPK-nummer är stabila — övriga UPK:er
+    // behåller sina nummer.
+    if (typ === 'upk') {
         syncUpTextarea();
         rebuildLayers();
     }
@@ -693,8 +703,6 @@ function renderObject(obj) {
             obj.lat = ll.lat; obj.lng = ll.lng;
             if (obj.typ === 'upk') {
                 reverseGeocodeUpk(obj);   // uppdaterar även textarean
-            } else if (obj.typ === 'sp') {
-                syncUpTextarea();
             }
         });
         // Namn-bricka under markern (togglas via map-controls-raden)
@@ -765,8 +773,8 @@ function openEditPopup(obj, layer, e) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Antal</label>';
         html += '<input id="edAntal" type="number" min="0" value="' + (obj.antal || '') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
     }
-    // v4.1: Modell + Plats — fri text för icke-meta-objekt (UPK/SP/ytter har egna fält)
-    const showExtraFields = (obj.typ !== 'upk' && obj.typ !== 'sp' && obj.typ !== 'ytter');
+    // v4.1: Modell + Plats — fri text för icke-meta-objekt (UPK/ytter har egna fält)
+    const showExtraFields = (obj.typ !== 'upk' && obj.typ !== 'ytter');
     if (showExtraFields) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Modell</label>';
         html += '<input id="edModell" type="text" placeholder="Ex: 5" value="' + (obj.modell || '').replace(/"/g, '&quot;') + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
@@ -833,7 +841,7 @@ function openEditPopup(obj, layer, e) {
             if (platsInput) obj.plats = (platsInput.value || '').trim();
             obj.anteckning = wrap.querySelector('#edNote').value || '';
             map.closePopup(popup);
-            if (isUpk) syncUpTextarea();         // uppdatera pUp-raden + SP-referenser
+            if (isUpk) syncUpTextarea();         // uppdatera pUp-raden
             rebuildLayers();
         });
         wrap.querySelector('#edDel').addEventListener('click', () => {
@@ -881,14 +889,7 @@ function cancelDraft() {
     state.draft = null; state.draftLayer = null;
 }
 
-// ── UPK/SP-hjälp: slumpnummer, bäring, avstånd, reverse-geocode, textarea-sync
-function initialBearing(a, b) {
-    const φ1 = a.lat * Math.PI / 180, φ2 = b.lat * Math.PI / 180;
-    const λ1 = a.lng * Math.PI / 180, λ2 = b.lng * Math.PI / 180;
-    const y = Math.sin(λ2 - λ1) * Math.cos(φ2);
-    const x = Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1);
-    return (Math.atan2(y, x) * 180 / Math.PI + 360) % 360;
-}
+// ── UPK-hjälp: slumpnummer, reverse-geocode, textarea-sync
 
 // UPK-nummer: stabila slumpade heltal 1..999 per placering. Identifierare är
 // unika i kartan — kollision löses via omsamplering.
@@ -912,81 +913,35 @@ function existingUpkNrs() {
     return state.objects.filter(o => o.typ === 'upk' && typeof o.nr === 'number').map(o => o.nr);
 }
 
-function findClosestUpk(sp) {
-    let best = null, bestD = Infinity;
-    for (const o of state.objects) {
-        if (o.typ !== 'upk') continue;
-        const d = haversine({ lat: sp.lat, lng: sp.lng }, { lat: o.lat, lng: o.lng });
-        if (d < bestD) { bestD = d; best = o; }
-    }
-    return best ? { upk: best, distanceM: bestD } : null;
-}
-
-function recomputeSpDerived() {
-    // UPK-nummer är stabila — aldrig omnumrerade. SP:er får en sekventiell
-    // seq i insertionsordning (det är deras displaynamn) och sin bäring mot
-    // närmaste UPK beräknad om vid varje sync.
-    let spSeq = 0;
-    for (const o of state.objects) {
-        if (o.typ === 'sp') {
-            spSeq++;
-            o.seq = spSeq;
-            o.label = 'SP' + spSeq;
-            const ref = findClosestUpk(o);
-            if (ref) {
-                o.refUpk = ref.upk.id;
-                o.refUpkNr = ref.upk.nr;
-                o.bearing = Math.round(initialBearing(ref.upk, o));
-                o.distanceM = Math.round(ref.distanceM);
-            } else {
-                o.refUpk = null; o.refUpkNr = null; o.bearing = null; o.distanceM = null;
-            }
-        }
-    }
-}
-
 function formatUpkLine(o) {
     const mgrs = safeMgrs(o.lat, o.lng) || '—';
     const adress = o.adress || (o.reverseLoading ? '(hämtar adress…)' : '');
     return upkLabel(o) + ': ' + mgrs + (adress ? ' — ' + adress : '');
 }
-function formatSpLine(o) {
-    // SP-referensformat uppdateras i FAS 5 till "från UPK <nnn>".
-    const mgrs = safeMgrs(o.lat, o.lng) || '—';
-    if (o.refUpkNr != null && o.bearing != null && o.distanceM != null) {
-        return 'SP' + o.seq + ': ' + mgrs + ' (från UPK ' + padUpk(o.refUpkNr) + ', ' + o.bearing + '° ' + o.distanceM + ' m)';
-    }
-    return 'SP' + o.seq + ': ' + mgrs;
-}
 
 function syncUpTextarea() {
     const ta = document.getElementById('pUp');
     if (!ta) return;
-    recomputeSpDerived();
-    // Bevara rader som inte ser ut som UP<n>: / UPK <nnn>: / SP<n>:
-    // (manuell fri text). UP-prefixet matchas kvar för bakåtkompat med
-    // sessioner som fortfarande har gamla rader i textarean.
+    // Bevara rader som inte ser ut som UP<n>: / UPK <nnn>: / SP<n>: (manuell
+    // fri text). UP- och SP-prefixen matchas kvar för bakåtkompat med
+    // sessioner som fortfarande har gamla auto-rader i textarean.
     const keptManual = (ta.value || '').split(/\r?\n/).filter(line => {
         return line.trim() !== '' && !/^\s*(UPK\s*\d+|UP\d+|SP\d+)\s*:/i.test(line);
     });
     const autoLines = [];
     for (const o of state.objects) {
         if (o.typ === 'upk') autoLines.push(formatUpkLine(o));
-        else if (o.typ === 'sp') autoLines.push(formatSpLine(o));
     }
     ta.value = [...autoLines, ...keptManual].join('\n');
 
-    // Reglementsvarning: räknar UPK på kartan (inte textbaserat) + SP.
+    // Reglementsvarning: räknar UPK på kartan (inte textbaserat). Kravet är
+    // minst 2 UPK efter att SP slopades 2026-04-27.
     const nUpk = state.objects.filter(o => o.typ === 'upk').length;
-    const nSp  = state.objects.filter(o => o.typ === 'sp').length;
     const warn = document.getElementById('pUpWarn');
     if (warn) {
-        if (nUpk < 2 || nSp < 1) {
+        if (nUpk < 2) {
             warn.style.display = 'block';
-            const needs = [];
-            if (nUpk < 2) needs.push('minst 2 UPK');
-            if (nSp < 1) needs.push('minst 1 SP');
-            warn.textContent = 'Obs: reglementet kräver ' + needs.join(' och ') + '.';
+            warn.textContent = 'Obs: reglementet kräver minst 2 UPK.';
         } else {
             warn.style.display = 'none';
         }
@@ -1032,12 +987,6 @@ function handleMapClick(e) {
             syncUpTextarea();
             rebuildLayers();                  // sätt tooltip-brickan till "UPK xxx"
             reverseGeocodeUpk(obj);
-            return;
-        }
-        if (activeTool === 'sp') {
-            addObject(obj);
-            syncUpTextarea();
-            rebuildLayers();                  // sätt tooltip-brickan till "SPn"
             return;
         }
         addObject(obj);
@@ -1099,9 +1048,12 @@ async function loadPersisted() {
 
             // v3 → v4-migration: borttagna symboltyper filtreras bort.
             // Ingen motsvarighet i nya SVG-paketet från 2026-04-26.
+            // 'sp' togs bort 2026-04-27 — gamla SP-objekt försvinner från
+            // sparat state och rader i pUp-textarean rensas via syncUpTextarea.
             const REMOVED_TYPS = new Set([
                 'strv_full','strv_rojskydd','trad','avstand',
-                'skenminering','landmina_okand','riktad_verkan'
+                'skenminering','landmina_okand','riktad_verkan',
+                'sp'
             ]);
             const beforeCount = state.objects.length;
             state.objects = state.objects.filter(o => !REMOVED_TYPS.has(o.typ));
@@ -1130,9 +1082,9 @@ async function loadPersisted() {
                 scheduleAutosave();
             }
             rebuildLayers();
-            if (state.objects.some(o => o.typ === 'upk' || o.typ === 'sp')) {
-                syncUpTextarea();
-            }
+            // Kör alltid syncUpTextarea — den rensar även eventuella SP-rader
+            // från gammalt state vars 'sp'-objekt just filtrerats bort ovan.
+            syncUpTextarea();
         }
     } catch (_) { /* ignorera */ }
 }
@@ -1454,8 +1406,7 @@ function generateProtocolText() {
             minlinje:          'Minlinje',
             avsparrning:       'Avspärrning',
             ytter:             'Yttergränsmarkör',
-            upk:               'UPK-markör',
-            sp:                'SP-markör'
+            upk:               'UPK-markör'
         });
         let idx = 0;
         for (const o of state.objects) {
@@ -1473,9 +1424,7 @@ function generateProtocolText() {
             const mgrs = safeMgrs(centerLat, centerLng) || '—';
             const rawLabel = (labelMapFull[o.typ] || o.typ) + suffix;
             let etikett = o.label || o.etikett || '';
-            if (o.typ === 'sp' && o.refUpkNr != null && o.bearing != null) {
-                etikett = (etikett || 'SP' + (o.seq || '')) + ' fr UPK ' + padUpk(o.refUpkNr);
-            } else if (o.typ === 'upk' && o.adress) {
+            if (o.typ === 'upk' && o.adress) {
                 etikett = (etikett || upkLabel(o));
             }
             // v4.1: modell + plats prepended till anteckningskolumnen
@@ -1548,9 +1497,9 @@ function attachAutoTnr() {
 }
 
 function attachProtocolActions() {
-    // pUp-textarean är nu auto-genererad från UPK/SP på kartan.
-    // Reglementsvarningen sätts av syncUpTextarea() baserat på antal
-    // objekt i state — inte på antal rader i textarean.
+    // pUp-textarean är nu auto-genererad från UPK på kartan.
+    // Reglementsvarningen sätts av syncUpTextarea() baserat på antal UPK
+    // i state — inte på antal rader i textarean.
     attachAutoTnr();
 
     // Återställ "Inkludera datalista"-preferensen
