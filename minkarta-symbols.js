@@ -381,12 +381,12 @@ const SYMBOLS = {
 };
 
 // Palett-grupper (för UI-layout). v4 efter 2026-04-28: 4 grupper.
-// Rad 1: referenspunkter (UPK + yttergränsmarkör).
+// Rad 1: referenser & annotering — UPK, yttergränsmarkör + fri-rita/text.
 // Rad 2: mineringar (Block A) — pjäser + larm + områdesverkan + minerat omr.
 // Rad 3: linjer & ytor (Block B).
 // Rad 4: förstöring & spärr (Block C).
 const SYMBOL_GROUPS = [
-    { title: 'Referenspunkter',    ids: ['upk', 'ytter', 'frihand', 'text'] },
+    { title: 'Referenser & annotering', ids: ['upk', 'ytter', 'frihand', 'text'] },
     { title: 'Mineringar',         ids: [
         'strv_tryck', 'fordonsmina', 'fordon_sid', 'tramp', 'forsvar',
         'omr_verkan', 'larm'
