@@ -504,7 +504,7 @@ let activeTool = null;
 
 function setActiveTool(id) {
     activeTool = id;
-    const label = id ? (window.MK_SYMBOLS[id] ? window.MK_SYMBOLS[id].label : id) : 'pan';
+    const label = id ? (window.MK_SYMBOLS[id] ? window.MK_SYMBOLS[id].label : id) : 'Panorera / välj';
     document.getElementById('paletteActive').textContent = 'Verktyg: ' + label;
     document.querySelectorAll('.mk-tool').forEach(btn => {
         btn.classList.toggle('is-active', btn.dataset.tool === id);
@@ -593,11 +593,14 @@ function renderMapControls() {
     modelLabel.appendChild(document.createTextNode(' Visa modell'));
     host.appendChild(modelLabel);
 
-    // Pan-läge-knappen (samma styrlogik som v3)
+    // "Panorera / välj"-knappen (tidigare "Pan-läge"). Samma logik — sätter
+    // activeTool=null så kartan kan panoreras OCH klick på utlagda symboler
+    // öppnar deras edit-popup. Tooltip förtydligar dubbelfunktionen.
     const panBtn = document.createElement('button');
     panBtn.type = 'button';
     panBtn.className = 'btn btn-sm btn-ghost';
-    panBtn.textContent = 'Pan-läge';
+    panBtn.textContent = 'Panorera / välj';
+    panBtn.title = 'Panorera kartan; klicka en symbol för att redigera eller ta bort';
     panBtn.addEventListener('click', () => setActiveTool(null));
     host.appendChild(panBtn);
 }
