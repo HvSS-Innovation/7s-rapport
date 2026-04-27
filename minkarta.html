@@ -404,6 +404,7 @@ function initMap() {
     map = L.map('mapContainer', { zoomControl: true, worldCopyJump: true });
     const tiles = new HybridTileLayer('', {
         maxZoom: 19,
+        crossOrigin: 'anonymous',          // delar browser-cache med PNG-exportens fetch
         attribution: '© OpenTopoMap (z ≤ 17, CC-BY-SA) / © OpenStreetMap (z ≥ 18, ODbL)'
     }).addTo(map);
     const spinner = document.getElementById('mapSpinner');

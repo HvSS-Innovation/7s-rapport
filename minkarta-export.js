@@ -94,6 +94,34 @@
         });
     }
 
+    // Concurrency-limited paralleliseringshjälp. OpenTopoMap rate-limitar runt
+    // ~1 req/s/IP och kastar 429 vid burst — så vi kör max N parallella jobb
+    // i taget istället för Promise.all över hela tile-listan.
+    async function runThrottled(jobs, concurrency) {
+        const results = new Array(jobs.length);
+        let next = 0;
+        async function worker() {
+            while (true) {
+                const my = next++;
+                if (my >= jobs.length) return;
+                results[my] = await jobs[my]();
+            }
+        }
+        const pool = [];
+        const lim = Math.min(concurrency, jobs.length);
+        for (let i = 0; i < lim; i++) pool.push(worker());
+        await Promise.all(pool);
+        return results;
+    }
+
+    // Tile-laddning med en retry vid fel (för att bemöta sporadiska 429:or
+    // från OpenTopoMap). Andra försöket går efter ~600 ms.
+    function loadImageWithRetry(url) {
+        return loadImage(url).catch(() => new Promise(res => {
+            setTimeout(() => loadImage(url).then(res, () => res(null)), 600);
+        }));
+    }
+
     async function renderExport(opts) {
         const objects = opts.objects || [];
         const targetPx = opts.targetPx || 2048;
@@ -427,20 +455,22 @@
         }
         ctx.textBaseline = 'alphabetic';
 
-        // 2) Tiles
-        const tilePromises = [];
+        // 2) Tiles — throttlat (max 4 parallella) + en retry per tile.
+        // OpenTopoMap rate-limitar burst-requests; tidigare Promise.all
+        // över alla tiles gjorde att flertalet tiles 429:ades samtidigt
+        // och ritades som fallback-mörka rutor.
+        const tileJobs = [];
         for (let ty = tileYMin; ty <= tileYMax; ty++) {
             for (let tx = tileXMin; tx <= tileXMax; tx++) {
                 const url = tileUrl(z, tx, ty);
                 const dx = (tx - tileXMin) * TILE_SIZE;
                 const dy = (ty - tileYMin) * TILE_SIZE + 60;
-                tilePromises.push(
-                    loadImage(url).then(img => ({ img, dx, dy }))
-                                  .catch(() => ({ img: null, dx, dy }))
+                tileJobs.push(() =>
+                    loadImageWithRetry(url).then(img => ({ img, dx, dy }))
                 );
             }
         }
-        const tiles = await Promise.all(tilePromises);
+        const tiles = await runThrottled(tileJobs, 4);
         for (const t of tiles) {
             if (t.img) ctx.drawImage(t.img, t.dx, t.dy);
             else {
