@@ -171,9 +171,14 @@
 
         /* Text-cursor-input som visas vid kart-klick när Text-verktyget är
            aktivt. Absolut-positionerad inuti map-container. */
-        .mk-text-input {
+        .mk-text-wrap {
             position: absolute;
             z-index: 1500;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .mk-text-input {
             min-width: 200px;
             min-height: 40px;
             padding: 4px 6px;
@@ -185,8 +190,25 @@
             line-height: 1.15;
             resize: none;
             outline: none;
+            overflow: hidden;
+            box-sizing: border-box;
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
         }
+        .mk-text-btns {
+            display: flex;
+            gap: 4px;
+            justify-content: flex-end;
+        }
+        .mk-text-btn {
+            padding: 3px 10px;
+            border: none;
+            border-radius: 3px;
+            font: 700 12px Inter, sans-serif;
+            cursor: pointer;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.25);
+        }
+        .mk-text-btn-ok     { background: var(--accent); color: #fff; }
+        .mk-text-btn-cancel { background: rgba(255,255,255,0.9); color: #333; }
 
         /* Drag-handtag för polylines/polygoner — en liten grön prick som
            sitter på första noden (eller apex för verkansomrade) och låter
@@ -1374,35 +1396,60 @@ function startTextInput(e) {
     const lat = e.latlng.lat, lng = e.latlng.lng;
     const cp = map.latLngToContainerPoint(e.latlng);
     const mapEl = map.getContainer();
+
+    const wrap = document.createElement('div');
+    wrap.className = 'mk-text-wrap';
+
     const ta = document.createElement('textarea');
     ta.className = 'mk-text-input';
-    // Klampa textarean inom kart-containern så den inte klipps av
-    // .map-wrap { overflow: hidden } när användaren klickar nära kanten.
-    // Approx-mått: bredd 200 (min-width), höjd 60 (rows=2 + padding).
-    const taW = 200, taH = 60, pad = 4;
+    ta.rows = 2;
+
+    const btnRow = document.createElement('div');
+    btnRow.className = 'mk-text-btns';
+    const btnOk     = document.createElement('button');
+    btnOk.type      = 'button';
+    btnOk.className = 'mk-text-btn mk-text-btn-ok';
+    btnOk.textContent = 'Spara';
+    const btnCancel     = document.createElement('button');
+    btnCancel.type      = 'button';
+    btnCancel.className = 'mk-text-btn mk-text-btn-cancel';
+    btnCancel.textContent = 'Avbryt';
+    btnRow.appendChild(btnCancel);
+    btnRow.appendChild(btnOk);
+    wrap.appendChild(ta);
+    wrap.appendChild(btnRow);
+
+    // Klampa wrappern inom kart-containern (bredd 210, höjd 110 inkl knappar).
+    const taW = 210, taH = 110, pad = 4;
     const mapW = mapEl.clientWidth, mapH = mapEl.clientHeight;
-    let x = cp.x - 100, y = cp.y - 20;
+    let x = cp.x - 105, y = cp.y - 20;
     if (x < pad) x = pad;
     if (x + taW > mapW - pad) x = mapW - taW - pad;
     if (y < pad) y = pad;
     if (y + taH > mapH - pad) y = mapH - taH - pad;
-    ta.style.left = x + 'px';
-    ta.style.top  = y + 'px';
-    ta.rows = 2;
-    mapEl.appendChild(ta);
+    wrap.style.left = x + 'px';
+    wrap.style.top  = y + 'px';
+
+    mapEl.appendChild(wrap);
     _textInputEl = ta;
 
-    // Stoppa Leaflet från att tolka klick i textarean som kart-events
+    // Stoppa Leaflet från att tolka klick i wrappern som kart-events
     if (L.DomEvent) {
-        L.DomEvent.disableClickPropagation(ta);
-        L.DomEvent.disableScrollPropagation(ta);
+        L.DomEvent.disableClickPropagation(wrap);
+        L.DomEvent.disableScrollPropagation(wrap);
     }
+
+    // Auto-resize: växer med innehållet
+    ta.addEventListener('input', () => {
+        ta.style.height = 'auto';
+        ta.style.height = ta.scrollHeight + 'px';
+    });
 
     let committed = false;
     function cleanup() {
         committed = true;
         if (_textInputEl === ta) _textInputEl = null;
-        ta.remove();
+        wrap.remove();
     }
     function commit() {
         if (committed) return;
@@ -1419,9 +1466,16 @@ function startTextInput(e) {
         else if (ev.key === 'Tab')              { ev.preventDefault(); commit(); }
         else if (ev.key === 'Escape')           { ev.preventDefault(); cancel(); }
     });
-    ta.addEventListener('blur', () => {
+    // blur: agera bara om fokus lämnar hela wrappern (inte vid knapptryck)
+    ta.addEventListener('blur', ev => {
+        if (ev.relatedTarget && wrap.contains(ev.relatedTarget)) return;
         if (ta.value.trim()) commit(); else cancel();
     });
+    // Förhindra att textarea tappar fokus när knapparna trycks ned
+    [btnOk, btnCancel].forEach(btn => btn.addEventListener('mousedown', ev => ev.preventDefault()));
+    btnOk.addEventListener('click', commit);
+    btnCancel.addEventListener('click', cancel);
+
     setTimeout(() => ta.focus(), 0);
 }
 
