@@ -829,7 +829,11 @@ function showUndoButton(label) {
     // stäng. Registreras i setTimeout så att samma klick som öppnade
     // knappen inte direkt stänger den.
     _undoBtnOutsideHandler = (e) => {
-        if (_undoBtnEl && !_undoBtnEl.contains(e.target)) hideUndoButton();
+        if (!_undoBtnEl || _undoBtnEl.contains(e.target)) return;
+        // Klick på paletten byter verktyg men ska inte stänga ångra-knappen
+        const palette = document.getElementById('paletteRoot');
+        if (palette && palette.contains(e.target)) return;
+        hideUndoButton();
     };
     setTimeout(() => {
         document.addEventListener('pointerdown', _undoBtnOutsideHandler, true);
