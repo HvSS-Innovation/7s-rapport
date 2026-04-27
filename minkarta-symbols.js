@@ -370,7 +370,7 @@ const SYMBOLS = {
             '<path d="M3.2 18.5l1.3-3.6 11-11 3.3 3.3-11 11L4 19.8z" fill="' + MK_INK + '" stroke="' + MK_HALO + '" stroke-width="0.7" paint-order="stroke" stroke-linejoin="round"/>' +
             '<path d="M14.5 3.9l3.3 3.3" stroke="' + MK_HALO + '" stroke-width="0.6"/>' +
         '</svg>',
-        stroke: MK_INK, weight: 3, dashArray: null
+        stroke: MK_INK, weight: 5, dashArray: null
     }
 
     // BORTTAGNA v3-nycklar (ingen motsvarighet i nya SVG-paketet från
