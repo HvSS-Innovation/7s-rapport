@@ -1,5 +1,5 @@
-const APP_VERSION = '20260427_105052';
-const APP_COMMIT = '3a9b9dd1ac01e3377957f41905b205ad256da5c4';
+const APP_VERSION = '20260427_113013';
+const APP_COMMIT = 'af4bbe5609e5b4edb6f6871d5146795c8becd6f1';
 document.addEventListener('DOMContentLoaded', () => {
     const el = document.createElement('div');
     el.style.cssText = 'text-align:center;padding:8px 0 16px;font-size:0.65rem;color:#3a5a3a;font-family:monospace';
