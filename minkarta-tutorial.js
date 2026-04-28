@@ -390,13 +390,6 @@
             target: null
         },
         {
-            title: 'UPK-markörer',
-            lines: [
-                'UPK = Utgångs-Punkt-Koordinat. Får automatiskt slumpnummer 001–999. Reverse-geocode föreslår en namn-etikett.'
-            ],
-            target: '[data-tool="upk"]'
-        },
-        {
             title: 'Yttergränsmarkörer',
             lines: [
                 'Sätt två yttergränsmarkörer för att styra vilken yta PNG-exporten ska täcka. Annars fyller den med padding runt allt.'
