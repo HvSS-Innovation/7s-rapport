@@ -555,16 +555,14 @@ const MGRS = (() => {
 
 // ── Extrahera MGRS eller lat/lon från fri text ───────────────────────────────
 function extractCoord(text) {
-    const mgrs = text.match(/\d{1,2}\s?[C-X]\s?[A-Z]{2}\s?\d{3,5}\s?\d{3,5}/i);
+    const mgrs = text.match(/(\d{1,2})\s*([C-X])\s*([A-Z])\s*([A-Z])\s*(\d+(?:\s+\d+)?)/i);
     if (mgrs) {
-        const digits = mgrs[0].replace(/\s+/g, '');
-        const m = digits.match(/^(\d{1,2})([C-X])([A-Z]{2})(\d+)$/i);
-        if (m) {
-            const nums = m[4];
-            const half = Math.floor(nums.length / 2);
+        const nums = mgrs[5].replace(/\s+/g, '');
+        if (nums.length >= 2 && nums.length <= 10 && nums.length % 2 === 0) {
+            const half = nums.length / 2;
             const east = nums.slice(0, half).padEnd(5, '0').slice(0, 5);
             const north = nums.slice(half).padEnd(5, '0').slice(0, 5);
-            return { kind: 'mgrs', value: `${m[1]}${m[2].toUpperCase()}${m[3].toUpperCase()} ${east} ${north}` };
+            return { kind: 'mgrs', value: `${mgrs[1]}${mgrs[2].toUpperCase()}${mgrs[3].toUpperCase()}${mgrs[4].toUpperCase()} ${east} ${north}` };
         }
     }
     const ll = text.match(/(-?\d{1,3}\.\d{2,})\s*[,/;\s]\s*(-?\d{1,3}\.\d{2,})/);
