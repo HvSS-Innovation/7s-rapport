@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260428_120721';
+const CACHE = 'hv-20260428_121010';
 const FILES = [
   './',
   './index.html',
