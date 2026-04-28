@@ -530,15 +530,6 @@ function initMap() {
         updateStatus();
     });
 
-    // Vid geolocation — föreslå vy om ingen cache fanns
-    if (!restored && navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-            pos => { map.setView([pos.coords.latitude, pos.coords.longitude], 13); },
-            () => { /* tyst nekat */ },
-            { enableHighAccuracy: false, timeout: 4000 }
-        );
-    }
-
     updateStatus();
 }
 
