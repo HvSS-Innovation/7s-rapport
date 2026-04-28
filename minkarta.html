@@ -1200,15 +1200,33 @@ function openEditPopup(obj, layer, e) {
             nrInput.select();
         }
 
-        // Synka rotation-slidern och numret med varandra (ren UI-bekvämlighet)
+        // Live-rotation: synka slider+number, applicera direkt på obj och
+        // rita om kartan så användaren ser sektorn snurra medan slidern dras.
+        // Stängs popupen utan Spara/Ta-bort återställs rotationen.
         const rotSlider = wrap.querySelector('#edRot');
         const rotNumber = wrap.querySelector('#edRotN');
+        let origRotation = obj.rotation || 0;
+        let rotCommitted = false;
         if (rotSlider && rotNumber) {
-            rotSlider.addEventListener('input', () => { rotNumber.value = rotSlider.value; });
-            rotNumber.addEventListener('input', () => {
-                const v = Math.max(0, Math.min(359, parseInt(rotNumber.value, 10) || 0));
+            const liveUpdate = (raw) => {
+                const v = Math.max(0, Math.min(359, parseInt(raw, 10) || 0));
                 rotSlider.value = v;
-            });
+                rotNumber.value = v;
+                obj.rotation = v;
+                rebuildLayers();
+            };
+            rotSlider.addEventListener('input', () => liveUpdate(rotSlider.value));
+            rotNumber.addEventListener('input', () => liveUpdate(rotNumber.value));
+
+            const onPopupClose = (ev) => {
+                if (ev.popup !== popup) return;
+                map.off('popupclose', onPopupClose);
+                if (!rotCommitted && obj.rotation !== origRotation) {
+                    obj.rotation = origRotation;
+                    rebuildLayers();
+                }
+            };
+            map.on('popupclose', onPopupClose);
         }
 
         wrap.querySelector('#edSave').addEventListener('click', () => {
@@ -1251,11 +1269,14 @@ function openEditPopup(obj, layer, e) {
             if (spreadInput) obj.spread = Math.max(5, Math.min(360, parseInt(spreadInput.value, 10) || 60));
             if (rotSlider) obj.rotation = Math.max(0, Math.min(359, parseInt(rotSlider.value, 10) || 0));
             obj.anteckning = wrap.querySelector('#edNote').value || '';
+            rotCommitted = true;
+            origRotation = obj.rotation;
             map.closePopup(popup);
             if (isUpk) syncUpTextarea();         // uppdatera pUp-raden
             rebuildLayers();
         });
         wrap.querySelector('#edDel').addEventListener('click', () => {
+            rotCommitted = true;
             map.closePopup(popup);
             softDelete(obj);
         });
