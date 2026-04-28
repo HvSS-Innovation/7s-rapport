@@ -108,6 +108,7 @@
     }
 
     function hideToast() {
+        if (suggestTimer) { clearTimeout(suggestTimer); suggestTimer = 0; }
         if (!toastEl) return;
         toastEl.classList.remove('show');
         const ref = toastEl;
@@ -326,8 +327,7 @@
         {
             title: 'UPK',
             lines: [
-                'UPK = Utgångs-Punkt-Koordinat. En bestämbar referenspunkt i terrängen, inte en mina.',
-                'Klart! Du kan starta steg 2 när du vill från "Lär dig MINKARTA"-knappen.'
+                'UPK = Utgångs-Punkt-Koordinat. En bestämbar referenspunkt i terrängen, inte en mina.'
             ],
             target: '[data-tool="upk"]'
         }
@@ -412,6 +412,45 @@
         state.steps[stepKey].completed = true;
         state.completed = STEPS.every(k => state.steps[k].completed);
         saveState();
+        injectLauncher();
+        // Mjukt förslag om nästa steg, ~1.2 sek efter att overlay/album stängts
+        if (!state.completed) {
+            setTimeout(() => suggestNextStep(stepKey), 1200);
+        }
+    }
+
+    function suggestNextStep(justCompleted) {
+        const next = { welcome: 'symbols', symbols: 'master' }[justCompleted];
+        if (!next) return;
+        if (state.steps[next] && state.steps[next].completed) return;
+        showSuggestToast(justCompleted, next);
+    }
+
+    let suggestTimer = 0;
+
+    function showSuggestToast(justCompleted, nextKey) {
+        if (toastEl) hideToast();
+        const messages = {
+            welcome: 'Steg 1 klart! Vill du fortsätta till Symbolernas värld?',
+            symbols: 'Snyggt! Vill du gå vidare till Bli en kartmästare?'
+        };
+        toastEl = el('div', { class: 'mkt-toast', role: 'dialog', 'aria-label': 'Förslag om nästa steg' }, [
+            el('div', { class: 'mkt-toast-text', text: messages[justCompleted] || 'Vill du gå vidare?' }),
+            el('div', { class: 'mkt-toast-actions' }, [
+                el('button', { type: 'button', text: 'Senare', onclick: hideToast }),
+                el('button', {
+                    type: 'button',
+                    class: 'mkt-primary',
+                    text: 'Ja, fortsätt',
+                    onclick: () => { hideToast(); start(nextKey); }
+                })
+            ])
+        ]);
+        document.body.appendChild(toastEl);
+        requestAnimationFrame(() => toastEl.classList.add('show'));
+        // Auto-stäng efter 9 sek så toasten inte hänger kvar i evighet
+        if (suggestTimer) { clearTimeout(suggestTimer); }
+        suggestTimer = setTimeout(() => { hideToast(); }, 9000);
     }
 
     function stop() {
@@ -426,6 +465,7 @@
     function reset() {
         try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
         state = defaultState();
+        injectLauncher();
     }
 
     function isCompleted() { return !!state.completed; }
@@ -650,26 +690,60 @@
                     e.stopPropagation();
                     closeMenu();
                     reset();
+                    injectLauncher();
                 }
             }, [el('span', { text: 'Återställ tutorial-progress' })])
         ]);
         document.body.appendChild(menuEl);
+
+        // Position: fixed mot viewporten. Föredra under knappen, flippa över
+        // om menyn inte får plats nedanför. Klampa till viewport-marginalen.
         const r = anchor.getBoundingClientRect();
         const mw = menuEl.offsetWidth;
-        menuEl.style.top  = (r.bottom + 6) + 'px';
-        menuEl.style.left = clamp(r.left, 8, window.innerWidth - mw - 8) + 'px';
+        const mh = menuEl.offsetHeight;
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const margin = 8;
+        const spaceBelow = vh - r.bottom - margin;
+        const spaceAbove = r.top - margin;
+        let top;
+        if (spaceBelow >= mh + 6) {
+            top = r.bottom + 6;
+        } else if (spaceAbove >= mh + 6) {
+            top = r.top - mh - 6;
+        } else {
+            top = clamp(r.bottom + 6, margin, vh - mh - margin);
+        }
+        const left = clamp(r.left, margin, vw - mw - margin);
+        menuEl.style.top  = top + 'px';
+        menuEl.style.left = left + 'px';
+
         // Fördröjt globalt klick-stäng (annars triggar samma klick)
         setTimeout(() => document.addEventListener('click', onDocClickForMenu, true), 0);
+    }
+
+    function getLauncherText() {
+        if (state.completed) return 'Lär dig MINKARTA igen';
+        const anyStarted = state.openedFirstTime ||
+            STEPS.some(k => state.steps[k].seen || state.steps[k].completed);
+        if (anyStarted) return 'Fortsätt lär dig kartan';
+        return 'Lär dig MINKARTA';
     }
 
     function injectLauncher() {
         const host = document.getElementById('mapControls');
         if (!host) return;
-        if (host.querySelector('.mkt-launcher')) return;
-        const btn = el('button', {
+        const txt = getLauncherText();
+        let btn = host.querySelector('.mkt-launcher');
+        if (btn) {
+            // Knappen finns redan — uppdatera bara texten om den ändrats
+            if (btn.textContent !== txt) btn.textContent = txt;
+            return;
+        }
+        btn = el('button', {
             type: 'button',
             class: 'mkt-launcher',
-            text: 'Lär dig MINKARTA',
+            text: txt,
             title: 'Starta interaktiv rundtur av kartan'
         });
         btn.addEventListener('click', () => openMenu(btn));

@@ -190,7 +190,7 @@
 
 /* ─── Återstart-meny (popover under launcher-knappen) ───────────────────── */
 .mkt-menu {
-    position: absolute;
+    position: fixed;
     z-index: 9100;
     background: var(--mkt-bubble-bg);
     color: var(--mkt-bubble-fg);
