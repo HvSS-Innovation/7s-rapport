@@ -124,16 +124,17 @@
 
     function clearPulseTarget() {
         if (pulseTargetEl) {
-            pulseTargetEl.classList.remove('mkt-pulse-target');
+            pulseTargetEl.classList.remove('mkt-pulse-target', 'mkt-pulse-strong');
             pulseTargetEl = null;
         }
     }
 
-    function setPulseTarget(target) {
+    function setPulseTarget(target, strong) {
         clearPulseTarget();
         // Hela kartan ar for stor for skala-puls — det blir visuellt rorigt.
         if (!target || target.id === 'mapContainer') return;
         target.classList.add('mkt-pulse-target');
+        if (strong) target.classList.add('mkt-pulse-strong');
         pulseTargetEl = target;
     }
 
@@ -237,6 +238,16 @@
         bubbleEl.style.left   = left + 'px';
         bubbleEl.style.right  = '';
         bubbleEl.style.bottom = '';
+
+        // Pil-riktning: om bubblan har .mkt-with-arrow, satt arrow-up nar
+        // bubblan ligger UNDER target och arrow-down nar den ligger OVAN.
+        if (bubbleEl.classList.contains('mkt-with-arrow')) {
+            bubbleEl.classList.remove('mkt-arrow-up', 'mkt-arrow-down');
+            if (targetRect) {
+                if (top >= targetRect.bottom) bubbleEl.classList.add('mkt-arrow-up');
+                else                          bubbleEl.classList.add('mkt-arrow-down');
+            }
+        }
     }
 
     function renderBubble(screen) {
@@ -249,7 +260,8 @@
             onclick: a.onClick
         }));
         const lineNodes = (screen.lines || []).map(t => el('p', { class: 'mkt-bubble-text', text: t }));
-        bubbleEl = el('div', { class: 'mkt-bubble', role: 'dialog', 'aria-modal': 'false' }, [
+        const bubbleClass = 'mkt-bubble' + (screen.arrow ? ' mkt-with-arrow' : '');
+        bubbleEl = el('div', { class: bubbleClass, role: 'dialog', 'aria-modal': 'false' }, [
             screen.title ? el('div', { class: 'mkt-bubble-title', text: screen.title }) : null,
             ...lineNodes,
             screen.progress ? el('div', { class: 'mkt-bubble-progress', text: screen.progress }) : null,
@@ -259,7 +271,7 @@
         overlayEl.appendChild(bubbleEl);
 
         const target = screen.target ? document.querySelector(screen.target) : null;
-        setPulseTarget(target);
+        setPulseTarget(target, !!screen.strongPulse);
         // Skrolla target in i view OM den inte redan är synlig.
         // Använd instant-scroll så getBoundingClientRect() ger korrekt
         // position direkt — smooth-scroll är asynkron och leder till att
@@ -355,10 +367,12 @@
         {
             title: 'Steg 3 av 3 — Sökning',
             lines: [
-                'Här söker du efter en plats. Stöder MGRS, lat,lon eller adresser via Nominatim.',
-                'Prova själv — kartan flyger dit du vill.'
+                'Sökfältet längst upp på skärmen.',
+                'Skriv adress, klistra in MGRS eller lat,lon — kartan flyger dit.'
             ],
-            target: '#mgrsSearch'
+            target: '#mgrsSearch',
+            arrow: true,
+            strongPulse: true
         },
         {
             title: 'Rita en symbol',

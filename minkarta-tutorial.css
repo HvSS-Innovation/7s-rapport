@@ -89,6 +89,45 @@
     transform-origin: center center;
     will-change: transform, opacity;
 }
+
+/* Starkare puls — for skarmar dar diskret pulserande inte rackt for att
+   draga ogat. Anvands t.ex. pa Steg 3 Sokning dar #mgrsSearch ar tunt
+   och hogst upp. Storre skala + accent-glod runt elementet. */
+@keyframes mktTargetPulseStrong {
+    0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(212,162,86,0); }
+    50%      { transform: scale(1.06); box-shadow: 0 0 0 6px rgba(212,162,86,0.45); }
+}
+.mkt-pulse-target.mkt-pulse-strong {
+    animation-name: mktTargetPulseStrong;
+}
+
+/* Pekande pil fran bubblan mot target. Triangel via border-trick. JS
+   placerar bubblan ovan/under target och satter .mkt-arrow-{up,down}
+   pa bubblan beroende pa relativposition. Pilen sitter pa bubblans
+   kant som vetter mot target. */
+.mkt-bubble.mkt-with-arrow::after {
+    content: '';
+    position: absolute;
+    width: 0; height: 0;
+    border-style: solid;
+    pointer-events: none;
+}
+.mkt-bubble.mkt-with-arrow.mkt-arrow-up::after {
+    /* Bubblan ligger UNDER target — pil pekar UPP. */
+    top: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 0 10px 10px 10px;
+    border-color: transparent transparent var(--mkt-bubble-bg) transparent;
+}
+.mkt-bubble.mkt-with-arrow.mkt-arrow-down::after {
+    /* Bubblan ligger OVAN target — pil pekar NER. */
+    bottom: -10px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 10px 10px 0 10px;
+    border-color: var(--mkt-bubble-bg) transparent transparent transparent;
+}
 #mktOverlay.no-spotlight .mkt-bubble-anchor {
     /* när ingen spotlight: helsvart dim ändå */
     background: var(--mkt-dim);
