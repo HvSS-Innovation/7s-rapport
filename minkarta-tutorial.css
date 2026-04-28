@@ -402,6 +402,20 @@
 }
 .mkt-album-card.mkt-pop { animation: mktCardPop 0.45s ease-out; }
 
+/* ─── Tap-hint: subtil puls pa alla oupptackta kort tills anvandaren
+       ror skarmen forsta gangen. Stagger via nth-child sa det blir en
+       lugn vagrorelse, inte alla samtidigt. ───────────────────────── */
+@keyframes mktTapHint {
+    0%, 60%, 100% { transform: scale(1); }
+    30%           { transform: scale(1.035); }
+}
+#mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered) {
+    animation: mktTapHint 1.6s ease-in-out infinite;
+}
+#mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(2n) { animation-delay: 0.20s; }
+#mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(3n) { animation-delay: 0.45s; }
+#mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(5n) { animation-delay: 0.75s; }
+
 /* Footer */
 .mkt-album-footer {
     display: flex;

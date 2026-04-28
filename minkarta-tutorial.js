@@ -553,7 +553,14 @@
     }
 
     function onAlbumKey(e) {
-        if (e.key === 'Escape') { e.preventDefault(); closeSymbolsAlbum(); }
+        if (e.key === 'Escape') { e.preventDefault(); completeSymbolsStep(); }
+    }
+
+    // Tap-hint: stoppa pulsanimationen vid forsta beröringen av skarmen
+    function stopAlbumTapHint() {
+        if (!albumEl) return;
+        albumEl.classList.remove('mkt-tap-hint-active');
+        document.removeEventListener('pointerdown', stopAlbumTapHint, true);
     }
 
     function openSymbolsAlbum() {
@@ -605,19 +612,22 @@
                         type: 'button',
                         'aria-label': 'Stäng',
                         text: '×',
-                        onclick: closeSymbolsAlbum
+                        onclick: completeSymbolsStep
                     })
                 ]),
                 el('p', { class: 'mkt-album-desc', text: 'Klicka på ett tecken för att se hur det ser ut direkt på kartan. Inget är fel — utforska i din egen takt.' }),
                 el('div', { class: 'mkt-album-body' }, [groupsEl]),
                 el('div', { class: 'mkt-album-footer' }, [
-                    el('button', { class: 'mkt-ghost', type: 'button', text: 'Stäng albumet', onclick: closeSymbolsAlbum }),
                     el('button', { class: 'mkt-primary', type: 'button', text: 'Klar med symboler', onclick: completeSymbolsStep })
                 ])
             ])
         ]);
+        // Tap-hint pa kort som inte ar upptackta
+        albumEl.classList.add('mkt-tap-hint-active');
         document.body.appendChild(albumEl);
         document.addEventListener('keydown', onAlbumKey);
+        // Lyssna pa forsta beröringen for att stanna pulsen permanent
+        document.addEventListener('pointerdown', stopAlbumTapHint, true);
     }
 
     function onCardClick(symId, cardEl) {
@@ -636,6 +646,7 @@
 
     function closeSymbolsAlbum() {
         document.removeEventListener('keydown', onAlbumKey);
+        document.removeEventListener('pointerdown', stopAlbumTapHint, true);
         if (albumEl && albumEl.parentNode) albumEl.parentNode.removeChild(albumEl);
         albumEl = null;
         clearTutorialDemoLayer();
