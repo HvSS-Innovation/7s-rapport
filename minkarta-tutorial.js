@@ -207,36 +207,94 @@
         overlayEl.appendChild(bubbleEl);
 
         const target = screen.target ? document.querySelector(screen.target) : null;
-        placeSpotlight(target);
-        // Vänta en frame så bubblan har korrekta dimensioner
+        // Scrolla target in i view så det syns under spotlighten
+        if (target && typeof target.scrollIntoView === 'function') {
+            try { target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); } catch (_) {}
+        }
+        // Vänta en frame så scroll och layout hunnit landa
         requestAnimationFrame(() => {
-            const rect = target ? target.getBoundingClientRect() : null;
-            placeBubble(rect);
+            placeSpotlight(target);
+            requestAnimationFrame(() => {
+                const rect = target ? target.getBoundingClientRect() : null;
+                placeBubble(rect);
+            });
         });
     }
 
     // ── Stegmotor ────────────────────────────────────────────────────────────
     let activeStep = null;       // 'welcome' | 'symbols' | 'master'
     let activeIndex = 0;
-    let activeScreens = [];      // platshållare-array; senare commits fyller på
+    let activeScreens = [];
 
-    function getStubScreens(stepKey) {
+    // Steg 1 — Välkommen till kartan (7 skärmar)
+    const WELCOME_SCREENS = [
+        {
+            title: 'Steg 1 av 3 — Välkommen',
+            lines: [
+                'Det här är MINKARTA. Här ritar du upp minläggningar med svenska kart-tecken.',
+                'Vill du ha en kort rundtur?'
+            ],
+            target: null
+        },
+        {
+            title: 'Kartan',
+            lines: [
+                'Det här är din karta. Drag för att panorera, scrolla eller pinch-zooma för att komma närmare.'
+            ],
+            target: '#mapContainer'
+        },
+        {
+            title: 'Status-raden',
+            lines: [
+                'Här ser du var mitten av kartan ligger i MGRS, och vilken zoomnivå du är på.'
+            ],
+            target: '.status-row'
+        },
+        {
+            title: 'Symbolpaletten',
+            lines: [
+                'Här nere finns alla kart-tecken du kan rita. Vi tittar närmare på tre stycken nu.'
+            ],
+            target: '#paletteRoot'
+        },
+        {
+            title: 'Stridsvagnsmina',
+            lines: [
+                'Den vanligaste markeringen på en minläggningskarta — en tryckutlöst stridsvagnsmina.'
+            ],
+            target: '[data-tool="strv_tryck"]'
+        },
+        {
+            title: 'Truppmina',
+            lines: [
+                'Truppminor markeras med en svart cirkel och två antenntrådar.'
+            ],
+            target: '[data-tool="tramp"]'
+        },
+        {
+            title: 'UPK',
+            lines: [
+                'UPK = Utgångs-Punkt-Koordinat. En bestämbar referenspunkt i terrängen, inte en mina.',
+                'Klart! Du kan starta steg 2 när du vill från "Lär dig MINKARTA"-knappen.'
+            ],
+            target: '[data-tool="upk"]'
+        }
+    ];
+
+    function getScreensFor(stepKey) {
+        if (stepKey === 'welcome') return WELCOME_SCREENS.slice();
+        // Steg 2 + 3 fylls i i senare commits
         const titles = {
-            welcome: 'Steg 1 — Välkommen till kartan',
             symbols: 'Steg 2 — Symbolernas värld',
             master:  'Steg 3 — Bli en kartmästare'
         };
         return [{
             title: titles[stepKey] || 'MINKARTA Tutorial',
             lines: [
-                'Skelettet är på plats. Fullständigt innehåll för det här steget kommer i en senare uppdatering.',
+                'Det här steget är inte byggt än. Kommer i en senare uppdatering.',
                 'Du kan stänga rundturen när som helst med Esc eller krysset.'
             ],
-            target: null,
-            actions: [
-                { label: 'Hoppa över', ghost: true, onClick: stop },
-                { label: 'Markera som klar', primary: true, onClick: () => { markCompleted(stepKey); stop(); } }
-            ]
+            target: null
         }];
     }
 
@@ -248,15 +306,49 @@
         state.steps[activeStep].seen = true;
         state.openedFirstTime = true;
         saveState();
-        activeScreens = getStubScreens(activeStep);
+        activeScreens = getScreensFor(activeStep);
         activeIndex = 0;
+        renderActiveScreen();
+    }
+
+    function nextScreen() {
+        if (activeIndex >= activeScreens.length - 1) {
+            markCompleted(activeStep);
+            stop();
+            return;
+        }
+        activeIndex += 1;
+        renderActiveScreen();
+    }
+
+    function prevScreen() {
+        if (activeIndex === 0) return;
+        activeIndex -= 1;
         renderActiveScreen();
     }
 
     function renderActiveScreen() {
         const screen = activeScreens[activeIndex];
         if (!screen) { stop(); return; }
-        renderBubble(screen);
+        const total = activeScreens.length;
+        const isFirst = activeIndex === 0;
+        const isLast  = activeIndex === total - 1;
+        const actions = [];
+        if (!isFirst) {
+            actions.push({ label: 'Tillbaka', ghost: true, onClick: prevScreen });
+        } else {
+            actions.push({ label: 'Hoppa över', ghost: true, onClick: stop });
+        }
+        actions.push({
+            label: isLast ? 'Klar' : 'Vidare',
+            primary: true,
+            onClick: nextScreen
+        });
+        const composed = Object.assign({}, screen, {
+            actions: actions,
+            progress: total > 1 ? ((activeIndex + 1) + ' av ' + total) : ''
+        });
+        renderBubble(composed);
     }
 
     function markCompleted(stepKey) {
