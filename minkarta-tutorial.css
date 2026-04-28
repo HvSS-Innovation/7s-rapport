@@ -429,6 +429,22 @@
 #mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(3n) { animation-delay: 0.45s; }
 #mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(5n) { animation-delay: 0.75s; }
 
+/* Info-banner — uppdateras vid varje kort-klick med kort beskrivning av
+   symbolen. Sticky over footern sa anvandaren alltid ser texten utan att
+   behova scrolla. Wrappar over max ~3 rader pa mobilen. */
+.mkt-album-info {
+    flex-shrink: 0;
+    padding: 10px 16px;
+    border-top: 1px solid var(--mkt-bubble-bord);
+    background: rgba(255,255,255,0.03);
+    color: var(--mkt-bubble-fg);
+    font-size: 0.86rem;
+    line-height: 1.4;
+    min-height: 1.4em;
+    max-height: 4.6em;
+    overflow: hidden;
+}
+
 /* Footer */
 .mkt-album-footer {
     display: flex;
@@ -469,6 +485,7 @@
     .mkt-album-counter { font-size: 0.72rem; }
     .mkt-album-card-svg { width: 40px; height: 40px; }
     .mkt-album-card-label { font-size: 0.66rem; }
+    .mkt-album-info { font-size: 0.8rem; padding: 8px 12px; max-height: 4.2em; }
 }
 
 /* ─── Diplom (Steg 3 avslutning) — 80-tals-blankettstil ───────────────── */

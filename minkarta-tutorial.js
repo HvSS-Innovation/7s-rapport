@@ -613,6 +613,37 @@
     }
 
     // ── Symbolernas värld (Steg 2) ──────────────────────────────────────────
+    // Korta beskrivningar av varje symbol — visas i nederkant-bannern nar
+    // anvandaren klickar ett kort. Inga kallcitat (de skulle blasa upp
+    // texten + introducera kalla-styrning som hor hemma i info-panelen).
+    const SYMBOL_DESCRIPTIONS = {
+        strv_tryck:        'Tryckutlöst stridsvagnsmina. Vanligaste markeringen på minkartan.',
+        tramp:             'Truppmina. Utlöses av tryck eller spränglina.',
+        larm:              'Larmmina. Varnar utan att skada — ljud eller ljus.',
+        fordonsmina:       'Fordonsmina. Verkar mot lätta fordon, mindre laddning än stridsvagnsminor.',
+        fordon_sid:        'Sidverkande fordonsmina. Riktad verkan vinkelrätt mot fordonsspår.',
+        forsvar:           'Försvarsladdning. Placeras manuellt och kan utlösas av egen trupp.',
+        prov_rojskydd:     'Provisoriskt fordonsröjningsskydd. Försvårar mekanisk röjning av minor.',
+        rojskydd:          'Röjningsskydd. Detonerar om fienden försöker röja minfältet.',
+        forst_forb:        'Förberedd förstöring. Laddningar på plats men ej säkrade för avfyring.',
+        forst_forb_sakrad: 'Förberedd förstöring, säkrad. Passage tillåten tills säkringen lyfts.',
+        forst_utf:         'Utförd förstöring. Markerar bro, väg eller anläggning som redan sprängts.',
+        forst_plan:        'Planlagd förstöring. Beslutad men ännu inte förberedd.',
+        omr_verkan:        'Områdesverkande mina. Verkar över ett större område samtidigt.',
+        verkansomrade:     'Verkansområde för en områdesverkande mina eller ett vapensystem.',
+        minlinje:          'Minlinje. Minor utlagda i en sammanhängande linje.',
+        avsparrning:       'Avspärrning, minvarning. Gränsen där minfältet börjar.',
+        minruta:           'Minruta. Rektangulär minering enligt fast schema.',
+        minomrade:         'Minerat område. Yta med minering — antal anges på gränsen.',
+        avstand_tramp:     'Avståndslagd trampminering. Trampminor lagda på distans.',
+        avstand_strv:      'Avståndslagd stridsvagnsminering. Strvminor lagda på distans, oftast via artilleri.',
+        upk:               'Utgångs-Punkt-Koordinat. Bestämbar referenspunkt i terrängen — inte en mina.',
+        ytter:             'Yttergränsmarkör. Styr vilken yta PNG-exporten täcker.',
+        text:              'Fri text. Egen anteckning på kartan.',
+        frihand:           'Fri-rita. Frihandsritad linje för skissmarkeringar.'
+    };
+    const ALBUM_INFO_DEFAULT = 'Klicka på ett kort för att läsa om symbolen.';
+
     let albumEl = null;
 
     function totalSymbolCount() {
@@ -697,6 +728,7 @@
                 ]),
                 el('p', { class: 'mkt-album-desc', text: 'Klicka på ett tecken för att se hur det ser ut direkt på kartan. Inget är fel — utforska i din egen takt.' }),
                 el('div', { class: 'mkt-album-body' }, [groupsEl]),
+                el('div', { class: 'mkt-album-info', text: ALBUM_INFO_DEFAULT }),
                 el('div', { class: 'mkt-album-footer' }, [
                     el('button', { class: 'mkt-primary', type: 'button', text: 'Klar med symboler', onclick: completeSymbolsStep })
                 ])
@@ -722,6 +754,14 @@
         void cardEl.offsetWidth;
         cardEl.classList.add('mkt-pop');
         updateAlbumCounter();
+        updateAlbumInfo(symId);
+    }
+
+    function updateAlbumInfo(symId) {
+        if (!albumEl) return;
+        const info = albumEl.querySelector('.mkt-album-info');
+        if (!info) return;
+        info.textContent = SYMBOL_DESCRIPTIONS[symId] || ALBUM_INFO_DEFAULT;
     }
 
     function closeSymbolsAlbum() {
