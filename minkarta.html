@@ -471,8 +471,86 @@ const MGRS = (() => {
     }
     function gridSquare(E,Ns,zn){const s=(zn-1)%6,col=Math.floor(E/100000)-1,row=Math.floor(Ns/100000)%20;return COL_LETTERS[s][col]+ROW_LETTERS[s%2][row];}
     function forward(lat,lon){const utm=toUTM(lat,lon),sq=gridSquare(utm.E,utm.N,utm.zn),e=String(Math.floor(utm.E%100000)).padStart(5,'0'),n=String(Math.floor(utm.N%100000)).padStart(5,'0');return`${utm.zn}${utm.zl}${sq} ${e} ${n}`;}
-    function inverse(mgrsStr){var s=mgrsStr.replace(/\s+/g,'');var m=s.match(/^(\d{1,2})([C-X])([A-Z])([A-Z])(\d+)$/i);if(!m)return null;var zn=parseInt(m[1]),band=m[2].toUpperCase(),col=m[3].toUpperCase(),row=m[4].toUpperCase(),nums=m[5],half=nums.length/2;var easting=parseInt(nums.slice(0,half))*Math.pow(10,5-half);var northing=parseInt(nums.slice(half))*Math.pow(10,5-half);var e100k='ABCDEFGHJKLMNPQRSTUVWXYZ',n100k='ABCDEFGHJKLMNPQRSTUV';var colIdx=e100k.indexOf(col);if(colIdx<0)return null;var setNum=((zn-1)%6);var baseCol=(setNum%3)*8;easting+=(colIdx-baseCol+24)%24*1e5+1e5;var rowIdx=n100k.indexOf(row);if(rowIdx<0)return null;var baseRow=(setNum%2===0)?0:5;northing+=(rowIdx-baseRow+20)%20*1e5;var latBand='CDEFGHJKLMNPQRSTUVWX',bi=latBand.indexOf(band);if(bi<0)return null;var minNorth=(bi*8-80)*Math.PI/180;var a=6378137,f=1/298.257223563,e2=2*f-f*f;var ep2=e2/(1-e2);var lonOrigin=((zn-1)*6-180+3)*Math.PI/180;var M=northing;var mu=M/(a*(1-e2/4-3*e2*e2/64-5*e2*e2*e2/256));var e1=(1-Math.sqrt(1-e2))/(1+Math.sqrt(1-e2));var lat1=mu+((3*e1/2-27*e1*e1*e1/32)*Math.sin(2*mu))+((21*e1*e1/16-55*e1*e1*e1*e1/32)*Math.sin(4*mu))+((151*e1*e1*e1/96)*Math.sin(6*mu));var N1=a/Math.sqrt(1-e2*Math.sin(lat1)*Math.sin(lat1));var T1=Math.tan(lat1)*Math.tan(lat1);var C1=ep2*Math.cos(lat1)*Math.cos(lat1);var R1=a*(1-e2)/Math.pow(1-e2*Math.sin(lat1)*Math.sin(lat1),1.5);var D=(easting-500000)/(N1*0.9996);var lat2=lat1-((N1*Math.tan(lat1)/R1)*(D*D/2-(5+3*T1+10*C1-4*C1*C1-9*ep2)*D*D*D*D/24+(61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D*D*D*D*D*D/720));var lon2=lonOrigin+(D-(1+2*T1+C1)*D*D*D/6+(5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D*D*D*D*D/120)/Math.cos(lat1);return[lat2*180/Math.PI,lon2*180/Math.PI];}
-    return{forward,inverse};
+    function bandLatRange(band) {
+        var letters = 'CDEFGHJKLMNPQRSTUVWX';
+        var bi = letters.indexOf(band);
+        if (bi < 0) return null;
+        var minLat = bi * 8 - 80;
+        var maxLat = (band === 'X') ? 84 : minLat + 8;
+        return { minLat: minLat, maxLat: maxLat };
+    }
+    function inverse(mgrsStr) {
+        var s = mgrsStr.replace(/\s+/g, '');
+        var m = s.match(/^(\d{1,2})([C-X])([A-Z])([A-Z])(\d+)$/i);
+        if (!m) return null;
+        var zn = parseInt(m[1]);
+        var band = m[2].toUpperCase();
+        var col = m[3].toUpperCase();
+        var row = m[4].toUpperCase();
+        var nums = m[5];
+        if (nums.length === 0 || nums.length % 2 !== 0 || nums.length > 10) return null;
+        var half = nums.length / 2;
+        var easting = parseInt(nums.slice(0, half)) * Math.pow(10, 5 - half);
+        var rawNorthing = parseInt(nums.slice(half)) * Math.pow(10, 5 - half);
+
+        var e100k = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        var n100k = 'ABCDEFGHJKLMNPQRSTUV';
+        var colIdx = e100k.indexOf(col);
+        if (colIdx < 0) return null;
+        var rowIdx = n100k.indexOf(row);
+        if (rowIdx < 0) return null;
+
+        var setNum = (zn - 1) % 6;
+        var baseCol = (setNum % 3) * 8;
+        var baseRow = (setNum % 2 === 0) ? 0 : 5;
+        easting += ((colIdx - baseCol + 24) % 24) * 1e5 + 1e5;
+        rawNorthing += ((rowIdx - baseRow + 20) % 20) * 1e5;
+
+        var range = bandLatRange(band);
+        if (!range) return null;
+        var southern = (band < 'N');
+
+        var a = 6378137, f = 1 / 298.257223563, e2 = 2 * f - f * f;
+        var ep2 = e2 / (1 - e2);
+        var lonOrigin = ((zn - 1) * 6 - 180 + 3) * Math.PI / 180;
+        var e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+
+        function computeLatLon(northingTotal) {
+            var M = southern ? (northingTotal - 10000000) : northingTotal;
+            var mu = M / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 * e2 * e2 / 256));
+            var lat1 = mu
+                + (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32) * Math.sin(2 * mu)
+                + (21 * e1 * e1 / 16 - 55 * e1 * e1 * e1 * e1 / 32) * Math.sin(4 * mu)
+                + (151 * e1 * e1 * e1 / 96) * Math.sin(6 * mu);
+            var sin1 = Math.sin(lat1), cos1 = Math.cos(lat1), tan1 = Math.tan(lat1);
+            var N1 = a / Math.sqrt(1 - e2 * sin1 * sin1);
+            var T1 = tan1 * tan1;
+            var C1 = ep2 * cos1 * cos1;
+            var R1 = a * (1 - e2) / Math.pow(1 - e2 * sin1 * sin1, 1.5);
+            var D = (easting - 500000) / (N1 * 0.9996);
+            var lat2 = lat1 - (N1 * tan1 / R1) * (
+                D * D / 2
+                - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * ep2) * Math.pow(D, 4) / 24
+                + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * ep2 - 3 * C1 * C1) * Math.pow(D, 6) / 720
+            );
+            var lon2 = lonOrigin + (
+                D
+                - (1 + 2 * T1 + C1) * Math.pow(D, 3) / 6
+                + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * ep2 + 24 * T1 * T1) * Math.pow(D, 5) / 120
+            ) / cos1;
+            return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
+        }
+
+        var midLat = (range.minLat + range.maxLat) / 2;
+        var bestLL = null, bestDist = Infinity;
+        for (var N = 0; N <= 4; N++) {
+            var ll = computeLatLon(rawNorthing + N * 2000000);
+            var dist = Math.abs(ll[0] - midLat);
+            if (dist < bestDist) { bestDist = dist; bestLL = ll; }
+        }
+        return bestLL;
+    }
+    return { forward, inverse };
 })();
 
 // ── Extrahera MGRS eller lat/lon från fri text ───────────────────────────────
