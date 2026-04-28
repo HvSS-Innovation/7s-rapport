@@ -283,8 +283,7 @@
         {
             title: 'Steg 1 av 3 — Välkommen',
             lines: [
-                'Det här är MINKARTA. Här ritar du upp minläggningar med svenska kart-tecken.',
-                'Vill du ha en kort rundtur?'
+                'Det här är MINKARTA. Här ritar du upp minläggningar.'
             ],
             target: null
         },
