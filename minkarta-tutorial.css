@@ -230,3 +230,216 @@
     filter: drop-shadow(0 0 6px rgba(80,140,255,0.85))
             drop-shadow(0 0 12px rgba(80,140,255,0.5));
 }
+
+/* ─── Symbolernas värld — full-skärm-album (Steg 2) ─────────────────────── */
+#mktAlbum {
+    position: fixed;
+    inset: 0;
+    z-index: 9200;
+    background: rgba(0,0,0,0.78);
+    display: flex;
+    align-items: stretch;
+    justify-content: center;
+    padding: 12px;
+    box-sizing: border-box;
+    animation: mktBubbleIn 0.22s ease-out;
+}
+.mkt-album-panel {
+    background: var(--mkt-bubble-bg);
+    color: var(--mkt-bubble-fg);
+    border: 1px solid var(--mkt-bubble-bord);
+    border-radius: var(--mkt-radius);
+    box-shadow: var(--mkt-shadow);
+    width: 100%;
+    max-width: 920px;
+    max-height: 100%;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+/* Header */
+.mkt-album-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px 10px;
+    border-bottom: 1px solid var(--mkt-bubble-bord);
+    flex-shrink: 0;
+}
+.mkt-album-title { flex: 1; min-width: 0; }
+.mkt-album-pre {
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mkt-bubble-mute);
+}
+.mkt-album-h2 {
+    margin: 2px 0 0;
+    font-size: 1.05rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+}
+.mkt-album-counter {
+    font-size: 0.78rem;
+    color: var(--mkt-accent);
+    letter-spacing: 0.04em;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+.mkt-album-close {
+    background: transparent;
+    color: var(--mkt-bubble-mute);
+    border: none;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 1.4rem;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    flex-shrink: 0;
+}
+.mkt-album-close:hover { background: rgba(255,255,255,0.08); color: var(--mkt-bubble-fg); }
+
+/* Beskrivning */
+.mkt-album-desc {
+    margin: 0;
+    padding: 8px 16px 4px;
+    font-size: 0.88rem;
+    line-height: 1.4;
+    color: var(--mkt-bubble-mute);
+    flex-shrink: 0;
+}
+
+/* Scrollbar grid-area */
+.mkt-album-body {
+    overflow-y: auto;
+    overflow-x: hidden;
+    padding: 8px 12px 12px;
+    flex: 1 1 auto;
+    min-height: 0;
+    -webkit-overflow-scrolling: touch;
+}
+.mkt-album-groups {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+.mkt-album-group-title {
+    margin: 6px 4px 6px;
+    font-size: 0.74rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--mkt-bubble-mute);
+}
+
+/* Kort-grid */
+.mkt-album-group-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+}
+.mkt-album-card {
+    background: var(--bg-input, #0d1f0d);
+    color: var(--mkt-bubble-fg);
+    border: 1px solid var(--mkt-bubble-bord);
+    border-radius: 10px;
+    padding: 10px 8px 8px;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+    font-family: inherit;
+    text-align: center;
+}
+.mkt-album-card:hover {
+    border-color: var(--mkt-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.35);
+}
+.mkt-album-card-svg {
+    width: 48px;
+    height: 48px;
+    background: #fff;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 4px;
+    box-sizing: border-box;
+    opacity: 0.55;
+    transition: opacity 0.22s ease, box-shadow 0.22s ease;
+}
+.mkt-album-card-svg svg {
+    width: 100%;
+    height: 100%;
+    max-width: 100%;
+    max-height: 100%;
+}
+.mkt-album-card-label {
+    font-size: 0.72rem;
+    line-height: 1.2;
+    color: var(--mkt-bubble-mute);
+    word-break: break-word;
+    hyphens: auto;
+}
+.mkt-album-card.discovered .mkt-album-card-svg {
+    opacity: 1;
+    box-shadow: 0 0 12px rgba(80,140,255,0.55);
+}
+.mkt-album-card.discovered .mkt-album-card-label {
+    color: var(--mkt-bubble-fg);
+}
+
+@keyframes mktCardPop {
+    0%   { transform: scale(1); }
+    35%  { transform: scale(1.18); }
+    70%  { transform: scale(0.98); }
+    100% { transform: scale(1); }
+}
+.mkt-album-card.mkt-pop { animation: mktCardPop 0.45s ease-out; }
+
+/* Footer */
+.mkt-album-footer {
+    display: flex;
+    gap: 8px;
+    padding: 12px 16px;
+    border-top: 1px solid var(--mkt-bubble-bord);
+    flex-shrink: 0;
+    flex-wrap: wrap;
+}
+.mkt-album-footer button {
+    border-radius: 8px;
+    padding: 9px 16px;
+    font-size: 0.88rem;
+    font-family: inherit;
+    cursor: pointer;
+    border: 1px solid var(--mkt-bubble-bord);
+    background: transparent;
+    color: var(--mkt-bubble-fg);
+    -webkit-tap-highlight-color: transparent;
+}
+.mkt-album-footer button.mkt-primary {
+    background: var(--mkt-accent);
+    color: #1a1a1a;
+    border-color: transparent;
+    font-weight: 600;
+    margin-left: auto;
+}
+.mkt-album-footer button.mkt-primary:hover { filter: brightness(1.08); }
+.mkt-album-footer button.mkt-ghost { color: var(--mkt-bubble-mute); border-color: transparent; }
+
+/* Mobil: tätare grid */
+@media (max-width: 600px) {
+    .mkt-album-group-grid {
+        grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+        gap: 6px;
+    }
+    .mkt-album-h2 { font-size: 0.96rem; }
+    .mkt-album-counter { font-size: 0.72rem; }
+    .mkt-album-card-svg { width: 40px; height: 40px; }
+    .mkt-album-card-label { font-size: 0.66rem; }
+}

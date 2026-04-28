@@ -503,6 +503,7 @@ const HybridTileLayer = L.TileLayer.extend({
 
 function initMap() {
     map = L.map('mapContainer', { zoomControl: true, worldCopyJump: true });
+    window.MK_MAP = map;
     const tiles = new HybridTileLayer('', {
         maxZoom: 19,
         crossOrigin: 'anonymous',          // delar browser-cache med PNG-exportens fetch

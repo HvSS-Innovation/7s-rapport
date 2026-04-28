@@ -335,13 +335,10 @@
 
     function getScreensFor(stepKey) {
         if (stepKey === 'welcome') return WELCOME_SCREENS.slice();
-        // Steg 2 + 3 fylls i i senare commits
-        const titles = {
-            symbols: 'Steg 2 — Symbolernas värld',
-            master:  'Steg 3 — Bli en kartmästare'
-        };
+        // 'symbols' hanteras som en egen panel, inte spotlight-flow
+        // Steg 3 fylls i i en senare commit
         return [{
-            title: titles[stepKey] || 'MINKARTA Tutorial',
+            title: 'Steg 3 — Bli en kartmästare',
             lines: [
                 'Det här steget är inte byggt än. Kommer i en senare uppdatering.',
                 'Du kan stänga rundturen när som helst med Esc eller krysset.'
@@ -351,13 +348,20 @@
     }
 
     function start(stepKey) {
-        ensureOverlay();
-        overlayEl.classList.add('active');
         activeStep = stepKey || pickAutoStep();
         if (!STEPS.includes(activeStep)) activeStep = 'welcome';
         state.steps[activeStep].seen = true;
         state.openedFirstTime = true;
         saveState();
+
+        // Steg 2 har egen panel-UI, inte spotlight-flow
+        if (activeStep === 'symbols') {
+            openSymbolsAlbum();
+            return;
+        }
+
+        ensureOverlay();
+        overlayEl.classList.add('active');
         activeScreens = getScreensFor(activeStep);
         activeIndex = 0;
         renderActiveScreen();
@@ -440,13 +444,167 @@
         return 'welcome';
     }
 
-    // ── Demo-lager (placeholder för steg 2/3) ────────────────────────────────
+    // ── Demo-lager: ett L.featureGroup som lever bara medan tutorialen är öppen ──
+    let demoLayer = null;
+    let demoCount = 0;
+
+    function ensureDemoLayer() {
+        if (!window.MK_MAP || !window.L) return null;
+        if (demoLayer) return demoLayer;
+        demoLayer = window.L.featureGroup().addTo(window.MK_MAP);
+        return demoLayer;
+    }
+
     function clearTutorialDemoLayer() {
         try {
-            if (window.tutorialDemoLayer && typeof window.tutorialDemoLayer.clearLayers === 'function') {
-                window.tutorialDemoLayer.clearLayers();
+            if (demoLayer) {
+                demoLayer.clearLayers();
+                demoCount = 0;
             }
         } catch (_) {}
+    }
+
+    function placeDemoSymbol(symId) {
+        const map = window.MK_MAP;
+        const sym = window.MK_SYMBOLS && window.MK_SYMBOLS[symId];
+        if (!map || !sym || !window.L) return;
+        const layer = ensureDemoLayer();
+        if (!layer) return;
+
+        // Golden-angle-spiral runt center: organisk spridning utan staplar
+        const center = map.getCenter();
+        const cp = map.latLngToContainerPoint(center);
+        const angle  = demoCount * 137.5 * Math.PI / 180;
+        const radius = 50 + demoCount * 6;
+        const p = window.L.point(
+            cp.x + radius * Math.cos(angle),
+            cp.y + radius * Math.sin(angle)
+        );
+        const pos = map.containerPointToLatLng(p);
+
+        const icon = window.L.divIcon({
+            className: 'mk-icon mkt-demo-icon',
+            html: sym.svg,
+            iconSize: [40, 40],
+            iconAnchor: [20, 20]
+        });
+        window.L.marker(pos, { icon: icon, interactive: false }).addTo(layer);
+        demoCount += 1;
+    }
+
+    // ── Symbolernas värld (Steg 2) ──────────────────────────────────────────
+    let albumEl = null;
+
+    function totalSymbolCount() {
+        if (!window.MK_SYMBOL_GROUPS) return 0;
+        let n = 0;
+        window.MK_SYMBOL_GROUPS.forEach(g => { n += g.ids.length; });
+        return n;
+    }
+
+    function counterText() {
+        return state.discoveries.length + ' av ' + totalSymbolCount() + ' upptäckta';
+    }
+
+    function updateAlbumCounter() {
+        if (!albumEl) return;
+        const c = albumEl.querySelector('.mkt-album-counter');
+        if (c) c.textContent = counterText();
+    }
+
+    function onAlbumKey(e) {
+        if (e.key === 'Escape') { e.preventDefault(); closeSymbolsAlbum(); }
+    }
+
+    function openSymbolsAlbum() {
+        // Stäng ev. spotlight-overlay först
+        if (overlayEl) destroyOverlay();
+        renderSymbolsAlbum();
+    }
+
+    function renderSymbolsAlbum() {
+        if (albumEl && albumEl.parentNode) albumEl.parentNode.removeChild(albumEl);
+        if (!window.MK_SYMBOL_GROUPS || !window.MK_SYMBOLS) return;
+
+        const groupsEl = el('div', { class: 'mkt-album-groups' });
+        window.MK_SYMBOL_GROUPS.forEach(group => {
+            const groupGrid = el('div', { class: 'mkt-album-group-grid' });
+            group.ids.forEach(id => {
+                const sym = window.MK_SYMBOLS[id];
+                if (!sym) return;
+                const isFound = state.discoveries.indexOf(id) !== -1;
+                const card = el('button', {
+                    type: 'button',
+                    class: 'mkt-album-card' + (isFound ? ' discovered' : ''),
+                    'data-sym-id': id,
+                    'aria-label': sym.label
+                }, [
+                    el('div', { class: 'mkt-album-card-svg', html: sym.svg }),
+                    el('div', { class: 'mkt-album-card-label', text: sym.label })
+                ]);
+                card.addEventListener('click', function () { onCardClick(id, card); });
+                groupGrid.appendChild(card);
+            });
+            const groupBlock = el('div', { class: 'mkt-album-group' }, [
+                el('h3', { class: 'mkt-album-group-title', text: group.title }),
+                groupGrid
+            ]);
+            groupsEl.appendChild(groupBlock);
+        });
+
+        albumEl = el('div', { id: 'mktAlbum', role: 'dialog', 'aria-label': 'Symbolernas värld' }, [
+            el('div', { class: 'mkt-album-panel' }, [
+                el('div', { class: 'mkt-album-header' }, [
+                    el('div', { class: 'mkt-album-title' }, [
+                        el('div', { class: 'mkt-album-pre', text: 'Steg 2 av 3' }),
+                        el('h2', { class: 'mkt-album-h2', text: 'Symbolernas värld' })
+                    ]),
+                    el('div', { class: 'mkt-album-counter', text: counterText() }),
+                    el('button', {
+                        class: 'mkt-album-close',
+                        type: 'button',
+                        'aria-label': 'Stäng',
+                        text: '×',
+                        onclick: closeSymbolsAlbum
+                    })
+                ]),
+                el('p', { class: 'mkt-album-desc', text: 'Klicka på ett tecken för att se hur det ser ut direkt på kartan. Inget är fel — utforska i din egen takt.' }),
+                el('div', { class: 'mkt-album-body' }, [groupsEl]),
+                el('div', { class: 'mkt-album-footer' }, [
+                    el('button', { class: 'mkt-ghost', type: 'button', text: 'Stäng albumet', onclick: closeSymbolsAlbum }),
+                    el('button', { class: 'mkt-primary', type: 'button', text: 'Klar med symboler', onclick: completeSymbolsStep })
+                ])
+            ])
+        ]);
+        document.body.appendChild(albumEl);
+        document.addEventListener('keydown', onAlbumKey);
+    }
+
+    function onCardClick(symId, cardEl) {
+        placeDemoSymbol(symId);
+        if (state.discoveries.indexOf(symId) === -1) {
+            state.discoveries.push(symId);
+            saveState();
+        }
+        cardEl.classList.add('discovered');
+        cardEl.classList.remove('mkt-pop');
+        // Force reflow så animationen kan retriggas vid upprepat klick
+        void cardEl.offsetWidth;
+        cardEl.classList.add('mkt-pop');
+        updateAlbumCounter();
+    }
+
+    function closeSymbolsAlbum() {
+        document.removeEventListener('keydown', onAlbumKey);
+        if (albumEl && albumEl.parentNode) albumEl.parentNode.removeChild(albumEl);
+        albumEl = null;
+        clearTutorialDemoLayer();
+        activeStep = null;
+    }
+
+    function completeSymbolsStep() {
+        markCompleted('symbols');
+        closeSymbolsAlbum();
     }
 
     // ── "Lär dig MINKARTA"-knapp + meny ─────────────────────────────────────
