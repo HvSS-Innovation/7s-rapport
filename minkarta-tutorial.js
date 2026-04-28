@@ -127,14 +127,32 @@
         overlayEl.appendChild(spotlightEl);
         document.body.appendChild(overlayEl);
         document.addEventListener('keydown', onKey);
+        window.addEventListener('scroll', schedulePositionUpdate, true);
+        window.addEventListener('resize', schedulePositionUpdate);
     }
 
     function destroyOverlay() {
         document.removeEventListener('keydown', onKey);
+        window.removeEventListener('scroll', schedulePositionUpdate, true);
+        window.removeEventListener('resize', schedulePositionUpdate);
+        if (positionUpdateRaf) { cancelAnimationFrame(positionUpdateRaf); positionUpdateRaf = 0; }
         if (overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
         overlayEl = null;
         spotlightEl = null;
         bubbleEl = null;
+    }
+
+    let positionUpdateRaf = 0;
+    function schedulePositionUpdate() {
+        if (positionUpdateRaf) return;
+        positionUpdateRaf = requestAnimationFrame(() => {
+            positionUpdateRaf = 0;
+            const screen = activeScreens[activeIndex];
+            if (!screen || !overlayEl) return;
+            const target = screen.target ? document.querySelector(screen.target) : null;
+            placeSpotlight(target);
+            placeBubble(target ? target.getBoundingClientRect() : null);
+        });
     }
 
     function onKey(e) {
@@ -207,11 +225,28 @@
         overlayEl.appendChild(bubbleEl);
 
         const target = screen.target ? document.querySelector(screen.target) : null;
-        // Scrolla target in i view så det syns under spotlighten
+        // Skrolla target in i view OM den inte redan är synlig.
+        // Använd instant-scroll så getBoundingClientRect() ger korrekt
+        // position direkt — smooth-scroll är asynkron och leder till att
+        // spotlighten placeras på targets pre-scroll-position.
         if (target && typeof target.scrollIntoView === 'function') {
-            try { target.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' }); } catch (_) {}
+            const r = target.getBoundingClientRect();
+            const margin = 24;
+            const fullyVisible =
+                r.top    >= margin &&
+                r.bottom <= window.innerHeight - margin &&
+                r.left   >= 0 &&
+                r.right  <= window.innerWidth;
+            if (!fullyVisible) {
+                try {
+                    target.scrollIntoView({ behavior: 'instant', block: 'center', inline: 'center' });
+                } catch (_) {
+                    // Fallback för webbläsare som inte stöder 'instant'-strängen
+                    target.scrollIntoView({ block: 'center', inline: 'center' });
+                }
+            }
         }
-        // Vänta en frame så scroll och layout hunnit landa
+        // Vänta en frame så ev. scroll och layout hunnit landa innan vi mäter
         requestAnimationFrame(() => {
             placeSpotlight(target);
             requestAnimationFrame(() => {
@@ -237,9 +272,10 @@
             target: null
         },
         {
-            title: 'Kartan',
+            title: 'Kartan — prova själv',
             lines: [
-                'Det här är din karta. Drag för att panorera, scrolla eller pinch-zooma för att komma närmare.'
+                'Det här är din karta. Drag för att panorera, pinch-zooma (mobil) eller scrolla (dator) för att zooma in och ut.',
+                'Prova nu! Kartan reagerar direkt — klicka "Vidare" när du är klar.'
             ],
             target: '#mapContainer'
         },

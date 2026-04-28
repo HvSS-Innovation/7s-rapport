@@ -60,17 +60,20 @@
     position: fixed;
     inset: 0;
     z-index: 8500;
+    /* Overlay släpper alltid igenom pekarhändelser till sidan under.
+       Bubblan har eget pointer-events: auto. Det betyder att kartan
+       kan panoreras/zoomas och palett-knappar är klickbara även när
+       tutorialen är öppen. */
     pointer-events: none;
 }
-#mktOverlay.active { pointer-events: auto; }
 #mktOverlay.no-spotlight .mkt-spotlight { display: none; }
 
 .mkt-spotlight {
     position: absolute;
     border-radius: 14px;
     box-shadow: 0 0 0 9999px var(--mkt-dim);
-    transition: top 0.28s ease, left 0.28s ease,
-                width 0.28s ease, height 0.28s ease;
+    transition: top 0.18s ease, left 0.18s ease,
+                width 0.18s ease, height 0.18s ease;
     pointer-events: none;
 }
 #mktOverlay.no-spotlight .mkt-bubble-anchor {
