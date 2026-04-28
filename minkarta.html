@@ -803,6 +803,16 @@ function addObject(obj) {
     renderObject(obj);
 }
 
+// Öppnar edit-popupen direkt på ett nyskapat objekt så användaren kan fylla i
+// etikett/antal/anteckning utan ett extra klick. Frihand och fri-text hoppas
+// över: frihand har inga editbara fält, fri-text har redan egen inline-input.
+function autoOpenEditor(obj) {
+    if (!obj || obj.typ === 'frihand' || obj.typ === 'text') return;
+    const layer = state.layers[obj.id];
+    if (!layer) return;
+    openEditPopup(obj, layer, null);
+}
+
 function removeObject(id) {
     const idx = state.objects.findIndex(o => o.id === id);
     if (idx < 0) return;
@@ -1314,6 +1324,7 @@ function finishDraft() {
     map.removeLayer(state.draftLayer);
     state.draft = null; state.draftLayer = null;
     addObject(obj);
+    autoOpenEditor(obj);
 }
 function cancelDraft() {
     if (state.draftLayer) map.removeLayer(state.draftLayer);
@@ -1619,9 +1630,11 @@ function handleMapClick(e) {
             syncUpTextarea();
             rebuildLayers();                  // sätt tooltip-brickan till "UPK xxx"
             reverseGeocodeUpk(obj);
+            autoOpenEditor(obj);
             return;
         }
         addObject(obj);
+        autoOpenEditor(obj);
         return;
     }
     // Linje/polygon
