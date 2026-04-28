@@ -552,6 +552,7 @@ const MGRS = (() => {
     }
     return { forward, inverse };
 })();
+window.MK_MGRS = MGRS;
 
 // ── Extrahera MGRS eller lat/lon från fri text ───────────────────────────────
 function extractCoord(text) {
