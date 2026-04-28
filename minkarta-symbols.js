@@ -1,8 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  MINKARTA — symbolbibliotek (v4: nya SVG-symboler från stab-paketet 2026-04-26)
 //
-//  Reglementsreferens: "Mineringar på karta — sammanställning"
-//  (Fältarbeten s. 338–342, Handbok 11.7.1 + Handbok 9.5 s. 86).
+//  Symboler ritade enligt svenska militära kart-tecken för minor.
 //
 //  v4-paketet har 20 nya symbol-SVG:er + 2 behållna från v3 (upk, ytter)
 //  = totalt 22 symboler. Åtta v3-nycklar är borttagna (strv_full,
@@ -316,7 +315,7 @@ const SYMBOLS = {
     },
 
     // ── Referenspunkter (UPK) — BEHÅLLEN från v3 ─────────────────────────────
-    // UPK (Utgångs-Punkt-Koordinat) är en bestämbar terrängpunkt (PDF s.338),
+    // UPK (Utgångs-Punkt-Koordinat) är en bestämbar terrängpunkt,
     // inte en skarp minposition. Stabilt slumpnummer 001–999 hanteras i
     // minkarta.html. Svartmålad v3-stil, oförändrad i v4.
     // SP-symbolen togs bort 2026-04-27 — reglementsvarningen kräver bara UPK.
