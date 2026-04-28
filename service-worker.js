@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260428_120721';
+const CACHE = 'hv-20260428_143658';
 const FILES = [
   './',
   './index.html',
@@ -19,6 +19,8 @@ const FILES = [
   './minkarta.html',
   './minkarta-symbols.js',
   './minkarta-export.js',
+  './minkarta-tutorial.js',
+  './minkarta-tutorial.css',
   './version.js',
   './pwa.js',
   './ortnamn.json',
