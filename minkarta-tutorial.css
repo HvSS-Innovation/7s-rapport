@@ -165,15 +165,12 @@
     letter-spacing: 0.04em;
 }
 
-/* ─── Mobil: bubblan låses till nedre kanten ────────────────────────────── */
+/* ─── Mobil: nästan full bredd. Vertikal position styrs av JS som flippar
+       bubblan ovan/under target beroende på var den får plats. ────────── */
 @media (max-width: 600px) {
     .mkt-bubble {
-        left: 8px !important;
-        right: 8px !important;
-        bottom: 8px !important;
-        top: auto !important;
         max-width: none;
-        width: auto;
+        width: calc(100vw - 16px);
     }
 }
 

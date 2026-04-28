@@ -178,31 +178,47 @@
         if (!bubbleEl) return;
         const vw = window.innerWidth;
         const vh = window.innerHeight;
+        const margin = 12;
         const isMobile = vw <= 600;
-        if (isMobile) {
-            // CSS-mediefråga sköter positionering — bara säkerställ att inline-styles inte krockar
-            bubbleEl.style.top = '';
-            bubbleEl.style.left = '';
-            return;
-        }
+
+        // Mät bubblan EFTER att ev. mobile-bredd-CSS appliceras
         const bw = bubbleEl.offsetWidth;
         const bh = bubbleEl.offsetHeight;
+
         let top, left;
+
         if (!targetRect) {
+            // Ingen target — centrera bubblan
             top  = (vh - bh) / 2;
             left = (vw - bw) / 2;
         } else {
-            // Föredra under spotlighten, annars över
-            const spaceBelow = vh - targetRect.bottom;
-            if (spaceBelow >= bh + 24) {
-                top = targetRect.bottom + 12;
+            // Vertikal: föredra UNDER target. Om inte plats — flippa OVAN.
+            const spaceBelow = vh - targetRect.bottom - margin;
+            const spaceAbove = targetRect.top - margin;
+            if (spaceBelow >= bh) {
+                top = targetRect.bottom + margin;
+            } else if (spaceAbove >= bh) {
+                top = targetRect.top - bh - margin;
             } else {
-                top = Math.max(12, targetRect.top - bh - 12);
+                // Varken över eller under — välj sidan med mest plats
+                top = spaceAbove > spaceBelow
+                    ? Math.max(margin, targetRect.top - bh - margin)
+                    : targetRect.bottom + margin;
             }
-            left = clamp(targetRect.left + targetRect.width / 2 - bw / 2, 12, vw - bw - 12);
+            top = clamp(top, margin, vh - bh - margin);
+
+            // Horisontell: centrera under/över target på desktop, full bredd på mobil
+            if (isMobile) {
+                left = (vw - bw) / 2;
+            } else {
+                left = clamp(targetRect.left + targetRect.width / 2 - bw / 2, margin, vw - bw - margin);
+            }
         }
-        bubbleEl.style.top  = top + 'px';
-        bubbleEl.style.left = left + 'px';
+
+        bubbleEl.style.top    = top + 'px';
+        bubbleEl.style.left   = left + 'px';
+        bubbleEl.style.right  = '';
+        bubbleEl.style.bottom = '';
     }
 
     function renderBubble(screen) {
