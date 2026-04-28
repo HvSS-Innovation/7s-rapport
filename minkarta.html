@@ -158,6 +158,24 @@
             pointer-events: none;
         }
 
+        /* Kant-bricka for minomrade — siffran sitter PA midpunkten av
+           varje polygon-kant (max 4). Vit bakgrund bryter polygon-stroken
+           visuellt under siffran sa den ser ut att vara "i linje med
+           granssen", enligt svenska minomradenas standardformat. */
+        .mk-edge-badge { background: transparent !important; border: none !important; pointer-events: none; }
+        .mk-edge-badge span {
+            display: inline-block;
+            background: #fff;
+            color: #000;
+            border: 1px solid #000;
+            border-radius: 6px;
+            padding: 1px 6px;
+            font: 700 13px Inter, sans-serif;
+            line-height: 1.1;
+            white-space: nowrap;
+            box-shadow: 0 0 0 1px rgba(255,255,255,0.9);
+        }
+
         /* Fri-text-symbol: svart text med vit halo direkt på kartan. */
         .mk-text-symbol { background: transparent !important; border: none !important; overflow: visible !important; transform: translate(-50%, -50%); }
         .mk-text-symbol span {
@@ -939,13 +957,16 @@ function addDragHandle(obj, layer) {
             const dLat = cur.lat - orig.lat;
             const dLng = cur.lng - orig.lng;
             layer.setLatLngs(obj.path.map(p => [p.lat + dLat, p.lng + dLng]));
-            // Siffer-brickan för minomrade följer med synkroniserat
+            // Siffer-brickorna for minomrade (max 4 pa kant-midpunkter)
+            // foljer med — vi rakknar om mot translaterad path varje tick
+            // sa positionen alltid stammer mot polygonens visuella kant.
             if (obj.typ === 'minomrade') {
-                const cm = state.layers[obj.id + '_c'];
-                if (cm) {
-                    const base = minomradeBadgePos(obj.path);
-                    cm.setLatLng([base[0] + dLat, base[1] + dLng]);
-                }
+                const tPath = obj.path.map(p => ({ lat: p.lat + dLat, lng: p.lng + dLng }));
+                const mids = minomradeEdgeMidpoints(tPath);
+                mids.forEach((latlng, i) => {
+                    const cm = state.layers[obj.id + '_c' + i];
+                    if (cm) cm.setLatLng(latlng);
+                });
             }
         }
     });
@@ -966,40 +987,53 @@ function addDragHandle(obj, layer) {
     state.layers[obj.id + '_h'] = handle;
 }
 
-// Position för minomrade-siffran: lng-mitten, max-latitud (norra kanten).
-// Drag-handlern flyttar markören med samma delta som hela polygonen, så
-// här räknar vi alltid mot ursprungs-path:en (inte den translated layern).
-function minomradeBadgePos(path) {
-    let minLng = Infinity, maxLng = -Infinity, maxLat = -Infinity;
-    for (const p of path) {
-        if (p.lat > maxLat) maxLat = p.lat;
-        if (p.lng < minLng) minLng = p.lng;
-        if (p.lng > maxLng) maxLng = p.lng;
+// Midpunkt pa varje polygon-KANT (segment), sorterade efter langd. Standard-
+// formatet for svenska minomraden visar antalet pa kanten — typiskt fyra
+// gangar for en fyrhornings-polygon. Vid >4 noder valjs de 4 langsta
+// kanterna; kortare kanter skip:as for att undvika overlapp.
+function minomradeEdgeMidpoints(path) {
+    if (!path || path.length < 2) return [];
+    const segs = [];
+    for (let i = 0; i < path.length; i++) {
+        const a = path[i];
+        const b = path[(i + 1) % path.length];
+        const dLat = b.lat - a.lat;
+        const dLng = b.lng - a.lng;
+        const len2 = dLat * dLat + dLng * dLng;
+        segs.push({
+            mid: [(a.lat + b.lat) / 2, (a.lng + b.lng) / 2],
+            len2: len2
+        });
     }
-    return [maxLat, (minLng + maxLng) / 2];
+    segs.sort((x, y) => y.len2 - x.len2);
+    return segs.slice(0, 4).map(s => s.mid);
 }
 
-// Siffer-bricka för minerat område — placeras strax utanför polygonens
-// nordliga kant. Visas bara när obj.antal > 0 (annars helt utan markör).
-// Inte interaktiv (klick går igenom till polygonen). 2026-04-27: ersätter
-// tidigare centrum-SVG med ellips/M som ritades inuti polygonen.
-function addCenterMarker(obj) {
-    if (!obj.path || obj.path.length < 1) return;
+// Siffer-brickor for minerat omrade — en pa midpunkten av varje polygon-
+// kant (max 4). Visas bara nar obj.antal > 0. Inte interaktiva (klick gar
+// genom till polygonen). 2026-04-28: ersatter tidigare singel-badge ovanfor
+// nordkanten — siffran ska sitta PA granssen i linje med de svenska
+// militara minomradenas standardformat.
+function addEdgeMarkers(obj) {
+    if (!obj.path || obj.path.length < 2) return;
     if (obj.typ !== 'minomrade') return;
     const n = Number(obj.antal);
     if (!Number.isFinite(n) || n <= 0) return;
-    const m = L.marker(minomradeBadgePos(obj.path), {
-        icon: L.divIcon({
-            className: 'mk-numeric-badge',
-            html: '<span>' + n + '</span>',
-            iconSize: [60, 24],
-            iconAnchor: [30, 36]              // lyfter siffran ~24 px ovanför kant-punkten
-        }),
-        interactive: false,
-        keyboard: false
+    const mids = minomradeEdgeMidpoints(obj.path);
+    mids.forEach((latlng, i) => {
+        const m = L.marker(latlng, {
+            icon: L.divIcon({
+                className: 'mk-edge-badge',
+                html: '<span>' + n + '</span>',
+                iconSize: [28, 22],
+                iconAnchor: [14, 11]
+            }),
+            interactive: false,
+            keyboard: false
+        });
+        m.addTo(map);
+        state.layers[obj.id + '_c' + i] = m;
     });
-    m.addTo(map);
-    state.layers[obj.id + '_c'] = m;
 }
 
 function renderObject(obj) {
@@ -1102,9 +1136,9 @@ function renderObject(obj) {
     if (sym.category === 'line' || sym.category === 'polygon' || obj.typ === 'verkansomrade') {
         addDragHandle(obj, layer);
     }
-    // Centrum-markör för minomrade (M eller antal)
+    // Kant-markorer for minomrade (antal pa midpunkten av varje kant, max 4)
     if (obj.typ === 'minomrade') {
-        addCenterMarker(obj);
+        addEdgeMarkers(obj);
     }
 }
 
