@@ -120,6 +120,22 @@
     let overlayEl = null;
     let spotlightEl = null;
     let bubbleEl = null;
+    let pulseTargetEl = null;
+
+    function clearPulseTarget() {
+        if (pulseTargetEl) {
+            pulseTargetEl.classList.remove('mkt-pulse-target');
+            pulseTargetEl = null;
+        }
+    }
+
+    function setPulseTarget(target) {
+        clearPulseTarget();
+        // Hela kartan ar for stor for skala-puls — det blir visuellt rorigt.
+        if (!target || target.id === 'mapContainer') return;
+        target.classList.add('mkt-pulse-target');
+        pulseTargetEl = target;
+    }
 
     function ensureOverlay() {
         if (overlayEl) return;
@@ -137,6 +153,7 @@
         window.removeEventListener('scroll', schedulePositionUpdate, true);
         window.removeEventListener('resize', schedulePositionUpdate);
         if (positionUpdateRaf) { cancelAnimationFrame(positionUpdateRaf); positionUpdateRaf = 0; }
+        clearPulseTarget();
         if (overlayEl && overlayEl.parentNode) overlayEl.parentNode.removeChild(overlayEl);
         overlayEl = null;
         spotlightEl = null;
@@ -242,6 +259,7 @@
         overlayEl.appendChild(bubbleEl);
 
         const target = screen.target ? document.querySelector(screen.target) : null;
+        setPulseTarget(target);
         // Skrolla target in i view OM den inte redan är synlig.
         // Använd instant-scroll så getBoundingClientRect() ger korrekt
         // position direkt — smooth-scroll är asynkron och leder till att

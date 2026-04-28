@@ -76,6 +76,19 @@
                 width 0.18s ease, height 0.18s ease;
     pointer-events: none;
 }
+
+/* Subtil puls pa spotlight-target sa anvandaren ser exakt vad bubblan
+   pekar pa. Skala + opacity-glimt, 1.6 s loop. Sätts av JS via
+   .mkt-pulse-target och tas bort vid skarmbyte / stop. */
+@keyframes mktTargetPulse {
+    0%, 100% { transform: scale(1);     opacity: 1;    }
+    50%      { transform: scale(1.025); opacity: 0.92; }
+}
+.mkt-pulse-target {
+    animation: mktTargetPulse 1.6s ease-in-out infinite;
+    transform-origin: center center;
+    will-change: transform, opacity;
+}
 #mktOverlay.no-spotlight .mkt-bubble-anchor {
     /* när ingen spotlight: helsvart dim ändå */
     background: var(--mkt-dim);
