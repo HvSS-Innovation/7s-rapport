@@ -457,3 +457,128 @@
     .mkt-album-card-svg { width: 40px; height: 40px; }
     .mkt-album-card-label { font-size: 0.66rem; }
 }
+
+/* ─── Diplom (Steg 3 avslutning) — 80-tals-blankettstil ───────────────── */
+#mktDiploma {
+    position: fixed;
+    inset: 0;
+    z-index: 9300;
+    background: rgba(0,0,0,0.78);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 16px;
+    box-sizing: border-box;
+    animation: mktBubbleIn 0.32s ease-out;
+}
+.mkt-diploma-card {
+    position: relative;
+    background: #f5efe2;       /* gulvitt papper */
+    color: #1a1a1a;
+    border: 3px solid #1a1a1a;
+    box-shadow: 6px 6px 0 0 rgba(0,0,0,0.55), inset 0 0 0 6px #f5efe2, inset 0 0 0 7px #1a1a1a;
+    padding: 38px 28px 22px;
+    width: 100%;
+    max-width: 460px;
+    max-height: 100%;
+    overflow-y: auto;
+    font-family: 'Courier New', Courier, monospace;
+    text-align: center;
+    box-sizing: border-box;
+}
+.mkt-diploma-stamp {
+    position: absolute;
+    top: 8px;
+    right: 14px;
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.2em;
+    color: #1a1a1a;
+    border: 2px solid #1a1a1a;
+    padding: 3px 8px;
+    transform: rotate(8deg);
+    background: rgba(245,239,226,0.8);
+}
+.mkt-diploma-pre {
+    font-size: 0.78rem;
+    letter-spacing: 0.4em;
+    text-transform: uppercase;
+    color: #1a1a1a;
+    margin-bottom: 4px;
+}
+.mkt-diploma-title {
+    margin: 4px 0 12px;
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+.mkt-diploma-line {
+    margin: 0 0 16px;
+    font-size: 0.92rem;
+    line-height: 1.5;
+}
+.mkt-diploma-rows {
+    border-top: 2px solid #1a1a1a;
+    border-bottom: 2px solid #1a1a1a;
+    padding: 10px 0;
+    margin: 12px 0 18px;
+    text-align: left;
+}
+.mkt-diploma-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    font-size: 0.88rem;
+}
+.mkt-diploma-row + .mkt-diploma-row {
+    border-top: 1px dashed #888;
+}
+.mkt-diploma-row-label {
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    font-size: 0.74rem;
+    color: #444;
+}
+.mkt-diploma-row-value {
+    font-weight: 700;
+}
+.mkt-diploma-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 6px;
+    flex-wrap: wrap;
+}
+.mkt-diploma-actions button {
+    flex: 1;
+    min-width: 140px;
+    border-radius: 0;
+    padding: 10px 14px;
+    font-size: 0.84rem;
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    cursor: pointer;
+    border: 2px solid #1a1a1a;
+    background: #f5efe2;
+    color: #1a1a1a;
+    -webkit-tap-highlight-color: transparent;
+}
+.mkt-diploma-actions button.mkt-primary {
+    background: #1a1a1a;
+    color: #f5efe2;
+}
+.mkt-diploma-actions button:hover {
+    background: #e6dfcc;
+}
+.mkt-diploma-actions button.mkt-primary:hover {
+    background: #333;
+}
+@media (max-width: 600px) {
+    .mkt-diploma-card { padding: 32px 18px 18px; }
+    .mkt-diploma-title { font-size: 1.15rem; }
+    .mkt-diploma-line { font-size: 0.86rem; }
+}

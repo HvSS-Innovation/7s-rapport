@@ -333,16 +333,68 @@
         }
     ];
 
+    // Steg 3 — Bli en kartmästare (7 skärmar, sedan diplom)
+    const MASTER_SCREENS = [
+        {
+            title: 'Steg 3 av 3 — Sökning',
+            lines: [
+                'Här söker du efter en plats. Stöder MGRS, lat,lon eller adresser via Nominatim.',
+                'Prova själv — kartan flyger dit du vill.'
+            ],
+            target: '#mgrsSearch'
+        },
+        {
+            title: 'Rita en symbol',
+            lines: [
+                'Klicka en symbol i paletten och sedan på kartan för att rita. Linjer och polygoner avslutas med dubbelklick.'
+            ],
+            target: '#paletteRoot'
+        },
+        {
+            title: 'Redigera en symbol',
+            lines: [
+                'I "Panorera / välj"-läget öppnar ett klick på en utlagd symbol en edit-popup för etikett, antal, anteckning och rotation.',
+                'Slidern roterar i realtid.'
+            ],
+            target: null
+        },
+        {
+            title: 'UPK-markörer',
+            lines: [
+                'UPK = Utgångs-Punkt-Koordinat. Får automatiskt slumpnummer 001–999. Reverse-geocode föreslår en namn-etikett.'
+            ],
+            target: '[data-tool="upk"]'
+        },
+        {
+            title: 'Yttergränsmarkörer',
+            lines: [
+                'Sätt två yttergränsmarkörer för att styra vilken yta PNG-exporten ska täcka. Annars fyller den med padding runt allt.'
+            ],
+            target: '[data-tool="ytter"]'
+        },
+        {
+            title: 'Minprotokoll',
+            lines: [
+                'När kartan är klar fyller du i protokollet och delar via Signal eller PDF. Allt sparas lokalt i webbläsaren.'
+            ],
+            target: '#protoPanel'
+        },
+        {
+            title: 'Klart!',
+            lines: [
+                'Du är nu en kartmästare. Lek fritt med kartan när du vill — tutorialen ligger kvar under "Lär dig MINKARTA"-knappen.'
+            ],
+            target: null
+        }
+    ];
+
     function getScreensFor(stepKey) {
         if (stepKey === 'welcome') return WELCOME_SCREENS.slice();
+        if (stepKey === 'master')  return MASTER_SCREENS.slice();
         // 'symbols' hanteras som en egen panel, inte spotlight-flow
-        // Steg 3 fylls i i en senare commit
         return [{
-            title: 'Steg 3 — Bli en kartmästare',
-            lines: [
-                'Det här steget är inte byggt än. Kommer i en senare uppdatering.',
-                'Du kan stänga rundturen när som helst med Esc eller krysset.'
-            ],
+            title: 'MINKARTA Tutorial',
+            lines: ['Okänt steg.'],
             target: null
         }];
     }
@@ -369,7 +421,18 @@
 
     function nextScreen() {
         if (activeIndex >= activeScreens.length - 1) {
+            const justCompleted = activeStep;
             markCompleted(activeStep);
+            if (justCompleted === 'master') {
+                // Stäng spotlight-overlay men visa diplom direkt efter
+                clearTutorialDemoLayer();
+                destroyOverlay();
+                activeStep = null;
+                activeScreens = [];
+                activeIndex = 0;
+                showDiploma();
+                return;
+            }
             stop();
             return;
         }
@@ -656,6 +719,71 @@
     function completeSymbolsStep() {
         markCompleted('symbols');
         closeSymbolsAlbum();
+    }
+
+    // ── Diplom (Steg 3:s avslutning) ─────────────────────────────────────────
+    let diplomaEl = null;
+
+    function onDiplomaKey(e) {
+        if (e.key === 'Escape') { e.preventDefault(); closeDiploma(); }
+    }
+
+    function showDiploma() {
+        if (diplomaEl) return;
+        const now = new Date();
+        const dateStr = now.toLocaleDateString('sv-SE');
+        const timeStr = now.toLocaleTimeString('sv-SE', { hour: '2-digit', minute: '2-digit' });
+        const found = state.discoveries.length;
+        const total = totalSymbolCount();
+
+        const card = el('div', { class: 'mkt-diploma-card', role: 'document' }, [
+            el('div', { class: 'mkt-diploma-stamp', text: 'MINKARTA' }),
+            el('div', { class: 'mkt-diploma-pre', text: 'DIPLOM' }),
+            el('h2', { class: 'mkt-diploma-title', text: 'Rundturen genomförd' }),
+            el('p', { class: 'mkt-diploma-line', text: 'Härmed intygas att rundturen av MINKARTA är fullgjord.' }),
+            el('div', { class: 'mkt-diploma-rows' }, [
+                el('div', { class: 'mkt-diploma-row' }, [
+                    el('div', { class: 'mkt-diploma-row-label', text: 'Datum' }),
+                    el('div', { class: 'mkt-diploma-row-value', text: dateStr })
+                ]),
+                el('div', { class: 'mkt-diploma-row' }, [
+                    el('div', { class: 'mkt-diploma-row-label', text: 'Klockslag' }),
+                    el('div', { class: 'mkt-diploma-row-value', text: timeStr })
+                ]),
+                el('div', { class: 'mkt-diploma-row' }, [
+                    el('div', { class: 'mkt-diploma-row-label', text: 'Symboler upptäckta' }),
+                    el('div', { class: 'mkt-diploma-row-value', text: found + ' av ' + total })
+                ])
+            ]),
+            el('div', { class: 'mkt-diploma-actions' }, [
+                el('button', {
+                    type: 'button',
+                    class: 'mkt-ghost',
+                    text: 'Spela om från början',
+                    onclick: () => { closeDiploma(); reset(); start('welcome'); }
+                }),
+                el('button', {
+                    type: 'button',
+                    class: 'mkt-primary',
+                    text: 'Stäng',
+                    onclick: closeDiploma
+                })
+            ])
+        ]);
+        diplomaEl = el('div', {
+            id: 'mktDiploma',
+            role: 'dialog',
+            'aria-modal': 'true',
+            'aria-label': 'Diplom: MINKARTA-rundturen genomförd'
+        }, [card]);
+        document.body.appendChild(diplomaEl);
+        document.addEventListener('keydown', onDiplomaKey);
+    }
+
+    function closeDiploma() {
+        document.removeEventListener('keydown', onDiplomaKey);
+        if (diplomaEl && diplomaEl.parentNode) diplomaEl.parentNode.removeChild(diplomaEl);
+        diplomaEl = null;
     }
 
     // ── "Lär dig MINKARTA"-knapp + meny ─────────────────────────────────────
