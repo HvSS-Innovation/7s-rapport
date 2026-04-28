@@ -99,10 +99,10 @@ renderingen mot ett nytt SVG-paket från staben och förenklar dela-flödet.
 
 ### 2026-04-25: MINKARTA v3 — svarta reglementstecken + UPK-numrering
 Sex-fas-iteration på MINKARTA (roadmap: `roadmap-minkarta-v3.md`).
-Härdar reglementstroheten i två riktningar: symbolerna följer nu PDF:en
-*Mineringar på karta – sammanställning* i svart linjearbete mot vit
-bakgrund, och utgångspunkterna byter namn till UPK med stabila
-slumpnummer 001–999 istället för sekventiella UP1..UPn.
+Härdar reglementstroheten i två riktningar: symbolerna ritas nu i svenskt
+militärt manér med svart linjearbete mot vit bakgrund, och
+utgångspunkterna byter namn till UPK med stabila slumpnummer 001–999
+istället för sekventiella UP1..UPn.
 
 *   **Svarta reglementstecken (FAS 1):** Alla MK_SYMBOLS omritade till
     svart linjearbete + vit fyllning. Halo-principen inverterad: 3 px
@@ -110,18 +110,17 @@ slumpnummer 001–999 istället för sekventiella UP1..UPn.
     Yttre `filter: drop-shadow` på `.mk-icon svg` byggd som vit aura +
     mjuk mörk kant för läsbarhet mot både grönska, vatten och ljusa
     OSM-tiles (z 18–19). Utförd förstöring (`forst_utf`) är enda
-    symbolen som behåller röd accent — det speglar PDF:ens eget
+    symbolen som behåller röd accent — det speglar reglementets eget
     exempel. Ny färgmatris dokumenterad i `minkarta-symbols.js`.
     Polygon-/linje-halon i canvas-exporten inverterad till vit bred
     stroke under svart linjearbete.
-*   **Saknade beteckningar (FAS 2):** Sex nya reglementstecken från
-    PDF s. 339 + Handbok s. 86: `landmina_okand` (tom cirkel,
-    ospecificerad mina), `prov_rojskydd` (provisoriskt
-    fordonsröjningsskydd — punkter + vikning), `rojskydd` (egen
-    R-symbol), `verkansomrade` (streckad halvcirkel), `omr_verkan`
-    (områdesverkande mina med W-hake), `riktad_verkan` (cirkel +
-    pil). Varje symbol har en designbeslutskommentar som dokumenterar
-    PDF-tolkningen. Ny palett-grupp "Övriga landminor".
+*   **Saknade beteckningar (FAS 2):** Sex nya reglementstecken:
+    `landmina_okand` (tom cirkel, ospecificerad mina), `prov_rojskydd`
+    (provisoriskt fordonsröjningsskydd — punkter + vikning),
+    `rojskydd` (egen R-symbol), `verkansomrade` (streckad halvcirkel),
+    `omr_verkan` (områdesverkande mina med W-hake), `riktad_verkan`
+    (cirkel + pil). Varje symbol har en designbeslutskommentar som
+    dokumenterar tolkningen. Ny palett-grupp "Övriga landminor".
 *   **UPK-numrering (FAS 3):** UP-markören byter namn till UPK
     (Utgångs-Punkt-Koordinat). Vid placering slumpas ett heltal
     1–999, paddas till 3 siffror, unikhet kontrolleras via ett Set.
@@ -200,8 +199,7 @@ tydlig not om OSM-fallback och UP-reverse-geocode.
     för UP-markörer — inga minsymbol-koordinater någonsin.
 
 ### 2026-04-23: MINKARTA
-Ny tabb för minläggningskartor enligt *Mineringar på karta – sammanställning*
-(Fältarbeten s. 338–342, Handbok 11.7.1).
+Ny tabb för minläggningskartor med svenska militära kart-tecken för minor.
 
 *   **Kart-skelett:** OpenTopoMap 1:50 000-skala, MGRS-sökfält med paste-extrahering (MGRS / lat,lon), status-rad med vy-MGRS + zoom.
 *   **Symbolpalett:** Inline-SVG för 17 svenska minprotokoll-tecken (stridsvagnsminor med/utan röjskydd, trampmina, trådmina, larmmina, fordonsmina, sidverkande, försvarsladdning, avståndslagd R-spindel, förstöring förberedd/utförd/planlagd, minlinje, minruta, minerat område med HIND/FÖRDR/STÖR/AVST, skenminering, avspärrning, yttergränsmarkör).
