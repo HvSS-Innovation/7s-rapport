@@ -1,3 +1,5 @@
+// ARKIVERAD 2026-04-28: bortkopplad från minkarta.html.
+// Sparad för framtida referens. Återaktivera via <script>-tagg.
 // ─────────────────────────────────────────────────────────────────────────────
 //  MINKARTA — spelläge "SÄNKA MINOR"
 //

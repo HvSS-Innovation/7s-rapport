@@ -17,7 +17,6 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="minkarta-symbols.js" defer></script>
     <script src="minkarta-export.js" defer></script>
-    <script src="minkarta-game.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -413,7 +412,7 @@
                 <p><b>Syfte.</b> MINKARTA används för att rita upp och dokumentera
                 minläggningar enligt <i>Mineringar på karta – sammanställning</i>
                 (Fältarbeten s. 338–342). Kommande faser lägger till symbolpalett,
-                minprotokoll, PNG-export och spelläget SÄNKA MINOR.</p>
+                minprotokoll och PNG-export.</p>
                 <p><b>Integritet.</b> Inga minsymboler, minprotokoll eller anteckningar
                 skickas någonsin till någon server. De enda utgående nätverksanrop
                 som tabben gör är:</p>
@@ -1308,17 +1307,8 @@ function cancelDraft() {
 // DOM-lyssnare (touchstart/touchmove/touchend) eftersom Leaflet 1.9.x inte
 // syntetiserar pointermove till mousemove. Se onFrihandTouchStart/Move.
 let _frihandDrawing = false;
-function gameActive() {
-    return !!(window.MK_GAME && window.MK_GAME.state && window.MK_GAME.state.active);
-}
 function onFrihandStart(e) {
     if (activeTool !== 'frihand') return;
-    // Övningsläget får aldrig ta emot frihand-objekt — handlas inte i
-    // wrapHandleMapClick eftersom frihand drivs av map.mousedown, inte click.
-    if (gameActive()) {
-        toast('Fri-rita stöds inte i övningsläget.', 2200);
-        return;
-    }
     if (state.draft && state.draft.typ !== 'frihand') cancelDraft();
     _frihandDrawing = true;
     state.draft = {
@@ -2217,20 +2207,8 @@ async function shareTextOnly(txt) {
 
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
-    // Exponera för spellägesmodulen
-    window.__minkartaMap = map;
-    window.toast = toast;
-    Object.defineProperty(window, 'activeTool', { get: () => activeTool, configurable: true });
-
-    // Registrera kartklick för symbol-placering.
-    // Om spelmodulen laddats, låt den wrappa vår handler så att övnings-
-    // klick hamnar i gameState istället för skarpa objects.
-    let clickHandler = handleMapClick;
-    if (window.MK_GAME && window.MK_GAME.wrapHandleMapClick) {
-        clickHandler = window.MK_GAME.wrapHandleMapClick(handleMapClick);
-    }
     if (map) {
-        map.on('click', clickHandler);
+        map.on('click', handleMapClick);
         map.on('dblclick', handleMapDblClick);
         map.doubleClickZoom.disable();             // annars stjäl den dubbelklicket
         // Fri-rita: mus via Leaflets event-system, touch via DOM-lyssnare
@@ -2249,7 +2227,6 @@ document.addEventListener('DOMContentLoaded', () => {
     attachKeyboard();
     attachProtocolActions();
     loadPersisted();
-    if (window.MK_GAME && window.MK_GAME.init) window.MK_GAME.init();
 
     const input = document.getElementById('mgrsSearch');
     input.addEventListener('paste', e => {
