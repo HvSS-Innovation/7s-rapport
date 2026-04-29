@@ -773,11 +773,11 @@ function openEditPopup(obj, layer, evt) {
     html += '<button id="skfDel" style="flex:0 0 auto;padding:6px 8px;background:#c62828;color:#fff;border:none;border-radius:3px;font:600 12px Inter,sans-serif;cursor:pointer">Ta bort</button></div>';
     html += '</div>';
 
-    // autoClose: false så att kartklick INTE stänger popupen via Leaflets
+    // closeOnClick: false så att kartklick INTE stänger popupen via Leaflets
     // interna logik — vi hanterar det själva via _activeEditCommit i
     // map.click-handlern. Annars förlorar vi commit-callbacken i samma
-    // event-cykel.
-    const popup = L.popup({ className: 'sk-popup', closeButton: true, autoClose: false })
+    // event-cykel. autoClose: false skyddar mot klick på annan symbol.
+    const popup = L.popup({ className: 'sk-popup', closeButton: true, autoClose: false, closeOnClick: false })
         .setLatLng(layer.getLatLng ? layer.getLatLng() : (evt && evt.latlng) || layer.getBounds().getCenter())
         .setContent(html)
         .openOn(map);

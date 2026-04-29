@@ -1305,11 +1305,12 @@ function openEditPopup(obj, layer, e) {
     html += '</div>';
     wrap.innerHTML = html;
 
-    // autoClose: false så att kartklick INTE stänger popupen direkt via
+    // closeOnClick: false så att kartklick INTE stänger popupen direkt via
     // Leaflets interna logik — vi hanterar det själva via _activeEditCommit
-    // i handleMapClick (klick = Spara + stäng). Annars kan Leaflet rensa
-    // popupen i samma event-cykel och vi förlorar commit-callbacken.
-    const popup = L.popup({ className: 'mk-popup', closeButton: true, autoClose: false })
+    // i handleMapClick (klick = Spara + stäng). Annars rensas popupen i
+    // samma event-cykel och vi förlorar commit-callbacken. autoClose: false
+    // krävs också så att klick på en annan symbol inte stänger den i förväg.
+    const popup = L.popup({ className: 'mk-popup', closeButton: true, autoClose: false, closeOnClick: false })
         .setLatLng(e && e.latlng ? e.latlng : (layer.getLatLng ? layer.getLatLng() : layer.getBounds().getCenter()))
         .setContent(wrap)
         .openOn(map);
