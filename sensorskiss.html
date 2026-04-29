@@ -1426,7 +1426,8 @@ function attachPaletteToolbar() {
 
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
-    clearBtn.className = 'btn btn-sm btn-ghost';
+    clearBtn.className = 'btn btn-sm';
+    clearBtn.style.cssText = 'flex:1;background:#c62828;color:#fff';
     clearBtn.textContent = 'Rensa allt';
     clearBtn.addEventListener('click', () => {
         if (!state.objects.length) return toast('Skissen är redan tom.');
