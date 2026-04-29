@@ -1,0 +1,152 @@
+/* ─────────────────────────────────────────────────────────────────────────
+   SENSORSKISS — Tutorial CSS
+   Overlay, panel, knappar och steg-content. Mörkgrönt designspråk speglar
+   resten av appen.
+   ───────────────────────────────────────────────────────────────────────── */
+
+.sk-tut-overlay {
+    position: fixed; inset: 0; z-index: 11000;
+    background: rgba(13, 31, 13, 0.85);
+    display: flex; align-items: center; justify-content: center;
+    padding: 16px;
+    animation: skTutFade 0.18s ease-out;
+}
+@keyframes skTutFade { from { opacity: 0; } to { opacity: 1; } }
+
+.sk-tut-panel {
+    background: var(--bg-card);
+    border: 1px solid var(--accent);
+    border-radius: var(--radius);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.7);
+    max-width: 560px; width: 100%; max-height: 92vh;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+
+.sk-tut-head {
+    padding: 14px 20px;
+    background: var(--bg-secondary);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 10px;
+}
+.sk-tut-title {
+    font: 700 1.05rem Inter, sans-serif;
+    color: var(--accent);
+    letter-spacing: 0.06em; text-transform: uppercase;
+}
+.sk-tut-step-pill {
+    font: 600 0.7rem Inter, sans-serif;
+    color: var(--text-muted);
+    background: var(--bg-card);
+    padding: 4px 8px; border-radius: 999px;
+    border: 1px solid var(--border);
+    letter-spacing: 0.05em;
+}
+
+.sk-tut-body {
+    padding: 18px 20px;
+    overflow-y: auto;
+    color: var(--text-primary);
+    font: 400 0.92rem Inter, sans-serif;
+    line-height: 1.55;
+}
+.sk-tut-body h3 {
+    font: 700 0.95rem Inter, sans-serif;
+    color: var(--accent);
+    margin-top: 14px; margin-bottom: 6px;
+    letter-spacing: 0.04em;
+}
+.sk-tut-body p { margin-bottom: 10px; color: var(--text-secondary); }
+.sk-tut-body b, .sk-tut-body strong { color: var(--text-primary); }
+.sk-tut-body ul { margin: 8px 0 12px 18px; }
+.sk-tut-body li { margin-bottom: 4px; color: var(--text-secondary); }
+
+.sk-tut-symbol-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 10px; margin-top: 12px;
+}
+.sk-tut-symbol-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px 8px;
+    display: flex; flex-direction: column; align-items: center; gap: 6px;
+    color: #1a321a;
+}
+.sk-tut-symbol-card svg { width: 36px; height: 36px; display: block; }
+.sk-tut-symbol-card .name {
+    font: 700 0.78rem Inter, sans-serif;
+    color: #0d1f0d;
+}
+.sk-tut-symbol-card .hint {
+    font: 400 0.72rem Inter, sans-serif;
+    color: #2d4a2d;
+    text-align: center;
+    line-height: 1.35;
+}
+
+.sk-tut-foot {
+    padding: 12px 20px;
+    background: var(--bg-secondary);
+    border-top: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: center; gap: 10px;
+}
+.sk-tut-skip {
+    background: transparent; border: 1px solid var(--border);
+    color: var(--text-muted); padding: 8px 12px; border-radius: var(--radius-sm);
+    font: 600 0.78rem Inter, sans-serif; cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+}
+.sk-tut-skip:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+.sk-tut-actions { display: flex; gap: 8px; }
+.sk-tut-prev, .sk-tut-next, .sk-tut-finish {
+    border: none; border-radius: var(--radius-sm);
+    padding: 9px 16px; font: 600 0.85rem Inter, sans-serif;
+    cursor: pointer; -webkit-tap-highlight-color: transparent;
+    min-height: 40px;
+}
+.sk-tut-prev { background: var(--accent-dim); color: var(--accent); }
+.sk-tut-prev:hover { background: var(--border-focus); color: #fff; }
+.sk-tut-next, .sk-tut-finish { background: var(--accent); color: #fff; }
+.sk-tut-next:hover, .sk-tut-finish:hover { background: var(--accent-hover); }
+.sk-tut-prev:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* Lökprincip-figur (CSS-only "ringar runt objekt") */
+.sk-tut-onion {
+    position: relative;
+    width: 100%; min-height: 220px;
+    margin: 12px 0; padding: 10px;
+    background: var(--bg-input);
+    border-radius: var(--radius-sm);
+    display: flex; align-items: center; justify-content: center;
+}
+.sk-tut-onion-ring {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    border: 2px dashed var(--border);
+    border-radius: 50%;
+}
+.sk-tut-onion-label {
+    position: absolute; font: 600 0.7rem Inter, sans-serif;
+    color: var(--text-secondary);
+    background: var(--bg-card); padding: 2px 6px;
+    border-radius: 3px; border: 1px solid var(--border);
+}
+.sk-tut-onion-target {
+    position: absolute; left: 50%; top: 50%;
+    transform: translate(-50%, -50%);
+    width: 18px; height: 18px;
+    background: var(--accent); border-radius: 50%;
+    border: 3px solid var(--bg-card);
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+    z-index: 2;
+}
+
+@media (max-width: 600px) {
+    .sk-tut-overlay { padding: 8px; }
+    .sk-tut-head { padding: 10px 14px; }
+    .sk-tut-body { padding: 14px; }
+    .sk-tut-foot { padding: 10px 14px; }
+    .sk-tut-symbol-grid { grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); }
+}

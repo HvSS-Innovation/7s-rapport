@@ -14,9 +14,11 @@
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="fonts/inter.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+    <link rel="stylesheet" href="sensorskiss-tutorial.css">
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="sensorskiss-symbols.js" defer></script>
     <script src="sensorskiss-export.js" defer></script>
+    <script src="sensorskiss-tutorial.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -974,6 +976,16 @@ function renderMapControls() {
     panBtn.style.marginLeft = 'auto';
     panBtn.addEventListener('click', () => setActiveTool(null));
     host.appendChild(panBtn);
+
+    const tutBtn = document.createElement('button');
+    tutBtn.type = 'button';
+    tutBtn.className = 'btn btn-sm btn-ghost';
+    tutBtn.textContent = 'Mini-skola';
+    tutBtn.title = 'Genomgång av sensorerna och lökprincipen';
+    tutBtn.addEventListener('click', () => {
+        if (window.SK_TUTORIAL) window.SK_TUTORIAL.start('welcome');
+    });
+    host.appendChild(tutBtn);
 }
 
 function renderPalette() {
@@ -1257,6 +1269,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     document.getElementById('mgrsSearch').addEventListener('keydown', (e) => {
         if (e.key === 'Enter') handleSearch(e.target.value);
     });
+
+    // Auto-trigger tutorial vid första load om inget state finns
+    if (window.SK_TUTORIAL && !window.SK_TUTORIAL.isCompleted() && state.objects.length === 0) {
+        setTimeout(() => window.SK_TUTORIAL.start('welcome'), 600);
+    }
 });
 </script>
 </body>
