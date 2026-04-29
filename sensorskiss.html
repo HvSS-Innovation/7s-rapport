@@ -223,6 +223,81 @@
         @media (hover: none) and (pointer: coarse) {
             .sk-hover-preview { display: none; }
         }
+
+        /* Tangent-genväg-badge på palett-knapparna. Sitter i övre högra
+           hörnet, orange för att synas. Göms på touch (ingen nytta utan
+           tangentbord). Fullskärmsknappens badge använder samma klass. */
+        .sk-tool { position: relative; }
+        .sk-tool-shortcut {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            min-width: 16px;
+            padding: 2px 5px;
+            background: #e65100;
+            color: #fff;
+            font: 700 10px Inter, sans-serif;
+            line-height: 1;
+            border-radius: 9px;
+            text-align: center;
+            text-transform: uppercase;
+            pointer-events: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        }
+        #skFullBtn .sk-tool-shortcut {
+            position: static;
+            display: inline-block;
+            margin-left: 6px;
+            background: rgba(0, 0, 0, 0.4);
+            font-size: 0.72rem;
+        }
+        @media (hover: none) and (pointer: coarse) {
+            .sk-tool-shortcut { display: none; }
+        }
+
+        /* Mapping-dialog (modal) */
+        .sk-modal-overlay {
+            position: fixed; inset: 0; z-index: 10000;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex; align-items: center; justify-content: center;
+        }
+        .sk-modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            min-width: 280px; max-width: 92%;
+            color: var(--text-primary);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        }
+        .sk-modal-title {
+            font-size: 0.88rem; font-weight: 700; letter-spacing: 0.06em;
+            text-transform: uppercase; color: var(--accent);
+            margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+        }
+        .sk-modal-title svg { width: 24px; height: 24px; }
+        .sk-modal-prompt { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; }
+        .sk-modal-key {
+            display: inline-block; min-width: 40px; padding: 8px 14px;
+            background: var(--bg-input); border: 2px dashed var(--border-focus);
+            border-radius: var(--radius-sm);
+            font: 700 1.1rem 'Courier New', monospace;
+            color: var(--accent); text-align: center;
+            text-transform: uppercase;
+        }
+        .sk-modal-key.empty { color: var(--text-muted); }
+        .sk-modal-warn {
+            margin-top: 10px; padding: 8px 10px;
+            background: rgba(230, 81, 0, 0.15); border: 1px solid var(--warn);
+            border-radius: var(--radius-sm);
+            font-size: 0.78rem; color: var(--text-primary);
+        }
+        .sk-modal-current {
+            margin-top: 6px; font-size: 0.74rem; color: var(--text-muted);
+        }
+        .sk-modal-actions { display: flex; gap: 6px; margin-top: 14px; }
+        .sk-modal-actions button { flex: 1; }
+        .sk-modal-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -1042,6 +1117,133 @@ function hideHoverPreview() {
     }
 }
 
+// ── Tangent-genvägar (user-mappable) ────────────────────────────────────────
+// Dubbelklick på palett-knapp eller fullskärmsknappen öppnar dialog där
+// användaren trycker en tangent. Lagras i localStorage. Modifier-tangenter
+// blockeras både i dialogen och vid trigger.
+const SHORTCUTS_KEY = 'sensorskiss.shortcuts';
+const FULLMAP_PSEUDO = '__fullmap';
+const FULLMAP_LABEL = 'Fullskärm';
+let shortcutMap = (function() {
+    try {
+        const raw = localStorage.getItem(SHORTCUTS_KEY);
+        if (raw) return JSON.parse(raw) || {};
+    } catch (_) {}
+    return { f: FULLMAP_PSEUDO };  // default: F = fullskärm
+})();
+function saveShortcuts() {
+    try { localStorage.setItem(SHORTCUTS_KEY, JSON.stringify(shortcutMap)); } catch (_) {}
+}
+function shortcutForTool(toolId) {
+    return Object.keys(shortcutMap).find(k => shortcutMap[k] === toolId) || null;
+}
+function labelForTool(toolId) {
+    if (toolId === FULLMAP_PSEUDO) return FULLMAP_LABEL;
+    const sym = window.SK_SYMBOLS && window.SK_SYMBOLS[toolId];
+    return sym ? sym.label : toolId;
+}
+
+let _activeMappingDialog = null;
+function openShortcutDialog(toolId) {
+    if (_activeMappingDialog) _activeMappingDialog.close();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'sk-modal-overlay';
+    const sym = (toolId === FULLMAP_PSEUDO) ? null : window.SK_SYMBOLS[toolId];
+    const titleSvg = sym && sym.svg ? sym.svg : '';
+    const titleLbl = labelForTool(toolId);
+    const currentKey = shortcutForTool(toolId);
+
+    overlay.innerHTML =
+        '<div class="sk-modal" role="dialog" aria-modal="true">' +
+            '<div class="sk-modal-title">' + titleSvg + '<span>' + titleLbl + '</span></div>' +
+            '<div class="sk-modal-prompt">Tryck en tangent. Modifier-tangenter (Shift/Ctrl/Alt) ignoreras.</div>' +
+            '<div style="text-align:center;margin:8px 0">' +
+                '<span class="sk-modal-key' + (currentKey ? '' : ' empty') + '" id="skModalKey">' +
+                    (currentKey ? currentKey : '–') +
+                '</span>' +
+            '</div>' +
+            '<div class="sk-modal-current" id="skModalCurrent">' +
+                (currentKey ? 'Aktuell genväg: ' + currentKey.toUpperCase() : 'Ingen genväg satt') +
+            '</div>' +
+            '<div class="sk-modal-warn" id="skModalWarn" style="display:none"></div>' +
+            '<div class="sk-modal-actions">' +
+                '<button type="button" class="btn btn-sm btn-ghost" id="skModalClear">Rensa</button>' +
+                '<button type="button" class="btn btn-sm btn-ghost" id="skModalCancel">Avbryt</button>' +
+                '<button type="button" class="btn btn-sm btn-accent" id="skModalSave" disabled>Spara</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+
+    const keyEl = overlay.querySelector('#skModalKey');
+    const warnEl = overlay.querySelector('#skModalWarn');
+    const saveBtn = overlay.querySelector('#skModalSave');
+    const cancelBtn = overlay.querySelector('#skModalCancel');
+    const clearBtn = overlay.querySelector('#skModalClear');
+    let candidate = null;
+
+    const close = () => {
+        document.removeEventListener('keydown', onKey, true);
+        try { overlay.remove(); } catch (_) {}
+        _activeMappingDialog = null;
+    };
+    _activeMappingDialog = { close };
+
+    const onKey = (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+            return;
+        }
+        if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+        if (!e.key || e.key.length !== 1) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const k = e.key.toLowerCase();
+        candidate = k;
+        keyEl.textContent = k.toUpperCase();
+        keyEl.classList.remove('empty');
+        const owner = shortcutMap[k];
+        if (owner && owner !== toolId) {
+            warnEl.style.display = '';
+            warnEl.textContent = 'Tangenten "' + k.toUpperCase() + '" är upptagen av: ' +
+                labelForTool(owner) + '. Spara för att flytta över.';
+        } else {
+            warnEl.style.display = 'none';
+        }
+        saveBtn.disabled = false;
+    };
+    document.addEventListener('keydown', onKey, true);
+
+    cancelBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    clearBtn.addEventListener('click', () => {
+        const cur = shortcutForTool(toolId);
+        if (cur) {
+            delete shortcutMap[cur];
+            saveShortcuts();
+            renderPalette();
+            renderMapControls();
+        }
+        close();
+    });
+
+    saveBtn.addEventListener('click', () => {
+        if (!candidate) { close(); return; }
+        Object.keys(shortcutMap).forEach(k => {
+            if (shortcutMap[k] === toolId) delete shortcutMap[k];
+        });
+        delete shortcutMap[candidate];
+        shortcutMap[candidate] = toolId;
+        saveShortcuts();
+        renderPalette();
+        renderMapControls();
+        close();
+    });
+}
+
 function setActiveTool(id) {
     // Avbryt pågående polygon-ritning vid byte
     if (polyDraft && id !== 'sensoromrade') polyDraftCancel();
@@ -1111,7 +1313,6 @@ function attachMapDrawHandlers() {
         const t = e.target;
         if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
         if (e.key === 'Escape') {
-            // I fullmap-läge: stäng det först. Tryck igen för att avbryta drafted.
             if (document.body.classList.contains('is-fullmap')) {
                 toggleFullmap();
                 return;
@@ -1121,11 +1322,21 @@ function attachMapDrawHandlers() {
                 setActiveTool(null);
             }
         }
-        // F (utan modifier) = toggle fullskärm. F11 undviks — den fångas
-        // av webbläsaren själv på ett sätt vi inte kan lita på.
-        if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
-            e.preventDefault();
-            toggleFullmap();
+        // Tangent-genvägar (user-mappable). Bara enstaka glyph-tangenter
+        // utan modifier. FULLMAP_PSEUDO triggar fullskärm; verktygs-id
+        // togglar setActiveTool.
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey &&
+            e.key && e.key.length === 1) {
+            const k = e.key.toLowerCase();
+            const target = shortcutMap[k];
+            if (target) {
+                e.preventDefault();
+                if (target === FULLMAP_PSEUDO) {
+                    toggleFullmap();
+                } else if (window.SK_SYMBOLS && window.SK_SYMBOLS[target]) {
+                    setActiveTool(activeTool === target ? null : target);
+                }
+            }
         }
     });
     // Om webbläsaren stänger äkta fullscreen (ESC, exit-knapp i webbläsaren)
@@ -1218,15 +1429,35 @@ function renderMapControls() {
     });
     host.appendChild(tutBtn);
 
-    // Fullskärmsknapp (F-tangent gör samma sak). Shift+klick kör även
-    // äkta requestFullscreen() så webbläsarens flikrad också gömmer sig.
+    // Fullskärmsknapp — tangent slås upp i shortcutMap (default F).
+    // Shift+klick = äkta fullskärm. Dubbelklick öppnar mapping-dialog.
     const fullBtn = document.createElement('button');
     fullBtn.type = 'button';
     fullBtn.className = 'btn btn-sm btn-ghost';
     fullBtn.id = 'skFullBtn';
-    fullBtn.textContent = '⛶ Maximera';
-    fullBtn.title = 'Maximera kartan i fönstret (F). Shift+klick = äkta fullskärm.';
-    fullBtn.addEventListener('click', (e) => toggleFullmap({ native: e.shiftKey }));
+    const fullKey = shortcutForTool(FULLMAP_PSEUDO);
+    const fullBadge = fullKey
+        ? '<span class="sk-tool-shortcut">' + fullKey.toUpperCase() + '</span>'
+        : '';
+    fullBtn.innerHTML = '⛶ Maximera' + fullBadge;
+    fullBtn.title = 'Maximera kartan i fönstret' +
+        (fullKey ? ' (' + fullKey.toUpperCase() + ')' : '') +
+        '. Shift+klick = äkta fullskärm. Dubbelklicka för att ändra tangent.';
+    let fullClickTimer = null;
+    fullBtn.addEventListener('click', (e) => {
+        if (fullClickTimer) return;
+        const useNative = e.shiftKey;
+        fullClickTimer = setTimeout(() => {
+            fullClickTimer = null;
+            toggleFullmap({ native: useNative });
+        }, 220);
+    });
+    fullBtn.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (fullClickTimer) { clearTimeout(fullClickTimer); fullClickTimer = null; }
+        openShortcutDialog(FULLMAP_PSEUDO);
+    });
     host.appendChild(fullBtn);
 }
 
@@ -1279,9 +1510,26 @@ function renderPalette() {
             btn.dataset.tool = id;
             btn.title = sym.label;
             btn.setAttribute('aria-label', sym.label);
-            btn.innerHTML = sym.svg + '<span>' + sym.label + '</span>';
+            const shortcutKey = shortcutForTool(id);
+            const badgeHtml = shortcutKey
+                ? '<span class="sk-tool-shortcut" title="Tangentgenväg — dubbelklicka för att ändra">' + shortcutKey.toUpperCase() + '</span>'
+                : '';
+            btn.innerHTML = sym.svg + '<span>' + sym.label + '</span>' + badgeHtml;
+            // Single-click = aktivera. Dubbelklick = öppna mapping-dialog.
+            // 220 ms debounce hindrar trampning.
+            let clickTimer = null;
             btn.addEventListener('click', () => {
-                setActiveTool(activeTool === id ? null : id);
+                if (clickTimer) return;
+                clickTimer = setTimeout(() => {
+                    clickTimer = null;
+                    setActiveTool(activeTool === id ? null : id);
+                }, 220);
+            });
+            btn.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+                openShortcutDialog(id);
             });
             grid.appendChild(btn);
         });
