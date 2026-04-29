@@ -163,12 +163,12 @@
         .sk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 0.82rem; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
         .sk-toast.show { opacity: 1; }
 
-        /* Edit-popup fadear när användaren drar i riktnings-slidern, så
-           symbolens nya riktning syns på kartan bakom dialogen. */
+        /* Edit-popup fadear när användaren drar i en live-slider (idag bara
+           rotation, men generisk klass för framtida sliders). */
         .sk-popup .leaflet-popup-content-wrapper,
         .sk-popup .leaflet-popup-tip { transition: opacity 0.18s; }
-        .sk-popup.is-rotating .leaflet-popup-content-wrapper,
-        .sk-popup.is-rotating .leaflet-popup-tip { opacity: 0.25; }
+        .sk-popup.is-editing-live .leaflet-popup-content-wrapper,
+        .sk-popup.is-editing-live .leaflet-popup-tip { opacity: 0.25; }
 
         /* Fullskärm: kartan tar hela fönstret, allt övrigt UI göms.
            Triggas av knapp i .map-controls eller tangenten F. ESC stänger.
@@ -846,14 +846,14 @@ function openEditPopup(obj, layer, evt) {
         let rotCommitted = false;
         let fadeTimer = null;
         const beginFade = () => {
-            if (popup._container) popup._container.classList.add('is-rotating');
+            if (popup._container) popup._container.classList.add('is-editing-live');
             clearTimeout(fadeTimer);
             fadeTimer = setTimeout(endFade, 200);
         };
         const endFade = () => {
             clearTimeout(fadeTimer);
             fadeTimer = null;
-            if (popup._container) popup._container.classList.remove('is-rotating');
+            if (popup._container) popup._container.classList.remove('is-editing-live');
         };
         const liveRotate = (deg) => {
             obj.rotation = deg;

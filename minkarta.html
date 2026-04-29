@@ -289,12 +289,14 @@
         .mk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 0.82rem; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
         .mk-toast.show { opacity: 1; }
 
-        /* Edit-popup fadear när användaren drar i rotation-slidern, så
-           symbolens nya riktning syns på kartan bakom dialogen. */
+        /* Edit-popup fadear när användaren drar i en live-slider (rotation,
+           räckvidd, öppningsvinkel) så symbolens nya tillstånd syns på
+           kartan bakom dialogen. Generisk klass — samma princip för alla
+           sliders som triggar rebuildLayers() medan dialogen är öppen. */
         .mk-popup .leaflet-popup-content-wrapper,
         .mk-popup .leaflet-popup-tip { transition: opacity 0.18s; }
-        .mk-popup.is-rotating .leaflet-popup-content-wrapper,
-        .mk-popup.is-rotating .leaflet-popup-tip { opacity: 0.25; }
+        .mk-popup.is-editing-live .leaflet-popup-content-wrapper,
+        .mk-popup.is-editing-live .leaflet-popup-tip { opacity: 0.25; }
 
         /* Flytande Ångra-knapp (visas direkt efter "Ta bort"). Sitter nere
            till vänster så den inte krockar med toast (mitten) eller export-
@@ -1403,11 +1405,19 @@ function openEditPopup(obj, layer, e) {
         html += '<input type="text" value="' + escAttr(areaText) + '" readonly tabindex="-1" style="width:100%;padding:4px;background:#0a1a0a;color:#8aaa8a;border:1px solid #2d4a2d;cursor:default;font-family:inherit">';
     }
     // Verkansområde-specifika fält: räckvidd + öppningsvinkel.
+    // Slider + synkad number-input — samma layout som Rotation. Number-rutan
+    // behåller id="edRange"/"edSpread" så befintlig save-handler funkar.
     if (isVerkans) {
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Räckvidd (m)</label>';
-        html += '<input id="edRange" type="number" min="10" max="5000" value="' + (obj.range || 200) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '<div style="display:flex;gap:6px;align-items:center;margin-top:2px">';
+        html += '<input id="edRangeR" type="range" min="10" max="5000" step="10" value="' + (obj.range || 200) + '" style="flex:1">';
+        html += '<input id="edRange" type="number" min="10" max="5000" step="10" value="' + (obj.range || 200) + '" style="width:64px;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '</div>';
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Öppningsvinkel (°)</label>';
-        html += '<input id="edSpread" type="number" min="5" max="360" value="' + (obj.spread || 60) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '<div style="display:flex;gap:6px;align-items:center;margin-top:2px">';
+        html += '<input id="edSpreadR" type="range" min="5" max="360" step="1" value="' + (obj.spread || 60) + '" style="flex:1">';
+        html += '<input id="edSpread" type="number" min="5" max="360" step="1" value="' + (obj.spread || 60) + '" style="width:64px;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '</div>';
     }
     // Rotationsslider för vridbara symboler (fordon_sid, forsvar, verkansomrade).
     if (isRotatable) {
@@ -1457,29 +1467,71 @@ function openEditPopup(obj, layer, e) {
             nrInput.select();
         }
 
+        // Delade fade-funktioner — samma timer används av alla live-sliders
+        // (rotation, räckvidd, öppningsvinkel) så att snabba ändringar i ett
+        // fält inte trampar ett annat fälts 200 ms-restore. Fade dialogen
+        // till 25 % opacitet medan användaren drar; sifferruta-input räknas
+        // också som "live" och fadear lika.
+        let fadeTimer = null;
+        const beginFade = () => {
+            if (popup._container) popup._container.classList.add('is-editing-live');
+            clearTimeout(fadeTimer);
+            fadeTimer = setTimeout(endFade, 200);
+        };
+        const endFade = () => {
+            clearTimeout(fadeTimer);
+            fadeTimer = null;
+            if (popup._container) popup._container.classList.remove('is-editing-live');
+        };
+
+        // Live-räckvidd för verkansområde: samma slider+number-mönster som
+        // rotation. Number-rutan har id="edRange" så save-handlern hittar den.
+        const rangeSlider = wrap.querySelector('#edRangeR');
+        const rangeNumber = wrap.querySelector('#edRange');
+        let origRange = Number.isFinite(obj.range) ? obj.range : 200;
+        let rangeCommitted = false;
+        if (rangeSlider && rangeNumber) {
+            const liveRange = (raw) => {
+                const v = Math.max(10, Math.min(5000, parseInt(raw, 10) || 200));
+                rangeSlider.value = v;
+                rangeNumber.value = v;
+                obj.range = v;
+                rebuildLayers();
+            };
+            rangeSlider.addEventListener('input', () => { liveRange(rangeSlider.value); beginFade(); });
+            rangeNumber.addEventListener('input', () => { liveRange(rangeNumber.value); beginFade(); });
+            rangeSlider.addEventListener('change', endFade);
+            rangeSlider.addEventListener('pointerup', endFade);
+            rangeSlider.addEventListener('touchend', endFade);
+        }
+
+        // Live-öppningsvinkel: samma mönster.
+        const spreadSlider = wrap.querySelector('#edSpreadR');
+        const spreadNumber = wrap.querySelector('#edSpread');
+        let origSpread = Number.isFinite(obj.spread) ? obj.spread : 60;
+        let spreadCommitted = false;
+        if (spreadSlider && spreadNumber) {
+            const liveSpread = (raw) => {
+                const v = Math.max(5, Math.min(360, parseInt(raw, 10) || 60));
+                spreadSlider.value = v;
+                spreadNumber.value = v;
+                obj.spread = v;
+                rebuildLayers();
+            };
+            spreadSlider.addEventListener('input', () => { liveSpread(spreadSlider.value); beginFade(); });
+            spreadNumber.addEventListener('input', () => { liveSpread(spreadNumber.value); beginFade(); });
+            spreadSlider.addEventListener('change', endFade);
+            spreadSlider.addEventListener('pointerup', endFade);
+            spreadSlider.addEventListener('touchend', endFade);
+        }
+
         // Live-rotation: synka slider+number, applicera direkt på obj och
         // rita om kartan så användaren ser sektorn snurra medan slidern dras.
-        // Stängs popupen utan Spara/Ta-bort återställs rotationen.
         const rotSlider = wrap.querySelector('#edRot');
         const rotNumber = wrap.querySelector('#edRotN');
         let origRotation = obj.rotation || 0;
         let rotCommitted = false;
         if (rotSlider && rotNumber) {
-            // Fade dialogen till 25 % opacitet medan användaren ändrar
-            // rotation, så symbolens nya riktning syns på kartan bakom.
-            // Slidern återgår direkt vid släpp (change/pointerup/touchend);
-            // sifferrutan fadear tillbaka 200 ms efter senaste ändring.
-            let fadeTimer = null;
-            const beginFade = () => {
-                if (popup._container) popup._container.classList.add('is-rotating');
-                clearTimeout(fadeTimer);
-                fadeTimer = setTimeout(endFade, 200);
-            };
-            const endFade = () => {
-                clearTimeout(fadeTimer);
-                fadeTimer = null;
-                if (popup._container) popup._container.classList.remove('is-rotating');
-            };
             const liveUpdate = (raw) => {
                 const v = Math.max(0, Math.min(359, parseInt(raw, 10) || 0));
                 rotSlider.value = v;
@@ -1492,17 +1544,31 @@ function openEditPopup(obj, layer, e) {
             rotSlider.addEventListener('change', endFade);
             rotSlider.addEventListener('pointerup', endFade);
             rotSlider.addEventListener('touchend', endFade);
-
-            const onPopupClose = (ev) => {
-                if (ev.popup !== popup) return;
-                map.off('popupclose', onPopupClose);
-                if (!rotCommitted && obj.rotation !== origRotation) {
-                    obj.rotation = origRotation;
-                    rebuildLayers();
-                }
-            };
-            map.on('popupclose', onPopupClose);
         }
+
+        // Återställ alla live-fält om popupen stängs utan Spara/Ta-bort.
+        // En commit (Spara eller Ta-bort) sätter respektive *Committed-flagga
+        // → ingen rollback. Slider-existens-checken hindrar oss från att
+        // skriva range/spread till symboler som inte är verkansområde.
+        const onPopupClose = (ev) => {
+            if (ev.popup !== popup) return;
+            map.off('popupclose', onPopupClose);
+            let needsRebuild = false;
+            if (rotSlider && !rotCommitted && obj.rotation !== origRotation) {
+                obj.rotation = origRotation;
+                needsRebuild = true;
+            }
+            if (rangeSlider && !rangeCommitted && obj.range !== origRange) {
+                obj.range = origRange;
+                needsRebuild = true;
+            }
+            if (spreadSlider && !spreadCommitted && obj.spread !== origSpread) {
+                obj.spread = origSpread;
+                needsRebuild = true;
+            }
+            if (needsRebuild) rebuildLayers();
+        };
+        map.on('popupclose', onPopupClose);
 
         const edSaveBtn = wrap.querySelector('#edSave');
         // Lagra referens på popup-objektet så vi kan trigga Spara-knappen
@@ -1553,13 +1619,19 @@ function openEditPopup(obj, layer, e) {
             if (rotSlider) obj.rotation = Math.max(0, Math.min(359, parseInt(rotSlider.value, 10) || 0));
             obj.anteckning = wrap.querySelector('#edNote').value || '';
             rotCommitted = true;
+            rangeCommitted = true;
+            spreadCommitted = true;
             origRotation = obj.rotation;
+            origRange = obj.range;
+            origSpread = obj.spread;
             map.closePopup(popup);
             if (isUpk) syncUpTextarea();         // uppdatera pUp-raden
             rebuildLayers();
         });
         wrap.querySelector('#edDel').addEventListener('click', () => {
             rotCommitted = true;
+            rangeCommitted = true;
+            spreadCommitted = true;
             map.closePopup(popup);
             softDelete(obj);
         });
