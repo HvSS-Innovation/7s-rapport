@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260429_123501';
+const CACHE = 'hv-20260429_sensorskissv1';
 const FILES = [
   './',
   './index.html',
@@ -21,6 +21,11 @@ const FILES = [
   './minkarta-export.js',
   './minkarta-tutorial.js',
   './minkarta-tutorial.css',
+  './sensorskiss.html',
+  './sensorskiss-symbols.js',
+  './sensorskiss-export.js',
+  './sensorskiss-tutorial.js',
+  './sensorskiss-tutorial.css',
   './version.js',
   './pwa.js',
   './ortnamn.json',

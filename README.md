@@ -41,6 +41,7 @@ Verktyget kommer nu att fungera även när du har flygplansläge eller är i rad
 | **RASSOIKA** | Patrullchefens checklista (*Tidigt utvecklingsstadium*) |
 | **VÄDER** | Meteorologisk prognos (Hämtar SMHI-data vid täckning) |
 | **MINKARTA** | Minläggningskarta & minprotokoll (reglementstecken från stab-paketet 2026-04-26, UPK-numrering 001–999, UPK/SP-auto-inmätning, datalista, automatisk dela-med-karta, jumbo-symboler i PNG-export, övningsläge) |
+| **SENSORSKISS** | Sensoruppsättning & beslutsstödsplan (sensorer från Utbildningsanvisning sensorer Hemvärn 2025: CIM/PIR/KAMERA/UMRA + Larmmina + RPAS + poster + sensorområden, auto-numrering C/P/K/U/L, riktningslinjer, sensorprotokoll-export, mini-skola lökprincipen) |
 
 ## Teknisk Arkitektur
 Applikationen är byggd som en "Modern Vanilla" webbapplikation med ren HTML5, CSS3 och JavaScript (ES6). Den använder inga tunga bibliotek eller ramverk för att säkerställa extremt snabb uppstart och minimal batteriförbrukning på mobila enheter. Service Workers hanterar cachning för offline-bruk.
@@ -53,6 +54,33 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 ---
 
 ## Dagbok: Utvecklingslogg
+
+### 2026-04-29: SENSORSKISS v1 — ny tab för sensoruppsättning
+Sju-fas-implementation (roadmap: `roadmap-sensorskiss-v1.md`). Ny tab
+`sensorskiss.html` parallellt med MINKARTA, baserad på samma Leaflet-stack
+men med sensor-symboler från Utbildningsanvisning sensorer Hemvärn 2025
+(FM2025-8701:1) sid 72.
+
+* **Skelett** (FAS 2): `sensorskiss.html` med MGRS-sökruta, OTM/OSM hybrid-
+  kartlager och tab-nav-länk SENSORSKISS lagd till alla 14 sub-nav-sidor.
+* **Symbolbibliotek** (FAS 3): 10 SVG-baserade sensorsymboler i
+  `sensorskiss-symbols.js` — CIM, PIR, KAMERA, UMRA (markbundna),
+  Larmmina, RPAS, Enkelpost, Dubbelpost/patrull, In/Utfartspost,
+  Sensorområde. Bokstavsprefixen C/P/K/U/L följer JL.pdf.
+* **Ritning + edit** (FAS 4): klick-placering med auto-numrering
+  (C1, C2, P1, …), drag, edit-popup med riktnings-slider 0–360°,
+  streckad riktningslinje, polygon-ritning för Sensorområde,
+  IndexedDB-persistens och undo/redo.
+* **Beslutsstödsplan + protokoll-export** (FAS 5): tabell-panel enligt
+  PDF s. 71 fig 48 (BT, Händelse, Handlingsalternativ, Beslutstidpunkt,
+  Infobehov, Inhämtning av) sparas i localStorage. Sensorprotokoll
+  auto-genererar text + PNG-karta (`sensorskiss-export.js`) och
+  delar via `navigator.share`.
+* **Mini-skola** (FAS 6): `sensorskiss-tutorial.js`/`.css` med 3 steg
+  (Välkommen, Sensortyper, Lökprincipen + Beslutsstödsplan).
+* **Polish** (FAS 7): service-worker `CACHE` bumpat till
+  `hv-20260429_sensorskissv1`, `FILES` utökad med 5 nya entries,
+  README uppdaterad med SENSORSKISS-rad och denna dagboksentry.
 
 ### 2026-04-26: MINKARTA v4 — nya SVG-symboler + dela-med-karta
 Sex-fas-iteration på MINKARTA (roadmap: `roadmap-minkarta-v4.md`). v3-
