@@ -880,7 +880,7 @@ function toggleFullmap(opts) {
     if (btn) btn.textContent = turningOn ? '⛶ Återställ' : '⛶ Maximera';
 
     // Två invalidateSize: en direkt, en efter ev. CSS-transition.
-    if (window.map) {
+    if (map) {
         setTimeout(() => map.invalidateSize(), 50);
         setTimeout(() => map.invalidateSize(), 350);
     }
@@ -2195,7 +2195,7 @@ function attachKeyboard() {
             document.body.classList.remove('is-fullmap');
             const btn = document.getElementById('mkFullBtn');
             if (btn) btn.textContent = '⛶ Maximera';
-            if (window.map) setTimeout(() => map.invalidateSize(), 50);
+            if (map) setTimeout(() => map.invalidateSize(), 50);
         }
     });
     // Varna vid navigation bort BARA om autosave har osparat arbete i kö
