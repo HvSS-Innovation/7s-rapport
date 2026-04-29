@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="fonts/inter.css">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+    <script src="sensorskiss-symbols.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -444,8 +445,58 @@ function handleSearch(text) {
     }
 }
 
+// ── Aktivt verktyg + paletten ─────────────────────────────────────────────
+let activeTool = null;
+
+function setActiveTool(id) {
+    activeTool = id;
+    const sym = id ? window.SK_SYMBOLS[id] : null;
+    const label = sym ? sym.label : 'Panorera / välj';
+    const lbl = document.getElementById('paletteActive');
+    if (lbl) lbl.textContent = 'Verktyg: ' + label;
+    document.querySelectorAll('.sk-tool').forEach(btn => {
+        btn.classList.toggle('is-active', btn.dataset.tool === id);
+    });
+    const mapEl = document.getElementById('mapContainer');
+    if (mapEl) mapEl.style.cursor = id ? 'crosshair' : '';
+}
+
+function renderPalette() {
+    const body = document.getElementById('paletteBody');
+    if (!body || !window.SK_SYMBOL_GROUPS) return;
+    body.innerHTML = '';
+    window.SK_SYMBOL_GROUPS.forEach(group => {
+        const wrap = document.createElement('div');
+        wrap.className = 'palette-group';
+        const title = document.createElement('div');
+        title.className = 'palette-group-title';
+        title.textContent = group.title;
+        wrap.appendChild(title);
+        const grid = document.createElement('div');
+        grid.className = 'palette-grid';
+        group.ids.forEach(id => {
+            const sym = window.SK_SYMBOLS[id];
+            if (!sym) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'sk-tool';
+            btn.dataset.tool = id;
+            btn.title = sym.label;
+            btn.setAttribute('aria-label', sym.label);
+            btn.innerHTML = sym.svg + '<span>' + sym.label + '</span>';
+            btn.addEventListener('click', () => {
+                setActiveTool(activeTool === id ? null : id);
+            });
+            grid.appendChild(btn);
+        });
+        wrap.appendChild(grid);
+        body.appendChild(wrap);
+    });
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
+    renderPalette();
     document.getElementById('goBtn').addEventListener('click', () => {
         handleSearch(document.getElementById('mgrsSearch').value);
     });
