@@ -672,6 +672,12 @@ function handleSearch(text) {
 // ── Aktivt verktyg (null = pan/ingen ritning) ───────────────────────────────
 let activeTool = null;
 
+// När en edit-popup är öppen läggs en commit-callback här. Nästa kartklick
+// kör den (= Spara) istället för att placera en ny symbol — så användaren
+// inte råkar dubbelplacera när hen försöker stänga dialogen genom att klicka
+// utanför. Rensas på popupclose (Spara/Ta bort/Esc/X).
+let _activeEditCommit = null;
+
 function setActiveTool(id) {
     activeTool = id;
     const label = id ? (window.MK_SYMBOLS[id] ? window.MK_SYMBOLS[id].label : id) : 'Panorera / välj';
@@ -1292,10 +1298,21 @@ function openEditPopup(obj, layer, e) {
     html += '</div>';
     wrap.innerHTML = html;
 
-    const popup = L.popup({ className: 'mk-popup', closeButton: true, autoClose: true })
+    // autoClose: false så att kartklick INTE stänger popupen direkt via
+    // Leaflets interna logik — vi hanterar det själva via _activeEditCommit
+    // i handleMapClick (klick = Spara + stäng). Annars kan Leaflet rensa
+    // popupen i samma event-cykel och vi förlorar commit-callbacken.
+    const popup = L.popup({ className: 'mk-popup', closeButton: true, autoClose: false })
         .setLatLng(e && e.latlng ? e.latlng : (layer.getLatLng ? layer.getLatLng() : layer.getBounds().getCenter()))
         .setContent(wrap)
         .openOn(map);
+
+    const commitOnClose = (ev) => {
+        if (ev.popup !== popup) return;
+        map.off('popupclose', commitOnClose);
+        if (_activeEditCommit && _activeEditCommit.popup === popup) _activeEditCommit = null;
+    };
+    map.on('popupclose', commitOnClose);
 
     setTimeout(() => {
         const amb = wrap.querySelector('#edAmb');
@@ -1341,7 +1358,15 @@ function openEditPopup(obj, layer, e) {
             map.on('popupclose', onPopupClose);
         }
 
-        wrap.querySelector('#edSave').addEventListener('click', () => {
+        const edSaveBtn = wrap.querySelector('#edSave');
+        // Lagra referens på popup-objektet så vi kan trigga Spara-knappen
+        // från handleMapClick. Vi taggar callbacken med .popup för att
+        // popupclose-handlern ska veta vilken som ska rensas.
+        const commitFn = () => { if (edSaveBtn) edSaveBtn.click(); };
+        commitFn.popup = popup;
+        _activeEditCommit = commitFn;
+
+        edSaveBtn.addEventListener('click', () => {
             // Validera UPK-nummer om tillämpligt
             if (isUpk && nrInput) {
                 const raw = nrInput.value.trim();
@@ -1709,6 +1734,17 @@ function reverseGeocodeUpk(obj) {
 
 // ── Klickhanterare (placering eller draft-bygge) ────────────────────────────
 function handleMapClick(e) {
+    // Om en edit-popup är öppen: använd klicket som "Spara" och stäng,
+    // placera INGEN ny symbol. Symbolverktyget förblir aktivt, så nästa
+    // klick efter detta placerar nästa exemplar som vanligt. Detta körs
+    // även i pan-läge (activeTool=null) så popupen alltid kan stängas
+    // genom att klicka på kartan.
+    if (_activeEditCommit) {
+        const fn = _activeEditCommit;
+        _activeEditCommit = null;
+        fn();
+        return;
+    }
     if (!activeTool) return;
     if (activeTool === 'frihand') return;          // hanteras via mousedown/move/up
     if (activeTool === 'text') {                   // hanteras via inline textarea
