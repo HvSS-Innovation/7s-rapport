@@ -516,7 +516,7 @@ const MGRS = (() => {
         var e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
 
         function computeLatLon(northingTotal) {
-            var M = southern ? (northingTotal - 10000000) : northingTotal;
+            var M = (southern ? (northingTotal - 10000000) : northingTotal) / 0.9996;
             var mu = M / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 * e2 * e2 / 256));
             var lat1 = mu
                 + (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32) * Math.sin(2 * mu)
