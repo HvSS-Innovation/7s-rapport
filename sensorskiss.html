@@ -445,10 +445,360 @@ function handleSearch(text) {
     }
 }
 
+// ── Toast-hjälp ────────────────────────────────────────────────────────────
+function toast(msg, ms) {
+    const el = document.createElement('div');
+    el.className = 'sk-toast';
+    el.textContent = msg;
+    document.body.appendChild(el);
+    requestAnimationFrame(() => el.classList.add('show'));
+    setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 300); }, ms || 2200);
+}
+
+function escapeHtml(s) {
+    return String(s == null ? '' : s)
+        .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+function uid() {
+    return 'o_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 8);
+}
+
+// ── Datamodell ────────────────────────────────────────────────────────────
+// state.objects = [{ id, typ, lat, lng, rotation, numLabel, anteckning }]
+//   eller polygon: { id, typ, path:[{lat,lng}], antalText, anteckning }
+// state.counters: per-prefix räknare (C/P/K/U/L) — auto-numrering.
+const LAYERS_KEY = 'sensorskiss.layers';
+const state = {
+    objects: [],
+    layers: {},
+    counters: { C: 0, P: 0, K: 0, U: 0, L: 0 },
+    draft: null,
+    draftLayer: null,
+    showLabels: (function(){
+        try { const s = JSON.parse(localStorage.getItem(LAYERS_KEY) || 'null'); return s ? !!s.labels : true; }
+        catch(_) { return true; }
+    })()
+};
+function saveLayerState() {
+    try { localStorage.setItem(LAYERS_KEY, JSON.stringify({ labels: state.showLabels })); } catch(_) {}
+}
+
+const undoStack = [];
+const redoStack = [];
+const UNDO_LIMIT = 50;
+
+function snapshot() {
+    return JSON.stringify({ objects: state.objects, counters: state.counters });
+}
+function pushUndo() {
+    undoStack.push(snapshot());
+    if (undoStack.length > UNDO_LIMIT) undoStack.shift();
+    redoStack.length = 0;
+    scheduleAutosave();
+}
+function applySnapshot(snap) {
+    const obj = JSON.parse(snap);
+    state.objects = obj.objects || [];
+    state.counters = obj.counters || { C: 0, P: 0, K: 0, U: 0, L: 0 };
+    rebuildLayers();
+    scheduleAutosave();
+}
+function undoAction() {
+    if (undoStack.length < 1) return;
+    redoStack.push(snapshot());
+    applySnapshot(undoStack.pop());
+}
+function redoAction() {
+    if (redoStack.length < 1) return;
+    undoStack.push(snapshot());
+    applySnapshot(redoStack.pop());
+}
+
+// ── IndexedDB-persistens ──────────────────────────────────────────────────
+const DB_NAME = 'sensorskiss';
+const STORE = 'state';
+let _autosaveTimer = null;
+
+function openDb() {
+    return new Promise((resolve, reject) => {
+        const req = indexedDB.open(DB_NAME, 1);
+        req.onupgradeneeded = (e) => {
+            const db = e.target.result;
+            if (!db.objectStoreNames.contains(STORE)) db.createObjectStore(STORE);
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+    });
+}
+async function saveAutosave() {
+    try {
+        const db = await openDb();
+        await new Promise((res, rej) => {
+            const tx = db.transaction(STORE, 'readwrite');
+            tx.objectStore(STORE).put({
+                objects: state.objects, counters: state.counters
+            }, 'current');
+            tx.oncomplete = res; tx.onerror = () => rej(tx.error);
+        });
+    } catch (_) {}
+}
+function scheduleAutosave() {
+    if (_autosaveTimer) clearTimeout(_autosaveTimer);
+    _autosaveTimer = setTimeout(saveAutosave, 200);
+}
+async function loadPersisted() {
+    try {
+        const db = await openDb();
+        const data = await new Promise((res, rej) => {
+            const tx = db.transaction(STORE, 'readonly');
+            const r = tx.objectStore(STORE).get('current');
+            r.onsuccess = () => res(r.result);
+            r.onerror = () => rej(r.error);
+        });
+        if (data) {
+            state.objects = Array.isArray(data.objects) ? data.objects : [];
+            state.counters = data.counters || { C: 0, P: 0, K: 0, U: 0, L: 0 };
+        }
+    } catch (_) {}
+}
+
+// ── Riktningslinje (sub-layer) ────────────────────────────────────────────
+// Streckad svart linje från symbolens center i obj.rotation grader (0=norr).
+// Längd ~50 px på skärmen — räknas om mot zoom via en fast meter-distans.
+function dirLineEndpoint(lat, lng, bearingDeg, meters) {
+    const R = 6378137;
+    const br = bearingDeg * Math.PI / 180;
+    const cosLat = Math.cos(lat * Math.PI / 180);
+    const dLat = (meters * Math.cos(br)) / R * 180 / Math.PI;
+    const dLng = (meters * Math.sin(br)) / (R * cosLat) * 180 / Math.PI;
+    return [lat + dLat, lng + dLng];
+}
+
+function addDirectionLine(obj) {
+    if (!obj.rotation && obj.rotation !== 0) return;
+    if (!window.SK_DIRECTIONAL_TYPES.has(obj.typ)) return;
+    // Använd ~100 m som referenslängd vid normal zoom — synligt vid z 13–16
+    const end = dirLineEndpoint(obj.lat, obj.lng, obj.rotation, 100);
+    const line = L.polyline([[obj.lat, obj.lng], end], {
+        color: '#000', weight: 2, dashArray: '6 4', opacity: 0.8, interactive: false
+    });
+    line.addTo(map);
+    state.layers[obj.id + '_dir'] = line;
+}
+
+// ── Rendering av enskilt objekt ───────────────────────────────────────────
+function renderObject(obj) {
+    const sym = window.SK_SYMBOLS[obj.typ];
+    if (!sym) return;
+    let layer;
+
+    if (sym.category === 'point') {
+        const icon = window.skMakeIcon(obj.typ, obj);
+        layer = L.marker([obj.lat, obj.lng], {
+            icon: icon, title: sym.label, draggable: true
+        });
+        layer.on('dragend', () => {
+            pushUndo();
+            const ll = layer.getLatLng();
+            obj.lat = ll.lat; obj.lng = ll.lng;
+            // Flytta dir-linjen om den finns
+            const dir = state.layers[obj.id + '_dir'];
+            if (dir) {
+                const end = dirLineEndpoint(obj.lat, obj.lng, obj.rotation || 0, 100);
+                dir.setLatLngs([[obj.lat, obj.lng], end]);
+            }
+        });
+        if (state.showLabels) {
+            const labelText = obj.numLabel || sym.label;
+            layer.bindTooltip(labelText, {
+                permanent: true, direction: 'bottom', offset: [0, 14],
+                className: 'sk-label', interactive: false
+            });
+        }
+        layer.addTo(map);
+        state.layers[obj.id] = layer;
+        addDirectionLine(obj);
+    } else if (sym.category === 'polygon') {
+        layer = L.polygon(obj.path.map(p => [p.lat, p.lng]), {
+            color: sym.stroke, weight: 2, fillColor: sym.fill,
+            fillOpacity: sym.fillOpacity || 0.08, dashArray: sym.dashArray || null
+        });
+        if (obj.antalText || obj.anteckning) {
+            const t = obj.antalText || sym.label;
+            layer.bindTooltip(t, {
+                permanent: true, direction: 'center', className: 'sk-label'
+            });
+        }
+        layer.addTo(map);
+        state.layers[obj.id] = layer;
+    }
+    if (!layer) return;
+
+    // Klick i pan-läge → öppna edit-popup
+    layer.on('click', e => {
+        if (activeTool) return;
+        if (L.DomEvent) L.DomEvent.stopPropagation(e);
+        openEditPopup(obj, layer, e);
+    });
+}
+
+function rebuildLayers() {
+    // Rensa allt utom basemap-tiles och jumpMarker
+    Object.keys(state.layers).forEach(k => {
+        try { map.removeLayer(state.layers[k]); } catch (_) {}
+        delete state.layers[k];
+    });
+    state.objects.forEach(renderObject);
+}
+
+function addObject(obj) {
+    pushUndo();
+    state.objects.push(obj);
+    renderObject(obj);
+}
+
+function removeObject(id) {
+    const idx = state.objects.findIndex(o => o.id === id);
+    if (idx < 0) return;
+    pushUndo();
+    state.objects.splice(idx, 1);
+    Object.keys(state.layers).forEach(k => {
+        if (k === id || k.startsWith(id + '_')) {
+            try { map.removeLayer(state.layers[k]); } catch (_) {}
+            delete state.layers[k];
+        }
+    });
+}
+
+// ── Edit-popup ────────────────────────────────────────────────────────────
+function openEditPopup(obj, layer, evt) {
+    const sym = window.SK_SYMBOLS[obj.typ];
+    if (!sym) return;
+    const isPolygon = sym.category === 'polygon';
+    const directional = !!sym.directional;
+
+    let html = '<div style="font:600 12px Inter,sans-serif;color:#0d1f0d;min-width:220px">';
+    html += '<div style="font-size:13px;margin-bottom:8px;color:#0d1f0d"><b>' + escapeHtml(sym.label) + '</b></div>';
+
+    if (sym.prefix) {
+        html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Etikett (auto)</label>';
+        html += '<input type="text" id="skfNum" value="' + escapeHtml(obj.numLabel || '') +
+            '" style="width:100%;padding:4px 6px;font:600 13px Inter,sans-serif;border:1px solid #888;border-radius:3px;margin-bottom:8px">';
+    }
+
+    if (directional) {
+        const rot = Number.isFinite(obj.rotation) ? obj.rotation : 0;
+        html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Riktning <span id="skfRotVal">' + rot + '°</span></label>';
+        html += '<input type="range" id="skfRot" min="0" max="359" value="' + rot +
+            '" style="width:100%;margin-bottom:8px">';
+    }
+
+    if (isPolygon) {
+        html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Antal &amp; typ</label>';
+        html += '<input type="text" id="skfAntal" value="' + escapeHtml(obj.antalText || '') +
+            '" placeholder="t.ex. 3 PIR + 1 KAMERA" style="width:100%;padding:4px 6px;font:400 12px Inter,sans-serif;border:1px solid #888;border-radius:3px;margin-bottom:8px">';
+    }
+
+    html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Anteckning</label>';
+    html += '<textarea id="skfNote" rows="2" placeholder="fri text" style="width:100%;padding:4px 6px;font:400 12px Inter,sans-serif;border:1px solid #888;border-radius:3px;margin-bottom:8px;resize:vertical">' +
+        escapeHtml(obj.anteckning || '') + '</textarea>';
+
+    html += '<div style="display:flex;gap:6px"><button id="skfSave" style="flex:1;padding:6px 8px;background:#4caf50;color:#fff;border:none;border-radius:3px;font:600 12px Inter,sans-serif;cursor:pointer">Spara</button>';
+    html += '<button id="skfDel" style="flex:0 0 auto;padding:6px 8px;background:#c62828;color:#fff;border:none;border-radius:3px;font:600 12px Inter,sans-serif;cursor:pointer">Ta bort</button></div>';
+    html += '</div>';
+
+    const popup = L.popup({ closeButton: true, autoClose: true })
+        .setLatLng(layer.getLatLng ? layer.getLatLng() : (evt && evt.latlng) || layer.getBounds().getCenter())
+        .setContent(html)
+        .openOn(map);
+
+    setTimeout(() => {
+        const rot = document.getElementById('skfRot');
+        const rotVal = document.getElementById('skfRotVal');
+        if (rot && rotVal) rot.addEventListener('input', () => rotVal.textContent = rot.value + '°');
+        const save = document.getElementById('skfSave');
+        if (save) save.addEventListener('click', () => {
+            pushUndo();
+            const numEl = document.getElementById('skfNum');
+            if (numEl) obj.numLabel = numEl.value.trim();
+            if (rot) obj.rotation = parseInt(rot.value, 10) || 0;
+            const ant = document.getElementById('skfAntal');
+            if (ant) obj.antalText = ant.value.trim();
+            const note = document.getElementById('skfNote');
+            if (note) obj.anteckning = note.value;
+            map.closePopup();
+            // Re-render hela objektet (ersätt icon med ev. ny numLabel/rotation)
+            const old = state.layers[obj.id];
+            if (old) try { map.removeLayer(old); } catch (_) {}
+            delete state.layers[obj.id];
+            const oldDir = state.layers[obj.id + '_dir'];
+            if (oldDir) try { map.removeLayer(oldDir); } catch (_) {}
+            delete state.layers[obj.id + '_dir'];
+            renderObject(obj);
+        });
+        const del = document.getElementById('skfDel');
+        if (del) del.addEventListener('click', () => {
+            map.closePopup();
+            removeObject(obj.id);
+        });
+    }, 0);
+}
+
+// ── Polygon-ritning (Sensorområde) ────────────────────────────────────────
+let polyDraft = null;     // { path: [{lat,lng}], markers: [L.marker], line: L.polyline }
+function polyDraftStart() {
+    polyDraft = { path: [], markers: [], line: L.polyline([], {
+        color: '#000', weight: 2, dashArray: '6 4'
+    }).addTo(map) };
+    toast('Klicka punkter, dubbelklicka för att stänga.', 2400);
+}
+function polyDraftAdd(latlng) {
+    if (!polyDraft) polyDraftStart();
+    polyDraft.path.push({ lat: latlng.lat, lng: latlng.lng });
+    const m = L.marker(latlng, {
+        icon: L.divIcon({ className: 'sk-poly-node',
+            html: '<div style="width:10px;height:10px;background:#4caf50;border:2px solid #fff;border-radius:50%;box-shadow:0 0 3px rgba(0,0,0,0.6)"></div>',
+            iconSize: [10, 10], iconAnchor: [5, 5]
+        }),
+        interactive: false
+    }).addTo(map);
+    polyDraft.markers.push(m);
+    polyDraft.line.setLatLngs(polyDraft.path.map(p => [p.lat, p.lng]));
+}
+function polyDraftFinish() {
+    if (!polyDraft || polyDraft.path.length < 3) {
+        if (polyDraft) polyDraftCancel();
+        return;
+    }
+    const obj = {
+        id: uid(), typ: 'sensoromrade',
+        path: polyDraft.path.slice(),
+        antalText: '', anteckning: ''
+    };
+    polyDraftCancel();
+    addObject(obj);
+    setActiveTool(null);
+    // Auto-öppna popup för antal-text-redigering
+    setTimeout(() => {
+        const layer = state.layers[obj.id];
+        if (layer) openEditPopup(obj, layer, null);
+    }, 50);
+}
+function polyDraftCancel() {
+    if (!polyDraft) return;
+    polyDraft.markers.forEach(m => { try { map.removeLayer(m); } catch (_) {} });
+    if (polyDraft.line) try { map.removeLayer(polyDraft.line); } catch (_) {}
+    polyDraft = null;
+}
+
 // ── Aktivt verktyg + paletten ─────────────────────────────────────────────
 let activeTool = null;
 
 function setActiveTool(id) {
+    // Avbryt pågående polygon-ritning vid byte
+    if (polyDraft && id !== 'sensoromrade') polyDraftCancel();
     activeTool = id;
     const sym = id ? window.SK_SYMBOLS[id] : null;
     const label = sym ? sym.label : 'Panorera / välj';
@@ -459,6 +809,116 @@ function setActiveTool(id) {
     });
     const mapEl = document.getElementById('mapContainer');
     if (mapEl) mapEl.style.cursor = id ? 'crosshair' : '';
+}
+
+// ── Kart-klick: placera punkt eller polygon-nod ─────────────────────────────
+function attachMapDrawHandlers() {
+    if (!map) return;
+    map.on('click', e => {
+        if (!activeTool) return;
+        const sym = window.SK_SYMBOLS[activeTool];
+        if (!sym) return;
+        if (sym.category === 'point') {
+            const obj = {
+                id: uid(), typ: activeTool,
+                lat: e.latlng.lat, lng: e.latlng.lng,
+                rotation: 0, anteckning: ''
+            };
+            // Auto-numrering för C/P/K/U/L
+            if (sym.prefix) {
+                state.counters[sym.prefix] = (state.counters[sym.prefix] || 0) + 1;
+                obj.numLabel = sym.prefix + state.counters[sym.prefix];
+            }
+            addObject(obj);
+            // Auto-öppna popup för redigering
+            const layer = state.layers[obj.id];
+            if (layer) setTimeout(() => openEditPopup(obj, layer, null), 50);
+        } else if (sym.category === 'polygon') {
+            polyDraftAdd(e.latlng);
+        }
+    });
+    map.on('dblclick', e => {
+        if (activeTool === 'sensoromrade' && polyDraft) {
+            L.DomEvent.stopPropagation(e);
+            L.DomEvent.preventDefault(e);
+            polyDraftFinish();
+        }
+    });
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && polyDraft) {
+            polyDraftCancel();
+            setActiveTool(null);
+        }
+    });
+}
+
+// ── Toolbar (Ångra / Gör om / Rensa allt) ──────────────────────────────────
+function attachPaletteToolbar() {
+    const body = document.getElementById('paletteBody');
+    if (!body) return;
+    const tb = document.createElement('div');
+    tb.className = 'palette-toolbar';
+
+    const undoBtn = document.createElement('button');
+    undoBtn.type = 'button';
+    undoBtn.className = 'btn btn-sm btn-ghost';
+    undoBtn.textContent = '↶ Ångra';
+    undoBtn.addEventListener('click', undoAction);
+    tb.appendChild(undoBtn);
+
+    const redoBtn = document.createElement('button');
+    redoBtn.type = 'button';
+    redoBtn.className = 'btn btn-sm btn-ghost';
+    redoBtn.textContent = '↷ Gör om';
+    redoBtn.addEventListener('click', redoAction);
+    tb.appendChild(redoBtn);
+
+    const clearBtn = document.createElement('button');
+    clearBtn.type = 'button';
+    clearBtn.className = 'btn btn-sm btn-ghost';
+    clearBtn.textContent = 'Rensa allt';
+    clearBtn.addEventListener('click', () => {
+        if (!state.objects.length) return toast('Skissen är redan tom.');
+        if (!confirm('Radera alla ' + state.objects.length + ' objekt?')) return;
+        if (!confirm('Säker? Alla sensorer och områden försvinner.')) return;
+        pushUndo();
+        state.objects = [];
+        state.counters = { C: 0, P: 0, K: 0, U: 0, L: 0 };
+        rebuildLayers();
+    });
+    tb.appendChild(clearBtn);
+
+    body.appendChild(tb);
+}
+
+// ── map-controls-rad (Namn-etiketter + Pan-läge) ───────────────────────────
+function renderMapControls() {
+    const host = document.getElementById('mapControls');
+    if (!host) return;
+    host.innerHTML = '';
+
+    const labelsLabel = document.createElement('label');
+    const labelsCb = document.createElement('input');
+    labelsCb.type = 'checkbox';
+    labelsCb.id = 'skToggleLabels';
+    labelsCb.checked = state.showLabels;
+    labelsCb.addEventListener('change', () => {
+        state.showLabels = labelsCb.checked;
+        saveLayerState();
+        rebuildLayers();
+    });
+    labelsLabel.appendChild(labelsCb);
+    labelsLabel.appendChild(document.createTextNode(' Namn-etiketter'));
+    host.appendChild(labelsLabel);
+
+    const panBtn = document.createElement('button');
+    panBtn.type = 'button';
+    panBtn.className = 'btn btn-sm btn-ghost';
+    panBtn.textContent = 'Panorera / välj';
+    panBtn.title = 'Panorera kartan; klicka en symbol för att redigera';
+    panBtn.style.marginLeft = 'auto';
+    panBtn.addEventListener('click', () => setActiveTool(null));
+    host.appendChild(panBtn);
 }
 
 function renderPalette() {
@@ -494,9 +954,14 @@ function renderPalette() {
     });
 }
 
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
     initMap();
+    await loadPersisted();
     renderPalette();
+    attachPaletteToolbar();
+    renderMapControls();
+    attachMapDrawHandlers();
+    rebuildLayers();
     document.getElementById('goBtn').addEventListener('click', () => {
         handleSearch(document.getElementById('mgrsSearch').value);
     });
