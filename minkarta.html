@@ -1155,6 +1155,35 @@ function addDragHandle(obj, layer) {
     state.layers[obj.id + '_h'] = handle;
 }
 
+// Geodesisk polygon-area (m²) med spherical-excess / shoelace-formel.
+// Samma formel som Leaflet.draw L.GeometryUtil.geodesicArea — vi har inte
+// den dependencen, men matten är 10 rader. WGS84 ekvatorradien räcker:
+// felmarginalen i polygoner < 10 km² i Sverige är < 0.3 %, vilket är
+// fullt OK för planering av minfält. Polygonen behöver inte vara sluten
+// (sista och första noden får vara olika), modulo-loopen sluter den.
+function polygonAreaM2(path) {
+    if (!path || path.length < 3) return 0;
+    const R = 6378137;
+    const d2r = Math.PI / 180;
+    let area = 0;
+    for (let i = 0; i < path.length; i++) {
+        const p1 = path[i];
+        const p2 = path[(i + 1) % path.length];
+        area += ((p2.lng - p1.lng) * d2r) *
+                (2 + Math.sin(p1.lat * d2r) + Math.sin(p2.lat * d2r));
+    }
+    return Math.abs(area * R * R / 2);
+}
+
+// Format för areal: m² upp till 9 999, sen ha upp till < 1 km², sen km².
+// Svensk lokalisering (komma som decimal, mellanslag som tusentalsavskiljare).
+function formatArea(m2) {
+    if (!Number.isFinite(m2) || m2 < 1) return '0 m²';
+    if (m2 < 10000) return Math.round(m2).toLocaleString('sv-SE') + ' m²';
+    if (m2 < 1000000) return (m2 / 10000).toFixed(2).replace('.', ',') + ' ha';
+    return (m2 / 1000000).toFixed(2).replace('.', ',') + ' km²';
+}
+
 // Midpunkt pa varje polygon-KANT (segment), sorterade efter langd. Standard-
 // formatet for svenska minomraden visar antalet pa kanten — typiskt fyra
 // gangar for en fyrhornings-polygon. Vid >4 noder valjs de 4 langsta
@@ -1366,6 +1395,12 @@ function openEditPopup(obj, layer, e) {
         html += '<input id="edModell" type="text" placeholder="Ex: 5" value="' + escAttr(obj.modell) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
         html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Plats</label>';
         html += '<input id="edPlats" type="text" placeholder="Ex: 2m öster om stora stenen" value="' + escAttr(obj.plats) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    }
+    // Areal — bara för minerat område (polygon med >= 3 noder). Read-only.
+    if (obj.typ === 'minomrade' && obj.path && obj.path.length >= 3) {
+        const areaText = formatArea(polygonAreaM2(obj.path));
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Areal</label>';
+        html += '<input type="text" value="' + escAttr(areaText) + '" readonly tabindex="-1" style="width:100%;padding:4px;background:#0a1a0a;color:#8aaa8a;border:1px solid #2d4a2d;cursor:default;font-family:inherit">';
     }
     // Verkansområde-specifika fält: räckvidd + öppningsvinkel.
     if (isVerkans) {
