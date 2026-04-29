@@ -740,6 +740,14 @@ function removeObject(id) {
 function openEditPopup(obj, layer, evt) {
     const sym = window.SK_SYMBOLS[obj.typ];
     if (!sym) return;
+    // Om en annan edit-dialog redan står öppen: spara den först (samma
+    // princip som kartklick utanför). Detta täcker fallet "klicka på
+    // symbol B medan A:s dialog är öppen" — A sparas, sen öppnas B.
+    if (_activeEditCommit) {
+        const prev = _activeEditCommit;
+        _activeEditCommit = null;
+        prev();
+    }
     const isPolygon = sym.category === 'polygon';
     const directional = !!sym.directional;
 
@@ -962,9 +970,12 @@ function attachMapDrawHandlers() {
         // Om en edit-popup är öppen: använd klicket som "Spara" och stäng,
         // placera INGEN ny symbol/nod. Symbolverktyget förblir aktivt.
         if (_activeEditCommit) {
-            const fn = _activeEditCommit;
-            _activeEditCommit = null;
-            fn();
+            // Rensa INTE flaggan i förväg — om Spara-handlern avbryter
+            // på validation står popupen kvar och nästa kartklick ska
+            // också försöka spara, inte placera en ny symbol/nod.
+            // popupclose-handlern (commitOnClose) nollar flaggan när
+            // popupen verkligen stängs.
+            _activeEditCommit();
             return;
         }
         if (!activeTool) return;
