@@ -352,6 +352,23 @@
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
         }
+
+        /* Hover-preview: när ett verktyg är aktivt och muspekaren är över
+           kartan visas en halvgenomskinlig version av symbolen några pixlar
+           ovanför pekaren. Bara desktop — touch-enheter saknar hover. */
+        .mk-hover-preview {
+            background: transparent !important;
+            border: none !important;
+            pointer-events: none;
+            opacity: 0.45;
+        }
+        .mk-hover-preview svg {
+            width: 34px; height: 34px; display: block;
+            filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff);
+        }
+        @media (hover: none) and (pointer: coarse) {
+            .mk-hover-preview { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -724,8 +741,56 @@ let activeTool = null;
 // utanför. Rensas på popupclose (Spara/Ta bort/Esc/X).
 let _activeEditCommit = null;
 
+// Hover-preview-marker: halvgenomskinlig version av aktivt verktyg som
+// följer muspekaren när den är över kartan. Visas bara på desktop (touch-
+// detektion sker via CSS @media-query — markern skapas alltid men göms).
+// Skapas lazy vid första mousemove med activeTool satt.
+let _hoverPreview = null;
+function showHoverPreview(latlng) {
+    if (!activeTool || !map) { hideHoverPreview(); return; }
+    const sym = window.MK_SYMBOLS && window.MK_SYMBOLS[activeTool];
+    if (!sym || !sym.svg) { hideHoverPreview(); return; }
+    if (!_hoverPreview) {
+        _hoverPreview = L.marker(latlng, {
+            icon: L.divIcon({
+                className: 'mk-hover-preview',
+                html: sym.svg,
+                iconSize: [40, 40],
+                // Anchor 8 px under ikonens nederkant → centrum hamnar
+                // ~28 px ovanför muspekaren.
+                iconAnchor: [20, 48]
+            }),
+            interactive: false,
+            keyboard: false
+        }).addTo(map);
+        _hoverPreview._toolId = activeTool;
+    } else {
+        // Verktyget kan ha bytts utan att hideHoverPreview hunnit köras
+        // (t.ex. via tangent-mappning) — bygg om ikonen om så.
+        if (_hoverPreview._toolId !== activeTool) {
+            _hoverPreview.setIcon(L.divIcon({
+                className: 'mk-hover-preview',
+                html: sym.svg,
+                iconSize: [40, 40],
+                iconAnchor: [20, 48]
+            }));
+            _hoverPreview._toolId = activeTool;
+        }
+        _hoverPreview.setLatLng(latlng);
+    }
+}
+function hideHoverPreview() {
+    if (_hoverPreview) {
+        try { map.removeLayer(_hoverPreview); } catch (_) {}
+        _hoverPreview = null;
+    }
+}
+
 function setActiveTool(id) {
     activeTool = id;
+    // Hover-preview är knuten till activeTool — bygg om vid nästa mousemove,
+    // gömm direkt om verktyget avaktiverats.
+    hideHoverPreview();
     const label = id ? (window.MK_SYMBOLS[id] ? window.MK_SYMBOLS[id].label : id) : 'Panorera / välj';
     document.getElementById('paletteActive').textContent = 'Verktyg: ' + label;
     document.querySelectorAll('.mk-tool').forEach(btn => {
@@ -2635,7 +2700,10 @@ document.addEventListener('DOMContentLoaded', () => {
         map.on('mousedown', onFrihandStart);
         map.on('mousemove', onFrihandMove);
         map.on('mouseup', onFrihandEnd);
-        map.getContainer().addEventListener('mouseleave', onFrihandEnd);
+        // Hover-preview följer pekaren när ett verktyg är aktivt; göms när
+        // pekaren lämnar kart-containern eller verktyget avaktiveras.
+        map.on('mousemove', e => { if (activeTool) showHoverPreview(e.latlng); });
+        map.getContainer().addEventListener('mouseleave', () => { hideHoverPreview(); onFrihandEnd(); });
         map.getContainer().addEventListener('touchstart', onFrihandTouchStart, { passive: false });
         map.getContainer().addEventListener('touchmove',  onFrihandTouchMove,  { passive: false });
         map.getContainer().addEventListener('touchend',   onFrihandEnd);
