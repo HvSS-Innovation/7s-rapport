@@ -163,6 +163,21 @@
         .sk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 0.82rem; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
         .sk-toast.show { opacity: 1; }
 
+        /* Export-popover (Ladda ner / Dela) */
+        .sk-share-popover {
+            position: fixed; left: 50%; bottom: 80px; transform: translateX(-50%);
+            background: var(--bg-secondary); border: 1px solid var(--accent);
+            border-radius: var(--radius); padding: 12px 14px;
+            box-shadow: 0 6px 16px rgba(0,0,0,0.7);
+            z-index: 10000; min-width: 260px; max-width: 92%;
+            display: flex; flex-direction: column; gap: 10px;
+            animation: skFadeIn 0.18s ease-out;
+        }
+        @keyframes skFadeIn { from { opacity: 0; transform: translateX(-50%) translateY(8px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+        .sk-share-popover-title { font-size: 0.82rem; color: var(--text-primary); text-align: center; font-weight: 600; }
+        .sk-share-popover-actions { display: flex; gap: 6px; }
+        .sk-share-popover-actions .btn { flex: 1; }
+
         /* Edit-popup fadear när användaren drar i en live-slider (idag bara
            rotation, men generisk klass för framtida sliders). */
         .sk-popup .leaflet-popup-content-wrapper,
@@ -1401,6 +1416,14 @@ function attachPaletteToolbar() {
     redoBtn.addEventListener('click', redoAction);
     tb.appendChild(redoBtn);
 
+    const exportBtn = document.createElement('button');
+    exportBtn.type = 'button';
+    exportBtn.className = 'btn btn-sm';
+    exportBtn.style.cssText = 'flex:2;background:var(--accent);color:#fff;border-color:var(--accent)';
+    exportBtn.textContent = 'Exportera PNG';
+    exportBtn.addEventListener('click', exportPng);
+    tb.appendChild(exportBtn);
+
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
     clearBtn.className = 'btn btn-sm btn-ghost';
@@ -1413,10 +1436,106 @@ function attachPaletteToolbar() {
         state.objects = [];
         state.counters = { C: 0, P: 0, K: 0, U: 0, L: 0 };
         rebuildLayers();
+        _lastExport = null;
     });
     tb.appendChild(clearBtn);
 
     body.appendChild(tb);
+}
+
+// ── PNG-export (fristående knapp i palette-toolbar) ────────────────────────
+// Cache av senaste render så "Ladda ner" och "Dela" kan återanvända samma
+// blob utan re-rendering. Nollas av Rensa allt och när popovern stängs hårt.
+let _lastExport = null;       // { blob, filename }
+let _popoverTimer = null;
+
+async function prepareExportBlob() {
+    if (!state.objects.length) { toast('Inget att exportera.'); return null; }
+    if (!window.SK_EXPORT) { toast('Export-modulen är inte laddad.'); return null; }
+    const forband = (document.getElementById('pForband')?.value || '').trim();
+    const subtitle = (forband ? forband + ' · ' : '') + 'Sensorskiss · ' + state.objects.length + ' objekt';
+    const res = await window.SK_EXPORT.renderExportAsync({
+        objects: state.objects,
+        title: 'SENSORSKISS',
+        subtitle,
+        dpr: 2
+    });
+    if (!res || !res.blob) throw new Error('Inget bilddata.');
+    let centerMgrs = '';
+    try {
+        const cLat = (res.bbox.minLat + res.bbox.maxLat) / 2;
+        const cLng = (res.bbox.minLng + res.bbox.maxLng) / 2;
+        centerMgrs = MGRS.forward(cLat, cLng);
+    } catch (_) {}
+    const filename = window.SK_EXPORT.exportFilename(centerMgrs);
+    _lastExport = { blob: res.blob, filename };
+    return _lastExport;
+}
+
+async function exportPng(e) {
+    const btn = e && e.currentTarget && e.currentTarget.tagName === 'BUTTON' ? e.currentTarget : null;
+    const originalLabel = btn && btn.textContent;
+    if (btn) { btn.disabled = true; btn.textContent = 'Renderar…'; }
+    try {
+        const prepared = await prepareExportBlob();
+        if (!prepared) return;
+        showExportPopover();
+    } catch (err) {
+        console.error(err);
+        toast('Fel vid export: ' + (err.message || 'okänt'), 3500);
+    } finally {
+        if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+    }
+}
+
+function showExportPopover() {
+    closeExportPopover();
+    const pop = document.createElement('div');
+    pop.className = 'sk-share-popover';
+    pop.id = 'skSharePopover';
+    pop.innerHTML = `
+        <div class="sk-share-popover-title">Skiss renderad (${_lastExport ? _lastExport.filename : '—'})</div>
+        <div class="sk-share-popover-actions">
+            <button type="button" class="btn btn-sm btn-accent" id="skDownloadBtn">Ladda ner PNG</button>
+            <button type="button" class="btn btn-sm btn-ghost" id="skShareBtn">Dela via app</button>
+        </div>
+    `;
+    document.body.appendChild(pop);
+
+    pop.querySelector('#skDownloadBtn').addEventListener('click', () => {
+        if (_lastExport) window.SK_EXPORT.downloadBlob(_lastExport.blob, _lastExport.filename);
+        toast('Sparad: ' + (_lastExport ? _lastExport.filename : ''), 2400);
+        closeExportPopover();
+    });
+    pop.querySelector('#skShareBtn').addEventListener('click', async () => {
+        if (!_lastExport) return;
+        const res = await window.SK_EXPORT.shareBlob(_lastExport.blob, _lastExport.filename, null);
+        if (res === 'shared') toast('Delad.', 2000);
+        else if (res === 'unsupported') {
+            toast('Delning stöds inte — filen laddades ner.', 3200);
+            window.SK_EXPORT.downloadBlob(_lastExport.blob, _lastExport.filename);
+        }
+        closeExportPopover();
+    });
+
+    // Stäng automatiskt efter 8 s
+    _popoverTimer = setTimeout(closeExportPopover, 8000);
+    // Stäng vid klick utanför
+    setTimeout(() => {
+        document.addEventListener('click', outsideExportClick, true);
+    }, 0);
+}
+
+function outsideExportClick(e) {
+    const pop = document.getElementById('skSharePopover');
+    if (pop && !pop.contains(e.target)) closeExportPopover();
+}
+
+function closeExportPopover() {
+    const pop = document.getElementById('skSharePopover');
+    if (pop) pop.remove();
+    if (_popoverTimer) { clearTimeout(_popoverTimer); _popoverTimer = null; }
+    document.removeEventListener('click', outsideExportClick, true);
 }
 
 // ── map-controls-rad (Namn-etiketter + Pan-läge) ───────────────────────────
