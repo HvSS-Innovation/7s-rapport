@@ -226,3 +226,15 @@ Samma som Fas 1, fast i sensorskiss.
 5. **Fas 4 i sensorskiss:** sensorskiss saknar `verkansomrade` med range/spread — är det rätt uppfattat? Eller finns det ett liknande fält jag har missat? (Snabbgrep visar `skfRot` men inte `skfRange`/`skfSpread`.)
 
 Säg "kör" + svar på frågorna ovan, så börjar jag med Fas 1.
+
+---
+
+## Återstår (efter alla faser)
+
+- **Göm mapping-dialogen på touch-enheter.** Badgarna döljs redan via
+  `@media (hover: none) and (pointer: coarse)`, men `dblclick` på palett-
+  knappen öppnar fortfarande mapping-dialogen även på mobil — vilket är
+  meningslöst utan tangentbord. Lägg till samma media-query-villkor i
+  `openShortcutDialog()` så funktionen blir no-op på touch-only-enheter
+  (eller åtminstone visar en toast: "Genvägar kräver tangentbord"). Gäller
+  både `minkarta.html` och `sensorskiss.html`.
