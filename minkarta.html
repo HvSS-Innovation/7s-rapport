@@ -1234,6 +1234,14 @@ function renderObject(obj) {
 }
 
 function openEditPopup(obj, layer, e) {
+    // Om en annan edit-dialog redan står öppen: spara den först (samma
+    // princip som kartklick utanför). Detta täcker fallet "klicka på
+    // symbol B medan A:s dialog är öppen" — A sparas, sen öppnas B.
+    if (_activeEditCommit) {
+        const prev = _activeEditCommit;
+        _activeEditCommit = null;
+        prev();
+    }
     const sym = window.MK_SYMBOLS[obj.typ];
     const isUpk = obj.typ === 'upk';
     const isText = obj.typ === 'text';
@@ -1766,9 +1774,12 @@ function handleMapClick(e) {
     // även i pan-läge (activeTool=null) så popupen alltid kan stängas
     // genom att klicka på kartan.
     if (_activeEditCommit) {
-        const fn = _activeEditCommit;
-        _activeEditCommit = null;
-        fn();
+        // Rensa INTE flaggan i förväg — om Spara-handlern avbryter på
+        // validation (t.ex. UPK-kollision) står popupen kvar och vi vill
+        // att nästa kartklick också ska försöka spara, inte placera en
+        // ny symbol. popupclose-handlern (commitOnClose) ansvarar för
+        // att nolla flaggan när popupen verkligen stängs.
+        _activeEditCommit();
         return;
     }
     if (!activeTool) return;
