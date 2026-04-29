@@ -206,6 +206,23 @@
             backdrop-filter: blur(4px);
             -webkit-backdrop-filter: blur(4px);
         }
+
+        /* Hover-preview: när ett verktyg är aktivt och muspekaren är över
+           kartan visas en halvgenomskinlig version av symbolen några pixlar
+           ovanför pekaren. Bara desktop — touch-enheter saknar hover. */
+        .sk-hover-preview {
+            background: transparent !important;
+            border: none !important;
+            pointer-events: none;
+            opacity: 0.45;
+        }
+        .sk-hover-preview svg {
+            width: 34px; height: 34px; display: block;
+            filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff);
+        }
+        @media (hover: none) and (pointer: coarse) {
+            .sk-hover-preview { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -985,10 +1002,51 @@ let activeTool = null;
 // utanför. Rensas på popupclose (Spara/Ta bort/Esc/X).
 let _activeEditCommit = null;
 
+// Hover-preview-marker: halvgenomskinlig version av aktivt verktyg som
+// följer muspekaren när den är över kartan. Visas bara på desktop (touch
+// döljs via CSS @media-query). Skapas lazy vid första mousemove.
+let _hoverPreview = null;
+function showHoverPreview(latlng) {
+    if (!activeTool || !map) { hideHoverPreview(); return; }
+    const sym = window.SK_SYMBOLS && window.SK_SYMBOLS[activeTool];
+    if (!sym || !sym.svg) { hideHoverPreview(); return; }
+    if (!_hoverPreview) {
+        _hoverPreview = L.marker(latlng, {
+            icon: L.divIcon({
+                className: 'sk-hover-preview',
+                html: sym.svg,
+                iconSize: [40, 40],
+                iconAnchor: [20, 48]  // ~28 px ovanför pekaren
+            }),
+            interactive: false,
+            keyboard: false
+        }).addTo(map);
+        _hoverPreview._toolId = activeTool;
+    } else {
+        if (_hoverPreview._toolId !== activeTool) {
+            _hoverPreview.setIcon(L.divIcon({
+                className: 'sk-hover-preview',
+                html: sym.svg,
+                iconSize: [40, 40],
+                iconAnchor: [20, 48]
+            }));
+            _hoverPreview._toolId = activeTool;
+        }
+        _hoverPreview.setLatLng(latlng);
+    }
+}
+function hideHoverPreview() {
+    if (_hoverPreview) {
+        try { map.removeLayer(_hoverPreview); } catch (_) {}
+        _hoverPreview = null;
+    }
+}
+
 function setActiveTool(id) {
     // Avbryt pågående polygon-ritning vid byte
     if (polyDraft && id !== 'sensoromrade') polyDraftCancel();
     activeTool = id;
+    hideHoverPreview();
     const sym = id ? window.SK_SYMBOLS[id] : null;
     const label = sym ? sym.label : 'Panorera / välj';
     const lbl = document.getElementById('paletteActive');
@@ -1003,6 +1061,10 @@ function setActiveTool(id) {
 // ── Kart-klick: placera punkt eller polygon-nod ─────────────────────────────
 function attachMapDrawHandlers() {
     if (!map) return;
+    // Hover-preview följer pekaren när ett verktyg är aktivt; göms när
+    // pekaren lämnar kart-containern eller verktyget avaktiveras.
+    map.on('mousemove', e => { if (activeTool) showHoverPreview(e.latlng); });
+    map.getContainer().addEventListener('mouseleave', hideHoverPreview);
     map.on('click', e => {
         // Om en edit-popup är öppen: använd klicket som "Spara" och stäng,
         // placera INGEN ny symbol/nod. Symbolverktyget förblir aktivt.
