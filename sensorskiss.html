@@ -766,16 +766,31 @@ function openEditPopup(obj, layer, evt) {
     html += '<button id="skfDel" style="flex:0 0 auto;padding:6px 8px;background:#c62828;color:#fff;border:none;border-radius:3px;font:600 12px Inter,sans-serif;cursor:pointer">Ta bort</button></div>';
     html += '</div>';
 
-    const popup = L.popup({ closeButton: true, autoClose: true })
+    // autoClose: false så att kartklick INTE stänger popupen via Leaflets
+    // interna logik — vi hanterar det själva via _activeEditCommit i
+    // map.click-handlern. Annars förlorar vi commit-callbacken i samma
+    // event-cykel.
+    const popup = L.popup({ className: 'sk-popup', closeButton: true, autoClose: false })
         .setLatLng(layer.getLatLng ? layer.getLatLng() : (evt && evt.latlng) || layer.getBounds().getCenter())
         .setContent(html)
         .openOn(map);
+
+    const commitOnClose = (ev) => {
+        if (ev.popup !== popup) return;
+        map.off('popupclose', commitOnClose);
+        if (_activeEditCommit && _activeEditCommit.popup === popup) _activeEditCommit = null;
+    };
+    map.on('popupclose', commitOnClose);
 
     setTimeout(() => {
         const rot = document.getElementById('skfRot');
         const rotVal = document.getElementById('skfRotVal');
         if (rot && rotVal) rot.addEventListener('input', () => rotVal.textContent = rot.value + '°');
         const save = document.getElementById('skfSave');
+        // Lagra referens på popup-objektet så map.click kan trigga Spara.
+        const commitFn = () => { if (save) save.click(); };
+        commitFn.popup = popup;
+        _activeEditCommit = commitFn;
         if (save) save.addEventListener('click', () => {
             pushUndo();
             const numEl = document.getElementById('skfNum');
@@ -853,6 +868,12 @@ function polyDraftCancel() {
 // ── Aktivt verktyg + paletten ─────────────────────────────────────────────
 let activeTool = null;
 
+// När en edit-popup är öppen läggs en commit-callback här. Nästa kartklick
+// kör den (= Spara) istället för att placera en ny symbol — så användaren
+// inte råkar dubbelplacera när hen försöker stänga dialogen genom att klicka
+// utanför. Rensas på popupclose (Spara/Ta bort/Esc/X).
+let _activeEditCommit = null;
+
 function setActiveTool(id) {
     // Avbryt pågående polygon-ritning vid byte
     if (polyDraft && id !== 'sensoromrade') polyDraftCancel();
@@ -872,6 +893,14 @@ function setActiveTool(id) {
 function attachMapDrawHandlers() {
     if (!map) return;
     map.on('click', e => {
+        // Om en edit-popup är öppen: använd klicket som "Spara" och stäng,
+        // placera INGEN ny symbol/nod. Symbolverktyget förblir aktivt.
+        if (_activeEditCommit) {
+            const fn = _activeEditCommit;
+            _activeEditCommit = null;
+            fn();
+            return;
+        }
         if (!activeTool) return;
         const sym = window.SK_SYMBOLS[activeTool];
         if (!sym) return;
