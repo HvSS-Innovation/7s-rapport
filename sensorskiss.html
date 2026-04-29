@@ -162,6 +162,13 @@
         /* Toast */
         .sk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 0.82rem; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
         .sk-toast.show { opacity: 1; }
+
+        /* Edit-popup fadear när användaren drar i riktnings-slidern, så
+           symbolens nya riktning syns på kartan bakom dialogen. */
+        .sk-popup .leaflet-popup-content-wrapper,
+        .sk-popup .leaflet-popup-tip { transition: opacity 0.18s; }
+        .sk-popup.is-rotating .leaflet-popup-content-wrapper,
+        .sk-popup.is-rotating .leaflet-popup-tip { opacity: 0.25; }
     </style>
 </head>
 <body>
@@ -785,13 +792,71 @@ function openEditPopup(obj, layer, evt) {
     setTimeout(() => {
         const rot = document.getElementById('skfRot');
         const rotVal = document.getElementById('skfRotVal');
-        if (rot && rotVal) rot.addEventListener('input', () => rotVal.textContent = rot.value + '°');
+
+        // Live-rotation: uppdatera dir-linjen på kartan medan användaren drar
+        // slidern, så hen ser riktningen ändras bakom den fadeade dialogen.
+        // Återställs till origRotation om popupen stängs utan Spara.
+        const origRotation = Number.isFinite(obj.rotation) ? obj.rotation : 0;
+        const hadDirLine = !!state.layers[obj.id + '_dir'];
+        let rotCommitted = false;
+        let fadeTimer = null;
+        const beginFade = () => {
+            if (popup._container) popup._container.classList.add('is-rotating');
+            clearTimeout(fadeTimer);
+            fadeTimer = setTimeout(endFade, 200);
+        };
+        const endFade = () => {
+            clearTimeout(fadeTimer);
+            fadeTimer = null;
+            if (popup._container) popup._container.classList.remove('is-rotating');
+        };
+        const liveRotate = (deg) => {
+            obj.rotation = deg;
+            const dir = state.layers[obj.id + '_dir'];
+            if (dir) {
+                const end = dirLineEndpoint(obj.lat, obj.lng, deg, 100);
+                dir.setLatLngs([[obj.lat, obj.lng], end]);
+            } else if (window.SK_DIRECTIONAL_TYPES && window.SK_DIRECTIONAL_TYPES.has(obj.typ)) {
+                addDirectionLine(obj);
+            }
+        };
+        if (rot && rotVal) {
+            rot.addEventListener('input', () => {
+                const v = parseInt(rot.value, 10) || 0;
+                rotVal.textContent = v + '°';
+                liveRotate(v);
+                beginFade();
+            });
+            rot.addEventListener('change', endFade);
+            rot.addEventListener('pointerup', endFade);
+            rot.addEventListener('touchend', endFade);
+        }
+
+        // Återställ rotation om popupen stängs utan Spara/Ta bort.
+        const restoreOnClose = (ev) => {
+            if (ev.popup !== popup) return;
+            map.off('popupclose', restoreOnClose);
+            if (rotCommitted) return;
+            if (obj.rotation === origRotation) return;
+            obj.rotation = origRotation;
+            const dir = state.layers[obj.id + '_dir'];
+            if (!hadDirLine && dir) {
+                try { map.removeLayer(dir); } catch (_) {}
+                delete state.layers[obj.id + '_dir'];
+            } else if (dir) {
+                const end = dirLineEndpoint(obj.lat, obj.lng, origRotation, 100);
+                dir.setLatLngs([[obj.lat, obj.lng], end]);
+            }
+        };
+        map.on('popupclose', restoreOnClose);
+
         const save = document.getElementById('skfSave');
         // Lagra referens på popup-objektet så map.click kan trigga Spara.
         const commitFn = () => { if (save) save.click(); };
         commitFn.popup = popup;
         _activeEditCommit = commitFn;
         if (save) save.addEventListener('click', () => {
+            rotCommitted = true;
             pushUndo();
             const numEl = document.getElementById('skfNum');
             if (numEl) obj.numLabel = numEl.value.trim();
@@ -812,6 +877,7 @@ function openEditPopup(obj, layer, evt) {
         });
         const del = document.getElementById('skfDel');
         if (del) del.addEventListener('click', () => {
+            rotCommitted = true;
             map.closePopup();
             removeObject(obj.id);
         });
