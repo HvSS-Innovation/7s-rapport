@@ -369,6 +369,85 @@
         @media (hover: none) and (pointer: coarse) {
             .mk-hover-preview { display: none; }
         }
+
+        /* Tangent-genväg-badge på palett-knapparna. Sitter i övre högra
+           hörnet, orange för att synas mot vita knappar och grön accent.
+           Göms på touch (ingen nytta utan tangentbord) — användaren kan
+           fortfarande dubbelklicka för att mappa men ser ingen badge.
+           Fullskärmsknappens badge använder samma klass. */
+        .mk-tool { position: relative; }
+        .mk-tool-shortcut {
+            position: absolute;
+            top: 2px;
+            right: 2px;
+            min-width: 16px;
+            padding: 2px 5px;
+            background: #e65100;
+            color: #fff;
+            font: 700 10px Inter, sans-serif;
+            line-height: 1;
+            border-radius: 9px;
+            text-align: center;
+            text-transform: uppercase;
+            pointer-events: none;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.4);
+        }
+        #mkFullBtn .mk-tool-shortcut {
+            position: static;
+            display: inline-block;
+            margin-left: 6px;
+            background: rgba(0, 0, 0, 0.4);
+            font-size: 0.72rem;
+        }
+        @media (hover: none) and (pointer: coarse) {
+            .mk-tool-shortcut { display: none; }
+        }
+
+        /* Mapping-dialog (modal): tar emot ett tangenttryck, visar ev.
+           konflikt med befintlig mappning, sparar vid Spara-klick. */
+        .mk-modal-overlay {
+            position: fixed; inset: 0; z-index: 10000;
+            background: rgba(0, 0, 0, 0.55);
+            display: flex; align-items: center; justify-content: center;
+            animation: mkFadeIn 0.15s ease-out;
+        }
+        .mk-modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--accent);
+            border-radius: var(--radius);
+            padding: 18px 20px;
+            min-width: 280px; max-width: 92%;
+            color: var(--text-primary);
+            box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+        }
+        .mk-modal-title {
+            font-size: 0.88rem; font-weight: 700; letter-spacing: 0.06em;
+            text-transform: uppercase; color: var(--accent);
+            margin-bottom: 10px; display: flex; align-items: center; gap: 8px;
+        }
+        .mk-modal-title svg { width: 24px; height: 24px; }
+        .mk-modal-prompt { font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 8px; }
+        .mk-modal-key {
+            display: inline-block; min-width: 40px; padding: 8px 14px;
+            background: var(--bg-input); border: 2px dashed var(--border-focus);
+            border-radius: var(--radius-sm);
+            font: 700 1.1rem 'Courier New', monospace;
+            color: var(--accent); text-align: center;
+            text-transform: uppercase;
+        }
+        .mk-modal-key.empty { color: var(--text-muted); border-style: dashed; }
+        .mk-modal-warn {
+            margin-top: 10px; padding: 8px 10px;
+            background: rgba(230, 81, 0, 0.15); border: 1px solid var(--warn);
+            border-radius: var(--radius-sm);
+            font-size: 0.78rem; color: var(--text-primary);
+        }
+        .mk-modal-current {
+            margin-top: 6px; font-size: 0.74rem; color: var(--text-muted);
+        }
+        .mk-modal-actions { display: flex; gap: 6px; margin-top: 14px; }
+        .mk-modal-actions button { flex: 1; }
+        .mk-modal-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -786,6 +865,141 @@ function hideHoverPreview() {
     }
 }
 
+// ── Tangent-genvägar (user-mappable) ────────────────────────────────────────
+// Användaren dubbelklickar på en palett-knapp (eller fullskärmsknappen) för
+// att öppna en dialog där hen trycker en tangent. Tangenten lagras i
+// localStorage som { "f": "__fullmap", "u": "upk", ... } och slås upp i
+// attachKeyboard. Modifier-tangenter (Shift/Ctrl/Alt/Meta) får varken tryckas
+// i dialogen eller vid trigger — de skulle krocka med systemets shortcuts.
+const SHORTCUTS_KEY = 'minkarta.shortcuts';
+const FULLMAP_PSEUDO = '__fullmap';
+const FULLMAP_LABEL = 'Fullskärm';
+let shortcutMap = (function() {
+    try {
+        const raw = localStorage.getItem(SHORTCUTS_KEY);
+        if (raw) return JSON.parse(raw) || {};
+    } catch (_) {}
+    return { f: FULLMAP_PSEUDO };  // default: F = fullskärm
+})();
+function saveShortcuts() {
+    try { localStorage.setItem(SHORTCUTS_KEY, JSON.stringify(shortcutMap)); } catch (_) {}
+}
+function shortcutForTool(toolId) {
+    return Object.keys(shortcutMap).find(k => shortcutMap[k] === toolId) || null;
+}
+function labelForTool(toolId) {
+    if (toolId === FULLMAP_PSEUDO) return FULLMAP_LABEL;
+    const sym = window.MK_SYMBOLS && window.MK_SYMBOLS[toolId];
+    return sym ? sym.label : toolId;
+}
+
+// Öppna mapping-dialog för en symbol (toolId = MK_SYMBOLS-id eller pseudo).
+// Stänger befintlig dialog om en sådan finns. Esc / Avbryt = ingen ändring.
+let _activeMappingDialog = null;
+function openShortcutDialog(toolId) {
+    if (_activeMappingDialog) _activeMappingDialog.close();
+
+    const overlay = document.createElement('div');
+    overlay.className = 'mk-modal-overlay';
+    const sym = (toolId === FULLMAP_PSEUDO) ? null : window.MK_SYMBOLS[toolId];
+    const titleSvg = sym && sym.svg ? sym.svg : '';
+    const titleLbl = labelForTool(toolId);
+    const currentKey = shortcutForTool(toolId);
+
+    overlay.innerHTML =
+        '<div class="mk-modal" role="dialog" aria-modal="true">' +
+            '<div class="mk-modal-title">' + titleSvg + '<span>' + titleLbl + '</span></div>' +
+            '<div class="mk-modal-prompt">Tryck en tangent. Modifier-tangenter (Shift/Ctrl/Alt) ignoreras.</div>' +
+            '<div style="text-align:center;margin:8px 0">' +
+                '<span class="mk-modal-key' + (currentKey ? '' : ' empty') + '" id="mkModalKey">' +
+                    (currentKey ? currentKey : '–') +
+                '</span>' +
+            '</div>' +
+            '<div class="mk-modal-current" id="mkModalCurrent">' +
+                (currentKey ? 'Aktuell genväg: ' + currentKey.toUpperCase() : 'Ingen genväg satt') +
+            '</div>' +
+            '<div class="mk-modal-warn" id="mkModalWarn" style="display:none"></div>' +
+            '<div class="mk-modal-actions">' +
+                '<button type="button" class="btn btn-sm btn-ghost" id="mkModalClear">Rensa</button>' +
+                '<button type="button" class="btn btn-sm btn-ghost" id="mkModalCancel">Avbryt</button>' +
+                '<button type="button" class="btn btn-sm btn-accent" id="mkModalSave" disabled>Spara</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+
+    const keyEl = overlay.querySelector('#mkModalKey');
+    const warnEl = overlay.querySelector('#mkModalWarn');
+    const saveBtn = overlay.querySelector('#mkModalSave');
+    const cancelBtn = overlay.querySelector('#mkModalCancel');
+    const clearBtn = overlay.querySelector('#mkModalClear');
+    let candidate = null;
+
+    const close = () => {
+        document.removeEventListener('keydown', onKey, true);
+        try { overlay.remove(); } catch (_) {}
+        _activeMappingDialog = null;
+    };
+    _activeMappingDialog = { close };
+
+    const onKey = (e) => {
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            close();
+            return;
+        }
+        // Bara enstaka glyph-tangenter, inga modifier
+        if (e.ctrlKey || e.metaKey || e.altKey || e.shiftKey) return;
+        if (!e.key || e.key.length !== 1) return;
+        e.preventDefault();
+        e.stopPropagation();
+        const k = e.key.toLowerCase();
+        candidate = k;
+        keyEl.textContent = k.toUpperCase();
+        keyEl.classList.remove('empty');
+        const owner = shortcutMap[k];
+        if (owner && owner !== toolId) {
+            warnEl.style.display = '';
+            warnEl.textContent = 'Tangenten "' + k.toUpperCase() + '" är upptagen av: ' +
+                labelForTool(owner) + '. Spara för att flytta över.';
+        } else {
+            warnEl.style.display = 'none';
+        }
+        saveBtn.disabled = false;
+    };
+    // capture-fasen så att vi fångar tangenten innan attachKeyboard hinner
+    document.addEventListener('keydown', onKey, true);
+
+    cancelBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    clearBtn.addEventListener('click', () => {
+        // Ta bort befintlig mappning för detta verktyg
+        const cur = shortcutForTool(toolId);
+        if (cur) {
+            delete shortcutMap[cur];
+            saveShortcuts();
+            renderPalette();
+            renderMapControls();
+        }
+        close();
+    });
+
+    saveBtn.addEventListener('click', () => {
+        if (!candidate) { close(); return; }
+        // Ta bort tidigare mappningar för detta verktyg och för tangenten
+        Object.keys(shortcutMap).forEach(k => {
+            if (shortcutMap[k] === toolId) delete shortcutMap[k];
+        });
+        delete shortcutMap[candidate];  // skriv över ev. annan ägare
+        shortcutMap[candidate] = toolId;
+        saveShortcuts();
+        renderPalette();
+        renderMapControls();
+        close();
+    });
+}
+
 function setActiveTool(id) {
     activeTool = id;
     // Hover-preview är knuten till activeTool — bygg om vid nästa mousemove,
@@ -847,9 +1061,27 @@ function renderPalette() {
             // Visa hela labeln (inkl. mjuka bindestreck) och låt CSS:en bryta
             // den vid behov — tidigare kapades vid första "," eller "(" vilket
             // gjorde "Förberedd förstöring, säkrad" oläsbar.
-            btn.innerHTML = sym.svg + '<span>' + sym.label + '</span>';
+            const shortcutKey = shortcutForTool(id);
+            const badgeHtml = shortcutKey
+                ? '<span class="mk-tool-shortcut" title="Tangentgenväg — dubbelklicka för att ändra">' + shortcutKey.toUpperCase() + '</span>'
+                : '';
+            btn.innerHTML = sym.svg + '<span>' + sym.label + '</span>' + badgeHtml;
+            // Single-click = aktivera verktyget. Dubbelklick = öppna mapping-
+            // dialog. För att de inte ska trampa varandra används en 220 ms
+            // debounce: enkelklick fördröjs och avbryts om dblclick hinner.
+            let clickTimer = null;
             btn.addEventListener('click', () => {
-                setActiveTool(activeTool === id ? null : id);
+                if (clickTimer) return;
+                clickTimer = setTimeout(() => {
+                    clickTimer = null;
+                    setActiveTool(activeTool === id ? null : id);
+                }, 220);
+            });
+            btn.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                if (clickTimer) { clearTimeout(clickTimer); clickTimer = null; }
+                openShortcutDialog(id);
             });
             grid.appendChild(btn);
         });
@@ -912,15 +1144,36 @@ function renderMapControls() {
     panBtn.addEventListener('click', () => setActiveTool(null));
     host.appendChild(panBtn);
 
-    // Fullskärmsknapp (F-tangent gör samma sak). Shift+klick kör även
-    // äkta requestFullscreen() så webbläsarens flikrad också gömmer sig.
+    // Fullskärmsknapp — tangent slås upp i shortcutMap (default F).
+    // Shift+klick kör även äkta requestFullscreen(). Dubbelklick öppnar
+    // mapping-dialog så användaren kan ommappa tangenten.
     const fullBtn = document.createElement('button');
     fullBtn.type = 'button';
     fullBtn.className = 'btn btn-sm btn-ghost';
     fullBtn.id = 'mkFullBtn';
-    fullBtn.textContent = '⛶ Maximera';
-    fullBtn.title = 'Maximera kartan i fönstret (F). Shift+klick = äkta fullskärm.';
-    fullBtn.addEventListener('click', (e) => toggleFullmap({ native: e.shiftKey }));
+    const fullKey = shortcutForTool(FULLMAP_PSEUDO);
+    const fullBadge = fullKey
+        ? '<span class="mk-tool-shortcut">' + fullKey.toUpperCase() + '</span>'
+        : '';
+    fullBtn.innerHTML = '⛶ Maximera' + fullBadge;
+    fullBtn.title = 'Maximera kartan i fönstret' +
+        (fullKey ? ' (' + fullKey.toUpperCase() + ')' : '') +
+        '. Shift+klick = äkta fullskärm. Dubbelklicka för att ändra tangent.';
+    let fullClickTimer = null;
+    fullBtn.addEventListener('click', (e) => {
+        if (fullClickTimer) return;
+        const useNative = e.shiftKey;
+        fullClickTimer = setTimeout(() => {
+            fullClickTimer = null;
+            toggleFullmap({ native: useNative });
+        }, 220);
+    });
+    fullBtn.addEventListener('dblclick', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (fullClickTimer) { clearTimeout(fullClickTimer); fullClickTimer = null; }
+        openShortcutDialog(FULLMAP_PSEUDO);
+    });
     host.appendChild(fullBtn);
 }
 
@@ -2350,14 +2603,25 @@ function attachKeyboard() {
             if (state.draft) cancelDraft();
             setActiveTool(null);
         }
-        // F (utan modifier) = toggle fullskärm. F11 undviks — den fångas
-        // av webbläsaren själv på ett sätt vi inte kan lita på.
-        if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
-            e.preventDefault();
-            toggleFullmap();
-        }
         if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
         if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'y' || (e.shiftKey && e.key.toLowerCase() === 'z'))) { e.preventDefault(); redoAction(); }
+        // Tangent-genvägar (user-mappable). Bara enstaka glyph-tangenter
+        // utan modifier. Mappningen finns i shortcutMap; FULLMAP_PSEUDO
+        // triggar fullskärm istället för verktyg. Toggle-beteende: tryck
+        // genvägen igen på aktivt verktyg → avaktiverar.
+        if (!e.ctrlKey && !e.metaKey && !e.altKey && !e.shiftKey &&
+            e.key && e.key.length === 1) {
+            const k = e.key.toLowerCase();
+            const target = shortcutMap[k];
+            if (target) {
+                e.preventDefault();
+                if (target === FULLMAP_PSEUDO) {
+                    toggleFullmap();
+                } else if (window.MK_SYMBOLS && window.MK_SYMBOLS[target]) {
+                    setActiveTool(activeTool === target ? null : target);
+                }
+            }
+        }
     });
     // Om webbläsaren stänger äkta fullscreen (ESC, exit-knapp i webbläsaren)
     // medan vi är i hybrid-läge → städa bort CSS-klassen så vi inte fastnar
