@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d1f0d">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="alternate icon" href="favicon.ico">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SENSORSKISS">
+    <title>SENSORSKISS – Sensoruppsättning &amp; beslutsstödsplan</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="fonts/inter.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
+    <style>
+        :root {
+            --bg-primary: #0d1f0d;
+            --bg-secondary: #152815;
+            --bg-card: #1a321a;
+            --bg-input: #0f240f;
+            --border: #2d4a2d;
+            --border-focus: #4a7c4a;
+            --text-primary: #e8f0e8;
+            --text-secondary: #8aaa8a;
+            --text-muted: #5a7a5a;
+            --accent: #4caf50;
+            --accent-hover: #66bb6a;
+            --accent-dim: #1e3d1e;
+            --danger: #c62828;
+            --danger-hover: #e53935;
+            --info: #1565c0;
+            --info-hover: #1976d2;
+            --warn: #e65100;
+            --radius: 8px;
+            --radius-sm: 4px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; padding: 16px; }
+        .container { max-width: 980px; margin: 0 auto; }
+
+        header { text-align: center; padding: 20px 0 16px; }
+        header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+        header p { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.06em; margin-top: 2px; }
+
+        .tab-nav { display: flex; gap: 4px; margin-bottom: 4px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-link { flex: 1; text-align: center; padding: 9px 2px; border-radius: var(--radius-sm); color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
+        .tab-link:hover { background: var(--bg-card); color: var(--text-secondary); }
+        .tab-link.active { background: var(--accent-dim); color: var(--accent); }
+        .tab-nav-sub { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
+
+        label { font-weight: 600; font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); }
+        input[type="text"] { width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 1rem; padding: 12px 14px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; }
+        input[type="text"]:focus { border-color: var(--border-focus); }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; border: none; border-radius: var(--radius); font-family: inherit; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
+        .btn:active { transform: scale(0.97); }
+        .btn-sm { min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; white-space: nowrap; flex-shrink: 0; }
+        .btn-accent { background: var(--accent); color: #fff; }
+        .btn-accent:hover { background: var(--accent-hover); }
+        .btn-ghost { background: var(--accent-dim); color: var(--accent); }
+        .btn-ghost:hover { background: var(--border-focus); color: #fff; }
+
+        .search-row { display: flex; gap: 8px; margin-bottom: 10px; }
+        .search-row input { flex: 1; min-width: 0; font-family: 'Courier New', monospace; letter-spacing: 0.04em; }
+
+        .map-wrap { position: relative; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        #mapContainer { width: 100%; height: 70vh; min-height: 420px; }
+        .map-spinner { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--bg-primary); z-index: 1000; transition: opacity 0.3s; }
+        .map-spinner.hidden { opacity: 0; pointer-events: none; }
+        .map-spinner::after { content: ''; width: 36px; height: 36px; border: 3px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: skspin 0.8s linear infinite; }
+        @keyframes skspin { to { transform: rotate(360deg); } }
+
+        .status-row { display: flex; align-items: center; gap: 10px; padding: 10px 14px; background: var(--bg-secondary); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--radius) var(--radius); font-size: 0.82rem; color: var(--text-secondary); font-family: 'Courier New', monospace; letter-spacing: 0.04em; }
+        .status-mgrs { flex: 1; color: var(--accent); font-weight: 700; }
+
+        details.about { margin-top: 20px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); }
+        details.about summary { padding: 12px 16px; font-size: 0.82rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); cursor: pointer; list-style: none; }
+        details.about summary::-webkit-details-marker { display: none; }
+        details.about summary::after { content: '▸'; float: right; color: var(--text-muted); transition: transform 0.15s; }
+        details.about[open] summary::after { transform: rotate(90deg); display: inline-block; }
+        details.about .about-body { padding: 0 16px 16px; font-size: 0.82rem; color: var(--text-secondary); line-height: 1.6; }
+        details.about .about-body b { color: var(--text-primary); }
+        details.about .about-body a { color: var(--accent); text-decoration: underline; }
+
+        @media (max-width: 600px) {
+            body { padding: 10px; }
+            .container { max-width: 100%; }
+            #mapContainer { height: 62vh; min-height: 360px; }
+        }
+
+        /* Symbolpalett (samma struktur som MINKARTA, prefixad .sk-* för isolering) */
+        .palette { margin-top: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
+        .palette-head { padding: 10px 14px; background: var(--bg-secondary); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--border); }
+        .palette-head-title { font-size: 0.78rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-secondary); }
+        .palette-active { font-size: 0.78rem; color: var(--accent); font-weight: 600; letter-spacing: 0.03em; }
+        .palette-body { padding: 10px 12px 14px; }
+        .palette-group { margin-top: 8px; }
+        .palette-group:first-child { margin-top: 0; }
+        .palette-group-title { font-size: 0.68rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; padding-left: 2px; }
+        .palette-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 6px; }
+        .sk-tool {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 64px; padding: 8px 6px; gap: 4px;
+            background: #ffffff; border: 1px solid var(--border); border-radius: var(--radius-sm);
+            color: #1a321a; font-family: inherit; font-size: 0.66rem; font-weight: 600;
+            letter-spacing: 0.02em; text-align: center; cursor: pointer; transition: border-color 0.12s, background 0.12s;
+            -webkit-tap-highlight-color: transparent;
+            overflow: hidden;
+        }
+        .sk-tool:hover { border-color: var(--accent); background: #f0f7f0; }
+        .sk-tool.is-active { border-color: var(--accent); background: #c8e6c9; color: #0d1f0d; }
+        .sk-tool svg { width: 28px; height: 28px; display: block; }
+        .sk-tool span {
+            line-height: 1.15; white-space: normal; word-break: normal;
+            overflow-wrap: break-word; hyphens: auto;
+        }
+
+        .palette-toolbar { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+        .palette-toolbar button { flex: 1; min-width: 90px; }
+
+        /* Leaflet-ikon (vit halo via drop-shadow). Samma teknik som MINKARTA. */
+        .sk-icon { background: transparent !important; border: none !important; }
+        .sk-icon svg {
+            width: 34px; height: 34px; display: block;
+            filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 1.5px rgba(0,0,0,0.45));
+        }
+
+        .leaflet-tooltip.sk-label {
+            font: 600 11px Inter, sans-serif;
+            background: rgba(13, 31, 13, 0.90);
+            color: #fff;
+            border: 1px solid var(--accent);
+            border-radius: 3px;
+            padding: 2px 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.7);
+            white-space: nowrap;
+            pointer-events: none;
+        }
+        .leaflet-tooltip.sk-label::before { display: none; }
+
+        /* Genvägsrad under kartan */
+        .map-controls {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            margin-top: 8px; padding: 8px 10px;
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+        }
+        .map-controls label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 0.78rem; color: var(--text-secondary);
+            cursor: pointer; letter-spacing: 0.02em; text-transform: none; font-weight: 500;
+        }
+        .map-controls input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
+
+        /* Toast */
+        .sk-toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--bg-secondary); color: var(--text-primary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 16px; font-size: 0.82rem; z-index: 9999; opacity: 0; transition: opacity 0.3s; pointer-events: none; max-width: 90%; text-align: center; }
+        .sk-toast.show { opacity: 1; }
+    </style>
+</head>
+<body>
+<div class="container">
+
+    <header><h1>SENSORSKISS <span style="color:var(--accent-hover);font-weight:500;letter-spacing:0.04em">(BETA)</span></h1><p>Sensoruppsättning &amp; beslutsstödsplan</p></header>
+
+    <nav class="tab-nav">
+        <a href="index.html" class="tab-link">7S</a>
+        <a href="what.html" class="tab-link">WHAT</a>
+        <a href="scrim.html" class="tab-link">SCRIM</a>
+        <a href="weft.html" class="tab-link">WEFT</a>
+        <a href="ah.html" class="tab-link">A–H</a>
+    </nav>
+    <nav class="tab-nav-sub">
+        <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+        <a href="fors.html" class="tab-link">FORS</a>
+        <a href="pedars.html" class="tab-link">PEDARS</a>
+        <a href="postschema.html" class="tab-link">SCHEMA</a>
+        <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+        <a href="obo.html" class="tab-link">OBO</a>
+        <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+        <a href="vader.html" class="tab-link">VÄDER</a>
+        <a href="minkarta.html" class="tab-link">MINKARTA</a>
+        <a href="sensorskiss.html" class="tab-link active">SENSORSKISS</a>
+    </nav>
+
+    <main>
+        <div class="search-row">
+            <input type="text" id="mgrsSearch" placeholder="MGRS / lat,lon — klistra in eller skriv" autocomplete="off">
+            <button class="btn btn-sm btn-accent" id="goBtn">Gå</button>
+        </div>
+
+        <div class="map-wrap">
+            <div id="mapContainer"><div class="map-spinner" id="mapSpinner"></div></div>
+            <div class="status-row">
+                <span class="status-mgrs" id="statusMgrs">—</span>
+                <span id="statusZoom" style="color:var(--text-muted)">z —</span>
+            </div>
+        </div>
+
+        <div class="map-controls" id="mapControls"></div>
+
+        <section class="palette" id="paletteRoot">
+            <div class="palette-head">
+                <span class="palette-head-title">Symbolpalett</span>
+                <span class="palette-active" id="paletteActive">Verktyg: pan</span>
+            </div>
+            <div class="palette-body" id="paletteBody"></div>
+        </section>
+
+        <details class="about" id="aboutPanel">
+            <summary>Om SENSORSKISS &amp; integritet</summary>
+            <div class="about-body">
+                <p><b>Syfte.</b> SENSORSKISS används för att rita upp och dokumentera
+                sensoruppsättning enligt Hemvärnets utbildning (Utbildningsanvisning
+                sensorer Hemvärn 2025). Tabben levererar symbolpalett, beslutsstödsplan
+                och sensorprotokoll-export.</p>
+                <p><b>Integritet.</b> Inga sensorpositioner, beslutsstödsplan-data eller
+                anteckningar skickas någonsin till någon server. De enda utgående
+                nätverksanrop som tabben gör är:</p>
+                <ul>
+                    <li>OpenTopoMap-tiles (kartbilder) för zoomnivå upp till 17 — skickar zoom, x- och y-index för de rutor som ritas på skärmen.</li>
+                    <li>OpenStreetMap Standard-tiles (<code>tile.openstreetmap.org</code>) för zoomnivå 18–19, eftersom OpenTopoMap inte har data där.</li>
+                </ul>
+                <p>All ritning, lagring och export sker lokalt i webbläsaren.
+                Export och delning är alltid användar-initierad.</p>
+            </div>
+        </details>
+    </main>
+</div>
+
+<script>
+// ── MGRS (kopierad från minkarta.html — inkl. band-justerad inverse) ─────────
+const MGRS = (() => {
+    const COL_LETTERS = ['ABCDEFGH','JKLMNPQR','STUVWXYZ','ABCDEFGH','JKLMNPQR','STUVWXYZ'];
+    const ROW_LETTERS = ['ABCDEFGHJKLMNPQRSTUV','FGHJKLMNPQRSTUVABCDE'];
+    function zoneLetter(lat) { return 'CDEFGHJKLMNPQRSTUVWX'[Math.floor((lat+80)/8)]||'?'; }
+    function zoneNumber(lat,lon) {
+        let z=Math.floor((lon+180)/6)+1;
+        if(lat>=56&&lat<64&&lon>=3&&lon<12)return 32;
+        if(lat>=72&&lat<84){if(lon>=0&&lon<9)return 31;if(lon>=9&&lon<21)return 33;if(lon>=21&&lon<33)return 35;if(lon>=33&&lon<42)return 37;}
+        return z;
+    }
+    function toUTM(lat,lon) {
+        const R=Math.PI/180,a=6378137,f=1/298.257223563,b=a*(1-f),e2=(a*a-b*b)/(a*a),ep2=e2/(1-e2),k0=0.9996;
+        const lr=lat*R,lo=lon*R,zn=zoneNumber(lat,lon),lo0=((zn-1)*6-180+3)*R;
+        const N=a/Math.sqrt(1-e2*Math.sin(lr)**2),T=Math.tan(lr)**2,C=ep2*Math.cos(lr)**2,A=Math.cos(lr)*(lo-lo0);
+        const M=a*((1-e2/4-3*e2**2/64-5*e2**3/256)*lr-(3*e2/8+3*e2**2/32+45*e2**3/1024)*Math.sin(2*lr)+(15*e2**2/256+45*e2**3/1024)*Math.sin(4*lr)-(35*e2**3/3072)*Math.sin(6*lr));
+        const E=k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T**2+72*C-58*ep2)*A**5/120)+500000;
+        let Ns=k0*(M+N*Math.tan(lr)*(A**2/2+(5-T+9*C+4*C**2)*A**4/24+(61-58*T+T**2+600*C-330*ep2)*A**6/720));
+        if(lat<0)Ns+=10000000;
+        return{E,N:Ns,zn,zl:zoneLetter(lat)};
+    }
+    function gridSquare(E,Ns,zn){const s=(zn-1)%6,col=Math.floor(E/100000)-1,row=Math.floor(Ns/100000)%20;return COL_LETTERS[s][col]+ROW_LETTERS[s%2][row];}
+    function forward(lat,lon){const utm=toUTM(lat,lon),sq=gridSquare(utm.E,utm.N,utm.zn),e=String(Math.floor(utm.E%100000)).padStart(5,'0'),n=String(Math.floor(utm.N%100000)).padStart(5,'0');return`${utm.zn}${utm.zl}${sq} ${e} ${n}`;}
+    function bandLatRange(band) {
+        var letters = 'CDEFGHJKLMNPQRSTUVWX';
+        var bi = letters.indexOf(band);
+        if (bi < 0) return null;
+        var minLat = bi * 8 - 80;
+        var maxLat = (band === 'X') ? 84 : minLat + 8;
+        return { minLat: minLat, maxLat: maxLat };
+    }
+    function inverse(mgrsStr) {
+        var s = mgrsStr.replace(/\s+/g, '');
+        var m = s.match(/^(\d{1,2})([C-X])([A-Z])([A-Z])(\d+)$/i);
+        if (!m) return null;
+        var zn = parseInt(m[1]);
+        var band = m[2].toUpperCase();
+        var col = m[3].toUpperCase();
+        var row = m[4].toUpperCase();
+        var nums = m[5];
+        if (nums.length === 0 || nums.length % 2 !== 0 || nums.length > 10) return null;
+        var half = nums.length / 2;
+        var easting = parseInt(nums.slice(0, half)) * Math.pow(10, 5 - half);
+        var rawNorthing = parseInt(nums.slice(half)) * Math.pow(10, 5 - half);
+
+        var e100k = 'ABCDEFGHJKLMNPQRSTUVWXYZ';
+        var n100k = 'ABCDEFGHJKLMNPQRSTUV';
+        var colIdx = e100k.indexOf(col);
+        if (colIdx < 0) return null;
+        var rowIdx = n100k.indexOf(row);
+        if (rowIdx < 0) return null;
+
+        var setNum = (zn - 1) % 6;
+        var baseCol = (setNum % 3) * 8;
+        var baseRow = (setNum % 2 === 0) ? 0 : 5;
+        easting += ((colIdx - baseCol + 24) % 24) * 1e5 + 1e5;
+        rawNorthing += ((rowIdx - baseRow + 20) % 20) * 1e5;
+
+        var range = bandLatRange(band);
+        if (!range) return null;
+        var southern = (band < 'N');
+
+        var a = 6378137, f = 1 / 298.257223563, e2 = 2 * f - f * f;
+        var ep2 = e2 / (1 - e2);
+        var lonOrigin = ((zn - 1) * 6 - 180 + 3) * Math.PI / 180;
+        var e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+
+        function computeLatLon(northingTotal) {
+            var M = (southern ? (northingTotal - 10000000) : northingTotal) / 0.9996;
+            var mu = M / (a * (1 - e2 / 4 - 3 * e2 * e2 / 64 - 5 * e2 * e2 * e2 / 256));
+            var lat1 = mu
+                + (3 * e1 / 2 - 27 * e1 * e1 * e1 / 32) * Math.sin(2 * mu)
+                + (21 * e1 * e1 / 16 - 55 * e1 * e1 * e1 * e1 / 32) * Math.sin(4 * mu)
+                + (151 * e1 * e1 * e1 / 96) * Math.sin(6 * mu);
+            var sin1 = Math.sin(lat1), cos1 = Math.cos(lat1), tan1 = Math.tan(lat1);
+            var N1 = a / Math.sqrt(1 - e2 * sin1 * sin1);
+            var T1 = tan1 * tan1;
+            var C1 = ep2 * cos1 * cos1;
+            var R1 = a * (1 - e2) / Math.pow(1 - e2 * sin1 * sin1, 1.5);
+            var D = (easting - 500000) / (N1 * 0.9996);
+            var lat2 = lat1 - (N1 * tan1 / R1) * (
+                D * D / 2
+                - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * ep2) * Math.pow(D, 4) / 24
+                + (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * ep2 - 3 * C1 * C1) * Math.pow(D, 6) / 720
+            );
+            var lon2 = lonOrigin + (
+                D
+                - (1 + 2 * T1 + C1) * Math.pow(D, 3) / 6
+                + (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * ep2 + 24 * T1 * T1) * Math.pow(D, 5) / 120
+            ) / cos1;
+            return [lat2 * 180 / Math.PI, lon2 * 180 / Math.PI];
+        }
+
+        var midLat = (range.minLat + range.maxLat) / 2;
+        var bestLL = null, bestDist = Infinity;
+        for (var N = 0; N <= 4; N++) {
+            var ll = computeLatLon(rawNorthing + N * 2000000);
+            var dist = Math.abs(ll[0] - midLat);
+            if (dist < bestDist) { bestDist = dist; bestLL = ll; }
+        }
+        return bestLL;
+    }
+    return { forward, inverse };
+})();
+window.SK_MGRS = MGRS;
+
+function extractCoord(text) {
+    const mgrs = text.match(/(\d{1,2})\s*([C-X])\s*([A-Z])\s*([A-Z])\s*(\d+(?:\s+\d+)?)/i);
+    if (mgrs) {
+        const nums = mgrs[5].replace(/\s+/g, '');
+        if (nums.length >= 2 && nums.length <= 10 && nums.length % 2 === 0) {
+            const half = nums.length / 2;
+            const east = nums.slice(0, half).padEnd(5, '0').slice(0, 5);
+            const north = nums.slice(half).padEnd(5, '0').slice(0, 5);
+            return { kind: 'mgrs', value: `${mgrs[1]}${mgrs[2].toUpperCase()}${mgrs[3].toUpperCase()}${mgrs[4].toUpperCase()} ${east} ${north}` };
+        }
+    }
+    const ll = text.match(/(-?\d{1,3}\.\d{2,})\s*[,/;\s]\s*(-?\d{1,3}\.\d{2,})/);
+    if (ll) {
+        const a = parseFloat(ll[1]), b = parseFloat(ll[2]);
+        const lat = Math.abs(a) <= 90 ? a : b;
+        const lon = Math.abs(a) <= 90 ? b : a;
+        if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            return { kind: 'latlon', lat, lon };
+        }
+    }
+    return null;
+}
+
+const STORAGE_KEY = 'sensorskiss.lastView';
+let map = null;
+let jumpMarker = null;
+
+const HybridTileLayer = L.TileLayer.extend({
+    getTileUrl: function (coords) {
+        if (coords.z <= 17) {
+            const s = ['a', 'b', 'c'][(coords.x + coords.y) % 3];
+            return 'https://' + s + '.tile.opentopomap.org/' + coords.z + '/' + coords.x + '/' + coords.y + '.png';
+        }
+        return 'https://tile.openstreetmap.org/' + coords.z + '/' + coords.x + '/' + coords.y + '.png';
+    }
+});
+
+function initMap() {
+    map = L.map('mapContainer', { zoomControl: true, worldCopyJump: true });
+    window.SK_MAP = map;
+    const tiles = new HybridTileLayer('', {
+        maxZoom: 19,
+        crossOrigin: 'anonymous',
+        attribution: '© OpenTopoMap (z ≤ 17, CC-BY-SA) / © OpenStreetMap (z ≥ 18, ODbL)'
+    }).addTo(map);
+    const spinner = document.getElementById('mapSpinner');
+    tiles.on('load', () => spinner.classList.add('hidden'));
+
+    let restored = false;
+    try {
+        const cached = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+        if (cached && typeof cached.lat === 'number' && typeof cached.lng === 'number') {
+            map.setView([cached.lat, cached.lng], cached.z || 13);
+            restored = true;
+        }
+    } catch (_) {}
+    if (!restored) map.setView([59.33, 18.07], 5);
+
+    map.on('moveend', () => {
+        const c = map.getCenter(), z = map.getZoom();
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ lat: c.lat, lng: c.lng, z })); } catch (_) {}
+        updateStatus();
+    });
+
+    updateStatus();
+}
+
+function updateStatus() {
+    if (!map) return;
+    const c = map.getCenter();
+    const z = map.getZoom();
+    const mgrs = safeMgrs(c.lat, c.lng);
+    document.getElementById('statusMgrs').textContent = mgrs || '—';
+    const layerLabel = z <= 17 ? 'OpenTopoMap' : 'OSM Standard';
+    document.getElementById('statusZoom').textContent = 'z ' + z + ' — ' + layerLabel;
+}
+
+function safeMgrs(lat, lng) {
+    try { return MGRS.forward(lat, lng); } catch (_) { return null; }
+}
+
+function jumpTo(lat, lng, zoom) {
+    if (!map) return;
+    map.setView([lat, lng], zoom || 15);
+    if (jumpMarker) jumpMarker.setLatLng([lat, lng]);
+    else jumpMarker = L.marker([lat, lng], { title: 'Sökt plats', opacity: 0.7 }).addTo(map);
+    updateStatus();
+}
+
+function handleSearch(text) {
+    const t = (text || '').trim();
+    if (!t) return;
+    const coord = extractCoord(t);
+    if (!coord) {
+        const input = document.getElementById('mgrsSearch');
+        input.style.outline = '2px solid var(--danger)';
+        setTimeout(() => input.style.outline = '', 900);
+        return;
+    }
+    if (coord.kind === 'mgrs') {
+        const ll = MGRS.inverse(coord.value);
+        if (ll) jumpTo(ll[0], ll[1], 15);
+    } else {
+        jumpTo(coord.lat, coord.lon, 15);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initMap();
+    document.getElementById('goBtn').addEventListener('click', () => {
+        handleSearch(document.getElementById('mgrsSearch').value);
+    });
+    document.getElementById('mgrsSearch').addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') handleSearch(e.target.value);
+    });
+});
+</script>
+</body>
+</html>
