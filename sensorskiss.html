@@ -169,6 +169,43 @@
         .sk-popup .leaflet-popup-tip { transition: opacity 0.18s; }
         .sk-popup.is-rotating .leaflet-popup-content-wrapper,
         .sk-popup.is-rotating .leaflet-popup-tip { opacity: 0.25; }
+
+        /* Fullskärm: kartan tar hela fönstret, allt övrigt UI göms.
+           Triggas av knapp i .map-controls eller tangenten F. ESC stänger.
+           Shift+klick på knappen kör även äkta requestFullscreen() så
+           webbläsarens flikrad också gömmer sig (hybrid-läge). */
+        body.is-fullmap { padding: 0; overflow: hidden; }
+        body.is-fullmap > .container { max-width: none; margin: 0; padding: 0; }
+        body.is-fullmap > .container > header,
+        body.is-fullmap > .container > .tab-nav,
+        body.is-fullmap > .container > .tab-nav-sub { display: none; }
+        body.is-fullmap > .container > main > .search-row,
+        body.is-fullmap > .container > main > .palette,
+        body.is-fullmap > .container > main > details.about { display: none; }
+        body.is-fullmap .map-wrap {
+            position: fixed; inset: 0; z-index: 9000;
+            border-radius: 0; border: none;
+        }
+        body.is-fullmap #mapContainer {
+            width: 100%;
+            height: 100vh; height: 100dvh;
+            min-height: 0;
+        }
+        body.is-fullmap .map-controls {
+            position: fixed; top: 8px; right: 8px;
+            margin: 0; z-index: 9100;
+            background: rgba(13, 31, 13, 0.85);
+            border-color: var(--accent);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
+        body.is-fullmap .status-row {
+            position: fixed; bottom: 0; left: 0; right: 0;
+            z-index: 9100; border-radius: 0; border: none;
+            background: rgba(13, 31, 13, 0.85);
+            backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
+        }
     </style>
 </head>
 <body>
@@ -1008,9 +1045,35 @@ function attachMapDrawHandlers() {
         }
     });
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && polyDraft) {
-            polyDraftCancel();
-            setActiveTool(null);
+        // Tangenttryck i textfält ska följa native-beteende.
+        const t = e.target;
+        if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
+        if (e.key === 'Escape') {
+            // I fullmap-läge: stäng det först. Tryck igen för att avbryta drafted.
+            if (document.body.classList.contains('is-fullmap')) {
+                toggleFullmap();
+                return;
+            }
+            if (polyDraft) {
+                polyDraftCancel();
+                setActiveTool(null);
+            }
+        }
+        // F (utan modifier) = toggle fullskärm. F11 undviks — den fångas
+        // av webbläsaren själv på ett sätt vi inte kan lita på.
+        if ((e.key === 'f' || e.key === 'F') && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            toggleFullmap();
+        }
+    });
+    // Om webbläsaren stänger äkta fullscreen (ESC, exit-knapp i webbläsaren)
+    // medan vi är i hybrid-läge → städa bort CSS-klassen.
+    document.addEventListener('fullscreenchange', () => {
+        if (!document.fullscreenElement && document.body.classList.contains('is-fullmap')) {
+            document.body.classList.remove('is-fullmap');
+            const btn = document.getElementById('skFullBtn');
+            if (btn) btn.textContent = '⛶ Maximera';
+            if (map) setTimeout(() => map.invalidateSize(), 50);
         }
     });
 }
@@ -1092,6 +1155,44 @@ function renderMapControls() {
         if (window.SK_TUTORIAL) window.SK_TUTORIAL.start('welcome');
     });
     host.appendChild(tutBtn);
+
+    // Fullskärmsknapp (F-tangent gör samma sak). Shift+klick kör även
+    // äkta requestFullscreen() så webbläsarens flikrad också gömmer sig.
+    const fullBtn = document.createElement('button');
+    fullBtn.type = 'button';
+    fullBtn.className = 'btn btn-sm btn-ghost';
+    fullBtn.id = 'skFullBtn';
+    fullBtn.textContent = '⛶ Maximera';
+    fullBtn.title = 'Maximera kartan i fönstret (F). Shift+klick = äkta fullskärm.';
+    fullBtn.addEventListener('click', (e) => toggleFullmap({ native: e.shiftKey }));
+    host.appendChild(fullBtn);
+}
+
+// Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()
+// (hybrid). Leaflet behöver invalidateSize() efter att containern bytt
+// storlek, annars syns bara en grå halvkarta.
+function toggleFullmap(opts) {
+    const turningOn = !document.body.classList.contains('is-fullmap');
+    document.body.classList.toggle('is-fullmap');
+
+    if (opts && opts.native) {
+        const wrap = document.querySelector('.map-wrap');
+        if (turningOn) {
+            if (wrap && wrap.requestFullscreen) {
+                wrap.requestFullscreen().catch(() => { /* tyst — CSS-läget räcker */ });
+            }
+        } else if (document.fullscreenElement && document.exitFullscreen) {
+            document.exitFullscreen().catch(() => {});
+        }
+    }
+
+    const btn = document.getElementById('skFullBtn');
+    if (btn) btn.textContent = turningOn ? '⛶ Återställ' : '⛶ Maximera';
+
+    if (map) {
+        setTimeout(() => map.invalidateSize(), 50);
+        setTimeout(() => map.invalidateSize(), 350);
+    }
 }
 
 function renderPalette() {
