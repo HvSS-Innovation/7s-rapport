@@ -16,6 +16,7 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha384-sHL9NAb7lN7rfvG5lfHpm643Xkcjzp4jFvuavGOndn6pjVqS6ny56CAt3nsEVT4H" crossorigin="anonymous" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha384-cxOPjt7s7Iz04uaHJceBmS+qpjv2JkIHNVcuOrM+YHwZOmJGBXI00mdUXEq65HTH" crossorigin="anonymous"></script>
     <script src="sensorskiss-symbols.js" defer></script>
+    <script src="sensorskiss-export.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -209,6 +210,60 @@
             </div>
             <div class="palette-body" id="paletteBody"></div>
         </section>
+
+        <!-- Beslutsstödsplan-panel (PDF s. 71 fig 48) -->
+        <details class="about" id="bspPanel">
+            <summary>Beslutsstödsplan</summary>
+            <div class="about-body">
+                <p style="margin-bottom:8px">Beslutstillfällen, händelser och handlingsalternativ enligt
+                Utbildningsanvisning sensorer Hemvärn 2025, fig 48.</p>
+                <div style="overflow-x:auto">
+                    <table id="bspTable" style="width:100%;border-collapse:collapse;font-size:0.78rem;color:var(--text-primary)">
+                        <thead>
+                            <tr style="text-align:left;color:var(--text-secondary)">
+                                <th style="padding:4px 6px;border-bottom:1px solid var(--border);width:38px">BT</th>
+                                <th style="padding:4px 6px;border-bottom:1px solid var(--border)">Händelse</th>
+                                <th style="padding:4px 6px;border-bottom:1px solid var(--border)">Handlingsalternativ</th>
+                                <th style="padding:4px 6px;border-bottom:1px solid var(--border)">Beslutstidpunkt</th>
+                                <th style="padding:4px 6px;border-bottom:1px solid var(--border)">Infobehov / indikator</th>
+                                <th style="padding:4px 6px;border-bottom:1px solid var(--border)">Inhämtning av</th>
+                                <th style="padding:4px 6px;border-bottom:1px solid var(--border);width:34px"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="bspBody"></tbody>
+                    </table>
+                </div>
+                <div style="margin-top:10px">
+                    <button type="button" class="btn btn-sm btn-ghost" id="bspAdd">+ Ny rad</button>
+                </div>
+            </div>
+        </details>
+
+        <!-- Sensorprotokoll-panel -->
+        <details class="about" id="protoPanel">
+            <summary>Sensorprotokoll</summary>
+            <div class="about-body">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <div>
+                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">Förband</label>
+                        <input type="text" id="pForband" placeholder="Ex: 2. HVPLUT" oninput="this.value=this.value.toUpperCase()" style="text-transform:uppercase">
+                    </div>
+                    <div>
+                        <label style="display:block;font-size:0.68rem;margin-bottom:4px">Chef</label>
+                        <input type="text" id="pChef" placeholder="Ex: FK SVENSSON" oninput="this.value=this.value.toUpperCase()" style="text-transform:uppercase">
+                    </div>
+                </div>
+                <label style="display:block;font-size:0.68rem;margin-top:8px;margin-bottom:4px">Anteckningar</label>
+                <textarea id="pNote" rows="2" placeholder="Fria anteckningar (t.ex. uppgift, område, normalbild)…"
+                    style="width:100%;padding:10px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem"></textarea>
+
+                <div style="display:flex;gap:6px;margin-top:10px">
+                    <button type="button" class="btn btn-sm btn-accent" id="pGen" style="flex:2">Generera sammanställning</button>
+                </div>
+                <pre id="pOut" style="display:none;margin-top:10px;padding:12px;background:var(--bg-input);border:1px solid var(--border);border-radius:var(--radius-sm);font-family:'Courier New',monospace;font-size:0.82rem;line-height:1.6;color:var(--text-primary);white-space:pre-wrap"></pre>
+                <button type="button" class="btn btn-sm btn-accent" id="pShare" style="display:none;width:100%;margin-top:6px">Dela protokoll</button>
+            </div>
+        </details>
 
         <details class="about" id="aboutPanel">
             <summary>Om SENSORSKISS &amp; integritet</summary>
@@ -954,6 +1009,237 @@ function renderPalette() {
     });
 }
 
+// ── Beslutsstödsplan ──────────────────────────────────────────────────────
+const BSP_KEY = 'sensorskiss.bsp';
+const BSP_FIELDS = ['bt', 'event', 'options', 'when', 'info', 'source'];
+const BSP_PLACEHOLDERS = {
+    bt: 'BT 1', event: 'Identifierad händelse', options: 'Alt 1: …\nAlt 2: …',
+    when: 'T+5 min', info: 'Vad behövs för beslut', source: 'Vem inhämtar'
+};
+
+function loadBsp() {
+    try {
+        const raw = localStorage.getItem(BSP_KEY);
+        if (!raw) return [];
+        const arr = JSON.parse(raw);
+        return Array.isArray(arr) ? arr : [];
+    } catch (_) { return []; }
+}
+function saveBsp(rows) {
+    try { localStorage.setItem(BSP_KEY, JSON.stringify(rows)); } catch (_) {}
+}
+let bspRows = loadBsp();
+
+function renderBsp() {
+    const body = document.getElementById('bspBody');
+    if (!body) return;
+    body.innerHTML = '';
+    if (!bspRows.length) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = '<td colspan="7" style="padding:8px 6px;color:var(--text-muted);font-style:italic">Inga rader ännu — tryck "+ Ny rad".</td>';
+        body.appendChild(tr);
+        return;
+    }
+    bspRows.forEach((row, idx) => {
+        const tr = document.createElement('tr');
+        tr.style.verticalAlign = 'top';
+        BSP_FIELDS.forEach(f => {
+            const td = document.createElement('td');
+            td.style.padding = '4px 6px';
+            td.style.borderBottom = '1px solid var(--border)';
+            const ta = document.createElement('textarea');
+            ta.rows = 2;
+            ta.placeholder = BSP_PLACEHOLDERS[f] || '';
+            ta.value = row[f] || '';
+            ta.style.cssText = 'width:100%;min-width:80px;padding:4px 6px;background:var(--bg-input);color:var(--text-primary);border:1px solid var(--border);border-radius:3px;font:400 0.78rem Inter,sans-serif;resize:vertical';
+            ta.addEventListener('input', () => {
+                bspRows[idx][f] = ta.value;
+                saveBsp(bspRows);
+            });
+            td.appendChild(ta);
+            tr.appendChild(td);
+        });
+        const tdDel = document.createElement('td');
+        tdDel.style.padding = '4px 6px';
+        tdDel.style.borderBottom = '1px solid var(--border)';
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.textContent = '×';
+        delBtn.title = 'Ta bort raden';
+        delBtn.style.cssText = 'background:var(--danger);color:#fff;border:none;border-radius:3px;width:24px;height:24px;font:700 14px Inter,sans-serif;cursor:pointer';
+        delBtn.addEventListener('click', () => {
+            if (!confirm('Ta bort BT-raden?')) return;
+            bspRows.splice(idx, 1);
+            saveBsp(bspRows);
+            renderBsp();
+        });
+        tdDel.appendChild(delBtn);
+        tr.appendChild(tdDel);
+        body.appendChild(tr);
+    });
+}
+
+function addBspRow() {
+    if (bspRows.length >= 50) {
+        toast('Max 50 rader. Ta bort innan du lägger till fler.', 2800);
+        return;
+    }
+    bspRows.push({ bt: 'BT ' + (bspRows.length + 1), event: '', options: '', when: '', info: '', source: '' });
+    saveBsp(bspRows);
+    renderBsp();
+}
+
+// ── Sensorprotokoll-text ──────────────────────────────────────────────────
+const SENSOR_GROUPS_PROTO = {
+    markbundna: ['cim', 'pir', 'kamera', 'umra'],
+    larmminor:  ['larmmina'],
+    luftburna:  ['rpas'],
+    poster:     ['enkelpost', 'dubbelpost', 'infart'],
+    omraden:    ['sensoromrade']
+};
+
+function zuluNow() {
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    return d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate()) +
+        ' ' + pad(d.getUTCHours()) + pad(d.getUTCMinutes()) + 'Z';
+}
+
+function generateProtocolText() {
+    const lines = [];
+    const forband = (document.getElementById('pForband').value || '').trim();
+    const chef = (document.getElementById('pChef').value || '').trim();
+    const note = (document.getElementById('pNote').value || '').trim();
+
+    lines.push('SENSORSKISS — ' + zuluNow());
+    if (forband) lines.push('Förband: ' + forband);
+    if (chef)    lines.push('Chef:    ' + chef);
+    lines.push('');
+
+    function mgrsOf(o) {
+        try { return MGRS.forward(o.lat, o.lng); } catch (_) { return ''; }
+    }
+    function rotStr(o) {
+        if (o.rotation == null || o.rotation === 0) return '';
+        return 'riktn ' + String(o.rotation).padStart(3, '0') + '°';
+    }
+    function pad(s, w) { return (String(s) + ' '.repeat(w)).slice(0, w); }
+
+    function listSensors(typs, title) {
+        const items = state.objects.filter(o => typs.includes(o.typ));
+        if (!items.length) return;
+        lines.push(title + ':');
+        items.sort((a, b) => (a.numLabel || '').localeCompare(b.numLabel || '', 'sv'));
+        for (const o of items) {
+            const lab = o.numLabel || (window.SK_SYMBOLS[o.typ] && window.SK_SYMBOLS[o.typ].label) || o.typ;
+            const m = mgrsOf(o);
+            const r = rotStr(o);
+            const note = o.anteckning ? '"' + o.anteckning.replace(/\n/g, ' ') + '"' : '';
+            lines.push('  ' + pad(lab, 4) + ' ' + pad(m, 19) + ' ' + pad(r, 13) + ' ' + note);
+        }
+        lines.push('');
+    }
+
+    listSensors(SENSOR_GROUPS_PROTO.markbundna, 'Markbundna sensorer');
+    listSensors(SENSOR_GROUPS_PROTO.larmminor,  'Larmminor');
+    listSensors(SENSOR_GROUPS_PROTO.luftburna,  'Luftburna sensorer');
+
+    // Poster — räkna per typ
+    const posterCount = {};
+    SENSOR_GROUPS_PROTO.poster.forEach(t => {
+        posterCount[t] = state.objects.filter(o => o.typ === t).length;
+    });
+    const posterAny = Object.values(posterCount).some(n => n > 0);
+    if (posterAny) {
+        lines.push('Poster:');
+        if (posterCount.enkelpost) lines.push('  ' + posterCount.enkelpost + ' enkelpost' + (posterCount.enkelpost > 1 ? 'er' : ''));
+        if (posterCount.dubbelpost) lines.push('  ' + posterCount.dubbelpost + ' dubbelpost' + (posterCount.dubbelpost > 1 ? 'er' : '') + ' / patrull');
+        if (posterCount.infart) lines.push('  ' + posterCount.infart + ' in/utfartspost' + (posterCount.infart > 1 ? 'er' : ''));
+        lines.push('');
+    }
+
+    // Sensorområden
+    const omr = state.objects.filter(o => o.typ === 'sensoromrade');
+    if (omr.length) {
+        lines.push('Sensorområden:');
+        omr.forEach((o, i) => {
+            const t = o.antalText || '(ingen specifikation)';
+            const note = o.anteckning ? ' — "' + o.anteckning.replace(/\n/g, ' ') + '"' : '';
+            lines.push('  Område ' + (i + 1) + ': ' + t + note);
+        });
+        lines.push('');
+    }
+
+    // Beslutsstödsplan-sammanfattning
+    const filledBsp = bspRows.filter(r => (r.event || r.options || r.info || '').trim());
+    if (filledBsp.length) {
+        lines.push('Beslutsstödsplan: ' + filledBsp.length + ' beslutstillfälle' + (filledBsp.length > 1 ? 'n' : '') + '.');
+        lines.push('');
+    }
+
+    if (note) {
+        lines.push('Anteckningar:');
+        lines.push(note);
+        lines.push('');
+    }
+
+    if (state.objects.length === 0) {
+        lines.push('(Inga sensorer placerade.)');
+    }
+
+    return lines.join('\n').trimEnd() + '\n';
+}
+
+async function shareProtocol() {
+    const txt = document.getElementById('pOut').textContent;
+    if (!txt) return;
+    if (!state.objects.length) {
+        // Bara text — inget att exportera som PNG
+        try { await navigator.clipboard.writeText(txt); toast('Text kopierad (ingen karta att bifoga).', 2400); }
+        catch (_) { toast('Kunde inte kopiera. Markera texten manuellt.', 3000); }
+        return;
+    }
+    const forband = (document.getElementById('pForband').value || '').trim();
+    let blobInfo;
+    try {
+        blobInfo = await window.SK_EXPORT.renderExportAsync({
+            objects: state.objects,
+            title: 'SENSORSKISS',
+            subtitle: (forband ? forband + ' · ' : '') + new Date().toLocaleString('sv-SE'),
+            dpr: 2
+        });
+    } catch (e) {
+        toast('Kunde inte rendera karta: ' + (e.message || 'okänt'), 3500);
+        return;
+    }
+    let centerMgrs = '';
+    try {
+        const c = blobInfo.bbox;
+        centerMgrs = MGRS.forward((c.minLat + c.maxLat) / 2, (c.minLng + c.maxLng) / 2);
+    } catch (_) {}
+    const filename = window.SK_EXPORT.exportFilename(centerMgrs);
+    const shareRes = await window.SK_EXPORT.shareBlob(blobInfo.blob, filename, txt);
+    if (shareRes === 'shared') { toast('Delad (text + karta).', 2200); return; }
+    // Fallback
+    try { await navigator.clipboard.writeText(txt); } catch (_) {}
+    window.SK_EXPORT.downloadBlob(blobInfo.blob, filename);
+    toast('Text kopierad. PNG nedladdad.', 3500);
+}
+
+function attachProtocolActions() {
+    document.getElementById('pGen').addEventListener('click', () => {
+        const out = document.getElementById('pOut');
+        out.textContent = generateProtocolText();
+        out.style.display = 'block';
+        document.getElementById('pShare').style.display = 'block';
+    });
+    document.getElementById('pShare').addEventListener('click', shareProtocol);
+}
+
+function attachBspActions() {
+    document.getElementById('bspAdd').addEventListener('click', addBspRow);
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     initMap();
     await loadPersisted();
@@ -962,6 +1248,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderMapControls();
     attachMapDrawHandlers();
     rebuildLayers();
+    renderBsp();
+    attachBspActions();
+    attachProtocolActions();
     document.getElementById('goBtn').addEventListener('click', () => {
         handleSearch(document.getElementById('mgrsSearch').value);
     });
