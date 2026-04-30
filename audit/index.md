@@ -12,6 +12,7 @@ Denna mapp innehåller statisk audit, OPSEC-rapport, roadmap och löpande sessio
 | [cot-fuzz.html](cot-fuzz.html) | Självständig regression-sida för CoT-XML-escape. 10 auto-test-fall + manuell paste-ruta. Verifierar både att DOMParser accepterar resultatet och att `<remarks>`-textnodens innehåll bevaras. Öppna direkt i browsern: `https://7srapport.com/audit/cot-fuzz.html`. |
 | [session-1.md](session-1.md) | Pass 1 (2026-04-30): passiva geolocation-prompts borttagna, no-referrer/notranslate meta, opsec.js form-sweep. |
 | [session-2.md](session-2.md) | Pass 2 (2026-04-30): CoT-XML-escape, opsec.html med Glöm enheten-knappen, footer-länk. |
+| [session-3.md](session-3.md) | Pass 3 (2026-04-30): CSP-pilot på opsec.html, format-detection, robust SW install, noscript-fallback, karttile-regression-fix (strict-origin), PWA-capable + manifest, refactor av escapeXml och parseTnrToISO. |
 
 ## Status — Sväng 1 (idag)
 
