@@ -4,6 +4,7 @@ const FILES = [
   './index.html',
   './manifest.json',
   './icon.svg',
+  './favicon.ico',
   './obslosa.html',
   './fors.html',
   './pedars.html',
@@ -39,7 +40,20 @@ const FILES = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES)));
+  // Tidigare addAll(FILES) — om EN fil saknas (404) avbryts hela installationen
+  // tyst. Här cachas filerna individuellt så installationen lyckas och saknade
+  // filer rapporteras i console för felsökning.
+  e.waitUntil((async () => {
+    const cache = await caches.open(CACHE);
+    const results = await Promise.allSettled(FILES.map(url => cache.add(url)));
+    const failed = results
+      .map((r, i) => ({ r, url: FILES[i] }))
+      .filter(x => x.r.status === 'rejected');
+    if (failed.length) {
+      console.warn('[SW] ' + failed.length + ' fil(er) kunde inte cachas:',
+        failed.map(x => x.url + ' (' + (x.r.reason && x.r.reason.message) + ')'));
+    }
+  })());
   self.skipWaiting();
 });
 
