@@ -14,6 +14,7 @@ Denna mapp innehåller statisk audit, OPSEC-rapport, roadmap och löpande sessio
 | [session-1.md](session-1.md) | Pass 1 (2026-04-30): passiva geolocation-prompts borttagna, no-referrer/notranslate meta, opsec.js form-sweep. |
 | [session-2.md](session-2.md) | Pass 2 (2026-04-30): CoT-XML-escape, opsec.html med Glöm enheten-knappen, footer-länk. |
 | [session-3.md](session-3.md) | Pass 3 (2026-04-30): CSP-pilot på opsec.html, format-detection, robust SW install, noscript-fallback, karttile-regression-fix (strict-origin), PWA-capable + manifest, refactor av escapeXml och parseTnrToISO. |
+| [session-4.md](session-4.md) | Pass 4 (2026-04-30): tnr-fuzz, JSON.parse-safety, SW-cache-regression-fix (403-tiles fastnade), select-stöd i opsec.js, aria-label på footer-länkar. |
 
 ## Status — Sväng 1 (idag)
 
