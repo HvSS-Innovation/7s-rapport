@@ -18,6 +18,28 @@ window.escapeXml = function (s) {
   });
 };
 
+// ── Global TNR → ISO-stämpel ────────────────────────────────────────────────
+// TNR är hemvärnets tids-format: DDHHMM (kort) eller DDHHMM[ ]MMM[YYYY] (lång).
+// Returnerar en UTC ISO-sträng. Tomt/'-'/ogiltigt input → nu (ISO).
+// Tidigare fanns fem identiska inline-kopior i CoT-sidorna; en sanning här.
+window.parseTnrToISO = function (tnr) {
+  if (!tnr || tnr === '-') return new Date().toISOString();
+  var now = new Date();
+  var dd = parseInt(tnr.slice(0, 2));
+  var hh = parseInt(tnr.slice(2, 4));
+  var mm = parseInt(tnr.slice(4, 6));
+  var year = now.getFullYear();
+  var month = now.getMonth();
+  if (tnr.length > 6) {
+    var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    var mi = months.indexOf(tnr.slice(7, 10).toUpperCase());
+    if (mi >= 0) month = mi;
+    if (tnr.length >= 14) year = parseInt(tnr.slice(10, 14));
+  }
+  var d = new Date(Date.UTC(year, month, dd, hh, mm, 0));
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+};
+
 (function () {
   'use strict';
 

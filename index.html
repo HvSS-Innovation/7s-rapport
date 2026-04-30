@@ -1207,22 +1207,6 @@ function generateReport() {
 }
 
 // ── CoT (Cursor on Target) Export ────────────────────────────────────────────
-function parseTnrToISO(tnr) {
-    if (!tnr || tnr === '-') return new Date().toISOString();
-    const now = new Date();
-    const dd = parseInt(tnr.slice(0,2)), hh = parseInt(tnr.slice(2,4)), mm = parseInt(tnr.slice(4,6));
-    let year = now.getFullYear(), month = now.getMonth();
-    if (tnr.length > 6) {
-        const monthStr = tnr.slice(7,10);
-        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-        const mi = months.indexOf(monthStr.toUpperCase());
-        if (mi >= 0) month = mi;
-        if (tnr.length >= 14) year = parseInt(tnr.slice(10,14));
-    }
-    const d = new Date(Date.UTC(year, month, dd, hh, mm, 0));
-    return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-}
-
 function slagToCoTType(slag) {
     if (!slag || slag === '-') return 'a-u-G';
     const s = slag.toLowerCase();
