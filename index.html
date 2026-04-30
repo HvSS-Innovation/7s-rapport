@@ -1237,6 +1237,7 @@ function mgrsToLatLon(mgrsStr) {
 
 function generateCoTXML() {
     const v = id => document.getElementById(id).value.trim();
+    const e = s => String(s ?? '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
     const stalle = v('stalle');
     const stund = v('stund');
     const slag = v('slag');
@@ -1264,7 +1265,7 @@ function generateCoTXML() {
   <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>
   <detail>
     <contact callsign="7S Rapport"/>
-    <remarks>7S RAPPORT — ${remarks || '-'}</remarks>
+    <remarks>7S RAPPORT — ${e(remarks) || '-'}</remarks>
   </detail>
 </event>`;
 }

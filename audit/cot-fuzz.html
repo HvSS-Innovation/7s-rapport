@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<meta name="google" content="notranslate">
+<title>CoT-XML fuzz / regression — 7S Rapport</title>
+<style>
+  body { background:#0d1f0d; color:#c8e6c9; font-family:ui-sans-serif,system-ui,sans-serif; padding:24px; max-width:960px; margin:0 auto; }
+  h1 { color:#4caf50; font-size:1.3rem; }
+  h2 { color:#a0c4a0; font-size:1rem; margin-top:32px; }
+  pre { background:#000; color:#c8e6c9; padding:12px; overflow-x:auto; font-family:ui-monospace,monospace; font-size:0.78rem; line-height:1.45; border:1px solid #2d4a2d; border-radius:6px; white-space:pre-wrap; word-break:break-all; }
+  .ok { color:#4caf50; }
+  .fail { color:#e53935; font-weight:600; }
+  .row { display:grid; grid-template-columns:max-content 1fr; gap:8px 16px; margin:8px 0; align-items:start; }
+  .row > b { color:#a0c4a0; font-weight:500; }
+  .case { border:1px solid #2d4a2d; border-radius:8px; padding:14px 16px; margin:12px 0; background:#152815; }
+  small { color:#5a7a5a; }
+  textarea { width:100%; min-height:90px; background:#000; color:#c8e6c9; border:1px solid #2d4a2d; border-radius:6px; padding:8px; font-family:ui-monospace,monospace; font-size:0.85rem; }
+  button { background:#4caf50; color:#0d1f0d; border:none; border-radius:6px; padding:10px 16px; font-weight:600; cursor:pointer; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<h1>CoT-XML fuzz &mdash; verifierar att <code>${e(remarks)}</code> är XML-korrekt</h1>
+
+<p><small>Den här sidan kör samma escape-helper som finns inline i <code>index/ah/scrim/what/weft.html</code>. Om någon test-rad nedan misslyckas <em>eller</em> om browserns inbyggda XML-parser inte godkänner den producerade strängen, så har en regression smugit sig in.</small></p>
+
+<h2>1. Auto-test-fall</h2>
+<div id="cases"></div>
+
+<h2>2. Manuell fuzz-input</h2>
+<p>Klistra in fientlig text och tryck. Resultatet ska parsa som ren XML och visa exakt samma payload som <code>&lt;remarks&gt;</code>-text — inga tag-ar inuti.</p>
+<textarea id="manual">&lt;/remarks&gt;&lt;evil src=javascript:1&gt;&lt;remarks&gt;</textarea>
+<button id="run">Generera CoT</button>
+<pre id="manualOut"></pre>
+
+<script>
+// Identisk med inline-versionen i alla fem CoT-sidor.
+const e = s => String(s ?? '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
+
+// Bygger en CoT i samma form som 7S/AH/SCRIM/WHAT/WEFT.
+function makeCoT(remarksRaw) {
+  const remarks = e(remarksRaw);
+  const lat = '59.330000', lon = '18.070000';
+  const time = '2026-04-30T12:00:00.000Z';
+  const stale = '2026-04-30T12:30:00.000Z';
+  const uid = '7S-TEST';
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="${uid}" type="a-h-G" how="h-e" time="${time}" start="${time}" stale="${stale}">
+  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>
+  <detail>
+    <contact callsign="7S Rapport"/>
+    <remarks>7S RAPPORT — ${remarks || '-'}</remarks>
+  </detail>
+</event>`;
+}
+
+// Kör browserns DOMParser och rapportera om resultatet är giltig XML samt att
+// ingen extra child-element har smugit sig in i <event>.
+function check(xml) {
+  const doc = new DOMParser().parseFromString(xml, 'application/xml');
+  const parseErr = doc.querySelector('parsererror');
+  if (parseErr) return { ok:false, why: 'DOMParser parsererror', dom:null };
+  const event = doc.querySelector('event');
+  if (!event) return { ok:false, why: 'event-noden saknas', dom:doc };
+  const detail = event.querySelector('detail');
+  if (!detail) return { ok:false, why: 'detail-noden saknas', dom:doc };
+  // Korrekt struktur: detail har exakt två children — contact och remarks.
+  const kids = [...detail.children].map(n => n.tagName);
+  const expected = ['contact','remarks'];
+  const ok = kids.length === expected.length && kids.every((k,i) => k === expected[i]);
+  return { ok, why: ok ? 'detail-struktur intakt' : `oväntade children i <detail>: ${kids.join(',')}`, dom:doc };
+}
+
+const CASES = [
+  { name: 'Tom remarks', input: '' },
+  { name: 'Vanlig text', input: 'Styrka: 4 personer; Slag: fotpatrull' },
+  { name: 'XML-meta-tecken', input: 'Test < > & " \' i fritext' },
+  { name: 'Försök bryta ut ur remarks', input: '</remarks><evil/>' },
+  { name: 'Försök bryta ut ur event', input: '</event><evil src="javascript:1"></evil>' },
+  { name: 'CDATA-injection', input: ']]><script>alert(1)</script>' },
+  { name: 'Långt skräp', input: 'A'.repeat(2000) + '</remarks>' },
+  { name: 'Unicode + emoji', input: 'Pos N59.33° Ö18.07° 🛰 Δ' },
+  { name: 'Återkommande pipes', input: '||| & & & < < <' },
+  { name: 'Citattecken-bomb', input: '"" \'\' <attr="x"> </attr>' },
+];
+
+const out = document.getElementById('cases');
+let allOk = true;
+CASES.forEach(c => {
+  const xml = makeCoT(c.input);
+  const r = check(xml);
+  if (!r.ok) allOk = false;
+  // Bonus-check: <remarks>-text-noden ska innehålla exakt input efter unescape
+  let textOk = false;
+  if (r.dom) {
+    const remarksText = r.dom.querySelector('remarks')?.textContent || '';
+    const expected = '7S RAPPORT — ' + (c.input || '-');
+    textOk = remarksText === expected;
+  }
+  const div = document.createElement('div');
+  div.className = 'case';
+  div.innerHTML =
+    '<div class="row"><b>Test</b><span>' + c.name + '</span></div>' +
+    '<div class="row"><b>Input</b><span>' + e(c.input) + '</span></div>' +
+    '<div class="row"><b>Resultat</b><span class="' + (r.ok && textOk ? 'ok' : 'fail') + '">' +
+      (r.ok ? '✓ XML giltig, ' : '✗ XML ogiltig: ' + r.why + ', ') +
+      (textOk ? '✓ remarks-text bevarad' : '✗ remarks-text avviker') +
+    '</span></div>' +
+    '<details><summary><small>Visa producerad XML</small></summary><pre>' + e(xml) + '</pre></details>';
+  out.appendChild(div);
+});
+
+const banner = document.createElement('div');
+banner.className = 'case';
+banner.innerHTML = '<b style="color:' + (allOk ? '#4caf50' : '#e53935') + '">' +
+  (allOk ? '✓ Alla auto-tester gick igenom — escape:n håller.' : '✗ Minst ett auto-test misslyckades. Se ovan.') + '</b>';
+out.prepend(banner);
+
+document.getElementById('run').addEventListener('click', () => {
+  const xml = makeCoT(document.getElementById('manual').value);
+  const r = check(xml);
+  document.getElementById('manualOut').textContent =
+    (r.ok ? '✓ Giltig XML.\n\n' : '✗ Ogiltig: ' + r.why + '\n\n') + xml;
+});
+</script>
+
+</body>
+</html>
