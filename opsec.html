@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+<meta name="referrer" content="no-referrer">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1f0d">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<title>OPSEC — Glöm allt på den här enheten</title>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root { --bg:#0d1f0d; --fg:#c8e6c9; --muted:#a0c4a0; --line:#2d4a2d; --accent:#4caf50; --warn:#e05050; --warn-bg:#3a1818; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:'Inter',ui-sans-serif,system-ui,sans-serif; margin:0; padding:24px 16px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .container { max-width:680px; margin:0 auto; }
+  h1 { color:var(--accent); font-size:1.4rem; font-weight:600; margin:0 0 8px; letter-spacing:-0.01em; }
+  h2 { color:var(--muted); font-size:0.95rem; font-weight:500; margin:28px 0 8px; text-transform:uppercase; letter-spacing:0.04em; }
+  p { margin:8px 0; color:var(--fg); }
+  small { color:var(--muted); font-size:0.82rem; }
+  a { color:var(--accent); }
+  .card { background:#152815; border:1px solid var(--line); border-radius:10px; padding:16px; margin:16px 0; }
+  .nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .nav a { padding:6px 12px; background:#152815; border:1px solid var(--line); border-radius:6px; text-decoration:none; font-size:0.82rem; }
+  .nav a:hover { border-color:var(--accent); }
+  pre { background:#000; color:var(--fg); padding:10px 12px; border:1px solid var(--line); border-radius:6px; font-family:ui-monospace,monospace; font-size:0.78rem; overflow-x:auto; white-space:pre-wrap; }
+  ul { margin:6px 0 6px 20px; padding:0; }
+  li { margin:2px 0; }
+  .danger {
+    display:block; width:100%; min-height:64px;
+    background:var(--warn-bg); color:#ffd1d1; border:2px solid var(--warn); border-radius:10px;
+    padding:18px 20px; font-size:1.05rem; font-weight:600; cursor:pointer; letter-spacing:0.01em;
+    transition:background 120ms, transform 60ms;
+    font-family:inherit;
+  }
+  .danger:hover:not(:disabled) { background:#4a1a1a; }
+  .danger:active:not(:disabled) { transform:translateY(1px); }
+  .danger:disabled { opacity:0.5; cursor:not-allowed; }
+  .step2 { background:#5a1a1a; border-color:#ff4444; color:#fff; }
+  .ok { color:var(--accent); }
+  .warn { color:#ff9800; }
+  .err { color:var(--warn); }
+  #log { max-height:240px; overflow-y:auto; }
+  .btn-secondary {
+    background:none; color:var(--muted); border:1px solid var(--line); border-radius:6px;
+    padding:10px 14px; font-size:0.9rem; cursor:pointer; font-family:inherit;
+  }
+  .btn-secondary:hover { border-color:var(--accent); color:var(--fg); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<nav class="nav">
+  <a href="./">← Tillbaka</a>
+  <a href="index.html">7S</a>
+  <a href="minkarta.html">Minkarta</a>
+  <a href="sensorskiss.html">Sensorskiss</a>
+</nav>
+
+<h1>Glöm allt på den här enheten</h1>
+<p><small>Rensar all lokal data som verktyget har lagrat: utkast, kart-cache, sensor-skisser, minkartor, inställningar, offline-app-cache och Service Worker. Efter detta är enheten ren — verktyget måste laddas ner igen vid uppkoppling för att fungera offline igen.</small></p>
+
+<div class="card">
+  <h2>Vad rensas</h2>
+  <ul>
+    <li><b>localStorage</b> — kartcache, TNR-format, sliders, formdata</li>
+    <li><b>sessionStorage</b> — tillfällig flik-data</li>
+    <li><b>IndexedDB</b> — minkarta- och sensorskiss-ritningar</li>
+    <li><b>Cache API</b> — Service Workerns offline-bundle (HTML, JS, fonter, ortnamn)</li>
+    <li><b>Service Worker</b> — avregistreras helt</li>
+  </ul>
+  <p><small><b>Rensas inte:</b> webbläsarens egna historik, cookies satta av andra sajter, kameraroll, eller filer du själv har laddat ner. Det måste du rensa via webbläsarens inställningar och OS:et.</small></p>
+</div>
+
+<div class="card">
+  <h2>Aktuell status</h2>
+  <pre id="status">räknar…</pre>
+</div>
+
+<div class="card">
+  <h2>Rensa</h2>
+  <button id="btn1" class="danger">🧹 Glöm allt på den här enheten</button>
+  <p><small>Två tryck krävs. Ingen ångra.</small></p>
+</div>
+
+<div class="card" id="logCard" style="display:none">
+  <h2>Logg</h2>
+  <pre id="log"></pre>
+</div>
+
+<script src="opsec.js"></script>
+<script>
+'use strict';
+
+const $ = id => document.getElementById(id);
+const log = (msg, cls) => {
+  $('logCard').style.display = 'block';
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  $('log').appendChild(line);
+  $('log').scrollTop = $('log').scrollHeight;
+};
+
+async function inventory() {
+  const ls = Object.keys(localStorage).length;
+  const ss = Object.keys(sessionStorage).length;
+  let dbs = [];
+  try {
+    if (indexedDB && indexedDB.databases) dbs = await indexedDB.databases();
+  } catch (_) {}
+  let caches_ = [];
+  try {
+    if (window.caches) caches_ = await caches.keys();
+  } catch (_) {}
+  let swCount = 0;
+  try {
+    if (navigator.serviceWorker) {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      swCount = regs.length;
+    }
+  } catch (_) {}
+  return {
+    localStorage: ls,
+    sessionStorage: ss,
+    indexedDB: dbs.map(d => d.name).filter(Boolean),
+    cacheStores: caches_,
+    serviceWorkers: swCount
+  };
+}
+
+async function refreshStatus() {
+  const inv = await inventory();
+  const lines = [
+    'localStorage:    ' + inv.localStorage + ' nycklar',
+    'sessionStorage:  ' + inv.sessionStorage + ' nycklar',
+    'IndexedDB:       ' + (inv.indexedDB.length ? inv.indexedDB.join(', ') : '(inga)'),
+    'Cache API:       ' + (inv.cacheStores.length ? inv.cacheStores.join(', ') : '(inga)'),
+    'Service Worker:  ' + inv.serviceWorkers
+  ];
+  $('status').textContent = lines.join('\n');
+  return inv;
+}
+
+async function nukeEverything() {
+  log('Börjar rensning…');
+
+  try {
+    const before = Object.keys(localStorage).length;
+    localStorage.clear();
+    log('✓ localStorage: ' + before + ' nycklar rensade', 'ok');
+  } catch (err) { log('✗ localStorage: ' + err.message, 'err'); }
+
+  try {
+    const before = Object.keys(sessionStorage).length;
+    sessionStorage.clear();
+    log('✓ sessionStorage: ' + before + ' nycklar rensade', 'ok');
+  } catch (err) { log('✗ sessionStorage: ' + err.message, 'err'); }
+
+  if (window.indexedDB) {
+    let names = [];
+    try {
+      if (indexedDB.databases) {
+        const dbs = await indexedDB.databases();
+        names = dbs.map(d => d.name).filter(Boolean);
+      }
+    } catch (_) {}
+    // Fallback: Safari stöder inte indexedDB.databases() — försök kända namn.
+    const known = ['minkarta', 'sensorskiss'];
+    const all = Array.from(new Set([...names, ...known]));
+    for (const name of all) {
+      await new Promise(r => {
+        const req = indexedDB.deleteDatabase(name);
+        req.onsuccess = () => { log('✓ IndexedDB raderad: ' + name, 'ok'); r(); };
+        req.onerror = () => { log('✗ IndexedDB fel för ' + name + ': ' + (req.error?.message || 'okänt'), 'err'); r(); };
+        req.onblocked = () => { log('⚠ IndexedDB blockad för ' + name + ' (annan flik håller den)', 'warn'); r(); };
+      });
+    }
+  }
+
+  if (window.caches) {
+    try {
+      const keys = await caches.keys();
+      for (const k of keys) {
+        try { await caches.delete(k); log('✓ Cache raderad: ' + k, 'ok'); }
+        catch (err) { log('✗ Cache fel för ' + k + ': ' + err.message, 'err'); }
+      }
+    } catch (err) { log('✗ Cache API: ' + err.message, 'err'); }
+  }
+
+  if (navigator.serviceWorker) {
+    try {
+      const regs = await navigator.serviceWorker.getRegistrations();
+      for (const r of regs) {
+        try {
+          await r.unregister();
+          log('✓ Service Worker avregistrerad: ' + (r.scope || '(scope ?)'), 'ok');
+        } catch (err) { log('✗ SW unregister: ' + err.message, 'err'); }
+      }
+    } catch (err) { log('✗ SW: ' + err.message, 'err'); }
+  }
+
+  log('Klart. Stäng fliken och starta webbläsaren igen för att vara säker.', 'ok');
+}
+
+let armed = false;
+const btn = $('btn1');
+btn.addEventListener('click', async () => {
+  if (!armed) {
+    armed = true;
+    btn.classList.add('step2');
+    btn.textContent = '⚠ Tryck igen för att RADERA — ingen ångra';
+    setTimeout(() => {
+      if (armed) {
+        armed = false;
+        btn.classList.remove('step2');
+        btn.textContent = '🧹 Glöm allt på den här enheten';
+      }
+    }, 6000);
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Rensar…';
+  await nukeEverything();
+  await refreshStatus();
+  btn.textContent = '✓ Klart';
+});
+
+refreshStatus();
+</script>
+
+</body>
+</html>

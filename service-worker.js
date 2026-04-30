@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260430_064735';
+const CACHE = 'hv-20260430_opsec2';
 const FILES = [
   './',
   './index.html',
@@ -29,6 +29,7 @@ const FILES = [
   './version.js',
   './pwa.js',
   './opsec.js',
+  './opsec.html',
   './ortnamn.json',
   './fonts/inter.css',
   './fonts/inter-400.woff2',
