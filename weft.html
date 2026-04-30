@@ -798,7 +798,6 @@ function weftToCoTType() {
 }
 function generateCoTXML() {
     const v = id => document.getElementById(id).value.trim();
-    const esc = s => String(s ?? '').replace(/[<>&"']/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&apos;'}[c]));
     const coords = (() => { try { return MGRS.inverse(v('stalle')); } catch(e) { return null; } })();
     const lat = coords ? coords[0].toFixed(6) : '0';
     const lon = coords ? coords[1].toFixed(6) : '0';
@@ -815,7 +814,7 @@ function generateCoTXML() {
         v('tail') ? `Tail: ${v('tail')}` : null,
         v('sagesman') ? `Sagesman: ${v('sagesman')}` : null,
     ].filter(Boolean).join('; ');
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="${uid}" type="${type}" how="h-e" time="${time}" start="${time}" stale="${stale}">\n  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>\n  <detail>\n    <contact callsign="WEFT Rapport"/>\n    <remarks>WEFT RAPPORT — ${esc(remarks) || '-'}</remarks>\n  </detail>\n</event>`;
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="${uid}" type="${type}" how="h-e" time="${time}" start="${time}" stale="${stale}">\n  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>\n  <detail>\n    <contact callsign="WEFT Rapport"/>\n    <remarks>WEFT RAPPORT — ${escapeXml(remarks) || '-'}</remarks>\n  </detail>\n</event>`;
 }
 function copyCoT() {
     const xml = generateCoTXML();

@@ -7,6 +7,17 @@
 //
 // Påverkar inte type=file/submit/button/checkbox/radio/range/color/hidden.
 
+// ── Global XML-escape ───────────────────────────────────────────────────────
+// Används av CoT-XML-genereringen i index/ah/scrim/what/weft. Tidigare fanns
+// fem identiska inline-kopior; konsoliderat hit för att ha en sanning. Sätts
+// synkront vid script-load så generateCoTXML() (kallad via knapp-klick efter
+// DOMContentLoaded) alltid har den tillgänglig.
+window.escapeXml = function (s) {
+  return String(s == null ? '' : s).replace(/[<>&"']/g, function (c) {
+    return { '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;', "'": '&apos;' }[c];
+  });
+};
+
 (function () {
   'use strict';
 
