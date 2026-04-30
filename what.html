@@ -636,7 +636,7 @@ function generateReport() {
     const v = id => document.getElementById(id).value.trim();
     savePlaceIfNew(v('stalle')); saveSagesmanIfNew(v('sagesman'));
     const lines = [
-        'WHAT RAPPORT (BETA)',
+        'WHAT RAPPORT',
         `Till: ${v('till') || '-'}`,
         `Från: ${v('fran') || '-'}`,
         '',
@@ -672,7 +672,7 @@ function generateCoTXML() {
         v('turret') ? `Turret: ${v('turret')}` : null,
         v('sagesman') ? `Sagesman: ${v('sagesman')}` : null,
     ].filter(Boolean).join('; ');
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="${uid}" type="a-h-G-E" how="h-e" time="${time}" start="${time}" stale="${stale}">\n  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>\n  <detail>\n    <contact callsign="WHAT Rapport"/>\n    <remarks>WHAT RAPPORT (BETA) — ${escapeXml(remarks) || '-'}</remarks>\n  </detail>\n</event>`;
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="${uid}" type="a-h-G-E" how="h-e" time="${time}" start="${time}" stale="${stale}">\n  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>\n  <detail>\n    <contact callsign="WHAT Rapport"/>\n    <remarks>WHAT RAPPORT — ${escapeXml(remarks) || '-'}</remarks>\n  </detail>\n</event>`;
 }
 function copyCoT() {
     const xml = generateCoTXML();
