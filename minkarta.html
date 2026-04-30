@@ -178,18 +178,24 @@
 
         /* Räckvidds-etikett på verkansområdets raka yttergränser. Sitter
            på halva räckvidden längs varje sida och roteras parallellt med
-           linjen (CSS-rotate). Vit halv-transparent platta + svart text. */
+           linjen. Solid vit (suddar streckade linjen där etiketten sitter).
+           Bas-fontstorlek motsvarar zoom 17; transform-scale uppdateras
+           dynamiskt vid zoom-events så storleken pa marken är konstant
+           (osynligt vid full utzoomning, vilket är önskat). */
         .mk-range-label { background: transparent !important; border: none !important; pointer-events: none; overflow: visible !important; }
         .mk-range-label span {
-            display: inline-block;
-            background: rgba(255, 255, 255, 0.85);
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            background: #fff;
             color: #000;
             padding: 1px 5px;
             border-radius: 2px;
-            font: 700 0.7rem Inter, sans-serif;
+            font: 700 11px Inter, sans-serif;
             line-height: 1.1;
             white-space: nowrap;
             transform-origin: center center;
+            /* transform sätts inline: translate(-50%,-50%) scale(zoomScale) rotate(rot) */
         }
 
         /* Fri-text-symbol: svart text med vit halo direkt på kartan. */
@@ -816,6 +822,12 @@ function initMap() {
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify({ lat: c.lat, lng: c.lng, z })); } catch (_) {}
         updateStatus();
     });
+
+    // Hall rackvidds-etikettens visuella storlek konstant pa marken: skala
+    // med 2^(zoom-17) sa fontstorleken motsvarar 11 px vid zoom 17 oavsett
+    // aktuell zoom. Maste lyssna pa bade 'zoom' (under animation) och
+    // 'zoomend' (sluttillstand).
+    map.on('zoom zoomend', updateRangeLabelScales);
 
     updateStatus();
 }
@@ -1635,15 +1647,35 @@ function verkansRangeLabelInfo(lat, lng, range, spread, rotation) {
     });
 }
 
+// Bas-fontstorlek för rackvidds-etiketten är 11 px vid zoom 17 (matchar
+// CSS). Vid andra zoomnivaer skalar vi via transform: scale, sa att
+// etikettens storlek pa marken är konstant — fullt utzomat blir den
+// osynligt liten, vilket är onskat (annars dominerar text en oversikt).
+const RANGE_LABEL_BASE_ZOOM = 17;
+function rangeLabelScale() {
+    if (!map) return 1;
+    return Math.pow(2, map.getZoom() - RANGE_LABEL_BASE_ZOOM);
+}
+function updateRangeLabelScales() {
+    const s = rangeLabelScale().toFixed(3);
+    document.querySelectorAll('.mk-range-label span').forEach(el => {
+        const rot = el.dataset.rot || '0';
+        el.style.transform = 'translate(-50%, -50%) scale(' + s + ') rotate(' + rot + 'deg)';
+    });
+}
+
 function addVerkansRangeMarkers(obj) {
     if (obj.typ !== 'verkansomrade') return;
     const range = obj.range || 200;
     const infos = verkansRangeLabelInfo(obj.lat, obj.lng, range, obj.spread, obj.rotation);
+    const scale = rangeLabelScale().toFixed(3);
     infos.forEach((info, i) => {
+        const rot = info.css.toFixed(0);
+        const t = 'translate(-50%, -50%) scale(' + scale + ') rotate(' + rot + 'deg)';
         const m = L.marker([info.lat, info.lng], {
             icon: L.divIcon({
                 className: 'mk-range-label',
-                html: '<span style="transform:rotate(' + info.css.toFixed(0) + 'deg)">' + range + ' m</span>',
+                html: '<span data-rot="' + rot + '" style="transform:' + t + '">' + range + ' m</span>',
                 iconSize: [60, 18],
                 iconAnchor: [30, 9]
             }),

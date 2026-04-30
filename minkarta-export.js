@@ -593,7 +593,10 @@
                 ctx.setLineDash([]);
                 // Rackvidds-etikett pa varje rak yttergrans, halva range,
                 // roterad parallellt med linjen och flippad sa texten alltid
-                // laser fran vanster till hoger.
+                // laser fran vanster till hoger. Solid vit bakgrund som
+                // suddar ut den streckade linjen dar etiketten sitter.
+                // Fontstorleken speglar UI:t: 11 px vid zoom 17, skalas med
+                // 2^(z-17) sa storleken pa marken är samma som pa skarmen.
                 {
                     const range = o.range || 200;
                     const halfSpread = (o.spread || 60) / 2;
@@ -601,7 +604,8 @@
                     const halfRange = range / 2;
                     const R = 6378137;
                     const cosLat = Math.cos(o.lat * Math.PI / 180);
-                    const fontPx = 14 * SYMBOL_SCALE;
+                    const zoomScale = Math.pow(2, z - 17);
+                    const fontPx = 11 * zoomScale * SYMBOL_SCALE;
                     const text = range + ' m';
                     [rotation - halfSpread, rotation + halfSpread].forEach(bearing => {
                         const br = bearing * Math.PI / 180;
@@ -616,11 +620,11 @@
                         ctx.rotate(css * Math.PI / 180);
                         ctx.font = '700 ' + fontPx + 'px Inter, sans-serif';
                         const textW = ctx.measureText(text).width;
-                        const padX = 5 * SYMBOL_SCALE;
-                        const padY = 3 * SYMBOL_SCALE;
+                        const padX = 5 * SYMBOL_SCALE * zoomScale;
+                        const padY = 3 * SYMBOL_SCALE * zoomScale;
                         const rectW = textW + padX * 2;
                         const rectH = fontPx + padY * 2;
-                        ctx.fillStyle = 'rgba(255,255,255,0.85)';
+                        ctx.fillStyle = '#ffffff';
                         ctx.fillRect(-rectW / 2, -rectH / 2, rectW, rectH);
                         ctx.fillStyle = '#000000';
                         ctx.textAlign = 'center';
