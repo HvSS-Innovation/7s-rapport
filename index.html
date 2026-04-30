@@ -1090,8 +1090,9 @@ function openMapModal() {
 
     setTimeout(() => {
         mapInstance.invalidateSize();
-        var cached = localStorage.getItem('mapLastPos');
-        if (cached) { cached = JSON.parse(cached); mapInstance.setView([cached.lat, cached.lng], cached.z || 13); }
+        var cached = null;
+        try { cached = JSON.parse(localStorage.getItem('mapLastPos') || 'null'); } catch (_) { cached = null; }
+        if (cached && typeof cached.lat === 'number' && typeof cached.lng === 'number') { mapInstance.setView([cached.lat, cached.lng], cached.z || 13); }
         else { mapInstance.setView([59.33, 18.07], 5); }
         // OPSEC: ingen passiv geolocation-prompt vid kartmodal-öppning.
         // Användaren har explicit gpsBtn (📍 MGRS) eller drar/klickar på kartan manuellt.
@@ -1472,7 +1473,7 @@ function resetForm() {
 }
 
 // ── Sparade platser & sagesman ───────────────────────────────────────────────
-const get = key => JSON.parse(localStorage.getItem(key) || '[]');
+const get = key => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { return []; } };
 const set = (key, val) => localStorage.setItem(key, JSON.stringify(val));
 
 function savePlaceIfNew(v) {

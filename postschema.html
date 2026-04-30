@@ -287,7 +287,7 @@ let specialFrontSet = new Set(); // specialsoldater som ska placeras FRAM istäl
 let schedulableSpecials = []; // fylls i genererSchema, används i renderSchema
 
 // ── Sagesman localStorage ────────────────────────────────────────────────────
-const lsGet = k => JSON.parse(localStorage.getItem(k) || '[]');
+const lsGet = k => { try { return JSON.parse(localStorage.getItem(k) || '[]'); } catch (_) { return []; } };
 const lsSet = (k, v) => localStorage.setItem(k, JSON.stringify(v));
 
 function saveSagesmanIfNew(val) {
