@@ -2,3 +2,14 @@ verktyg/obsidian/
 verktyg/m_blankett/
 verktyg/parmrobot/
 stab/
+
+# Lokala screenshots och tmp-bilder i repo-roten — hör inte till prod
+/Screenshot_*.png
+/[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9]*.png
+/*.tmp
+/*.bak
+
+# OS-skräp
+.DS_Store
+Thumbs.db
+desktop.ini

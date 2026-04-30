@@ -1,12 +1,16 @@
 {
   "name": "7S Rapport",
   "short_name": "7S",
-  "description": "Fältrapporteringsverktyg",
+  "description": "Fältrapporteringsverktyg för Hemvärnet",
+  "lang": "sv",
+  "dir": "ltr",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
+  "orientation": "portrait",
   "background_color": "#0d1f0d",
   "theme_color": "#0d1f0d",
+  "categories": ["productivity", "utilities"],
   "icons": [
     {
       "src": "icon.svg",
