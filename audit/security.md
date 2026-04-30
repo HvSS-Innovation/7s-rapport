@@ -106,7 +106,7 @@ Bekräftelsedialog krävs eftersom det också tar bort offline-cache (kräver å
 
 ## 8. Referer / URL-läckor
 
-❌ `Referrer-Policy` saknas — default `strict-origin-when-cross-origin` läcker `https://7srapport.com` till varje tredjepart. Sväng 1-fix: `<meta name="referrer" content="no-referrer">` i alla sidor.
+⚠️ Initial fix `<meta name="referrer" content="no-referrer">` bröt karttile-laddningen (OpenTopoMap blockerar/throttlar requests utan Referer enligt OSM-policy). Bytt till `<meta name="referrer" content="strict-origin">`: skickar bara `https://7srapport.com` (utan path) till cross-origin. Origin är ändå publikt via DNS/SNI; ingen ny läcka jämfört med no-referrer, men kartan får sin Referer och slutar throttlas. Path inom 7srapport.com läcker fortfarande inte.
 
 ✅ Inga `?param=`-querystrings för rapportdata sett.
 ✅ Inga rapportfält i URL hash.
