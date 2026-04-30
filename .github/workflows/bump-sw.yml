@@ -6,6 +6,19 @@ on:
     paths-ignore:
       - 'service-worker.js'
       - 'version.js'
+      - 'audit/**'
+      - 'verktyg/**'
+      - 'raw/**'
+      - 'stab/**'
+      - '**.md'
+      - '**.png'
+      - '**.jpg'
+      - '**.jpeg'
+      - '**.pdf'
+      - '.gitignore'
+      - 'LICENSE'
+      - 'CNAME'
+      - '.github/**'
 
 permissions:
   contents: write
