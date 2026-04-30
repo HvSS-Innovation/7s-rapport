@@ -85,6 +85,13 @@ const CASES = [
   { name: 'Unicode + emoji', input: 'Pos N59.33° Ö18.07° 🛰 Δ' },
   { name: 'Återkommande pipes', input: '||| & & & < < <' },
   { name: 'Citattecken-bomb', input: '"" \'\' <attr="x"> </attr>' },
+  // Edge-cases: non-string input. e() ska coerce:a till tom strang utan att kasta.
+  { name: 'null',             input: null },
+  { name: 'undefined',        input: undefined },
+  { name: 'Nummer (12345)',   input: 12345 },
+  { name: 'Boolean true',     input: true },
+  { name: 'Object',           input: { evil: '<x/>' } },
+  { name: 'Array',            input: ['<', '>', '&'] },
 ];
 
 const out = document.getElementById('cases');
@@ -97,7 +104,10 @@ CASES.forEach(c => {
   let textOk = false;
   if (r.dom) {
     const remarksText = r.dom.querySelector('remarks')?.textContent || '';
-    const expected = '7S RAPPORT — ' + (c.input || '-');
+    // null/undefined coerce:as till '' av e(); sedan `${remarks || '-'}` → '-'.
+    // Andra non-strings (number, boolean, object, array) String:ifieras.
+    const coerced = (c.input == null) ? '' : String(c.input);
+    const expected = '7S RAPPORT — ' + (coerced || '-');
     textOk = remarksText === expected;
   }
   const div = document.createElement('div');

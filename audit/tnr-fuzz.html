@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<title>TNR fuzz / regression — 7S Rapport</title>
+<style>
+  body { background:#0d1f0d; color:#c8e6c9; font-family:ui-sans-serif,system-ui,sans-serif; padding:24px; max-width:960px; margin:0 auto; line-height:1.5; }
+  h1 { color:#4caf50; font-size:1.3rem; }
+  h2 { color:#a0c4a0; font-size:1rem; margin-top:32px; }
+  pre { background:#000; color:#c8e6c9; padding:10px 12px; font-family:ui-monospace,monospace; font-size:0.78rem; border:1px solid #2d4a2d; border-radius:6px; white-space:pre-wrap; word-break:break-all; }
+  .ok { color:#4caf50; }
+  .fail { color:#e53935; font-weight:600; }
+  .warn { color:#ff9800; }
+  .row { display:grid; grid-template-columns:max-content 1fr; gap:6px 16px; margin:6px 0; align-items:start; }
+  .row > b { color:#a0c4a0; font-weight:500; }
+  .case { border:1px solid #2d4a2d; border-radius:8px; padding:12px 14px; margin:10px 0; background:#152815; }
+  small { color:#5a7a5a; }
+  textarea { width:100%; min-height:60px; background:#000; color:#c8e6c9; border:1px solid #2d4a2d; border-radius:6px; padding:8px; font-family:ui-monospace,monospace; font-size:0.85rem; }
+  input[type=text] { background:#000; color:#c8e6c9; border:1px solid #2d4a2d; border-radius:6px; padding:8px; font-family:ui-monospace,monospace; font-size:0.85rem; width:100%; }
+  button { background:#4caf50; color:#0d1f0d; border:none; border-radius:6px; padding:10px 16px; font-weight:600; cursor:pointer; margin-top:8px; }
+</style>
+</head>
+<body>
+
+<h1>TNR fuzz &mdash; verifierar att <code>parseTnrToISO()</code> ger korrekt UTC ISO-stämpel</h1>
+
+<p><small>Den här sidan kör samma logik som finns globalt i <a href="../opsec.js" style="color:#4caf50">opsec.js</a> (<code>window.parseTnrToISO</code>). Anropas i CoT-XML-genereringen i index/ah/scrim/what/weft och bygger event-tidsstämpeln. Auto-test-fall körs vid sidladdning. Manuell paste-ruta för fritt experimenterande.</small></p>
+
+<h2>1. Auto-test-fall</h2>
+<div id="cases"></div>
+
+<h2>2. Manuell input</h2>
+<input type="text" id="manual" placeholder="t.ex. 301200 APR 2026" value="301200 APR 2026">
+<button id="run">Tolka</button>
+<pre id="manualOut"></pre>
+
+<script>
+// Bit-identisk implementation som opsec.js. Halls fristaende sa fuzz:en
+// fungerar aven om opsec.js bryter — men logiken matchar prod 1:1.
+function parseTnrToISO(tnr) {
+  if (!tnr || tnr === '-') return new Date().toISOString();
+  var now = new Date();
+  var dd = parseInt(tnr.slice(0, 2));
+  var hh = parseInt(tnr.slice(2, 4));
+  var mm = parseInt(tnr.slice(4, 6));
+  var year = now.getFullYear();
+  var month = now.getMonth();
+  if (tnr.length > 6) {
+    var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+    var mi = months.indexOf(tnr.slice(7, 10).toUpperCase());
+    if (mi >= 0) month = mi;
+    if (tnr.length >= 14) year = parseInt(tnr.slice(10, 14));
+  }
+  var d = new Date(Date.UTC(year, month, dd, hh, mm, 0));
+  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
+}
+
+function nowIso() { return new Date().toISOString(); }
+function isFresh(iso) {
+  // En "nu"-fallback ska vara inom 5 sek från test-körningen.
+  return Math.abs(new Date(iso).getTime() - Date.now()) < 5000;
+}
+
+// CASES = [{name, input, expected | expected:'fresh' om fallback till nu, only:'true' om bara den ska köras}]
+var CASES = [
+  // Tom / fallback
+  { name: 'Tom strang',          input: '',                  expected: 'fresh' },
+  { name: 'Strecksvar',          input: '-',                 expected: 'fresh' },
+  { name: 'null',                input: null,                expected: 'fresh' },
+  { name: 'undefined',           input: undefined,           expected: 'fresh' },
+  // Komplett TNR
+  { name: 'Kort TNR (DDHHMM)',           input: '301200',                 expected: 'this-month-30T12:00' },
+  { name: 'Komplett TNR med ar',         input: '301200 APR 2026',        expected: '2026-04-30T12:00:00.000Z' },
+  { name: 'Komplett TNR utan ar',        input: '301200 APR',             expected: 'this-year-04-30T12:00:00.000Z' },
+  // Manads-prefixet okant → fallback till nuvarande manad
+  { name: 'Okand manad ABC',             input: '301200 ABC',             expected: 'this-month-30T12:00' },
+  { name: 'Stora bokstaver MAJ (sv)',    input: '301200 MAJ',             expected: 'this-month-30T12:00' }, // 'MAJ' finns inte i listan (vi anvander engelska MAY)
+  // Specifika datum
+  { name: 'Forsta sekund i year',        input: '010000 JAN 2026',        expected: '2026-01-01T00:00:00.000Z' },
+  { name: 'Sista minuten december',      input: '312359 DEC 2025',        expected: '2025-12-31T23:59:00.000Z' },
+  { name: 'Skottdag 2024',               input: '291002 FEB 2024',        expected: '2024-02-29T10:02:00.000Z' },
+  // Edge-case: ogiltig dag → JS Date wrappar (inte var bug, men dokumenterar beteendet)
+  { name: 'Februari dag 30 (ogiltigt)',  input: '301400 FEB 2025',        expected: '2025-03-02T14:00:00.000Z' },
+  // Trasig input
+  { name: 'Bara bokstaver',              input: 'ABCDEF',                 expected: 'fresh' }, // parseInt -> NaN -> Date NaN -> fallback
+  { name: 'Kortare an 6 tecken',         input: '12',                     expected: 'fresh' }, // parseInt funkar, men dd=12, hh/mm=NaN -> Date NaN -> fallback
+];
+
+function compare(actual, expected) {
+  if (expected === 'fresh') return isFresh(actual);
+  if (expected.indexOf('this-month') === 0) {
+    // expected: 'this-month-30T12:00' — bara verifiera dag/timme/min
+    var d = new Date(actual);
+    var rest = expected.replace('this-month-', '');
+    var parts = rest.split('T');
+    var day = parseInt(parts[0]);
+    var hm = parts[1].split(':');
+    return d.getUTCDate() === day &&
+           d.getUTCHours() === parseInt(hm[0]) &&
+           d.getUTCMinutes() === parseInt(hm[1]);
+  }
+  if (expected.indexOf('this-year-') === 0) {
+    // expected: 'this-year-04-30T12:00:00.000Z' — verifiera allt utom yr
+    var actualNoYr = actual.replace(/^\d{4}-/, '');
+    var expectedNoYr = expected.replace('this-year-', '');
+    return actualNoYr === expectedNoYr;
+  }
+  return actual === expected;
+}
+
+var out = document.getElementById('cases');
+var allOk = true;
+CASES.forEach(function (c) {
+  var actual = parseTnrToISO(c.input);
+  var ok = compare(actual, c.expected);
+  if (!ok) allOk = false;
+  var div = document.createElement('div');
+  div.className = 'case';
+  var inputDisplay = c.input === null ? '<i>null</i>' : c.input === undefined ? '<i>undefined</i>' : c.input === '' ? '<i>(tom)</i>' : c.input;
+  div.innerHTML =
+    '<div class="row"><b>Test</b><span>' + c.name + '</span></div>' +
+    '<div class="row"><b>Input</b><span>' + inputDisplay + '</span></div>' +
+    '<div class="row"><b>Forvantat</b><span>' + c.expected + '</span></div>' +
+    '<div class="row"><b>Faktiskt</b><span class="' + (ok ? 'ok' : 'fail') + '">' + actual + (ok ? ' &check;' : ' &cross;') + '</span></div>';
+  out.appendChild(div);
+});
+
+var banner = document.createElement('div');
+banner.className = 'case';
+banner.innerHTML = '<b style="color:' + (allOk ? '#4caf50' : '#e53935') + '">' +
+  (allOk ? '&check; Alla auto-tester gick igenom — parseTnrToISO haller.' :
+    '&cross; Minst ett auto-test misslyckades. Se ovan.') + '</b>';
+out.prepend(banner);
+
+document.getElementById('run').addEventListener('click', function () {
+  var input = document.getElementById('manual').value;
+  var iso = parseTnrToISO(input);
+  document.getElementById('manualOut').textContent =
+    'Input:    ' + JSON.stringify(input) + '\n' +
+    'Output:   ' + iso + '\n' +
+    'Lokal tid: ' + new Date(iso).toString();
+});
+</script>
+
+</body>
+</html>
