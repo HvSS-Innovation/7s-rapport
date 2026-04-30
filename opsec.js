@@ -56,6 +56,8 @@ window.parseTnrToISO = function (tnr) {
     }
 
     if (!el.hasAttribute('autocomplete')) el.setAttribute('autocomplete', 'off');
+    // spellcheck/autocorrect/autocapitalize gör inget på <select> men skadar inte;
+    // sätts ändå för konsistens.
     if (!el.hasAttribute('spellcheck')) el.setAttribute('spellcheck', 'false');
     if (!el.hasAttribute('autocorrect')) el.setAttribute('autocorrect', 'off');
     if (!el.hasAttribute('autocapitalize')) el.setAttribute('autocapitalize', 'off');
@@ -68,7 +70,7 @@ window.parseTnrToISO = function (tnr) {
   }
 
   function sweep(root) {
-    var nodes = (root || document).querySelectorAll('input,textarea');
+    var nodes = (root || document).querySelectorAll('input,textarea,select');
     for (var i = 0; i < nodes.length; i++) harden(nodes[i]);
   }
 
@@ -82,7 +84,7 @@ window.parseTnrToISO = function (tnr) {
         for (var j = 0; j < added.length; j++) {
           var n = added[j];
           if (n.nodeType !== 1) continue;
-          if (n.tagName === 'INPUT' || n.tagName === 'TEXTAREA') harden(n);
+          if (n.tagName === 'INPUT' || n.tagName === 'TEXTAREA' || n.tagName === 'SELECT') harden(n);
           else if (n.querySelectorAll) sweep(n);
         }
       }
