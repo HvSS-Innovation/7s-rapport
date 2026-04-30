@@ -753,7 +753,7 @@ function generateReport() {
     const v = id => document.getElementById(id).value.trim();
     savePlaceIfNew(v('stalle')); saveSagesmanIfNew(v('sagesman'));
     const lines = [
-        'WEFT RAPPORT',
+        'WEFT RAPPORT (BETA)',
         `Till: ${v('till') || '-'}`,
         `Från: ${v('fran') || '-'}`,
         '',
@@ -800,7 +800,7 @@ function generateCoTXML() {
         v('tail') ? `Tail: ${v('tail')}` : null,
         v('sagesman') ? `Sagesman: ${v('sagesman')}` : null,
     ].filter(Boolean).join('; ');
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="${uid}" type="${type}" how="h-e" time="${time}" start="${time}" stale="${stale}">\n  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>\n  <detail>\n    <contact callsign="WEFT Rapport"/>\n    <remarks>WEFT RAPPORT — ${escapeXml(remarks) || '-'}</remarks>\n  </detail>\n</event>`;
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="${uid}" type="${type}" how="h-e" time="${time}" start="${time}" stale="${stale}">\n  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>\n  <detail>\n    <contact callsign="WEFT Rapport"/>\n    <remarks>WEFT RAPPORT (BETA) — ${escapeXml(remarks) || '-'}</remarks>\n  </detail>\n</event>`;
 }
 function copyCoT() {
     const xml = generateCoTXML();

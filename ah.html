@@ -690,7 +690,7 @@ function generateReport() {
     const v = id => document.getElementById(id).value.trim();
     savePlaceIfNew(v('stalle')); saveSagesmanIfNew(v('sagesman'));
     const lines = [
-        'A-H RAPPORT',
+        'A-H RAPPORT (BETA)',
         `Till: ${v('till') || '-'}`,
         `Från: ${v('fran') || '-'}`,
         '',
@@ -734,7 +734,7 @@ function generateCoTXML() {
         v('hair') ? `Hair: ${v('hair')}` : null,
         v('sagesman') ? `Sagesman: ${v('sagesman')}` : null,
     ].filter(Boolean).join('; ');
-    return `<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="${uid}" type="a-h-G" how="h-e" time="${time}" start="${time}" stale="${stale}">\n  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>\n  <detail>\n    <contact callsign="A-H Rapport"/>\n    <remarks>A-H RAPPORT — ${escapeXml(remarks) || '-'}</remarks>\n  </detail>\n</event>`;
+    return `<?xml version="1.0" encoding="UTF-8"?>\n<event version="2.0" uid="${uid}" type="a-h-G" how="h-e" time="${time}" start="${time}" stale="${stale}">\n  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>\n  <detail>\n    <contact callsign="A-H Rapport"/>\n    <remarks>A-H RAPPORT (BETA) — ${escapeXml(remarks) || '-'}</remarks>\n  </detail>\n</event>`;
 }
 function copyCoT() {
     const xml = generateCoTXML();
