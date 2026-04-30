@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260430_082022';
+const CACHE = 'hv-20260430_tile_403_fix';
 const FILES = [
   './',
   './index.html',
@@ -64,23 +64,33 @@ self.addEventListener('activate', e => {
   self.clients.claim();
 });
 
+// Cache:a ENDAST framgångsrika svar. Tidigare cachades 403/500/etc som
+// permanenta tile-bilder — t.ex. OSMs "Access blocked"-felmeddelande som
+// tile-image fastnade i evighet om en request gjordes utan korrekt Referer.
+// resp.ok täcker 200-299. Opaque cross-origin svar har resp.ok=false så de
+// hamnar i browser:ns standard HTTP-cache istället, vilket är önskvärt.
+function safePut(request, resp) {
+  if (resp && resp.ok) {
+    const clone = resp.clone();
+    caches.open(CACHE).then(c => c.put(request, clone));
+  }
+}
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
   // Network-first för HTML och JS (alltid senaste version online, cache som fallback)
   if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.js')) {
     e.respondWith(
       fetch(e.request).then(resp => {
-        const clone = resp.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        safePut(e.request, resp);
         return resp;
       }).catch(() => caches.match(e.request))
     );
   } else {
-    // Cache-first för allt annat (ikoner, JSON-data, etc.)
+    // Cache-first för allt annat (ikoner, JSON-data, kart-tiles, etc.)
     e.respondWith(
       caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
-        const clone = resp.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
+        safePut(e.request, resp);
         return resp;
       }))
     );
