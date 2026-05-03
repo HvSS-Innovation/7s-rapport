@@ -16,3 +16,6 @@ desktop.ini
 
 # Lokala roadmap-anteckningar (innehåller lokal Dropbox-sökväg, ej för publik repo)
 /roadmap-*.md
+
+# Claude Code lokal config (permissions, hooks – per maskin, ej för publik repo)
+.claude/
