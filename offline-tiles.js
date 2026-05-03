@@ -299,6 +299,98 @@
         return update;
     }
 
+    // Leaflet-kontroll-variant: lägger en pille i kart-hörnet (default
+    // top-right) med samma stilbas som zoom-kontrollen. Enhetligt över alla
+    // sidors kart-modaler. Returnerar L.Control-instansen så anroparen kan
+    // remove-a vid behov.
+    function injectCoverageControlStyles() {
+        if (document.getElementById('offline-tiles-cov-styles')) return;
+        var css =
+            '.ot-cov-ctrl{background:#fff;padding:4px 10px;font-family:Inter,system-ui,sans-serif;' +
+                'font-size:0.78rem;font-weight:600;border-radius:4px;' +
+                'box-shadow:0 1px 5px rgba(0,0,0,0.4);user-select:none;' +
+                'cursor:default;letter-spacing:0.02em;line-height:1.4;' +
+                'border:2px solid rgba(0,0,0,0.2)}';
+        var style = document.createElement('style');
+        style.id = 'offline-tiles-cov-styles';
+        style.textContent = css;
+        document.head.appendChild(style);
+    }
+
+    function attachCoverageControl(map, opts) {
+        if (!map || typeof L === 'undefined' || !L.Control) return null;
+        opts = opts || {};
+        var position = opts.position || 'topright';
+        injectCoverageControlStyles();
+
+        var Control = L.Control.extend({
+            onAdd: function () {
+                var div = L.DomUtil.create('div', 'ot-cov-ctrl leaflet-control');
+                div.style.display = 'none';
+                // Hindra att klick/drag på kontrollen triggar kart-events
+                // (annars kan zoom-kart-rörelse aktiveras vid tryck på pille:n).
+                L.DomEvent.disableClickPropagation(div);
+                L.DomEvent.disableScrollPropagation(div);
+                this._div = div;
+                return div;
+            },
+            update: function (text, color, title) {
+                if (!this._div) return;
+                if (!text) {
+                    this._div.style.display = 'none';
+                    return;
+                }
+                this._div.style.display = '';
+                this._div.textContent = text;
+                this._div.style.color = color || '#222';
+                this._div.title = title || '';
+            }
+        });
+
+        var ctrl = new Control({ position: position });
+        ctrl.addTo(map);
+
+        var pending = null;
+        var seq = 0;
+
+        function update() {
+            var mySeq = ++seq;
+            if (pending) clearTimeout(pending);
+            pending = setTimeout(async function () {
+                pending = null;
+                var z = Math.round(map.getZoom());
+                var b = map.getBounds();
+                try {
+                    var cov = await coverageFor(b, z);
+                    if (mySeq !== seq) return;
+                    if (cov === null) {
+                        ctrl.update('', '', '');
+                        return;
+                    }
+                    var pct = Math.round(cov.fraction * 100);
+                    if (pct === 0) {
+                        // Inget cachat i vyn → dölj helt så kontrollen inte
+                        // skräpar UI:n när inget område laddats ner.
+                        ctrl.update('', '', '');
+                        return;
+                    }
+                    var color = pct >= 100 ? '#2e7d32' : '#c8632e';
+                    var title = cov.cached + ' / ' + cov.total + ' tiles cachade i nuvarande vy';
+                    ctrl.update('offline ' + pct + '%', color, title);
+                } catch (_) {
+                    if (mySeq !== seq) return;
+                    ctrl.update('', '', '');
+                }
+            }, 250);
+        }
+
+        map.on('moveend zoomend', update);
+        global.addEventListener('offline-tiles:updated', update);
+        update();
+
+        return ctrl;
+    }
+
     // ── Sparade-områden-panel ───────────────────────────────────────────────
     // Renderar en lista i `container` (typ <div>). Kan kallas om för att
     // refresh:a efter add/delete. Tom lista → vänlig hint.
@@ -1498,6 +1590,7 @@
         removeArea: removeArea,
         coverageFor: coverageFor,
         attachCoverageIndicator: attachCoverageIndicator,
+        attachCoverageControl: attachCoverageControl,
         renderAreasPanel: renderAreasPanel,
         openModal: openModal,
         openKamuflageModal: openKamuflageModal,

@@ -21,6 +21,7 @@
     <script src="vendor/exifr/full.umd.js"></script>
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
     <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="offline-tiles.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -1071,6 +1072,9 @@ function openMapModal() {
             attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
         }).addTo(mapInstance);
         tileLayer.on('load', function() { if (sp) sp.classList.add('hidden'); });
+        if (window.OfflineTiles && typeof window.OfflineTiles.attachCoverageControl === 'function') {
+            window.OfflineTiles.attachCoverageControl(mapInstance);
+        }
 
         mapInstance.on('click', function(e) {
             const { lat, lng } = e.latlng;

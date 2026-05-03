@@ -21,6 +21,7 @@
     <script src="vendor/exifr/full.umd.js"></script>
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
     <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="offline-tiles.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d; --bg-secondary: #152815; --bg-card: #1a321a;
@@ -972,6 +973,9 @@ function openMapModal() {
         mapInstance = L.map('mapContainer', { zoomControl: true });
         var tileLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' }).addTo(mapInstance);
         tileLayer.on('load', function() { if (sp) sp.classList.add('hidden'); });
+        if (window.OfflineTiles && typeof window.OfflineTiles.attachCoverageControl === 'function') {
+            window.OfflineTiles.attachCoverageControl(mapInstance);
+        }
         mapInstance.on('click', function(e) {
             mapSelectedMgrs = MGRS.forward(e.latlng.lat, e.latlng.lng);
             document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs + ' — ';

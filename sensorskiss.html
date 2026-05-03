@@ -1971,7 +1971,6 @@ function setupOfflineAreasUI() {
     if (!window.OfflineTiles) return;
     const panel = document.getElementById('offlineAreasPanel');
     const body = document.getElementById('offlineAreasBody');
-    const status = document.getElementById('statusOffline');
 
     function render() {
         if (body) window.OfflineTiles.renderAreasPanel(body, { onChange: () => {}, map: map });
@@ -1983,8 +1982,8 @@ function setupOfflineAreasUI() {
     }
     window.addEventListener('offline-tiles:updated', render);
 
-    if (status && map) {
-        window.OfflineTiles.attachCoverageIndicator(map, status);
+    if (map && typeof window.OfflineTiles.attachCoverageControl === 'function') {
+        window.OfflineTiles.attachCoverageControl(map);
     }
 }
 
