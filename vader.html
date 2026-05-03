@@ -110,7 +110,6 @@
             <div class="info-text">Plats / koordinater</div>
             <div class="input-row">
                 <input type="text" id="ortInput" placeholder="Stockholm, Sverige" autocomplete="off">
-                <button class="btn btn-sm btn-time" id="mgrsBtn" onclick="hamtaOrt()">📍 MGRS</button>
             </div>
         </div>
 
@@ -149,33 +148,6 @@ function setNu() {
     const p = n => String(n).padStart(2, '0');
     const yy = String(now.getFullYear()).slice(2);
     document.getElementById('dispDatum').value = yy + p(now.getMonth() + 1) + p(now.getDate());
-}
-
-function hamtaOrt() {
-    const btn = document.getElementById('mgrsBtn');
-    btn.textContent = '…';
-    btn.disabled = true;
-    if (!navigator.geolocation) {
-        btn.textContent = '📍 MGRS'; btn.disabled = false; return;
-    }
-    navigator.geolocation.getCurrentPosition(pos => {
-        latVal = pos.coords.latitude;
-        lonVal = pos.coords.longitude;
-        const lat = latVal.toFixed(5);
-        const lon = lonVal.toFixed(5);
-        fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=10&accept-language=sv`)
-            .then(r => r.json())
-            .then(d => {
-                const city = d.address?.city || d.address?.town || d.address?.village || d.address?.county || `${lat}, ${lon}`;
-                document.getElementById('ortInput').value = city;
-            })
-            .catch(() => {
-                document.getElementById('ortInput').value = `${lat}, ${lon}`;
-            })
-            .finally(() => { btn.textContent = '📍 MGRS'; btn.disabled = false; });
-    }, () => {
-        btn.textContent = '📍 MGRS'; btn.disabled = false;
-    });
 }
 
 // ÅÅMMDD → YYYY-MM-DD
@@ -268,7 +240,7 @@ async function generera() {
     const datumVal = document.getElementById('dispDatum').value.trim();
     if (!datumVal) { showFormError('Ange datum (ÅÅMMDD) eller tryck "Nu".'); return; }
     const ortText = document.getElementById('ortInput').value.trim();
-    if (!ortText && !latVal) { showFormError('Ange en ort eller tryck på 📍 MGRS.'); return; }
+    if (!ortText) { showFormError('Ange en ort.'); return; }
 
     const genBtn = document.querySelector('.btn-primary');
     genBtn.textContent = 'Hämtar väderdata…';
