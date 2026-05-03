@@ -285,10 +285,33 @@
     // ── Sparade-områden-panel ───────────────────────────────────────────────
     // Renderar en lista i `container` (typ <div>). Kan kallas om för att
     // refresh:a efter add/delete. Tom lista → vänlig hint.
+    var STALE_DAYS = 30;
+
+    function ageText(savedAt) {
+        if (!savedAt) return null;
+        var t = new Date(savedAt).getTime();
+        if (isNaN(t)) return null;
+        var sec = Math.floor((Date.now() - t) / 1000);
+        if (sec < 60) return 'just nu';
+        if (sec < 3600) return Math.floor(sec / 60) + ' min';
+        if (sec < 86400) return Math.floor(sec / 3600) + ' h';
+        var days = Math.floor(sec / 86400);
+        if (days < 14) return days + ' dagar';
+        if (days < 60) return Math.floor(days / 7) + ' veckor';
+        return Math.floor(days / 30) + ' mån';
+    }
+    function isStale(savedAt) {
+        if (!savedAt) return false;
+        var t = new Date(savedAt).getTime();
+        if (isNaN(t)) return false;
+        return (Date.now() - t) > STALE_DAYS * 86400 * 1000;
+    }
+
     function renderAreasPanel(container, opts) {
         if (!container) return;
         opts = opts || {};
         var onChange = opts.onChange || function () {};
+        var map = opts.map || null;
         injectModalStyles();
         container.innerHTML = '';
 
@@ -309,14 +332,14 @@
         var list = document.createElement('div');
         list.style.cssText = 'display:flex;flex-direction:column;gap:8px';
         for (var i = 0; i < areas.length; i++) {
-            list.appendChild(renderAreaRow(areas[i], onChange));
+            list.appendChild(renderAreaRow(areas[i], onChange, map));
         }
         container.appendChild(list);
     }
 
-    function renderAreaRow(area, onChange) {
+    function renderAreaRow(area, onChange, map) {
         var row = document.createElement('div');
-        row.style.cssText = 'background:#0f240f;border:1px solid #2d4a2d;border-radius:4px;padding:10px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px';
+        row.style.cssText = 'background:#0f240f;border:1px solid #2d4a2d;border-radius:4px;padding:10px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap';
         row.dataset.areaId = area.id;
 
         var savedDate = '';
@@ -332,13 +355,19 @@
             '  →  ' +
             fmtCoord(area.bbox.south, true) + ', ' + fmtCoord(area.bbox.east, false);
 
+        var age = ageText(area.savedAt);
+        var stale = isStale(area.savedAt);
+        var ageBadge = age
+            ? ' <span style="color:' + (stale ? '#c8a24e' : 'var(--text-muted)') + ';font-weight:400">· ' + age + (stale ? ' (gammal)' : '') + '</span>'
+            : '';
+
         var info = document.createElement('div');
-        info.style.cssText = 'flex:1;min-width:0;font-size:0.78rem;line-height:1.5;color:var(--text-primary)';
+        info.style.cssText = 'flex:1;min-width:200px;font-size:0.78rem;line-height:1.5;color:var(--text-primary)';
         var status = area.complete === false
             ? '<span style="color:#c8a24e">· avbruten</span>'
             : '';
         info.innerHTML =
-            '<div style="font-weight:600;margin-bottom:2px">' + savedDate + ' ' + status + '</div>' +
+            '<div style="font-weight:600;margin-bottom:2px">' + savedDate + ' ' + status + ageBadge + '</div>' +
             '<div style="color:var(--text-secondary);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.7rem">' +
                 bboxLine +
             '</div>' +
@@ -347,6 +376,23 @@
                 ' · ' + (area.tileCount || 0).toLocaleString('sv-SE') + ' tiles' +
                 ' · ' + formatBytes(area.bytes || 0) +
             '</div>';
+
+        var actions = document.createElement('div');
+        actions.style.cssText = 'display:flex;gap:6px;flex-wrap:wrap';
+
+        if (map) {
+            var refresh = document.createElement('button');
+            refresh.type = 'button';
+            refresh.className = 'btn btn-sm btn-ghost';
+            refresh.textContent = 'Uppdatera';
+            refresh.title = stale
+                ? 'Området är äldre än ' + STALE_DAYS + ' dagar — uppdatera tiles från servern'
+                : 'Ladda ner tiles på nytt och ersätt cache-entries';
+            refresh.addEventListener('click', function () {
+                refreshAreaWithModal(area.id, map);
+            });
+            actions.appendChild(refresh);
+        }
 
         var del = document.createElement('button');
         del.type = 'button';
@@ -361,10 +407,181 @@
             row.remove();
             onChange();
         });
+        actions.appendChild(del);
 
         row.appendChild(info);
-        row.appendChild(del);
+        row.appendChild(actions);
         return row;
+    }
+
+    // ── Bakgrundsjobb ──────────────────────────────────────────────────────
+    // En singleton _jobs-tabell med löpande nedladdningar. Modal-en startar
+    // ett jobb via startJob(); det körs vidare även om modal-en stängs.
+    // Bakgrundspille:n (renderJobsBar) lyssnar på 'offline-tiles:job-update'
+    // och visar alla aktiva jobb. Designen är tight-decoupled: modal och pill
+    // kommunicerar bara via event, inte via shared state-references.
+    var _jobs = Object.create(null);
+
+    function emitJobUpdate(jobId) {
+        try {
+            global.dispatchEvent(new CustomEvent('offline-tiles:job-update', {
+                detail: { jobId: jobId, job: _jobs[jobId] || null }
+            }));
+        } catch (_) {}
+    }
+
+    function getJob(jobId) { return _jobs[jobId] || null; }
+    function getActiveJobs() {
+        var out = [];
+        for (var k in _jobs) out.push(_jobs[k]);
+        return out;
+    }
+
+    function cancelJob(jobId) {
+        var j = _jobs[jobId];
+        if (j && j.controller) j.controller.abort();
+    }
+
+    // Startar en nedladdning som ett bakgrundsjobb. Returnerar jobId direkt;
+    // jobbets framgång/avslut signaleras via event-strömmen.
+    function startJob(spec) {
+        var jobId = 'j_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 5);
+        var items = tilesForBbox(spec.bbox, spec.minZoom, spec.maxZoom);
+        var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
+        var areaId = spec.areaId || newAreaId();
+        var savedAt = new Date().toISOString();
+
+        var job = {
+            id: jobId,
+            areaId: areaId,
+            label: spec.label || '',
+            mode: spec.mode || 'new',
+            bbox: spec.bbox,
+            minZoom: spec.minZoom,
+            maxZoom: spec.maxZoom,
+            total: items.length,
+            done: 0,
+            bytes: 0,
+            failed: 0,
+            status: 'running',
+            controller: controller,
+            savedAt: savedAt,
+            error: null
+        };
+        _jobs[jobId] = job;
+        emitJobUpdate(jobId);
+        // Säkerställ att bakgrundspille:n existerar så jobbet inte kan
+        // försvinna ur sikte om modal-en stängs direkt.
+        ensureJobsBar();
+
+        (async function run() {
+            try {
+                var result = await downloadTiles(items, {
+                    signal: controller ? controller.signal : undefined,
+                    onProgress: function (p) {
+                        job.done = p.done;
+                        job.bytes = p.bytes;
+                        job.failed = p.failed;
+                        emitJobUpdate(jobId);
+                        if (p.done % 50 === 0 || p.done === p.total) {
+                            saveAreaMeta({
+                                id: areaId,
+                                bbox: spec.bbox,
+                                minZoom: spec.minZoom,
+                                maxZoom: spec.maxZoom,
+                                tileCount: p.done,
+                                bytes: p.bytes,
+                                savedAt: savedAt,
+                                complete: p.done === p.total
+                            });
+                        }
+                    }
+                });
+                job.status = 'done';
+                job.done = result.done;
+                job.bytes = result.bytes;
+                job.failed = result.failed;
+            } catch (err) {
+                job.error = err;
+                job.status = (err && err.name === 'AbortError') ? 'aborted'
+                          : (err && err.name === 'QuotaExceededError') ? 'quota'
+                          : 'error';
+            }
+            emitJobUpdate(jobId);
+            // Behåll en stund så pille:n kan visa "klart" innan den fader ut.
+            setTimeout(function () {
+                delete _jobs[jobId];
+                emitJobUpdate(jobId);
+            }, 5000);
+        })();
+
+        return jobId;
+    }
+
+    // ── Bakgrunds-pille (UI) ───────────────────────────────────────────────
+    // Singleton som ritar en flytande lista över aktiva nedladdningar längst
+    // ner i fönstret. Auto-tom när inga jobb finns. Klick på avbryt kallar
+    // cancelJob; klick på pille (utanför avbryt) öppnar full-modal igen.
+    function ensureJobsBar() {
+        if (document.getElementById('offline-tiles-jobsbar')) return;
+        injectModalStyles();
+        var bar = document.createElement('div');
+        bar.id = 'offline-tiles-jobsbar';
+        bar.className = 'ot-jobsbar';
+        document.body.appendChild(bar);
+        global.addEventListener('offline-tiles:job-update', function () {
+            renderJobsBar(bar);
+        });
+        renderJobsBar(bar);
+    }
+
+    function renderJobsBar(bar) {
+        bar = bar || document.getElementById('offline-tiles-jobsbar');
+        if (!bar) return;
+        var jobs = getActiveJobs();
+        if (!jobs.length) {
+            bar.innerHTML = '';
+            bar.style.display = 'none';
+            return;
+        }
+        bar.style.display = '';
+        // Senaste först.
+        jobs.sort(function (a, b) { return (b.savedAt || '').localeCompare(a.savedAt || ''); });
+
+        var html = '';
+        for (var i = 0; i < jobs.length; i++) {
+            var j = jobs[i];
+            var pct = j.total ? Math.round(j.done / j.total * 100) : 0;
+            var label = j.mode === 'refresh' ? 'Uppdaterar' : 'Laddar ner';
+            var statusTxt = '';
+            if (j.status === 'done') { statusTxt = 'Klart'; pct = 100; }
+            else if (j.status === 'aborted') statusTxt = 'Avbruten';
+            else if (j.status === 'error') statusTxt = 'Fel';
+            else if (j.status === 'quota') statusTxt = 'Slut på utrymme';
+            else statusTxt = j.done + ' / ' + j.total + ' · ' + formatBytes(j.bytes) +
+                              (j.failed ? ' · ' + j.failed + ' fel' : '');
+
+            html +=
+                '<div class="ot-jobpill" data-job="' + j.id + '" data-status="' + j.status + '">' +
+                    '<div class="ot-jobpill-head">' +
+                        '<span class="ot-jobpill-label">' + label + (j.label ? ': ' + j.label : '') + '</span>' +
+                        (j.status === 'running'
+                            ? '<button type="button" class="ot-jobpill-x" data-cancel="' + j.id + '" title="Avbryt">×</button>'
+                            : '') +
+                    '</div>' +
+                    '<div class="ot-jobpill-status">' + statusTxt + '</div>' +
+                    '<div class="ot-jobpill-bar"><div class="ot-jobpill-fill" style="width:' + pct + '%"></div></div>' +
+                '</div>';
+        }
+        bar.innerHTML = html;
+
+        var cancels = bar.querySelectorAll('[data-cancel]');
+        for (var k = 0; k < cancels.length; k++) {
+            cancels[k].addEventListener('click', function (e) {
+                e.stopPropagation();
+                cancelJob(this.getAttribute('data-cancel'));
+            });
+        }
     }
 
     // ── Modal ───────────────────────────────────────────────────────────────
@@ -393,7 +610,19 @@
             '.ot-modal .ot-btn-primary:disabled{background:#2d4a2d;color:#5a7a5a;cursor:not-allowed}' +
             '.ot-modal .ot-progress{height:8px;background:#0f240f;border-radius:4px;overflow:hidden;border:1px solid #2d4a2d;margin-top:8px}' +
             '.ot-modal .ot-progress-fill{height:100%;background:#4caf50;width:0;transition:width 0.2s}' +
-            '.ot-modal .ot-confirm{display:flex;align-items:center;gap:8px;font-size:0.78rem;color:#c8a24e;margin-top:8px;text-transform:none;letter-spacing:0}';
+            '.ot-modal .ot-confirm{display:flex;align-items:center;gap:8px;font-size:0.78rem;color:#c8a24e;margin-top:8px;text-transform:none;letter-spacing:0}' +
+            '.ot-jobsbar{position:fixed;bottom:12px;right:12px;z-index:9999;display:flex;flex-direction:column;gap:8px;max-width:320px;font-family:Inter,system-ui,sans-serif;pointer-events:auto}' +
+            '.ot-jobpill{background:#152815;border:1px solid #2d4a2d;border-radius:6px;padding:10px 12px;color:#e8f0e8;box-shadow:0 4px 12px rgba(0,0,0,0.4);font-size:0.78rem}' +
+            '.ot-jobpill[data-status="done"]{border-color:#4caf50;opacity:0.9}' +
+            '.ot-jobpill[data-status="aborted"]{border-color:#c8a24e;opacity:0.85}' +
+            '.ot-jobpill[data-status="error"],.ot-jobpill[data-status="quota"]{border-color:#c62828;opacity:0.9}' +
+            '.ot-jobpill-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}' +
+            '.ot-jobpill-label{font-weight:600;color:#c8e6c9;letter-spacing:0.04em;text-transform:uppercase;font-size:0.7rem}' +
+            '.ot-jobpill-x{background:none;border:1px solid #2d4a2d;color:#8aaa8a;border-radius:4px;width:24px;height:24px;cursor:pointer;font-size:1rem;line-height:1;display:flex;align-items:center;justify-content:center;padding:0}' +
+            '.ot-jobpill-x:hover{background:#3d1a1a;color:#ff8a8a;border-color:#c62828}' +
+            '.ot-jobpill-status{color:#8aaa8a;font-size:0.72rem;font-family:ui-monospace,Menlo,Consolas,monospace;margin-bottom:6px}' +
+            '.ot-jobpill-bar{height:4px;background:#0f240f;border-radius:2px;overflow:hidden;border:1px solid #2d4a2d}' +
+            '.ot-jobpill-fill{height:100%;background:#4caf50;transition:width 0.2s}';
         var style = document.createElement('style');
         style.id = 'offline-tiles-styles';
         style.textContent = css;
@@ -405,32 +634,49 @@
         return Math.abs(v).toFixed(4) + '° ' + dir;
     }
 
-    function openModal(map) {
+    function openModal(map, opts) {
+        opts = opts || {};
+        var refreshArea = opts.area || null;
+        var isRefresh = !!refreshArea;
+
         if (!map || typeof map.getBounds !== 'function') {
             console.warn('[offline-tiles] openModal: map saknas eller saknar getBounds');
             return;
         }
         injectModalStyles();
 
-        var bounds = map.getBounds();
-        var bbox = {
-            south: bounds.getSouth(),
-            west: bounds.getWest(),
-            north: bounds.getNorth(),
-            east: bounds.getEast()
-        };
-        var currentZoom = Math.round(map.getZoom());
-        var initMin = Math.max(8, currentZoom - 1);
-        var initMax = Math.min(17, currentZoom + 1);
-        if (initMin > initMax) initMin = initMax;
+        var bbox, initMin, initMax, bboxLabelTxt;
+        if (isRefresh) {
+            bbox = refreshArea.bbox;
+            initMin = refreshArea.minZoom;
+            initMax = refreshArea.maxZoom;
+            bboxLabelTxt = 'Bounding box (sparat område)';
+        } else {
+            var bounds = map.getBounds();
+            bbox = {
+                south: bounds.getSouth(),
+                west: bounds.getWest(),
+                north: bounds.getNorth(),
+                east: bounds.getEast()
+            };
+            var currentZoom = Math.round(map.getZoom());
+            initMin = Math.max(8, currentZoom - 1);
+            initMax = Math.min(17, currentZoom + 1);
+            if (initMin > initMax) initMin = initMax;
+            bboxLabelTxt = 'Bounding box (nuvarande vy)';
+        }
+
+        var titleTxt = isRefresh ? 'UPPDATERA OFFLINE-OMRÅDE' : 'SPARA OMRÅDE OFFLINE';
+        var startTxt = isRefresh ? 'Uppdatera' : 'Spara';
+        var startTxtRunning = isRefresh ? 'Uppdaterar…' : 'Laddar…';
 
         var overlay = document.createElement('div');
         overlay.className = 'ot-overlay';
         overlay.innerHTML =
-            '<div class="ot-modal" role="dialog" aria-label="Spara område offline">' +
-                '<h3>SPARA OMRÅDE OFFLINE</h3>' +
+            '<div class="ot-modal" role="dialog" aria-label="' + titleTxt + '">' +
+                '<h3>' + titleTxt + '</h3>' +
                 '<div class="ot-warn">Nedladdningen avslöjar valt område för tile-servern (OpenTopoMap / OSM). Gör den helst från en annan plats än ni ska in i, och på ett annat nät.</div>' +
-                '<label>Bounding box (nuvarande vy)</label>' +
+                '<label>' + bboxLabelTxt + '</label>' +
                 '<div class="ot-bbox" id="otBbox"></div>' +
                 '<div class="ot-row" style="margin-top:12px">' +
                     '<div>' +
@@ -447,8 +693,9 @@
                 '<div id="otStatus"></div>' +
                 '<div class="ot-progress" id="otProgressWrap" style="display:none"><div class="ot-progress-fill" id="otProgressFill"></div></div>' +
                 '<div class="ot-actions">' +
+                    '<button type="button" class="ot-btn" id="otBackground" style="display:none">Kör i bakgrunden</button>' +
                     '<button type="button" class="ot-btn" id="otCancel">Stäng</button>' +
-                    '<button type="button" class="ot-btn ot-btn-primary" id="otStart">Spara</button>' +
+                    '<button type="button" class="ot-btn ot-btn-primary" id="otStart">' + startTxt + '</button>' +
                 '</div>' +
             '</div>';
         document.body.appendChild(overlay);
@@ -467,13 +714,14 @@
         var statusEl = overlay.querySelector('#otStatus');
         var startBtn = overlay.querySelector('#otStart');
         var cancelBtn = overlay.querySelector('#otCancel');
+        var bgBtn = overlay.querySelector('#otBackground');
         var progressWrap = overlay.querySelector('#otProgressWrap');
         var progressFill = overlay.querySelector('#otProgressFill');
 
         minSlider.value = initMin;
         maxSlider.value = initMax;
 
-        var aborter = null;
+        var activeJobId = null;
         var running = false;
 
         function recalc() {
@@ -523,108 +771,120 @@
         maxSlider.addEventListener('input', recalc);
         recalc();
 
-        function close() {
-            if (aborter) aborter.abort();
+        // Stänger overlayn. När ett jobb körs avbryts det INTE — användaren
+        // kan klicka "Kör i bakgrunden" för det. Stäng under download = avbryt.
+        function close(opts) {
+            opts = opts || {};
+            if (running && !opts.keepJob && activeJobId) {
+                cancelJob(activeJobId);
+            }
+            global.removeEventListener('offline-tiles:job-update', onJobUpdate);
+            document.removeEventListener('keydown', onEsc);
             overlay.remove();
         }
 
         cancelBtn.addEventListener('click', function () {
-            if (running) {
-                if (aborter) aborter.abort();
-                cancelBtn.textContent = 'Stäng';
-                running = false;
-                startBtn.disabled = false;
-                startBtn.textContent = 'Spara';
-            } else {
-                close();
-            }
+            close();
         });
 
-        // Esc stänger när inte mid-download.
+        bgBtn.addEventListener('click', function () {
+            // Jobbet får leva vidare — pille:n visar progress.
+            close({ keepJob: true });
+        });
+
+        // Esc stänger när inte mid-download (samma beteende som tidigare).
         function onEsc(e) {
-            if (e.key === 'Escape' && !running) {
-                document.removeEventListener('keydown', onEsc);
-                close();
-            }
+            if (e.key === 'Escape' && !running) close();
         }
         document.addEventListener('keydown', onEsc);
 
-        startBtn.addEventListener('click', async function () {
+        function onJobUpdate(ev) {
+            var det = ev.detail || {};
+            if (det.jobId !== activeJobId) return;
+            var job = det.job;
+            // Om jobbet är borttaget (efter cleanup-timeout) har vi redan
+            // visat slutläget och behöver bara hålla overlay rensad.
+            if (!job) return;
+
+            var pct = job.total ? Math.round(job.done / job.total * 100) : 0;
+            progressFill.style.width = pct + '%';
+
+            if (job.status === 'running') {
+                statusEl.innerHTML =
+                    '<div class="ot-stat"><span>Förlopp</span><b>' +
+                        job.done + ' / ' + job.total +
+                        ' · ' + formatBytes(job.bytes) +
+                        (job.failed ? ' · ' + job.failed + ' fel' : '') +
+                    '</b></div>';
+                return;
+            }
+
+            // Slutfas
+            running = false;
+            bgBtn.style.display = 'none';
+            cancelBtn.textContent = 'Stäng';
+
+            if (job.status === 'done') {
+                startBtn.textContent = 'Klar';
+                statusEl.innerHTML =
+                    '<div class="ot-stat"><span>Klart</span><b>' +
+                        job.done + ' tiles · ' + formatBytes(job.bytes) +
+                        (job.failed ? ' · ' + job.failed + ' fel' : '') +
+                    '</b></div>' +
+                    '<div class="ot-warn">Området är nu tillgängligt offline. Slå på flygplansläge och ladda om sidan för att verifiera.</div>';
+            } else if (job.status === 'aborted') {
+                startBtn.textContent = startTxt;
+                startBtn.disabled = false;
+                statusEl.innerHTML = '<div class="ot-warn">Avbruten. Tiles som hann sparas finns kvar i offline-cachen.</div>';
+            } else if (job.status === 'quota') {
+                startBtn.textContent = startTxt;
+                startBtn.disabled = false;
+                statusEl.innerHTML = '<div class="ot-block">Slut på lagringsutrymme i webbläsaren. Rensa områden eller välj ett mindre.</div>';
+            } else {
+                startBtn.textContent = startTxt;
+                startBtn.disabled = false;
+                var msg = job.error && job.error.message ? job.error.message : 'okänt';
+                statusEl.innerHTML = '<div class="ot-block">Fel vid nedladdning: ' + msg + '</div>';
+            }
+        }
+        global.addEventListener('offline-tiles:job-update', onJobUpdate);
+
+        startBtn.addEventListener('click', function () {
             if (running) return;
             running = true;
             startBtn.disabled = true;
-            startBtn.textContent = 'Laddar…';
+            startBtn.textContent = startTxtRunning;
             cancelBtn.textContent = 'Avbryt';
+            bgBtn.style.display = '';
             progressWrap.style.display = '';
             progressFill.style.width = '0%';
 
             var mn = parseInt(minSlider.value, 10);
             var mx = parseInt(maxSlider.value, 10);
-            var items = tilesForBbox(bbox, mn, mx);
+            statusEl.innerHTML = '<div class="ot-stat"><span>Förlopp</span><b>0 / ' + countTiles(bbox, mn, mx) + '</b></div>';
 
-            statusEl.innerHTML = '<div class="ot-stat"><span>Förlopp</span><b id="otLive">0 / ' + items.length + '</b></div>';
-            var liveEl = overlay.querySelector('#otLive');
-
-            aborter = (typeof AbortController !== 'undefined') ? new AbortController() : null;
-
-            var areaId = newAreaId();
-            var savedAt = new Date().toISOString();
-
-            try {
-                var result = await downloadTiles(items, {
-                    signal: aborter ? aborter.signal : undefined,
-                    onProgress: function (p) {
-                        var pct = Math.round(p.done / p.total * 100);
-                        progressFill.style.width = pct + '%';
-                        liveEl.textContent =
-                            p.done + ' / ' + p.total +
-                            ' · ' + formatBytes(p.bytes) +
-                            (p.failed ? ' · ' + p.failed + ' fel' : '');
-
-                        // Spara metadata efter var 50:e tile så att en
-                        // halvfärdig session inte är osynlig om fliken stängs.
-                        if (p.done % 50 === 0 || p.done === p.total) {
-                            saveAreaMeta({
-                                id: areaId,
-                                bbox: bbox,
-                                minZoom: mn,
-                                maxZoom: mx,
-                                tileCount: p.done,
-                                bytes: p.bytes,
-                                savedAt: savedAt,
-                                complete: p.done === p.total
-                            });
-                        }
-                    }
-                });
-
-                running = false;
-                startBtn.textContent = 'Klar';
-                cancelBtn.textContent = 'Stäng';
-                statusEl.innerHTML =
-                    '<div class="ot-stat"><span>Klart</span><b>' +
-                        result.done + ' tiles · ' + formatBytes(result.bytes) +
-                        (result.failed ? ' · ' + result.failed + ' fel' : '') +
-                    '</b></div>' +
-                    '<div class="ot-warn">Området är nu tillgängligt offline. Slå på flygplansläge och ladda om sidan för att verifiera.</div>';
-            } catch (err) {
-                running = false;
-                startBtn.textContent = 'Spara';
-                startBtn.disabled = false;
-                cancelBtn.textContent = 'Stäng';
-                if (err && err.name === 'AbortError') {
-                    statusEl.innerHTML = '<div class="ot-warn">Avbruten. Tiles som hann sparas finns kvar i offline-cachen.</div>';
-                } else if (err && err.name === 'QuotaExceededError') {
-                    statusEl.innerHTML = '<div class="ot-block">Slut på lagringsutrymme i webbläsaren. Rensa områden eller välj ett mindre.</div>';
-                } else {
-                    statusEl.innerHTML = '<div class="ot-block">Fel vid nedladdning: ' + (err && err.message ? err.message : 'okänt') + '</div>';
-                }
-            }
+            activeJobId = startJob({
+                bbox: bbox,
+                minZoom: mn,
+                maxZoom: mx,
+                areaId: isRefresh ? refreshArea.id : null,
+                mode: isRefresh ? 'refresh' : 'new'
+            });
         });
+    }
+
+    // Öppnar modal:n pre-fylld med ett befintligt områdes bbox/zoom-range.
+    // Ny nedladdning ersätter cache-entries och uppdaterar metadata under
+    // samma areaId (savedAt får dock ett nytt värde via saveAreaMeta).
+    function refreshAreaWithModal(id, map) {
+        var area = getStoredAreas().find(function (a) { return a.id === id; });
+        if (!area) return;
+        openModal(map, { area: area });
     }
 
     global.OfflineTiles = {
         OFFLINE_CACHE: OFFLINE_CACHE,
+        STALE_DAYS: STALE_DAYS,
         tileUrl: tileUrl,
         tilesForBbox: tilesForBbox,
         countTiles: countTiles,
@@ -637,6 +897,11 @@
         coverageFor: coverageFor,
         attachCoverageIndicator: attachCoverageIndicator,
         renderAreasPanel: renderAreasPanel,
-        openModal: openModal
+        openModal: openModal,
+        refreshArea: refreshAreaWithModal,
+        startJob: startJob,
+        cancelJob: cancelJob,
+        getJob: getJob,
+        getActiveJobs: getActiveJobs
     };
 })(window);

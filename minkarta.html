@@ -3133,7 +3133,7 @@ function setupOfflineAreasUI() {
     const status = document.getElementById('statusOffline');
 
     function render() {
-        if (body) window.OfflineTiles.renderAreasPanel(body, { onChange: () => {} });
+        if (body) window.OfflineTiles.renderAreasPanel(body, { onChange: () => {}, map: map });
     }
 
     if (panel) {
