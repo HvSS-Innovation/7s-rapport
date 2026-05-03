@@ -37,7 +37,15 @@ const FILES = [
   './fonts/inter-400.woff2',
   './fonts/inter-500.woff2',
   './fonts/inter-600.woff2',
-  './fonts/inter-700.woff2'
+  './fonts/inter-700.woff2',
+  './vendor/leaflet/leaflet.css',
+  './vendor/leaflet/leaflet.js',
+  './vendor/leaflet/images/layers.png',
+  './vendor/leaflet/images/layers-2x.png',
+  './vendor/leaflet/images/marker-icon.png',
+  './vendor/leaflet/images/marker-icon-2x.png',
+  './vendor/leaflet/images/marker-shadow.png',
+  './vendor/exifr/full.umd.js'
 ];
 
 self.addEventListener('install', e => {
