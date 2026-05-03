@@ -30,6 +30,7 @@ const FILES = [
   './version.js',
   './pwa.js',
   './opsec.js',
+  './footer.js',
   './opsec.html',
   './ortnamn.json',
   './fonts/inter.css',

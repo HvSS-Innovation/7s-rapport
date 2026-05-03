@@ -772,21 +772,12 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ── Feedback-länk ──────────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-    const a = document.createElement('a');
-    a.href = 'https://github.com/gitjoda71/7s-rapport/issues/new?title=%5BBeta-Feedback%5D%20SCHEMA&body=**Form%3A**%20POSTSCHEMA%0A%0A**Beskriv%20problemet%2Ff%C3%B6rslaget%3A**';
-    a.target = '_blank'; a.rel = 'noopener noreferrer';
-    a.textContent = 'Bugg eller förslag? Lämna feedback →';
-    a.style.cssText = 'display:block;text-align:center;padding:24px 0 12px;font-size:0.7rem;color:#5a7a5a;text-decoration:none';
-    const p = document.createElement('p');
-    p.textContent = 'Ingen data skickas eller lagras utanfor din enhet.';
-    p.style.cssText = 'text-align:center;padding:8px 0 0;font-size:0.65rem;color:#3a5a3a;';
-    const c = document.querySelector('.container');
-    if (c) { c.appendChild(p); c.appendChild(a); }
-});
+// Footer hanteras i footer.js
 </script>
 <script src="opsec.js"></script>
 <script src="pwa.js"></script>
+<script>window.FORM_ID = { title: 'SCHEMA', body: 'POSTSCHEMA' };</script>
+<script src="footer.js"></script>
 <script src="version.js"></script>
 </body>
 </html>
