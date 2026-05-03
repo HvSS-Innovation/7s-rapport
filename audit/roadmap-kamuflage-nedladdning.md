@@ -209,7 +209,7 @@ enheten i fält bara visar verkansområdet.
    delområdet (men fortfarande inom det gamla kamuflage-bbox:et) →
    grå rutor. **Detta är beviset på att beskärningen funkade.**
 
-### Fas 3 — Schemalägg-läge (om tid finns)
+### Fas 3 — Schemalägg-läge *(LEVERERAD 2026-05-03)*
 
 **Mål.** Köra en kamuflage-download över natten på extremt låg
 throttling så att burst-signaturen blir nära oigenkännlig från vanlig

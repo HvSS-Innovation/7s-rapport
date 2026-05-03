@@ -147,13 +147,25 @@
             ? opts.parallel : PARALLEL;
         var throttleMs = (typeof opts.throttleMs === 'number' && opts.throttleMs >= 0)
             ? opts.throttleMs : THROTTLE_MS;
+        // shouldPause: callback som workers kollar mellan tiles. När den
+        // returnerar true vantar workers ~2 sek innan de kollar igen. Anvands
+        // av startJob for auto-pause vid offline/lagt batteri (Fas 3).
+        var shouldPause = opts.shouldPause || function () { return false; };
         var cache = await caches.open(OFFLINE_CACHE);
 
         var done = 0, failed = 0, bytes = 0;
         var idx = 0;
 
+        async function waitWhilePaused() {
+            while (shouldPause() && !(signal && signal.aborted)) {
+                await new Promise(function (r) { setTimeout(r, 2000); });
+            }
+        }
+
         async function worker() {
             while (idx < items.length) {
+                if (signal && signal.aborted) return;
+                await waitWhilePaused();
                 if (signal && signal.aborted) return;
                 var i = idx++;
                 var item = items[i];
@@ -580,6 +592,39 @@
             actions.appendChild(prune);
         }
 
+        // Återuppta-knappen visas bara på avbrutna områden (complete: false).
+        // Kollar vilka tiles som faktiskt saknas i cachen och startar ett
+        // jobb med bara dem — sa redan-nedladdade tiles inte hamtas igen.
+        if (area.complete === false) {
+            var resume = document.createElement('button');
+            resume.type = 'button';
+            resume.className = 'btn btn-sm btn-ghost';
+            resume.textContent = 'Återuppta';
+            resume.title = 'Hämta de tiles som saknas — redan cachade hoppas över';
+            resume.addEventListener('click', async function () {
+                resume.disabled = true;
+                resume.textContent = 'Förbereder…';
+                try {
+                    // Bestam throttling baserat pa kind: kamuflage anvander
+                    // sin lagre signatur ocksa vid resume.
+                    var jobId = await resumeArea(area.id, {
+                        parallel: area.kind === 'kamuflage' ? BULK_PARALLEL : undefined,
+                        throttleMs: area.kind === 'kamuflage' ? BULK_THROTTLE_MS : undefined
+                    });
+                    resume.textContent = jobId ? 'Pågår' : 'Klart';
+                    setTimeout(function () { resume.remove(); onChange(); }, 1500);
+                } catch (err) {
+                    resume.textContent = 'Fel';
+                    resume.title = (err && err.message) || 'Resume misslyckades';
+                    setTimeout(function () {
+                        resume.disabled = false;
+                        resume.textContent = 'Återuppta';
+                    }, 3000);
+                }
+            });
+            actions.appendChild(resume);
+        }
+
         var exp = document.createElement('button');
         exp.type = 'button';
         exp.className = 'btn btn-sm btn-ghost';
@@ -829,11 +874,109 @@
         if (j && j.controller) j.controller.abort();
     }
 
+    // ── Auto-pause + Wake Lock (Fas 3) ─────────────────────────────────────
+    // Vid offline → paus tills nät kommer tillbaka. Vid batteri < 20 % och
+    // inte laddande → paus tills laddning eller nivå höjs. Wake Lock håller
+    // skärmen aktiv så schemalagda nattliga downloads inte avbryts av OS:ens
+    // sömn. Battery Status API är borttaget i Firefox; pause-checken tål
+    // `undefined` graciöst.
+    var BATTERY_PAUSE_THRESHOLD = 0.2;
+
+    function setJobPause(job, reason) {
+        if (job.status !== 'running') return;
+        if (job.paused && job.pauseReason === reason) return;
+        job.paused = true;
+        job.pauseReason = reason;
+        emitJobUpdate(job.id);
+    }
+    function clearJobPause(job, reason) {
+        if (!job.paused) return;
+        // Bara den anledning som satt pausen får clear:a den. Annars skulle
+        // 'online' kunna släppa en battery-pause.
+        if (reason && job.pauseReason !== reason) return;
+        job.paused = false;
+        job.pauseReason = null;
+        emitJobUpdate(job.id);
+    }
+
+    function installAutoPause(job) {
+        var battery = null;
+        var batteryCheck = null;
+
+        function onOffline() { setJobPause(job, 'offline'); }
+        function onOnline() { clearJobPause(job, 'offline'); }
+        global.addEventListener('offline', onOffline);
+        global.addEventListener('online', onOnline);
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+            setJobPause(job, 'offline');
+        }
+
+        if (typeof navigator !== 'undefined' && typeof navigator.getBattery === 'function') {
+            navigator.getBattery().then(function (bat) {
+                battery = bat;
+                batteryCheck = function () {
+                    if (bat.level < BATTERY_PAUSE_THRESHOLD && !bat.charging) {
+                        setJobPause(job, 'battery');
+                    } else {
+                        clearJobPause(job, 'battery');
+                    }
+                };
+                bat.addEventListener('levelchange', batteryCheck);
+                bat.addEventListener('chargingchange', batteryCheck);
+                batteryCheck();
+            }).catch(function () { /* API saknas eller blockerad */ });
+        }
+
+        return function cleanup() {
+            global.removeEventListener('offline', onOffline);
+            global.removeEventListener('online', onOnline);
+            if (battery && batteryCheck) {
+                try {
+                    battery.removeEventListener('levelchange', batteryCheck);
+                    battery.removeEventListener('chargingchange', batteryCheck);
+                } catch (_) {}
+            }
+        };
+    }
+
+    async function acquireWakeLock() {
+        if (typeof navigator === 'undefined' || !navigator.wakeLock) return null;
+        try {
+            return await navigator.wakeLock.request('screen');
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function installWakeLockReacquire(job) {
+        var handler = async function () {
+            // OS:et släpper Wake Lock automatiskt när skärmen blir mörk.
+            // Re-acquire när användaren tittar på skärmen igen och jobbet
+            // fortfarande kör.
+            if (document.visibilityState === 'visible' && job.status === 'running' && !job.wakeLock) {
+                job.wakeLock = await acquireWakeLock();
+            }
+        };
+        document.addEventListener('visibilitychange', handler);
+        return function cleanup() {
+            document.removeEventListener('visibilitychange', handler);
+        };
+    }
+
     // Startar en nedladdning som ett bakgrundsjobb. Returnerar jobId direkt;
     // jobbets framgång/avslut signaleras via event-strömmen.
     function startJob(spec) {
         var jobId = 'j_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 5);
-        var items = tilesForBbox(spec.bbox, spec.minZoom, spec.maxZoom);
+        // spec.items: valfri override som anvands av resumeArea — bara
+        // saknade tiles laddas ner istallet for hela bbox-uppsattningen.
+        var items = (spec.items && spec.items.length)
+            ? spec.items
+            : tilesForBbox(spec.bbox, spec.minZoom, spec.maxZoom);
+        var fullCount = (typeof spec.totalTiles === 'number' && spec.totalTiles > 0)
+            ? spec.totalTiles
+            : items.length;
+        var alreadyDone = (typeof spec.alreadyDone === 'number' && spec.alreadyDone >= 0)
+            ? spec.alreadyDone : 0;
         var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
         var areaId = spec.areaId || newAreaId();
         var savedAt = new Date().toISOString();
@@ -853,20 +996,27 @@
             bbox: spec.bbox,
             minZoom: spec.minZoom,
             maxZoom: spec.maxZoom,
-            total: items.length,
-            done: 0,
+            total: fullCount,
+            done: alreadyDone,
             bytes: 0,
             failed: 0,
             status: 'running',
             controller: controller,
             savedAt: savedAt,
-            error: null
+            error: null,
+            paused: false,
+            pauseReason: null,
+            wakeLock: null
         };
         _jobs[jobId] = job;
         emitJobUpdate(jobId);
-        // Säkerställ att bakgrundspille:n existerar så jobbet inte kan
-        // försvinna ur sikte om modal-en stängs direkt.
         ensureJobsBar();
+
+        // Wake Lock + auto-pause installeras synkront sa att events fangas
+        // direkt — t.ex. om enheten redan ar offline nar jobbet startar.
+        var cleanupAutoPause = installAutoPause(job);
+        var cleanupWakeLock = installWakeLockReacquire(job);
+        acquireWakeLock().then(function (lock) { job.wakeLock = lock; });
 
         (async function run() {
             try {
@@ -874,8 +1024,9 @@
                     signal: controller ? controller.signal : undefined,
                     parallel: spec.parallel,
                     throttleMs: spec.throttleMs,
+                    shouldPause: function () { return job.paused; },
                     onProgress: function (p) {
-                        job.done = p.done;
+                        job.done = alreadyDone + p.done;
                         job.bytes = p.bytes;
                         job.failed = p.failed;
                         emitJobUpdate(jobId);
@@ -886,16 +1037,16 @@
                                 bbox: spec.bbox,
                                 minZoom: spec.minZoom,
                                 maxZoom: spec.maxZoom,
-                                tileCount: p.done,
+                                tileCount: alreadyDone + p.done,
                                 bytes: p.bytes,
                                 savedAt: savedAt,
-                                complete: p.done === p.total
+                                complete: (alreadyDone + p.done) === fullCount
                             });
                         }
                     }
                 });
                 job.status = 'done';
-                job.done = result.done;
+                job.done = alreadyDone + result.done;
                 job.bytes = result.bytes;
                 job.failed = result.failed;
             } catch (err) {
@@ -903,6 +1054,13 @@
                 job.status = (err && err.name === 'AbortError') ? 'aborted'
                           : (err && err.name === 'QuotaExceededError') ? 'quota'
                           : 'error';
+            } finally {
+                cleanupAutoPause();
+                cleanupWakeLock();
+                if (job.wakeLock) {
+                    try { await job.wakeLock.release(); } catch (_) {}
+                    job.wakeLock = null;
+                }
             }
             emitJobUpdate(jobId);
             // Behåll en stund så pille:n kan visa "klart" innan den fader ut.
@@ -913,6 +1071,44 @@
         })();
 
         return jobId;
+    }
+
+    // Återupptar ett område där `complete: false`. Kollar vilka tiles som
+    // redan finns i cachen och startar ett nytt jobb med bara de saknade.
+    // Behåller area-id så listan inte växer med duplikat.
+    async function resumeArea(id, opts) {
+        opts = opts || {};
+        var area = getStoredAreas().find(function (a) { return a.id === id; });
+        if (!area) throw new Error('Området saknas');
+        if (area.complete) return null;
+
+        var allItems = tilesForBbox(area.bbox, area.minZoom, area.maxZoom);
+        var cache = await caches.open(OFFLINE_CACHE);
+        var missing = [];
+        for (var i = 0; i < allItems.length; i++) {
+            var hit = await cache.match(allItems[i].url);
+            if (!hit) missing.push(allItems[i]);
+        }
+
+        if (!missing.length) {
+            // Allt finns redan — markera complete och avsluta.
+            saveAreaMeta(Object.assign({}, area, { complete: true }));
+            return null;
+        }
+
+        return startJob({
+            bbox: area.bbox,
+            minZoom: area.minZoom,
+            maxZoom: area.maxZoom,
+            kind: area.kind || 'area',
+            mode: 'resume',
+            areaId: area.id,
+            items: missing,
+            totalTiles: allItems.length,
+            alreadyDone: allItems.length - missing.length,
+            parallel: opts.parallel,
+            throttleMs: opts.throttleMs
+        });
     }
 
     // ── Bakgrunds-pille (UI) ───────────────────────────────────────────────
@@ -950,17 +1146,24 @@
             var j = jobs[i];
             var pct = j.total ? Math.round(j.done / j.total * 100) : 0;
             var label = j.mode === 'refresh' ? 'Uppdaterar'
+                      : j.mode === 'resume' ? 'Återupptar'
                       : (j.kind === 'kamuflage' ? 'Kamuflage' : 'Laddar ner');
             var statusTxt = '';
             if (j.status === 'done') { statusTxt = 'Klart'; pct = 100; }
             else if (j.status === 'aborted') statusTxt = 'Avbruten';
             else if (j.status === 'error') statusTxt = 'Fel';
             else if (j.status === 'quota') statusTxt = 'Slut på utrymme';
+            else if (j.paused) {
+                var reasonTxt = j.pauseReason === 'offline' ? 'inget nät'
+                              : j.pauseReason === 'battery' ? 'lågt batteri'
+                              : 'manuell';
+                statusTxt = 'Pausad: ' + reasonTxt + ' · ' + j.done + ' / ' + j.total;
+            }
             else statusTxt = j.done + ' / ' + j.total + ' · ' + formatBytes(j.bytes) +
                               (j.failed ? ' · ' + j.failed + ' fel' : '');
 
             html +=
-                '<div class="ot-jobpill" data-job="' + j.id + '" data-status="' + j.status + '">' +
+                '<div class="ot-jobpill" data-job="' + j.id + '" data-status="' + j.status + '" data-paused="' + (j.paused ? '1' : '0') + '">' +
                     '<div class="ot-jobpill-head">' +
                         '<span class="ot-jobpill-label">' + label + (j.label ? ': ' + j.label : '') + '</span>' +
                         (j.status === 'running'
@@ -1018,6 +1221,8 @@
             '.ot-jobpill{background:#152815;border:1px solid #2d4a2d;border-radius:6px;padding:10px 12px;color:#e8f0e8;box-shadow:0 4px 12px rgba(0,0,0,0.4);font-size:0.78rem}' +
             '.ot-jobpill[data-status="done"]{border-color:#4caf50;opacity:0.9}' +
             '.ot-jobpill[data-status="aborted"]{border-color:#c8a24e;opacity:0.85}' +
+            '.ot-jobpill[data-paused="1"]{border-color:#c8a24e}' +
+            '.ot-jobpill[data-paused="1"] .ot-jobpill-fill{background:#c8a24e}' +
             '.ot-jobpill[data-status="error"],.ot-jobpill[data-status="quota"]{border-color:#c62828;opacity:0.9}' +
             '.ot-jobpill-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:4px}' +
             '.ot-jobpill-label{font-weight:600;color:#c8e6c9;letter-spacing:0.04em;text-transform:uppercase;font-size:0.7rem}' +
@@ -1709,6 +1914,11 @@
                 '<div class="ot-stat"><span>Tiles att ladda ner</span><b id="otkCount">—</b></div>' +
                 '<div class="ot-stat"><span>Uppskattad storlek</span><b id="otkBytes">—</b></div>' +
                 '<div class="ot-stat"><span>Uppskattad tid</span><b id="otkTime">—</b></div>' +
+                '<label style="margin-top:12px">Hastighet</label>' +
+                '<div style="font-size:0.78rem;color:#e8f0e8;line-height:1.5">' +
+                    '<label class="ot-confirm" style="margin:0"><input type="radio" name="otkSpeed" value="standard" checked> Standard (1 req / 0,5 s) — färdigt på ~minuter</label>' +
+                    '<label class="ot-confirm" style="margin:6px 0 0"><input type="radio" name="otkSpeed" value="schedule"> Schemalagd (1 req / 3 s, lägre signatur, kör över natt). Auto-paus vid offline / batteri &lt; 20 %. Wake Lock håller skärm aktiv.</label>' +
+                '</div>' +
                 '<div id="otkStatus"></div>' +
                 '<div class="ot-warn" style="margin-top:10px">' +
                     '<label class="ot-confirm" style="margin:0"><input type="checkbox" id="otkAck1"> Jag förstår att tile-leverantören ser denna nedladdning i sin IP-logg.</label>' +
@@ -1765,8 +1975,13 @@
             countEl.textContent = currentTileCount.toLocaleString('sv-SE');
             bytesEl.textContent = '~' + formatBytes(currentBytes);
 
-            // Tid = tiles × (throttleMs / parallel) i ms.
-            var ms = currentTileCount * (BULK_THROTTLE_MS / BULK_PARALLEL);
+            // Tid = tiles × (throttleMs / parallel) i ms. Hastighets-radio
+            // valjer mellan BULK_THROTTLE_MS (standard, 0,5 s) och 3000 ms
+            // (schemalagd) — uppskattningen uppdateras live nar anvandaren
+            // andrar radio.
+            var speedRadio = overlay.querySelector('input[name="otkSpeed"]:checked');
+            var chosenThrottle = (speedRadio && speedRadio.value === 'schedule') ? 3000 : BULK_THROTTLE_MS;
+            var ms = currentTileCount * (chosenThrottle / BULK_PARALLEL);
             var sec = Math.round(ms / 1000);
             var tStr;
             if (sec < 60) tStr = sec + ' s';
@@ -1798,6 +2013,11 @@
         maxSlider.addEventListener('input', recalc);
         ack1.addEventListener('change', function () { refreshStartState(currentTileCount === 0 || currentTileCount > BULK_MAX_TILES); });
         ack2.addEventListener('change', function () { refreshStartState(currentTileCount === 0 || currentTileCount > BULK_MAX_TILES); });
+        // Live-uppskattning av tid uppdateras nar anvandaren byter hastighet.
+        var speedRadios = overlay.querySelectorAll('input[name="otkSpeed"]');
+        for (var sr = 0; sr < speedRadios.length; sr++) {
+            speedRadios[sr].addEventListener('change', recalc);
+        }
         recalc();
 
         var activeJobId = null;
@@ -1906,6 +2126,9 @@
             var mx = parseInt(maxSlider.value, 10);
             statusEl.innerHTML = '<div class="ot-stat"><span>Förlopp</span><b>0 / ' + currentTileCount + '</b></div>';
 
+            var speedRadio = overlay.querySelector('input[name="otkSpeed"]:checked');
+            var throttleChoice = (speedRadio && speedRadio.value === 'schedule') ? 3000 : BULK_THROTTLE_MS;
+
             activeJobId = startJob({
                 bbox: currentBbox,
                 minZoom: mn,
@@ -1913,7 +2136,7 @@
                 kind: 'kamuflage',
                 mode: 'new',
                 parallel: BULK_PARALLEL,
-                throttleMs: BULK_THROTTLE_MS
+                throttleMs: throttleChoice
             });
         });
     }
@@ -1944,6 +2167,7 @@
         refreshArea: refreshAreaWithModal,
         startJob: startJob,
         cancelJob: cancelJob,
+        resumeArea: resumeArea,
         getJob: getJob,
         getActiveJobs: getActiveJobs,
         exportArea: exportArea,
