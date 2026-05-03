@@ -113,8 +113,10 @@ och pan:a fritt över hela det stora området.
   - Bbox-val: nuvarande vy-centrum + en **skala-slider 1×–20×**
     (1× = nuvarande viewport, 20× ≈ 200×200 km). Pragmatiskt val
     framför drag-tooling i Fas 1 — drag/koordinat-input övervägs i Fas 2.
-  - Zoom-spann: min 8, max 14 (default 9–13). Mer konservativt än vanliga
-    "Spara område offline" eftersom hög-zoom snabbt sprängar 30 000-cap:en.
+  - Zoom-spann: min 6, max 17 (default 9–13). Vid hög max-zoom sprängs
+    30 000-cap:en snabbt — användaren får då minska skala. Cap:en sköter
+    säkerheten; default är konservativ men taket är samma som vanliga
+    "Spara område offline".
   - Live tile-räkning + storleksuppskattning.
   - Storage-check via `navigator.storage.estimate()` — varna om
     `quota - usage < 1.5 × beräknad storlek`.

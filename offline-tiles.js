@@ -1263,11 +1263,11 @@
                 '<div class="ot-row" style="margin-top:12px">' +
                     '<div>' +
                         '<label>Min zoom: <span id="otkMinLbl">' + initMin + '</span></label>' +
-                        '<input type="range" id="otkMin" min="6" max="14" step="1" value="' + initMin + '">' +
+                        '<input type="range" id="otkMin" min="6" max="17" step="1" value="' + initMin + '">' +
                     '</div>' +
                     '<div>' +
                         '<label>Max zoom: <span id="otkMaxLbl">' + initMax + '</span></label>' +
-                        '<input type="range" id="otkMax" min="6" max="14" step="1" value="' + initMax + '">' +
+                        '<input type="range" id="otkMax" min="6" max="17" step="1" value="' + initMax + '">' +
                     '</div>' +
                 '</div>' +
                 '<div class="ot-stat"><span>Tiles att ladda ner</span><b id="otkCount">—</b></div>' +
