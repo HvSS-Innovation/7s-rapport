@@ -35,6 +35,16 @@
     var THROTTLE_MS = 100;
     var STORAGE_KEY = 'offlineTiles.areas';
 
+    // Kamuflage-nedladdning: medveten överträdelse av tile-leverantörens
+    // bulk-policy för att täcka ett mycket större område än verkansområdet,
+    // så att tile-server-loggen inte avslöjar VAR operatören ska in. Hot-
+    // modell + UX-krav i audit/roadmap-kamuflage-nedladdning.md. Mer
+    // konservativ throttling än standard — burst-signaturen ska vara mindre
+    // igenkännlig, inte mer.
+    var BULK_MAX_TILES = 30000;
+    var BULK_PARALLEL = 1;
+    var BULK_THROTTLE_MS = 500;
+
     // Speglar HybridTileLayer.getTileUrl i minkarta.html: OTM z≤17, OSM z 18–19.
     function tileUrl(z, x, y) {
         if (z <= 17) {
@@ -130,6 +140,13 @@
         opts = opts || {};
         var onProgress = opts.onProgress || function () {};
         var signal = opts.signal;
+        // parallel/throttleMs konfigureras per anrop så standard "Spara
+        // område offline" och "Kamuflage-nedladdning" kan ha olika
+        // burst-profiler utan att duplicera nedladdnings-loop:en.
+        var parallel = (typeof opts.parallel === 'number' && opts.parallel > 0)
+            ? opts.parallel : PARALLEL;
+        var throttleMs = (typeof opts.throttleMs === 'number' && opts.throttleMs >= 0)
+            ? opts.throttleMs : THROTTLE_MS;
         var cache = await caches.open(OFFLINE_CACHE);
 
         var done = 0, failed = 0, bytes = 0;
@@ -152,14 +169,14 @@
                 }
                 done++;
                 onProgress({ done: done, failed: failed, bytes: bytes, total: items.length });
-                if (THROTTLE_MS > 0 && idx < items.length) {
-                    await new Promise(function (r) { setTimeout(r, THROTTLE_MS); });
+                if (throttleMs > 0 && idx < items.length) {
+                    await new Promise(function (r) { setTimeout(r, throttleMs); });
                 }
             }
         }
 
         var workers = [];
-        for (var w = 0; w < PARALLEL; w++) workers.push(worker());
+        for (var w = 0; w < parallel; w++) workers.push(worker());
         await Promise.all(workers);
         return { done: done, failed: failed, bytes: bytes };
     }
@@ -421,8 +438,16 @@
         var status = area.complete === false
             ? '<span style="color:#c8a24e">· avbruten</span>'
             : '';
+        // Kamuflage-områden får en distinkt badge så operatören ser i
+        // listan vilka som är medvetna bulk-downloads (potentiellt
+        // beskärbara) och vilka som är vanlig "Spara område offline".
+        var kindBadge = area.kind === 'kamuflage'
+            ? ' <span style="color:#c8a24e;background:#2a1a0a;border:1px solid #c8a24e;border-radius:3px;padding:0 6px;font-size:0.66rem;letter-spacing:0.06em;text-transform:uppercase">Kamuflage</span>'
+            : (area.kind === 'kamuflage-pruned'
+                ? ' <span style="color:#8aaa8a;background:#0f240f;border:1px solid #2d4a2d;border-radius:3px;padding:0 6px;font-size:0.66rem;letter-spacing:0.06em;text-transform:uppercase">Beskuren</span>'
+                : '');
         info.innerHTML =
-            '<div style="font-weight:600;margin-bottom:2px">' + savedDate + ' ' + status + ageBadge + '</div>' +
+            '<div style="font-weight:600;margin-bottom:2px">' + savedDate + kindBadge + ' ' + status + ageBadge + '</div>' +
             '<div style="color:var(--text-secondary);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.7rem">' +
                 bboxLine +
             '</div>' +
@@ -707,11 +732,18 @@
         var areaId = spec.areaId || newAreaId();
         var savedAt = new Date().toISOString();
 
+        // kind = 'area' (default) eller 'kamuflage'. Kamuflage-jobb laddar
+        // ner ett medvetet stort område som omsluter verkansområdet — se
+        // audit/roadmap-kamuflage-nedladdning.md. Persisteras i area-meta så
+        // att UI:n kan visa det och Fas 2 (beskär) kan filtrera på det.
+        var kind = spec.kind || 'area';
+
         var job = {
             id: jobId,
             areaId: areaId,
             label: spec.label || '',
             mode: spec.mode || 'new',
+            kind: kind,
             bbox: spec.bbox,
             minZoom: spec.minZoom,
             maxZoom: spec.maxZoom,
@@ -734,6 +766,8 @@
             try {
                 var result = await downloadTiles(items, {
                     signal: controller ? controller.signal : undefined,
+                    parallel: spec.parallel,
+                    throttleMs: spec.throttleMs,
                     onProgress: function (p) {
                         job.done = p.done;
                         job.bytes = p.bytes;
@@ -742,6 +776,7 @@
                         if (p.done % 50 === 0 || p.done === p.total) {
                             saveAreaMeta({
                                 id: areaId,
+                                kind: kind,
                                 bbox: spec.bbox,
                                 minZoom: spec.minZoom,
                                 maxZoom: spec.maxZoom,
@@ -808,7 +843,8 @@
         for (var i = 0; i < jobs.length; i++) {
             var j = jobs[i];
             var pct = j.total ? Math.round(j.done / j.total * 100) : 0;
-            var label = j.mode === 'refresh' ? 'Uppdaterar' : 'Laddar ner';
+            var label = j.mode === 'refresh' ? 'Uppdaterar'
+                      : (j.kind === 'kamuflage' ? 'Kamuflage' : 'Laddar ner');
             var statusTxt = '';
             if (j.status === 'done') { statusTxt = 'Klart'; pct = 100; }
             else if (j.status === 'aborted') statusTxt = 'Avbruten';
@@ -1138,9 +1174,319 @@
         openModal(map, { area: area });
     }
 
+    // ── Kamuflage-modal ────────────────────────────────────────────────────
+    // Skala-baserad bbox runt vy-centrum (1× = nuvarande viewport,
+    // 20× ≈ 200×200 km) så att operatören kan ladda ner ett stort område som
+    // omsluter verkansområdet. Beskäring lokalt i Fas 2.
+    //
+    // Designmotiv för konstanter och defaults: audit/roadmap-kamuflage-
+    // nedladdning.md. Kort: BULK_MAX_TILES = 30000 (~600 MB), throttling 1
+    // par. + 500 ms (under normal pan/zoom-aktivitet, vilket gör burst-
+    // signaturen mindre igenkännlig). Två obligatoriska checkboxes — utan
+    // dem är start-knappen disabled.
+    function scaleBbox(centerLat, centerLon, viewportBbox, factor) {
+        // Skala bbox runt centrum genom att räkna ny halv-bredd/halv-höjd.
+        // Funkar bra inom Sverige; vid hög nordlig breddgrad är lon-grader
+        // smalare i meter, men det är okej här — användaren ser MB-summan
+        // och tile-räkningen och kan justera, det är inte en surveying-grad
+        // beräkning.
+        var halfLat = (viewportBbox.north - viewportBbox.south) / 2;
+        var halfLon = (viewportBbox.east - viewportBbox.west) / 2;
+        var newHalfLat = halfLat * factor;
+        var newHalfLon = halfLon * factor;
+        var south = Math.max(-85, centerLat - newHalfLat);
+        var north = Math.min(85, centerLat + newHalfLat);
+        var west = centerLon - newHalfLon;
+        var east = centerLon + newHalfLon;
+        // Vid extremt stora skalor kan lon-spannet bli > 180 — clamp:a.
+        if (east - west >= 360) { west = -180; east = 180; }
+        return { south: south, west: west, north: north, east: east };
+    }
+
+    async function checkStorageHeadroom(estimateBytes) {
+        // navigator.storage.estimate() är tillgängligt i alla moderna
+        // browsers. Returnerar { ok, freeBytes, quota, usage } eller null
+        // om API:t saknas (då hoppar vi över check-en — bättre att låta
+        // användaren prova än att blockera grundlöst).
+        try {
+            if (!navigator.storage || !navigator.storage.estimate) return null;
+            var est = await navigator.storage.estimate();
+            var quota = est.quota || 0;
+            var usage = est.usage || 0;
+            var free = Math.max(0, quota - usage);
+            // 1.5× headroom — cache-data + metadata + Response-objektens
+            // overhead i Cache API (vilket inte är linjärt med blob-storlek).
+            var ok = free >= estimateBytes * 1.5;
+            return { ok: ok, freeBytes: free, quota: quota, usage: usage };
+        } catch (_) {
+            return null;
+        }
+    }
+
+    function openKamuflageModal(map) {
+        if (!map || typeof map.getBounds !== 'function') {
+            console.warn('[offline-tiles] openKamuflageModal: map saknas eller saknar getBounds');
+            return;
+        }
+        injectModalStyles();
+
+        var bounds = map.getBounds();
+        var center = map.getCenter();
+        var viewportBbox = {
+            south: bounds.getSouth(),
+            west: bounds.getWest(),
+            north: bounds.getNorth(),
+            east: bounds.getEast()
+        };
+
+        var initScale = 5;
+        var initMin = 9;
+        var initMax = 13;
+
+        var overlay = document.createElement('div');
+        overlay.className = 'ot-overlay';
+        overlay.innerHTML =
+            '<div class="ot-modal" role="dialog" aria-label="Kamuflage-nedladdning">' +
+                '<h3>KAMUFLAGE-NEDLADDNING</h3>' +
+                '<div class="ot-block">' +
+                    '<b>Bulk-download.</b> Tile-leverantörens IP-logg ser exakt vilken region som laddades ner. Funktionen döljer <b>var</b> ni ska verka — inte <b>att</b> nedladdningen sker. ' +
+                    'Kör via VPN eller Tor från ett annat nät, helst från en plats långt från verkansområdet och vid en annan tid. ' +
+                    'Detta är ett medvetet brott mot OpenStreetMap/OpenTopoMap:s bulk-policy.' +
+                '</div>' +
+                '<label>Område: skala kring vy-centrum</label>' +
+                '<div style="display:flex;align-items:center;gap:10px">' +
+                    '<input type="range" id="otkScale" min="1" max="20" step="1" value="' + initScale + '" style="flex:1">' +
+                    '<span id="otkScaleLbl" style="font-family:ui-monospace,Menlo,Consolas,monospace;color:#c8e6c9;min-width:42px;text-align:right">' + initScale + '×</span>' +
+                '</div>' +
+                '<label>Bounding box</label>' +
+                '<div class="ot-bbox" id="otkBbox"></div>' +
+                '<div class="ot-row" style="margin-top:12px">' +
+                    '<div>' +
+                        '<label>Min zoom: <span id="otkMinLbl">' + initMin + '</span></label>' +
+                        '<input type="range" id="otkMin" min="6" max="14" step="1" value="' + initMin + '">' +
+                    '</div>' +
+                    '<div>' +
+                        '<label>Max zoom: <span id="otkMaxLbl">' + initMax + '</span></label>' +
+                        '<input type="range" id="otkMax" min="6" max="14" step="1" value="' + initMax + '">' +
+                    '</div>' +
+                '</div>' +
+                '<div class="ot-stat"><span>Tiles att ladda ner</span><b id="otkCount">—</b></div>' +
+                '<div class="ot-stat"><span>Uppskattad storlek</span><b id="otkBytes">—</b></div>' +
+                '<div class="ot-stat"><span>Uppskattad tid</span><b id="otkTime">—</b></div>' +
+                '<div id="otkStatus"></div>' +
+                '<div class="ot-warn" style="margin-top:10px">' +
+                    '<label class="ot-confirm" style="margin:0"><input type="checkbox" id="otkAck1"> Jag förstår att tile-leverantören ser denna nedladdning i sin IP-logg.</label>' +
+                    '<label class="ot-confirm" style="margin:6px 0 0"><input type="checkbox" id="otkAck2"> Jag använder VPN/Tor och ett annat nät än verkansområdet.</label>' +
+                '</div>' +
+                '<div class="ot-progress" id="otkProgressWrap" style="display:none"><div class="ot-progress-fill" id="otkProgressFill"></div></div>' +
+                '<div class="ot-actions">' +
+                    '<button type="button" class="ot-btn" id="otkBackground" style="display:none">Kör i bakgrunden</button>' +
+                    '<button type="button" class="ot-btn" id="otkCancel">Stäng</button>' +
+                    '<button type="button" class="ot-btn ot-btn-primary" id="otkStart" disabled>Starta</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+
+        var scaleSlider = overlay.querySelector('#otkScale');
+        var scaleLbl = overlay.querySelector('#otkScaleLbl');
+        var minSlider = overlay.querySelector('#otkMin');
+        var maxSlider = overlay.querySelector('#otkMax');
+        var minLbl = overlay.querySelector('#otkMinLbl');
+        var maxLbl = overlay.querySelector('#otkMaxLbl');
+        var bboxEl = overlay.querySelector('#otkBbox');
+        var countEl = overlay.querySelector('#otkCount');
+        var bytesEl = overlay.querySelector('#otkBytes');
+        var timeEl = overlay.querySelector('#otkTime');
+        var statusEl = overlay.querySelector('#otkStatus');
+        var ack1 = overlay.querySelector('#otkAck1');
+        var ack2 = overlay.querySelector('#otkAck2');
+        var startBtn = overlay.querySelector('#otkStart');
+        var cancelBtn = overlay.querySelector('#otkCancel');
+        var bgBtn = overlay.querySelector('#otkBackground');
+        var progressWrap = overlay.querySelector('#otkProgressWrap');
+        var progressFill = overlay.querySelector('#otkProgressFill');
+
+        var currentBbox = viewportBbox;
+        var currentTileCount = 0;
+        var currentBytes = 0;
+
+        function recalc() {
+            var scale = parseInt(scaleSlider.value, 10);
+            var mn = parseInt(minSlider.value, 10);
+            var mx = parseInt(maxSlider.value, 10);
+            if (mn > mx) { minSlider.value = mx; mn = mx; }
+            scaleLbl.textContent = scale + '×';
+            minLbl.textContent = mn;
+            maxLbl.textContent = mx;
+
+            currentBbox = scaleBbox(center.lat, center.lng, viewportBbox, scale);
+            bboxEl.textContent =
+                'NV: ' + fmtCoord(currentBbox.north, true) + ', ' + fmtCoord(currentBbox.west, false) + '\n' +
+                'SE: ' + fmtCoord(currentBbox.south, true) + ', ' + fmtCoord(currentBbox.east, false);
+
+            currentTileCount = countTiles(currentBbox, mn, mx);
+            currentBytes = estimateBytes(currentTileCount);
+            countEl.textContent = currentTileCount.toLocaleString('sv-SE');
+            bytesEl.textContent = '~' + formatBytes(currentBytes);
+
+            // Tid = tiles × (throttleMs / parallel) i ms.
+            var ms = currentTileCount * (BULK_THROTTLE_MS / BULK_PARALLEL);
+            var sec = Math.round(ms / 1000);
+            var tStr;
+            if (sec < 60) tStr = sec + ' s';
+            else if (sec < 3600) tStr = Math.floor(sec / 60) + ' min ' + (sec % 60) + ' s';
+            else tStr = Math.floor(sec / 3600) + ' h ' + Math.round((sec % 3600) / 60) + ' min';
+            timeEl.textContent = '~' + tStr;
+
+            statusEl.innerHTML = '';
+
+            if (currentTileCount === 0) {
+                statusEl.innerHTML = '<div class="ot-block">Inga tiles att ladda ner i valt område.</div>';
+                refreshStartState(true);
+                return;
+            }
+            if (currentTileCount > BULK_MAX_TILES) {
+                statusEl.innerHTML = '<div class="ot-block">Över hård cap på ' + BULK_MAX_TILES.toLocaleString('sv-SE') + ' tiles. Minska skala eller zoom-spann.</div>';
+                refreshStartState(true);
+                return;
+            }
+            refreshStartState(false);
+        }
+
+        function refreshStartState(forceDisable) {
+            startBtn.disabled = forceDisable || !ack1.checked || !ack2.checked;
+        }
+
+        scaleSlider.addEventListener('input', recalc);
+        minSlider.addEventListener('input', recalc);
+        maxSlider.addEventListener('input', recalc);
+        ack1.addEventListener('change', function () { refreshStartState(currentTileCount === 0 || currentTileCount > BULK_MAX_TILES); });
+        ack2.addEventListener('change', function () { refreshStartState(currentTileCount === 0 || currentTileCount > BULK_MAX_TILES); });
+        recalc();
+
+        var activeJobId = null;
+        var running = false;
+
+        function close(opts) {
+            opts = opts || {};
+            if (running && !opts.keepJob && activeJobId) {
+                cancelJob(activeJobId);
+            }
+            global.removeEventListener('offline-tiles:job-update', onJobUpdate);
+            document.removeEventListener('keydown', onEsc);
+            overlay.remove();
+        }
+
+        cancelBtn.addEventListener('click', function () { close(); });
+        bgBtn.addEventListener('click', function () { close({ keepJob: true }); });
+
+        function onEsc(e) {
+            if (e.key === 'Escape' && !running) close();
+        }
+        document.addEventListener('keydown', onEsc);
+
+        function onJobUpdate(ev) {
+            var det = ev.detail || {};
+            if (det.jobId !== activeJobId) return;
+            var job = det.job;
+            if (!job) return;
+
+            var pct = job.total ? Math.round(job.done / job.total * 100) : 0;
+            progressFill.style.width = pct + '%';
+
+            if (job.status === 'running') {
+                statusEl.innerHTML =
+                    '<div class="ot-stat"><span>Förlopp</span><b>' +
+                        job.done + ' / ' + job.total +
+                        ' · ' + formatBytes(job.bytes) +
+                        (job.failed ? ' · ' + job.failed + ' fel' : '') +
+                    '</b></div>';
+                return;
+            }
+
+            running = false;
+            bgBtn.style.display = 'none';
+            cancelBtn.textContent = 'Stäng';
+
+            if (job.status === 'done') {
+                startBtn.textContent = 'Klar';
+                statusEl.innerHTML =
+                    '<div class="ot-stat"><span>Klart</span><b>' +
+                        job.done + ' tiles · ' + formatBytes(job.bytes) +
+                        (job.failed ? ' · ' + job.failed + ' fel' : '') +
+                    '</b></div>' +
+                    '<div class="ot-warn">Området är nedladdat och markerat som kamuflage. Fas 2 kommer låta dig beskära det till verkansområdet.</div>';
+            } else if (job.status === 'aborted') {
+                startBtn.textContent = 'Starta';
+                refreshStartState(false);
+                statusEl.innerHTML = '<div class="ot-warn">Avbruten. Tiles som hann sparas finns kvar i offline-cachen som kamuflage-område.</div>';
+            } else if (job.status === 'quota') {
+                startBtn.textContent = 'Starta';
+                refreshStartState(false);
+                statusEl.innerHTML = '<div class="ot-block">Slut på lagringsutrymme i webbläsaren. Rensa områden eller välj ett mindre.</div>';
+            } else {
+                startBtn.textContent = 'Starta';
+                refreshStartState(false);
+                var msg = job.error && job.error.message ? job.error.message : 'okänt';
+                statusEl.innerHTML = '<div class="ot-block">Fel vid nedladdning: ' + msg + '</div>';
+            }
+        }
+        global.addEventListener('offline-tiles:job-update', onJobUpdate);
+
+        startBtn.addEventListener('click', async function () {
+            if (running) return;
+
+            // Storage-headroom-check INNAN start. Om quota är otillräcklig
+            // får användaren välja att avbryta eller fortsätta ändå (det
+            // sistnämnda kan vara önskvärt på enheter med dynamisk quota
+            // som växer vid behov).
+            startBtn.disabled = true;
+            startBtn.textContent = 'Kontrollerar utrymme…';
+            var head = await checkStorageHeadroom(currentBytes);
+            if (head && !head.ok) {
+                statusEl.innerHTML =
+                    '<div class="ot-block">Inte tillräckligt med utrymme: ' +
+                        formatBytes(head.freeBytes) + ' fritt, ' +
+                        '~' + formatBytes(currentBytes * 1.5) + ' rekommenderat.' +
+                    '<br><label class="ot-confirm" style="margin-top:6px"><input type="checkbox" id="otkForceQuota"> Fortsätt ändå (risk för avbrott mid-download)</label>' +
+                    '</div>';
+                startBtn.textContent = 'Starta';
+                startBtn.disabled = true;
+                var force = overlay.querySelector('#otkForceQuota');
+                force.addEventListener('change', function () {
+                    startBtn.disabled = !force.checked;
+                });
+                return;
+            }
+
+            running = true;
+            startBtn.textContent = 'Laddar…';
+            cancelBtn.textContent = 'Avbryt';
+            bgBtn.style.display = '';
+            progressWrap.style.display = '';
+            progressFill.style.width = '0%';
+
+            var mn = parseInt(minSlider.value, 10);
+            var mx = parseInt(maxSlider.value, 10);
+            statusEl.innerHTML = '<div class="ot-stat"><span>Förlopp</span><b>0 / ' + currentTileCount + '</b></div>';
+
+            activeJobId = startJob({
+                bbox: currentBbox,
+                minZoom: mn,
+                maxZoom: mx,
+                kind: 'kamuflage',
+                mode: 'new',
+                parallel: BULK_PARALLEL,
+                throttleMs: BULK_THROTTLE_MS
+            });
+        });
+    }
+
     global.OfflineTiles = {
         OFFLINE_CACHE: OFFLINE_CACHE,
         STALE_DAYS: STALE_DAYS,
+        MAX_TILES: MAX_TILES,
+        BULK_MAX_TILES: BULK_MAX_TILES,
         tileUrl: tileUrl,
         tilesForBbox: tilesForBbox,
         countTiles: countTiles,
@@ -1154,6 +1500,7 @@
         attachCoverageIndicator: attachCoverageIndicator,
         renderAreasPanel: renderAreasPanel,
         openModal: openModal,
+        openKamuflageModal: openKamuflageModal,
         refreshArea: refreshAreaWithModal,
         startJob: startJob,
         cancelJob: cancelJob,
