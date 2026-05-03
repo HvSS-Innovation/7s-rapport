@@ -23,6 +23,34 @@ import { leafletLayer } from './vendor/protomaps/protomaps-leaflet.esm.js';
 const STORAGE_KEY = 'pmtiles.hardening';
 const DEFAULT_FLAVOR = 'light'; // protomaps-leaflet: light/dark/white/grayscale/black
 
+// Tre publika test-PMTiles på protomaps GitHub (raw.githubusercontent.com har
+// CORS open). Räcker för att verifiera UI-flödet utan att bygga egen fil.
+// Fas 2 byter till en svensk hostad fil med SHA-256-verifiering.
+const DEMO_URLS = [
+    {
+        name: 'Florens (vector, 6,6 MB)',
+        url: 'https://raw.githubusercontent.com/protomaps/PMTiles/main/spec/v3/protomaps%28vector%29ODbL_firenze.pmtiles',
+        description: 'Stadskarta över Florens, Italien — visar protomaps-stilen i praktiken',
+        center: [43.77, 11.25],
+        zoom: 13
+    },
+    {
+        name: 'Världen z 0-3 (raster, 0,7 MB)',
+        url: 'https://raw.githubusercontent.com/protomaps/PMTiles/main/spec/v3/stamen_toner%28raster%29CC-BY+ODbL_z3.pmtiles',
+        description: 'Stamen Toner svartvit, världstäckning men bara extremt utzoomad',
+        center: [0, 0],
+        zoom: 2
+    },
+    {
+        name: 'Mt Whitney (raster WebP, 1,9 MB)',
+        url: 'https://raw.githubusercontent.com/protomaps/PMTiles/main/spec/v3/usgs-mt-whitney-8-15-webp-512.pmtiles',
+        description: 'USGS topografi över Mt Whitney, Kalifornien',
+        center: [36.58, -118.29],
+        zoom: 12
+    }
+];
+const DEFAULT_DEMO_URL = DEMO_URLS[0].url;
+
 function loadState() {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -97,17 +125,12 @@ function createController(map, normalLayer, opts) {
     async function activate(promptedUrl) {
         if (promptedUrl) url = promptedUrl;
         if (!url) {
-            const input = window.prompt(
-                'PMTiles-URL\n\n' +
-                'Ange en .pmtiles-URL som stödjer HTTP Range-requests och CORS.\n' +
-                'Exempel:\n' +
-                '  http://localhost:8000/sample.pmtiles  (lokal test-server)\n' +
-                '  https://din-r2-bucket.example.com/sverige.pmtiles\n\n' +
-                'Hostingen får inte vara aktiv tile-server (OTM/OSM blockerar bulk).',
-                ''
-            );
-            if (!input) return false;
-            url = input.trim();
+            // Fas 1: defaulta till demo-fil (Florens) sa anvandaren ser
+            // resultatet direkt. Fas 2 byter till svensk hostad fil med
+            // SHA-256-verifiering. Anvandaren kan andra URL via
+            // window.MK_HARDENING.setUrl(...) eller setDemo().
+            url = DEFAULT_DEMO_URL;
+            console.info('[pmtiles] Anvander default demo-URL (Florens). Byt via setUrl() eller setDemo(index).');
         }
 
         try {
@@ -128,6 +151,13 @@ function createController(map, normalLayer, opts) {
             hardLayer.addTo(map);
             if (normalLayer && map.hasLayer(normalLayer)) {
                 map.removeLayer(normalLayer);
+            }
+            // Pan-till-demo: om aktiv URL ar en av de kanda demos och
+            // anvandarens vy ar utanfor dess tackningsomrade, hoppa dit.
+            // Annars ser man bara grå rutor och tror funktionen ar trasig.
+            const demo = DEMO_URLS.find(d => d.url === url);
+            if (demo && demo.center && map.setView) {
+                try { map.setView(demo.center, demo.zoom); } catch (_) {}
             }
             saveState({ active: true, url, flavor, kind });
             emit();
@@ -172,6 +202,19 @@ function createController(map, normalLayer, opts) {
         return Promise.resolve(false);
     }
 
+    // Hjalpare for att byta till en av de inbyggda demo-filerna och
+    // auto-pan:a till dess center. Anvands via console: MK_HARDENING.setDemo(0/1/2).
+    async function setDemo(index) {
+        const demo = DEMO_URLS[index] || DEMO_URLS[0];
+        await setUrl(demo.url);
+        if (!isActive()) await activate();
+        if (demo.center && map) {
+            map.setView(demo.center, demo.zoom);
+        }
+        return demo;
+    }
+    function listDemos() { return DEMO_URLS.map((d, i) => ({ index: i, ...d })); }
+
     function setFlavor(f) {
         flavor = f;
         const wasActive = isActive();
@@ -194,6 +237,7 @@ function createController(map, normalLayer, opts) {
         getUrl, setUrl,
         getFlavor, setFlavor,
         getKind,
+        setDemo, listDemos,
         onChange,
         verifyHashIfRequired
     };
