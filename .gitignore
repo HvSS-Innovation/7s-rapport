@@ -13,3 +13,6 @@ stab/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# Lokala roadmap-anteckningar (innehåller lokal Dropbox-sökväg, ej för publik repo)
+/roadmap-*.md
