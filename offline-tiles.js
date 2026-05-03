@@ -566,6 +566,20 @@
             actions.appendChild(refresh);
         }
 
+        // Beskär-knappen visas bara på kamuflage-områden. Kräver att map ar
+        // synlig i bakgrunden sa L.rectangle-overlayn syns.
+        if (map && area.kind === 'kamuflage') {
+            var prune = document.createElement('button');
+            prune.type = 'button';
+            prune.className = 'btn btn-sm btn-ghost';
+            prune.textContent = 'Beskär';
+            prune.title = 'Välj ett delområde att behålla; resten av kamuflage-cachen raderas lokalt';
+            prune.addEventListener('click', function () {
+                openPruneModal(area, map);
+            });
+            actions.appendChild(prune);
+        }
+
         var exp = document.createElement('button');
         exp.type = 'button';
         exp.className = 'btn btn-sm btn-ghost';
@@ -976,6 +990,11 @@
         if (document.getElementById('offline-tiles-styles')) return;
         var css =
             '.ot-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:10000;display:flex;align-items:center;justify-content:center;padding:16px}' +
+            // Panel-mode: gor overlay genomskinligt + non-interactive sa
+            // anvandaren kan klicka pa kartan bakom (panorera, zooma).
+            // Modal-en sjalv halls klickbar via pointer-events:auto.
+            '.ot-overlay.ot-overlay-panel{background:rgba(0,0,0,0.15);pointer-events:none;align-items:flex-end;justify-content:flex-end;padding:12px}' +
+            '.ot-overlay.ot-overlay-panel .ot-modal{pointer-events:auto;max-width:420px}' +
             '.ot-modal{background:#1a321a;border:1px solid #2d4a2d;border-radius:8px;padding:16px;max-width:560px;width:100%;max-height:90vh;overflow:auto;color:#e8f0e8;font-family:Inter,system-ui,sans-serif}' +
             '.ot-modal h3{margin:0 0 8px;font-size:1rem;letter-spacing:0.04em}' +
             '.ot-modal label{display:block;font-size:0.72rem;color:#8aaa8a;margin-top:10px;margin-bottom:4px;text-transform:uppercase;letter-spacing:0.06em}' +
@@ -1315,6 +1334,331 @@
         }
     }
 
+    // ── Beskär (Fas 2) ─────────────────────────────────────────────────────
+    // Tar ett kamuflage-område och raderar tiles utanför ett valt delområde
+    // (keepBbox). Resultat: bara verkansområdet finns kvar i offline-cachen,
+    // medan tile-server-loggen redan har sett hela det ursprungliga området.
+    // Beslutsmotiv + UX-krav i audit/roadmap-kamuflage-nedladdning.md (Fas 2).
+    function planPrune(area, keepBbox) {
+        var allItems = tilesForBbox(area.bbox, area.minZoom, area.maxZoom);
+        var keepItems = tilesForBbox(keepBbox, area.minZoom, area.maxZoom);
+        // Set-lookup pa URL ar aktning O(1); tile-koordinater aligns pa
+        // rutnatet sa bbox-overlap-test ar onodig komplexitet.
+        var keepSet = Object.create(null);
+        for (var i = 0; i < keepItems.length; i++) keepSet[keepItems[i].url] = true;
+        var toDelete = [];
+        for (var j = 0; j < allItems.length; j++) {
+            if (!keepSet[allItems[j].url]) toDelete.push(allItems[j]);
+        }
+        return {
+            keepCount: keepItems.length,
+            deleteCount: toDelete.length,
+            totalCount: allItems.length,
+            toDelete: toDelete
+        };
+    }
+
+    async function pruneArea(id, keepBbox, opts) {
+        opts = opts || {};
+        var action = opts.action || 'replace'; // 'replace' eller 'mark-pruned'
+        var onProgress = opts.onProgress || function () {};
+
+        var list = getStoredAreas();
+        var area = list.find(function (a) { return a.id === id; });
+        if (!area) throw new Error('Området saknas');
+
+        var plan = planPrune(area, keepBbox);
+        var cache = await caches.open(OFFLINE_CACHE);
+
+        var deleted = 0;
+        for (var i = 0; i < plan.toDelete.length; i++) {
+            try {
+                var ok = await cache.delete(plan.toDelete[i].url);
+                if (ok) deleted++;
+            } catch (_) {
+                // Forts. — en miss raderar inte hela jobbet, bara den entry:n.
+            }
+            if (i % 50 === 0) onProgress({ done: i, total: plan.toDelete.length });
+        }
+        onProgress({ done: plan.toDelete.length, total: plan.toDelete.length });
+
+        // Uppskatta kvarvarande bytes proportionellt mot tile-andel. Vid replace
+        // far tile-anvandaren ett "rent" omrade med korrekt count; vid mark-
+        // pruned skrivs bbox over till keepBbox sa att coverage-indikatorn
+        // matchar det faktiska innehallet.
+        var avgBytes = (area.bytes && area.tileCount) ? (area.bytes / area.tileCount) : BYTES_PER_TILE_AVG;
+        var remainingBytes = Math.round(avgBytes * plan.keepCount);
+
+        var nextArea;
+        if (action === 'replace') {
+            nextArea = {
+                id: newAreaId(),
+                kind: 'area',
+                bbox: keepBbox,
+                minZoom: area.minZoom,
+                maxZoom: area.maxZoom,
+                tileCount: plan.keepCount,
+                bytes: remainingBytes,
+                savedAt: new Date().toISOString(),
+                complete: true,
+                prunedFrom: area.id
+            };
+            list = list.filter(function (a) { return a.id !== area.id; });
+            list.push(nextArea);
+        } else {
+            var idx = list.findIndex(function (a) { return a.id === area.id; });
+            if (idx >= 0) {
+                list[idx] = Object.assign({}, area, {
+                    kind: 'kamuflage-pruned',
+                    bbox: keepBbox,
+                    tileCount: plan.keepCount,
+                    bytes: remainingBytes,
+                    prunedAt: new Date().toISOString()
+                });
+                nextArea = list[idx];
+            }
+        }
+
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch (_) {}
+        notifyChange();
+        return { area: nextArea, deleted: deleted, kept: plan.keepCount };
+    }
+
+    function openPruneModal(area, map) {
+        if (!area || !map || typeof L === 'undefined' || !L.rectangle) {
+            console.warn('[offline-tiles] openPruneModal: krav saknas (area, map, Leaflet L.rectangle)');
+            return;
+        }
+        if (area.kind !== 'kamuflage') {
+            console.warn('[offline-tiles] Beskär stöds bara på kamuflage-områden');
+            return;
+        }
+        injectModalStyles();
+
+        // Init: clamp:a nuvarande viewport till kamuflage-bbox sa anvandaren
+        // inte staller delomradet utanfor det redan nedladdade.
+        var bounds = map.getBounds();
+        var keepBbox = clampBbox({
+            south: bounds.getSouth(),
+            west: bounds.getWest(),
+            north: bounds.getNorth(),
+            east: bounds.getEast()
+        }, area.bbox);
+        if (!isValidBbox(keepBbox)) keepBbox = Object.assign({}, area.bbox);
+
+        // Visualisera bade kamuflage-omradet (gratt, glest streck) och
+        // del-omradet (gult, fyllt) pa kartan i bakgrunden.
+        var areaRect = L.rectangle(
+            [[area.bbox.south, area.bbox.west], [area.bbox.north, area.bbox.east]],
+            { color: '#888', weight: 1, fillColor: '#888', fillOpacity: 0.04, dashArray: '2,4', interactive: false }
+        ).addTo(map);
+        var keepRect = L.rectangle(
+            [[keepBbox.south, keepBbox.west], [keepBbox.north, keepBbox.east]],
+            { color: '#c8a24e', weight: 2, fillColor: '#c8a24e', fillOpacity: 0.15, dashArray: '6,4', interactive: false }
+        ).addTo(map);
+
+        var overlay = document.createElement('div');
+        overlay.className = 'ot-overlay ot-overlay-panel';
+        overlay.innerHTML =
+            '<div class="ot-modal" role="dialog" aria-label="Beskär kamuflage-område">' +
+                '<h3>BESKÄR KAMUFLAGE-OMRÅDE</h3>' +
+                '<div class="ot-warn">Raderar tiles utanför valt delområde lokalt på enheten. Tile-server-loggen är redan skapad — denna åtgärd krymper bara cachen så att en forensisk analys av enheten i fält inte avslöjar verkansområdet.</div>' +
+                '<label>Delområde att behålla (NV / SE)</label>' +
+                '<div class="ot-bbox" id="otpBbox"></div>' +
+                '<div class="ot-actions" style="margin-top:8px;justify-content:flex-start;flex-wrap:wrap">' +
+                    '<button type="button" class="ot-btn" id="otpUseView">Använd nuvarande vy</button>' +
+                    '<button type="button" class="ot-btn" id="otpToggleManual">Koord-input…</button>' +
+                '</div>' +
+                '<div id="otpManual" style="display:none;margin-top:10px">' +
+                    '<div class="ot-row">' +
+                        '<div><label>N (lat)</label><input type="number" step="0.0001" id="otpN"></div>' +
+                        '<div><label>S (lat)</label><input type="number" step="0.0001" id="otpS"></div>' +
+                    '</div>' +
+                    '<div class="ot-row">' +
+                        '<div><label>V (lon)</label><input type="number" step="0.0001" id="otpW"></div>' +
+                        '<div><label>Ö (lon)</label><input type="number" step="0.0001" id="otpE"></div>' +
+                    '</div>' +
+                    '<div style="margin-top:6px"><button type="button" class="ot-btn" id="otpApplyManual">Använd koordinater</button></div>' +
+                '</div>' +
+                '<div class="ot-stat"><span>Behåller</span><b id="otpKeep">—</b></div>' +
+                '<div class="ot-stat"><span>Raderar</span><b id="otpDel">—</b></div>' +
+                '<div class="ot-stat"><span>Frigör</span><b id="otpFree">—</b></div>' +
+                '<label style="margin-top:12px">Efter beskärning</label>' +
+                '<div style="font-size:0.78rem;color:#e8f0e8;line-height:1.5">' +
+                    '<label class="ot-confirm" style="margin:0"><input type="radio" name="otpAction" value="replace" checked> Ersätt kamuflage-området med delområdet (kind: <code>area</code>). Det stora kamuflage-omr. försvinner ur listan.</label>' +
+                    '<label class="ot-confirm" style="margin:6px 0 0"><input type="radio" name="otpAction" value="mark-pruned"> Markera som beskuret kamuflage (kind: <code>kamuflage-pruned</code>). Behåller spårbarhet.</label>' +
+                '</div>' +
+                '<div id="otpStatus"></div>' +
+                '<div class="ot-progress" id="otpProgressWrap" style="display:none"><div class="ot-progress-fill" id="otpProgressFill"></div></div>' +
+                '<div class="ot-actions">' +
+                    '<button type="button" class="ot-btn" id="otpCancel">Stäng</button>' +
+                    '<button type="button" class="ot-btn ot-btn-primary" id="otpStart">Beskär</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+
+        var bboxEl = overlay.querySelector('#otpBbox');
+        var keepEl = overlay.querySelector('#otpKeep');
+        var delEl = overlay.querySelector('#otpDel');
+        var freeEl = overlay.querySelector('#otpFree');
+        var statusEl = overlay.querySelector('#otpStatus');
+        var startBtn = overlay.querySelector('#otpStart');
+        var cancelBtn = overlay.querySelector('#otpCancel');
+        var useViewBtn = overlay.querySelector('#otpUseView');
+        var toggleManual = overlay.querySelector('#otpToggleManual');
+        var manualBox = overlay.querySelector('#otpManual');
+        var applyManual = overlay.querySelector('#otpApplyManual');
+        var nIn = overlay.querySelector('#otpN');
+        var sIn = overlay.querySelector('#otpS');
+        var wIn = overlay.querySelector('#otpW');
+        var eIn = overlay.querySelector('#otpE');
+        var progressWrap = overlay.querySelector('#otpProgressWrap');
+        var progressFill = overlay.querySelector('#otpProgressFill');
+
+        var avgBytes = (area.bytes && area.tileCount) ? (area.bytes / area.tileCount) : BYTES_PER_TILE_AVG;
+        var awaitingConfirm = false;
+        var running = false;
+
+        function syncManualInputs() {
+            nIn.value = keepBbox.north.toFixed(4);
+            sIn.value = keepBbox.south.toFixed(4);
+            wIn.value = keepBbox.west.toFixed(4);
+            eIn.value = keepBbox.east.toFixed(4);
+        }
+
+        function recalc() {
+            keepRect.setBounds([[keepBbox.south, keepBbox.west], [keepBbox.north, keepBbox.east]]);
+            bboxEl.textContent =
+                'NV: ' + fmtCoord(keepBbox.north, true) + ', ' + fmtCoord(keepBbox.west, false) + '\n' +
+                'SE: ' + fmtCoord(keepBbox.south, true) + ', ' + fmtCoord(keepBbox.east, false);
+            syncManualInputs();
+
+            var plan = planPrune(area, keepBbox);
+            keepEl.textContent = plan.keepCount.toLocaleString('sv-SE') + ' tiles';
+            delEl.textContent = plan.deleteCount.toLocaleString('sv-SE') + ' tiles';
+            freeEl.textContent = '~' + formatBytes(Math.round(avgBytes * plan.deleteCount));
+
+            // Reset confirm-state vid bbox-andring sa anvandaren inte raderar
+            // av misstag direkt efter att ha andrat omrade.
+            awaitingConfirm = false;
+            startBtn.textContent = 'Beskär';
+            startBtn.disabled = plan.keepCount === 0 || plan.deleteCount === 0;
+            statusEl.innerHTML = '';
+        }
+
+        useViewBtn.addEventListener('click', function () {
+            var b = map.getBounds();
+            keepBbox = clampBbox({
+                south: b.getSouth(), west: b.getWest(),
+                north: b.getNorth(), east: b.getEast()
+            }, area.bbox);
+            if (!isValidBbox(keepBbox)) {
+                statusEl.innerHTML = '<div class="ot-block">Nuvarande vy ligger utanför kamuflage-området. Pan:a in i området först.</div>';
+                return;
+            }
+            recalc();
+        });
+
+        toggleManual.addEventListener('click', function () {
+            manualBox.style.display = manualBox.style.display === 'none' ? '' : 'none';
+        });
+
+        applyManual.addEventListener('click', function () {
+            var n = parseFloat(nIn.value), s = parseFloat(sIn.value);
+            var w = parseFloat(wIn.value), e = parseFloat(eIn.value);
+            if (!isFinite(n) || !isFinite(s) || !isFinite(w) || !isFinite(e)) {
+                statusEl.innerHTML = '<div class="ot-block">Ogiltiga koordinater.</div>';
+                return;
+            }
+            var next = clampBbox({ south: s, west: w, north: n, east: e }, area.bbox);
+            if (!isValidBbox(next)) {
+                statusEl.innerHTML = '<div class="ot-block">Koordinaterna täcker inget område inom kamuflage-bbox.</div>';
+                return;
+            }
+            keepBbox = next;
+            recalc();
+        });
+
+        function close() {
+            try { keepRect.remove(); } catch (_) {}
+            try { areaRect.remove(); } catch (_) {}
+            overlay.remove();
+        }
+
+        cancelBtn.addEventListener('click', close);
+
+        startBtn.addEventListener('click', async function () {
+            if (running) return;
+            var plan = planPrune(area, keepBbox);
+            if (plan.keepCount === 0 || plan.deleteCount === 0) return;
+
+            // Tva-stegs-bekraftelse i samma knapp — andra klicket utlosar
+            // raderingen. Hindrar oavsiktlig destruktion utan att bryta
+            // flowen med en separat confirm-dialog.
+            if (!awaitingConfirm) {
+                awaitingConfirm = true;
+                startBtn.textContent = 'Bekräfta: behåll ' + plan.keepCount + ', radera ' + plan.deleteCount;
+                statusEl.innerHTML = '<div class="ot-warn">Detta går inte att ångra. Klicka knappen igen för att bekräfta.</div>';
+                return;
+            }
+
+            var actionRadio = overlay.querySelector('input[name="otpAction"]:checked');
+            var action = actionRadio ? actionRadio.value : 'replace';
+
+            running = true;
+            startBtn.disabled = true;
+            startBtn.textContent = 'Beskär…';
+            cancelBtn.disabled = true;
+            progressWrap.style.display = '';
+            progressFill.style.width = '0%';
+            statusEl.innerHTML = '<div class="ot-stat"><span>Förlopp</span><b id="otpProg">0 / ' + plan.deleteCount + '</b></div>';
+
+            try {
+                var result = await pruneArea(area.id, keepBbox, {
+                    action: action,
+                    onProgress: function (p) {
+                        var pct = p.total ? Math.round(p.done / p.total * 100) : 0;
+                        progressFill.style.width = pct + '%';
+                        var prog = overlay.querySelector('#otpProg');
+                        if (prog) prog.textContent = p.done + ' / ' + p.total;
+                    }
+                });
+                statusEl.innerHTML =
+                    '<div class="ot-stat"><span>Klart</span><b>Behöll ' + result.kept +
+                    ', raderade ' + result.deleted + '</b></div>' +
+                    '<div class="ot-warn">Verkansområdet finns kvar offline. Stäng modalen för att se uppdaterad områdes-lista.</div>';
+                cancelBtn.disabled = false;
+                cancelBtn.textContent = 'Klar';
+            } catch (err) {
+                running = false;
+                cancelBtn.disabled = false;
+                startBtn.disabled = false;
+                startBtn.textContent = 'Beskär';
+                awaitingConfirm = false;
+                var msg = err && err.message ? err.message : 'okänt';
+                statusEl.innerHTML = '<div class="ot-block">Fel vid beskärning: ' + msg + '</div>';
+            }
+        });
+
+        recalc();
+    }
+
+    // Bbox-helpers — clamp:ar in i ett yttre omrade och kollar att resultatet
+    // har positiv yta. Anvands av prune-modal:n for att garantera att del-
+    // omradet ligger inom kamuflage-bboxen.
+    function clampBbox(inner, outer) {
+        return {
+            south: Math.max(inner.south, outer.south),
+            west: Math.max(inner.west, outer.west),
+            north: Math.min(inner.north, outer.north),
+            east: Math.min(inner.east, outer.east)
+        };
+    }
+    function isValidBbox(b) {
+        return b && isFinite(b.south) && isFinite(b.north) && isFinite(b.west) && isFinite(b.east)
+            && b.north > b.south && b.east > b.west;
+    }
+
     function openKamuflageModal(map) {
         if (!map || typeof map.getBounds !== 'function') {
             console.warn('[offline-tiles] openKamuflageModal: map saknas eller saknar getBounds');
@@ -1594,6 +1938,9 @@
         renderAreasPanel: renderAreasPanel,
         openModal: openModal,
         openKamuflageModal: openKamuflageModal,
+        openPruneModal: openPruneModal,
+        pruneArea: pruneArea,
+        planPrune: planPrune,
         refreshArea: refreshAreaWithModal,
         startJob: startJob,
         cancelJob: cancelJob,

@@ -93,7 +93,7 @@ UI:n måste vara explicit:
 Varje fas är en **shippbar skiva**. En push i slutet ger något konkret
 användbart även om senare faser uteblir.
 
-### Fas 1 — MVP (push idag)
+### Fas 1 — MVP *(LEVERERAD 2026-05-03)*
 
 **Mål.** Användaren kan trigga en kamuflage-nedladdning av ett område
 flera mil i diameter, se progress, vänta på 100 %, slå på flygplansläge
@@ -168,7 +168,7 @@ och pan:a fritt över hela det stora området.
 CSS rör jag inte — modal-en återanvänder `.ot-overlay`/`.ot-modal`-
 stilarna som redan finns i `injectModalStyles()`.
 
-### Fas 2 — Beskär till verkansområde
+### Fas 2 — Beskär till verkansområde *(LEVERERAD 2026-05-03)*
 
 **Mål.** Efter en kamuflage-nedladdning kan operatören välja ett delområde
 att behålla; resten raderas ur cachen lokalt så att en forensisk analys av
@@ -322,7 +322,9 @@ brus i tile-server-loggen.
   introduceras separat.
 - Allt nytt JS hamnar i `offline-tiles.js` så länge filen håller sig
   under 1500 rader. Vid överstigning: bryt ut till
-  `offline-tiles-kamuflage.js`.
+  `offline-tiles-kamuflage.js`. **Status efter Fas 2:** filen är ~1950
+  rader. Splittring är ett TODO innan Fas 3 (Schemalägg-läge) — den fasen
+  kommer lägga ytterligare ~150 rader.
 - `.about`-panelen i `minkarta.html` och `sensorskiss.html` uppdateras
   med en explicit kamuflage-rad som beskriver hot-modellen.
 
