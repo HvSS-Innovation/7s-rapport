@@ -178,10 +178,193 @@
         var i = list.findIndex(function (a) { return a.id === area.id; });
         if (i >= 0) list[i] = area; else list.push(area);
         try { localStorage.setItem(STORAGE_KEY, JSON.stringify(list)); } catch (_) {}
+        notifyChange();
+    }
+
+    function notifyChange() {
+        try { global.dispatchEvent(new CustomEvent('offline-tiles:updated')); } catch (_) {}
     }
 
     function newAreaId() {
         return 'a_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+    }
+
+    // Räknar bara unika URL:er — om två områden överlappar är det inte ett
+    // problem för delete (URL existerar bara som en cache-entry).
+    async function removeArea(id) {
+        var list = getStoredAreas();
+        var area = list.find(function (a) { return a.id === id; });
+        if (!area) return false;
+        try {
+            var cache = await caches.open(OFFLINE_CACHE);
+            var items = tilesForBbox(area.bbox, area.minZoom, area.maxZoom);
+            for (var i = 0; i < items.length; i++) {
+                await cache.delete(items[i].url);
+            }
+        } catch (_) {
+            // Forts. trots fel så att metadata försvinner — annars hänger
+            // ett "spöke"-område kvar i listan utan tiles att rensa.
+        }
+        var next = list.filter(function (a) { return a.id !== id; });
+        try { localStorage.setItem(STORAGE_KEY, JSON.stringify(next)); } catch (_) {}
+        notifyChange();
+        return true;
+    }
+
+    // ── Viewport-täckning ───────────────────────────────────────────────────
+    // Räknar hur stor andel av tiles i nuvarande viewport som redan finns
+    // i offline-cachen. Cap:ar på MAX_COVERAGE_TILES så att vi inte gör
+    // tusentals cache.match-anrop när användaren zoomar ut. Returnerar
+    // null om viewporten är för stor (UI:n visar då "—").
+    var MAX_COVERAGE_TILES = 400;
+
+    async function coverageFor(bounds, zoom) {
+        var bbox = {
+            south: bounds.getSouth(),
+            west: bounds.getWest(),
+            north: bounds.getNorth(),
+            east: bounds.getEast()
+        };
+        var n = countTiles(bbox, zoom, zoom);
+        if (n === 0 || n > MAX_COVERAGE_TILES) return null;
+        var items = tilesForBbox(bbox, zoom, zoom);
+        var cache = await caches.open(OFFLINE_CACHE);
+        var hits = 0;
+        for (var i = 0; i < items.length; i++) {
+            var hit = await cache.match(items[i].url);
+            if (hit) hits++;
+        }
+        return { total: items.length, cached: hits, fraction: hits / items.length };
+    }
+
+    // Debouncad indikator-uppdaterare. Stylar statusEl utifrån täckning:
+    // 100 % → grön, partiell → orange, 0 → muted.
+    function attachCoverageIndicator(map, statusEl) {
+        if (!map || !statusEl) return;
+        var pending = null;
+        var seq = 0;
+
+        function update() {
+            var mySeq = ++seq;
+            if (pending) clearTimeout(pending);
+            pending = setTimeout(async function () {
+                pending = null;
+                var z = Math.round(map.getZoom());
+                var b = map.getBounds();
+                try {
+                    var cov = await coverageFor(b, z);
+                    if (mySeq !== seq) return;
+                    if (cov === null) {
+                        statusEl.textContent = '';
+                        statusEl.title = '';
+                        return;
+                    }
+                    var pct = Math.round(cov.fraction * 100);
+                    statusEl.textContent = 'offline ' + pct + '%';
+                    statusEl.title = cov.cached + ' / ' + cov.total + ' tiles cachade i nuvarande vy';
+                    if (pct >= 100) {
+                        statusEl.style.color = '#4caf50';
+                    } else if (pct > 0) {
+                        statusEl.style.color = '#c8a24e';
+                    } else {
+                        statusEl.style.color = 'var(--text-muted)';
+                    }
+                } catch (_) {
+                    if (mySeq !== seq) return;
+                    statusEl.textContent = '';
+                }
+            }, 250);
+        }
+
+        map.on('moveend zoomend', update);
+        global.addEventListener('offline-tiles:updated', update);
+        update();
+        return update;
+    }
+
+    // ── Sparade-områden-panel ───────────────────────────────────────────────
+    // Renderar en lista i `container` (typ <div>). Kan kallas om för att
+    // refresh:a efter add/delete. Tom lista → vänlig hint.
+    function renderAreasPanel(container, opts) {
+        if (!container) return;
+        opts = opts || {};
+        var onChange = opts.onChange || function () {};
+        injectModalStyles();
+        container.innerHTML = '';
+
+        var areas = getStoredAreas();
+        if (!areas.length) {
+            container.innerHTML =
+                '<p style="font-size:0.82rem;color:var(--text-secondary);margin:0">' +
+                    'Inga områden sparade än. Klicka <b>Spara område offline</b> ovanför kartan för att börja.' +
+                '</p>';
+            return;
+        }
+
+        // Senaste först.
+        areas = areas.slice().sort(function (a, b) {
+            return (b.savedAt || '').localeCompare(a.savedAt || '');
+        });
+
+        var list = document.createElement('div');
+        list.style.cssText = 'display:flex;flex-direction:column;gap:8px';
+        for (var i = 0; i < areas.length; i++) {
+            list.appendChild(renderAreaRow(areas[i], onChange));
+        }
+        container.appendChild(list);
+    }
+
+    function renderAreaRow(area, onChange) {
+        var row = document.createElement('div');
+        row.style.cssText = 'background:#0f240f;border:1px solid #2d4a2d;border-radius:4px;padding:10px 12px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px';
+        row.dataset.areaId = area.id;
+
+        var savedDate = '';
+        try {
+            savedDate = new Date(area.savedAt).toLocaleString('sv-SE', {
+                year: 'numeric', month: '2-digit', day: '2-digit',
+                hour: '2-digit', minute: '2-digit'
+            });
+        } catch (_) { savedDate = area.savedAt || ''; }
+
+        var bboxLine =
+            fmtCoord(area.bbox.north, true) + ', ' + fmtCoord(area.bbox.west, false) +
+            '  →  ' +
+            fmtCoord(area.bbox.south, true) + ', ' + fmtCoord(area.bbox.east, false);
+
+        var info = document.createElement('div');
+        info.style.cssText = 'flex:1;min-width:0;font-size:0.78rem;line-height:1.5;color:var(--text-primary)';
+        var status = area.complete === false
+            ? '<span style="color:#c8a24e">· avbruten</span>'
+            : '';
+        info.innerHTML =
+            '<div style="font-weight:600;margin-bottom:2px">' + savedDate + ' ' + status + '</div>' +
+            '<div style="color:var(--text-secondary);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.7rem">' +
+                bboxLine +
+            '</div>' +
+            '<div style="color:var(--text-secondary);margin-top:2px">' +
+                'z ' + area.minZoom + '–' + area.maxZoom +
+                ' · ' + (area.tileCount || 0).toLocaleString('sv-SE') + ' tiles' +
+                ' · ' + formatBytes(area.bytes || 0) +
+            '</div>';
+
+        var del = document.createElement('button');
+        del.type = 'button';
+        del.className = 'btn btn-sm btn-ghost';
+        del.textContent = 'Radera';
+        del.title = 'Tar bort tiles för det här området ur offline-cachen';
+        del.addEventListener('click', async function () {
+            if (!window.confirm('Radera området? Tiles tas bort ur offline-cachen.')) return;
+            del.disabled = true;
+            del.textContent = 'Raderar…';
+            await removeArea(area.id);
+            row.remove();
+            onChange();
+        });
+
+        row.appendChild(info);
+        row.appendChild(del);
+        return row;
     }
 
     // ── Modal ───────────────────────────────────────────────────────────────
@@ -450,6 +633,10 @@
         downloadTiles: downloadTiles,
         getStoredAreas: getStoredAreas,
         saveAreaMeta: saveAreaMeta,
+        removeArea: removeArea,
+        coverageFor: coverageFor,
+        attachCoverageIndicator: attachCoverageIndicator,
+        renderAreasPanel: renderAreasPanel,
         openModal: openModal
     };
 })(window);

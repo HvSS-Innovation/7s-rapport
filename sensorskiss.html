@@ -24,6 +24,7 @@
     <script src="sensorskiss-symbols.js" defer></script>
     <script src="sensorskiss-export.js" defer></script>
     <script src="sensorskiss-tutorial.js" defer></script>
+    <script src="offline-tiles.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -358,6 +359,7 @@
             <div class="status-row">
                 <span class="status-mgrs" id="statusMgrs">—</span>
                 <span id="statusZoom" style="color:var(--text-muted)">z —</span>
+                <span id="statusOffline" style="color:var(--text-muted);margin-left:auto;font-size:0.74rem"></span>
             </div>
         </div>
 
@@ -454,6 +456,11 @@
             </div>
         </details>
 
+        <details class="about" id="offlineAreasPanel">
+            <summary>Sparade offline-områden</summary>
+            <div class="about-body" id="offlineAreasBody"></div>
+        </details>
+
         <details class="about" id="aboutPanel">
             <summary>Om SENSORSKISS &amp; integritet</summary>
             <div class="about-body">
@@ -467,6 +474,7 @@
                 <ul>
                     <li>OpenTopoMap-tiles (kartbilder) för zoomnivå upp till 17 — skickar zoom, x- och y-index för de rutor som ritas på skärmen.</li>
                     <li>OpenStreetMap Standard-tiles (<code>tile.openstreetmap.org</code>) för zoomnivå 18–19, eftersom OpenTopoMap inte har data där.</li>
+                    <li>Offline-cache (knapp <b>Spara område offline</b>): laddar ner valda kart-tiles till webbläsarens egna Cache API (<code>hv-offline-tiles-v1</code>) så att kartan fungerar utan nät. Tiles stannar lokalt på enheten och kan inte läsas av tredje part. Själva nedladdningen är ett burst av tile-requests till OpenTopoMap/OSM och avslöjar valt område för respektive tile-server — gör den helst från en annan plats än ni ska in i.</li>
                 </ul>
                 <p>All ritning, lagring och export sker lokalt i webbläsaren.
                 Export och delning är alltid användar-initierad.</p>
@@ -1615,6 +1623,22 @@ function renderMapControls() {
         openShortcutDialog(FULLMAP_PSEUDO);
     });
     host.appendChild(fullBtn);
+
+    // Offline-cache (Fas 1/2): nedladdning av tiles for nuvarande viewport
+    // till en separat Cache API-namespace ('hv-offline-tiles-v1'). Modulen
+    // ar inlast med defer; om den misslyckats skippas knappen tyst.
+    if (window.OfflineTiles && typeof window.OfflineTiles.openModal === 'function') {
+        const offlineBtn = document.createElement('button');
+        offlineBtn.type = 'button';
+        offlineBtn.className = 'btn btn-sm btn-ghost';
+        offlineBtn.textContent = 'Spara område offline';
+        offlineBtn.title = 'Ladda ner kart-tiles för nuvarande vy så att kartan fungerar utan nät';
+        offlineBtn.addEventListener('click', () => {
+            if (!map) return;
+            window.OfflineTiles.openModal(map);
+        });
+        host.appendChild(offlineBtn);
+    }
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()
@@ -1925,6 +1949,29 @@ function attachBspActions() {
     document.getElementById('bspAdd').addEventListener('click', addBspRow);
 }
 
+// Offline-områden: render lista i panelen och håll viewport-indikatorn
+// uppdaterad. Tyst no-op om offline-tiles.js inte hann laddas.
+function setupOfflineAreasUI() {
+    if (!window.OfflineTiles) return;
+    const panel = document.getElementById('offlineAreasPanel');
+    const body = document.getElementById('offlineAreasBody');
+    const status = document.getElementById('statusOffline');
+
+    function render() {
+        if (body) window.OfflineTiles.renderAreasPanel(body, { onChange: () => {} });
+    }
+
+    if (panel) {
+        panel.addEventListener('toggle', () => { if (panel.open) render(); });
+        render();
+    }
+    window.addEventListener('offline-tiles:updated', render);
+
+    if (status && map) {
+        window.OfflineTiles.attachCoverageIndicator(map, status);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', async () => {
     initMap();
     await loadPersisted();
@@ -1936,6 +1983,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     renderBsp();
     attachBspActions();
     attachProtocolActions();
+    setupOfflineAreasUI();
     document.getElementById('goBtn').addEventListener('click', () => {
         handleSearch(document.getElementById('mgrsSearch').value);
     });

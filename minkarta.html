@@ -516,6 +516,7 @@
             <div class="status-row">
                 <span class="status-mgrs" id="statusMgrs">—</span>
                 <span id="statusZoom" style="color:var(--text-muted)">z —</span>
+                <span id="statusOffline" style="color:var(--text-muted);margin-left:auto;font-size:0.74rem"></span>
             </div>
         </div>
 
@@ -630,6 +631,11 @@
                     <li>Allt sparas lokalt i webbläsaren — ingen serverkommunikation för minsymboler.</li>
                 </ul>
             </div>
+        </details>
+
+        <details class="about" id="offlineAreasPanel">
+            <summary>Sparade offline-områden</summary>
+            <div class="about-body" id="offlineAreasBody"></div>
         </details>
 
         <details class="about" id="aboutPanel">
@@ -3117,6 +3123,32 @@ async function shareTextOnly(txt) {
     }
 }
 
+// Offline-områden: render lista i panelen och håll viewport-indikatorn
+// uppdaterad. Båda hooks är tysta no-ops om offline-tiles.js inte hann
+// laddas (defer på script-elementet betyder normalt OK, men vi tål miss).
+function setupOfflineAreasUI() {
+    if (!window.OfflineTiles) return;
+    const panel = document.getElementById('offlineAreasPanel');
+    const body = document.getElementById('offlineAreasBody');
+    const status = document.getElementById('statusOffline');
+
+    function render() {
+        if (body) window.OfflineTiles.renderAreasPanel(body, { onChange: () => {} });
+    }
+
+    if (panel) {
+        // Render direkt + vid varje öppning så att kostsam render undviks
+        // när panelen är stängd.
+        panel.addEventListener('toggle', () => { if (panel.open) render(); });
+        render();
+    }
+    window.addEventListener('offline-tiles:updated', render);
+
+    if (status && map) {
+        window.OfflineTiles.attachCoverageIndicator(map, status);
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     initMap();
     if (map) {
@@ -3142,6 +3174,7 @@ document.addEventListener('DOMContentLoaded', () => {
     attachKeyboard();
     attachProtocolActions();
     loadPersisted();
+    setupOfflineAreasUI();
 
     const input = document.getElementById('mgrsSearch');
     input.addEventListener('paste', e => {
