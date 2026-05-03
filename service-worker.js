@@ -35,6 +35,7 @@ const FILES = [
   './pwa.js',
   './opsec.js',
   './offline-tiles.js',
+  './snabbrapport.js',
   './footer.js',
   './opsec.html',
   './ortnamn.json',

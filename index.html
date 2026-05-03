@@ -22,6 +22,7 @@
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="offline-tiles.js" defer></script>
+    <script src="snabbrapport.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -284,6 +285,12 @@
     </nav>
     <main>
         <div class="form-view" id="formView">
+
+            <!-- SNABBRAPPORT — minimalt formulär för akut kontaktrapport (≤15 sek). -->
+            <div class="form-group" style="border-color:#c8a24e;background:#1f1a0a">
+                <button class="btn btn-primary" id="snabbrapportBtn" style="margin-top:0;background:#c8a24e;border-color:#c8a24e;color:#0d1f0d" onclick="if(window.Snabbrapport){window.Snabbrapport.open();}else{alert('Snabbrapport-modulen är inte laddad.');}">⚡ SNABBRAPPORT (≤15 sek)</button>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;text-align:center">Endast kärnfälten — Styrka, Slag, Sysselsättning, Ställe. Övriga defaultar från senaste rapport.</div>
+            </div>
 
             <!-- FOTO -->
             <div class="form-group" style="border-style:dashed;">
@@ -1210,6 +1217,20 @@ function generateReport() {
     document.getElementById('reportOutput').textContent = lines.join('\n');
     document.getElementById('formView').classList.add('hidden');
     document.getElementById('resultView').classList.add('active');
+
+    // Spara senaste rapporten for snabbrapport-default-fyllning. Bara
+    // de fält som typiskt halls konstanta over tid (Till/Fran/Symbol/
+    // Sagesman/Sedan) — primarfalten (Styrka/Slag/Stalle/Sysselsattning)
+    // ar avsiktligt utelamnade sa snabbrapport tvingar fram nya varden.
+    if (window.Snabbrapport && typeof window.Snabbrapport.saveLastReport === 'function') {
+        window.Snabbrapport.saveLastReport({
+            till: v('till'),
+            fran: v('fran'),
+            symbol: v('symbol'),
+            sagesman: v('sagesman'),
+            sedan: v('sedan')
+        });
+    }
 }
 
 // ── CoT (Cursor on Target) Export ────────────────────────────────────────────
