@@ -25,6 +25,7 @@
     <script src="sensorskiss-export.js" defer></script>
     <script src="sensorskiss-tutorial.js" defer></script>
     <script src="offline-tiles.js" defer></script>
+    <script type="module" src="pmtiles-layer.js"></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -637,6 +638,19 @@ function initMap() {
     }).addTo(map);
     const spinner = document.getElementById('mapSpinner');
     tiles.on('load', () => spinner.classList.add('hidden'));
+
+    // Härdat läge: se motsvarande block i minkarta.html.
+    function setupHardening() {
+        if (window.PMTilesHardening && typeof window.PMTilesHardening.createController === 'function') {
+            window.SK_HARDENING = window.PMTilesHardening.createController(map, tiles);
+            window.dispatchEvent(new CustomEvent('SK_HARDENING:ready'));
+            return true;
+        }
+        return false;
+    }
+    if (!setupHardening()) {
+        window.addEventListener('PMTilesHardening:ready', setupHardening, { once: true });
+    }
 
     let restored = false;
     try {
@@ -1640,6 +1654,36 @@ function renderMapControls() {
         host.appendChild(offlineBtn);
     }
 
+    // Härdat läge (PMTiles, Fas 1) — se motsvarande knapp i minkarta.html.
+    const hardenBtn = document.createElement('button');
+    hardenBtn.type = 'button';
+    hardenBtn.className = 'btn btn-sm btn-ghost';
+    hardenBtn.title = 'Använd en PMTiles-fil istället för OTM/OSM. Inga utgående tile-requests under härdat läge.';
+    function refreshHardenBtn() {
+        const ctrl = window.SK_HARDENING;
+        const active = ctrl && ctrl.isActive();
+        hardenBtn.textContent = active ? '🛡 Härdat läge: PÅ' : '🛡 Härdat läge';
+        hardenBtn.style.borderColor = active ? '#c8a24e' : '';
+        hardenBtn.style.color = active ? '#c8a24e' : '';
+    }
+    hardenBtn.addEventListener('click', async () => {
+        const ctrl = window.SK_HARDENING;
+        if (!ctrl) {
+            window.alert('PMTiles-modulen är inte laddad.');
+            return;
+        }
+        await ctrl.toggle();
+    });
+    if (window.SK_HARDENING) {
+        window.SK_HARDENING.onChange(refreshHardenBtn);
+    } else {
+        window.addEventListener('SK_HARDENING:ready', () => {
+            window.SK_HARDENING.onChange(refreshHardenBtn);
+            refreshHardenBtn();
+        }, { once: true });
+    }
+    refreshHardenBtn();
+    host.appendChild(hardenBtn);
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()

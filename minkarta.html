@@ -25,6 +25,7 @@
     <script src="minkarta-export.js" defer></script>
     <script src="minkarta-tutorial.js" defer></script>
     <script src="offline-tiles.js" defer></script>
+    <script type="module" src="pmtiles-layer.js"></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -820,6 +821,20 @@ function initMap() {
     const spinner = document.getElementById('mapSpinner');
     tiles.on('load', () => spinner.classList.add('hidden'));
 
+    // Härdat läge: ESM-modul pmtiles-layer.js laddas async, så vi
+    // installerar controller direkt om den hunnit, annars vid 'ready'-event.
+    function setupHardening() {
+        if (window.PMTilesHardening && typeof window.PMTilesHardening.createController === 'function') {
+            window.MK_HARDENING = window.PMTilesHardening.createController(map, tiles);
+            window.dispatchEvent(new CustomEvent('MK_HARDENING:ready'));
+            return true;
+        }
+        return false;
+    }
+    if (!setupHardening()) {
+        window.addEventListener('PMTilesHardening:ready', setupHardening, { once: true });
+    }
+
     // Återställ senaste vy eller defaulta
     let restored = false;
     try {
@@ -1269,6 +1284,39 @@ function renderMapControls() {
         host.appendChild(offlineBtn);
     }
 
+    // Härdat läge (PMTiles, Fas 1). Knappen visas alltid; klick utan att
+    // PMTiles-modulen är laddad ger en alert. Modul-load är typiskt klar
+    // före renderMapControls anropas men race-conditions skyddas via
+    // PMTilesHardening:ready event.
+    const hardenBtn = document.createElement('button');
+    hardenBtn.type = 'button';
+    hardenBtn.className = 'btn btn-sm btn-ghost';
+    hardenBtn.title = 'Använd en PMTiles-fil istället för OTM/OSM. Inga utgående tile-requests under härdat läge.';
+    function refreshHardenBtn() {
+        const ctrl = window.MK_HARDENING;
+        const active = ctrl && ctrl.isActive();
+        hardenBtn.textContent = active ? '🛡 Härdat läge: PÅ' : '🛡 Härdat läge';
+        hardenBtn.style.borderColor = active ? '#c8a24e' : '';
+        hardenBtn.style.color = active ? '#c8a24e' : '';
+    }
+    hardenBtn.addEventListener('click', async () => {
+        const ctrl = window.MK_HARDENING;
+        if (!ctrl) {
+            window.alert('PMTiles-modulen är inte laddad.');
+            return;
+        }
+        await ctrl.toggle();
+    });
+    if (window.MK_HARDENING) {
+        window.MK_HARDENING.onChange(refreshHardenBtn);
+    } else {
+        window.addEventListener('MK_HARDENING:ready', () => {
+            window.MK_HARDENING.onChange(refreshHardenBtn);
+            refreshHardenBtn();
+        }, { once: true });
+    }
+    refreshHardenBtn();
+    host.appendChild(hardenBtn);
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()

@@ -130,7 +130,7 @@ slå på flygplansläge och pan:a fritt.
 
 ## Faserad plan
 
-### Fas 1 — Klient-stöd (kan byggas direkt, oberoende av hosting)
+### Fas 1 — Klient-stöd *(LEVERERAD 2026-05-03)*
 
 **Mål.** PMTiles-klient i sajten + UI-toggle "Härdat läge" som
 fungerar mot vilken som helst PMTiles-URL. Testbart mot publika
