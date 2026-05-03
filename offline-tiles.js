@@ -315,12 +315,18 @@
         injectModalStyles();
         container.innerHTML = '';
 
+        // Header med "Importera fil"-knapp finns alltid, även när listan
+        // är tom — annars går det inte att starta från ett delat paket
+        // utan att först ha laddat ner ett område på enheten.
+        var header = renderImportHeader();
+        container.appendChild(header);
+
         var areas = getStoredAreas();
         if (!areas.length) {
-            container.innerHTML =
-                '<p style="font-size:0.82rem;color:var(--text-secondary);margin:0">' +
-                    'Inga områden sparade än. Klicka <b>Spara område offline</b> ovanför kartan för att börja.' +
-                '</p>';
+            var hint = document.createElement('p');
+            hint.style.cssText = 'font-size:0.82rem;color:var(--text-secondary);margin:8px 0 0';
+            hint.innerHTML = 'Inga områden sparade än. Klicka <b>Spara område offline</b> ovanför kartan, eller importera ett paket nedan.';
+            container.appendChild(hint);
             return;
         }
 
@@ -330,11 +336,60 @@
         });
 
         var list = document.createElement('div');
-        list.style.cssText = 'display:flex;flex-direction:column;gap:8px';
+        list.style.cssText = 'display:flex;flex-direction:column;gap:8px;margin-top:10px';
         for (var i = 0; i < areas.length; i++) {
             list.appendChild(renderAreaRow(areas[i], onChange, map));
         }
         container.appendChild(list);
+    }
+
+    function renderImportHeader() {
+        var bar = document.createElement('div');
+        bar.style.cssText = 'display:flex;justify-content:flex-end;gap:6px;align-items:center';
+
+        var input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.hvoffline,application/octet-stream';
+        input.style.display = 'none';
+
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-ghost';
+        btn.textContent = 'Importera paket…';
+        btn.title = 'Läs in ett offline-paket (.hvoffline) som någon annan har exporterat';
+        btn.addEventListener('click', function () { input.click(); });
+
+        var status = document.createElement('span');
+        status.style.cssText = 'font-size:0.74rem;color:var(--text-secondary)';
+
+        input.addEventListener('change', async function () {
+            var f = input.files && input.files[0];
+            if (!f) return;
+            btn.disabled = true;
+            btn.textContent = 'Importerar…';
+            status.textContent = '';
+            try {
+                var area = await importPackage(f, {
+                    onProgress: function (p) {
+                        status.textContent = p.done + ' / ' + p.total + ' tiles';
+                    }
+                });
+                status.textContent = 'Importerat ' + (area.tileCount || 0) + ' tiles';
+                status.style.color = '#4caf50';
+            } catch (err) {
+                status.textContent = 'Fel: ' + (err && err.message ? err.message : 'okänt');
+                status.style.color = '#ff8a8a';
+            } finally {
+                btn.disabled = false;
+                btn.textContent = 'Importera paket…';
+                input.value = '';
+            }
+        });
+
+        bar.appendChild(status);
+        bar.appendChild(btn);
+        bar.appendChild(input);
+        return bar;
     }
 
     function renderAreaRow(area, onChange, map) {
@@ -394,6 +449,34 @@
             actions.appendChild(refresh);
         }
 
+        var exp = document.createElement('button');
+        exp.type = 'button';
+        exp.className = 'btn btn-sm btn-ghost';
+        exp.textContent = 'Exportera';
+        exp.title = 'Spara området som .hvoffline-fil att dela till annan enhet';
+        exp.addEventListener('click', async function () {
+            exp.disabled = true;
+            var origLabel = exp.textContent;
+            exp.textContent = 'Exporterar…';
+            try {
+                var pkg = await exportArea(area.id, {
+                    onProgress: function (p) {
+                        exp.textContent = 'Exporterar ' + Math.round(p.done / p.total * 100) + '%';
+                    }
+                });
+                var stamp = (area.savedAt || new Date().toISOString()).replace(/[:.]/g, '').slice(0, 15);
+                var fname = 'hv-offline-' + area.id + '-' + stamp + '.hvoffline';
+                downloadBlob(pkg.blob, fname);
+                exp.textContent = 'Klar';
+                setTimeout(function () { exp.textContent = origLabel; exp.disabled = false; }, 2000);
+            } catch (err) {
+                exp.textContent = 'Fel';
+                exp.title = (err && err.message) ? err.message : 'Export misslyckades';
+                setTimeout(function () { exp.textContent = origLabel; exp.disabled = false; }, 3000);
+            }
+        });
+        actions.appendChild(exp);
+
         var del = document.createElement('button');
         del.type = 'button';
         del.className = 'btn btn-sm btn-ghost';
@@ -412,6 +495,179 @@
         row.appendChild(info);
         row.appendChild(actions);
         return row;
+    }
+
+    // ── Export / import av offline-paket ───────────────────────────────────
+    // Eget container-format (.hvoffline) — ingen tredjepart-zip-dep.
+    //
+    //   Offset  Bytes   Field
+    //   0       4       Magic "HVOA"
+    //   4       1       Version 0x01
+    //   5..7    3       Reserved (noll)
+    //   8       4       Manifest-länged (uint32 big-endian)
+    //   12      N       UTF-8 JSON manifest (bbox, zoom-range, tile-index)
+    //   12+N    ...     Konkatenerade tile-blobs (offset+length i manifest)
+    //
+    // Same-origin: paket kan delas via t.ex. Signal/SD-kort utan att tile-
+    // server-loggen avslöjar att en kopia gjordes. Manifest innehåller
+    // areans bbox men inga sensor-/min-data.
+    var MAGIC_BYTES = [0x48, 0x56, 0x4F, 0x41]; // "HVOA"
+    var PACKAGE_VERSION = 0x01;
+
+    async function exportArea(id, opts) {
+        opts = opts || {};
+        var onProgress = opts.onProgress || function () {};
+        var area = getStoredAreas().find(function (a) { return a.id === id; });
+        if (!area) throw new Error('Området saknas');
+
+        var items = tilesForBbox(area.bbox, area.minZoom, area.maxZoom);
+        var cache = await caches.open(OFFLINE_CACHE);
+
+        var manifest = {
+            version: PACKAGE_VERSION,
+            createdAt: new Date().toISOString(),
+            area: {
+                id: area.id,
+                bbox: area.bbox,
+                minZoom: area.minZoom,
+                maxZoom: area.maxZoom,
+                savedAt: area.savedAt,
+                tileCount: 0,
+                bytes: 0
+            },
+            tiles: []
+        };
+
+        var blobBuffers = [];
+        var totalLen = 0;
+        for (var i = 0; i < items.length; i++) {
+            var hit = await cache.match(items[i].url);
+            if (!hit) continue;
+            var blob = await hit.blob();
+            var ab = await blob.arrayBuffer();
+            manifest.tiles.push({
+                url: items[i].url,
+                type: blob.type || 'image/png',
+                length: ab.byteLength,
+                offset: totalLen
+            });
+            blobBuffers.push(ab);
+            totalLen += ab.byteLength;
+            manifest.area.tileCount++;
+            manifest.area.bytes += ab.byteLength;
+            onProgress({ done: i + 1, total: items.length, bytes: totalLen });
+        }
+
+        var manifestBytes = new TextEncoder().encode(JSON.stringify(manifest));
+        var headerLen = 12;
+        var totalSize = headerLen + manifestBytes.byteLength + totalLen;
+        var out = new Uint8Array(totalSize);
+        var dv = new DataView(out.buffer);
+
+        out[0] = MAGIC_BYTES[0]; out[1] = MAGIC_BYTES[1];
+        out[2] = MAGIC_BYTES[2]; out[3] = MAGIC_BYTES[3];
+        out[4] = PACKAGE_VERSION;
+        // bytes 5..7 lämnas som noll (reserved)
+        dv.setUint32(8, manifestBytes.byteLength, false);
+        out.set(manifestBytes, headerLen);
+
+        var pos = headerLen + manifestBytes.byteLength;
+        for (var k = 0; k < blobBuffers.length; k++) {
+            out.set(new Uint8Array(blobBuffers[k]), pos);
+            pos += blobBuffers[k].byteLength;
+        }
+
+        return {
+            blob: new Blob([out], { type: 'application/octet-stream' }),
+            manifest: manifest
+        };
+    }
+
+    async function importPackage(file, opts) {
+        opts = opts || {};
+        var onProgress = opts.onProgress || function () {};
+        var ab = await file.arrayBuffer();
+        if (ab.byteLength < 12) throw new Error('Filen är för kort för att vara ett offline-paket');
+
+        var dv = new DataView(ab);
+        for (var m = 0; m < MAGIC_BYTES.length; m++) {
+            if (dv.getUint8(m) !== MAGIC_BYTES[m]) {
+                throw new Error('Inte ett giltigt offline-paket (felaktig magic-byte)');
+            }
+        }
+        var version = dv.getUint8(4);
+        if (version !== PACKAGE_VERSION) {
+            throw new Error('Stöder inte paket-version ' + version);
+        }
+        var manifestLen = dv.getUint32(8, false);
+        if (12 + manifestLen > ab.byteLength) {
+            throw new Error('Skadat paket: manifest-längd är längre än filen');
+        }
+
+        var manifest;
+        try {
+            var manifestBytes = new Uint8Array(ab, 12, manifestLen);
+            manifest = JSON.parse(new TextDecoder().decode(manifestBytes));
+        } catch (_) {
+            throw new Error('Skadad manifest-JSON');
+        }
+        if (!manifest || !manifest.area || !Array.isArray(manifest.tiles)) {
+            throw new Error('Manifest saknar förväntad struktur');
+        }
+
+        var dataStart = 12 + manifestLen;
+        var cache = await caches.open(OFFLINE_CACHE);
+
+        for (var i = 0; i < manifest.tiles.length; i++) {
+            var t = manifest.tiles[i];
+            if (!t || typeof t.url !== 'string' || typeof t.offset !== 'number' || typeof t.length !== 'number') {
+                throw new Error('Skadad tile-post #' + i);
+            }
+            var start = dataStart + t.offset;
+            var end = start + t.length;
+            if (end > ab.byteLength) throw new Error('Tile-data sträcker sig utanför filen (#' + i + ')');
+            var slice = ab.slice(start, end);
+            var blob = new Blob([slice], { type: t.type || 'image/png' });
+            var resp = new Response(blob, {
+                status: 200,
+                statusText: 'OK',
+                headers: { 'Content-Type': t.type || 'image/png' }
+            });
+            await cache.put(t.url, resp);
+            onProgress({ done: i + 1, total: manifest.tiles.length });
+        }
+
+        // Vid id-kollision: ge importerade kopian ett nytt id istället för
+        // att skriva över existerande område. Användaren förväntar sig
+        // sällan att import "ersätter" — additiv är säkrare default.
+        var areaCopy = {
+            id: manifest.area.id,
+            bbox: manifest.area.bbox,
+            minZoom: manifest.area.minZoom,
+            maxZoom: manifest.area.maxZoom,
+            tileCount: manifest.area.tileCount,
+            bytes: manifest.area.bytes,
+            savedAt: manifest.area.savedAt || new Date().toISOString(),
+            complete: true
+        };
+        var existing = getStoredAreas().find(function (a) { return a.id === areaCopy.id; });
+        if (existing) areaCopy.id = newAreaId();
+        saveAreaMeta(areaCopy);
+
+        return areaCopy;
+    }
+
+    function downloadBlob(blob, filename) {
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function () {
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }, 100);
     }
 
     // ── Bakgrundsjobb ──────────────────────────────────────────────────────
@@ -902,6 +1158,9 @@
         startJob: startJob,
         cancelJob: cancelJob,
         getJob: getJob,
-        getActiveJobs: getActiveJobs
+        getActiveJobs: getActiveJobs,
+        exportArea: exportArea,
+        importPackage: importPackage,
+        downloadBlob: downloadBlob
     };
 })(window);
