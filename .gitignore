@@ -19,3 +19,19 @@ desktop.ini
 
 # Claude Code lokal config (permissions, hooks – per maskin, ej för publik repo)
 .claude/
+
+# Råa data-källor i repo-roten (parse-input — outputs som ortnamn.json
+# versioneras, men källorna är stora och ändras sällan).
+raw/
+/kriterier.xml
+/sjöar.xml
+/öar.xml
+
+# Kamera/webcam-experiment i verktyg/ — test-bilder, ad-hoc scripts och
+# loggar. Inte del av prod-appen. Om du vill committa en enskild fil:
+# använd `git add -f path` eller lägg ett !undantag nedan.
+verktyg/*.png
+verktyg/*.jpg
+verktyg/*.txt
+verktyg/*.pdf
+verktyg/*.py
