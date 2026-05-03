@@ -91,26 +91,32 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 - **Risk:** Visuell regression mellan sidor om någon hade en lokal override. Mitigation: PR per sida, manuell visuell verifiering.
 - **Mätbart:** Sidstorlek (HTML) sjunker med ~50 % i snitt. Tid till första render mätbar via Performance.now().
 
-### 2.4 Snabbrapport-läge för 7S
-- **Problem:** En komplett 7S-rapport tar 30–60 sek att fylla i, vilket är för långt vid kontaktrapport.
-- **Lösning:** Ny knapp "Snabbrapport" som öppnar minimalt formulär: Storlek (chips 1–10), Sysselsättning (kompass), Ställe (auto MGRS), Slag (ett ord). De övriga S-en defaultar från senaste rapporten i historik. Submit-tid: < 15 sek.
-- **Tid:** 1 dag.
-- **Risk:** Default från senaste rapport kan vara fel — alltid synligt och redigerbart i en kollapserad sektion.
-- **Mätbart:** Stoppursmätning på 5 testanvändare → median ≤ 15 sek från klick till "kopierad".
+### 2.4 Snabbrapport-läge för 7S — *AVSKRIVEN 2026-05-03*
+> **Status:** byggd, testad, avskriven. Användaren bedömde efter test att
+> det fullständiga 7S-formuläret är tillräckligt snabbt och att en separat
+> snabbrapport-vy var en distraktion mer än ett verktyg. Koden är borttagen
+> ur sajten i samma commit som arkiveringen av 2.5/2.6.
+- ~~**Problem:** En komplett 7S-rapport tar 30–60 sek att fylla i, vilket är för långt vid kontaktrapport.~~
+- ~~**Lösning:** Ny knapp "Snabbrapport" som öppnar minimalt formulär.~~
+- ~~**Tid:** 1 dag.~~
 
-### 2.5 Rapport-historik (lokal, sökbar, diff-bar)
-- **Problem:** Rapporter försvinner efter "kopiera". Ingen möjlighet att se "vad skickade jag förra timmen?".
-- **Lösning:** IndexedDB-tabell `reports` med rader (timestamp, typ, JSON-state, genererad text). Lista i en ny `historik.html`. Sökbart per datum/förband. Klick → reload som mall för ny rapport.
-- **Tid:** 1 dag.
-- **Risk:** Mer storage på enheten — täcks av "Glöm allt"-knappen från Sväng 1.5.
-- **Mätbart:** Senaste 50 rapporter listade och sökbara per fritext.
+### 2.5 Rapport-historik (lokal, sökbar, diff-bar) — *ARKIVERAD 2026-05-03*
+> **Status:** avskriven. Beslut av användaren: rapporter ska försvinna när
+> de "kopierats" — det är OPSEC-bra (inget kvar på enheten om den tas).
+> Den som vill spara en rapport kan göra det själv via skärmdump eller
+> kopia till annan plats. **Bygg inte.**
+- ~~**Problem:** Rapporter försvinner efter "kopiera". Ingen möjlighet att se "vad skickade jag förra timmen?".~~
+- ~~**Lösning:** IndexedDB-tabell `reports` med rader (timestamp, typ, JSON-state, genererad text). Lista i en ny `historik.html`. Sökbart per datum/förband. Klick → reload som mall för ny rapport.~~
+- ~~**Tid:** 1 dag.~~
 
-### 2.6 Mall-bibliotek
-- **Problem:** Återkommande rapporttyper (rutinpost, byte, läget) kräver att hela formuläret fylls i från noll.
-- **Lösning:** `localStorage["templates"]` med 10 användarstyrda mallar. Knapp i varje formulär: "Spara som mall" / "Använd mall →".
-- **Tid:** 4 timmar.
-- **Risk:** Mallar med gamla namn kan av misstag skickas. Mitigation: visa mall-namn tydligt i toast vid laddning.
-- **Mätbart:** Antal sparade mallar > 0 efter 1 vecka i fält.
+### 2.6 Mall-bibliotek — *ARKIVERAD 2026-05-03*
+> **Status:** avskriven. Beslut av användaren: lagrade mallar med gammal
+> taktisk text är en OPSEC-risk. De redan befintliga "saved-items" per fält
+> (`7s_places`, `7s_sagesman`, `7s_till`, `7s_fran`) räcker som
+> autocompletion. **Bygg inte.**
+- ~~**Problem:** Återkommande rapporttyper (rutinpost, byte, läget) kräver att hela formuläret fylls i från noll.~~
+- ~~**Lösning:** `localStorage["templates"]` med 10 användarstyrda mallar. Knapp i varje formulär: "Spara som mall" / "Använd mall →".~~
+- ~~**Tid:** 4 timmar.~~
 
 ### 2.7 Andmätare i status-baren
 - **Problem:** Operatören vet inte hur långt det är till nästa avlösning, batterinivå syns inte i appen.
