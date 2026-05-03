@@ -24,6 +24,7 @@
     <script src="minkarta-symbols.js" defer></script>
     <script src="minkarta-export.js" defer></script>
     <script src="minkarta-tutorial.js" defer></script>
+    <script src="offline-tiles.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -644,6 +645,7 @@
                     <li>OpenTopoMap-tiles (kartbilder) för zoomnivå upp till 17 — skickar zoom, x- och y-index för de rutor som ritas på skärmen.</li>
                     <li>OpenStreetMap Standard-tiles (<code>tile.openstreetmap.org</code>) för zoomnivå 18–19, eftersom OpenTopoMap inte har data där. Aktiveras automatiskt när du zoomar in närmare; status-raden visar vilket lager som används.</li>
                     <li>Nominatim/Overpass vid adressökning och för UPK-markörers reverse-geocode — skickar endast kartans vy-center, sökfras eller UPK-markörens koordinat, aldrig minsymbolpositioner. UPK (Utgångs-Punkt-Koordinat) är en bestämbar referenspunkt i terrängen, inte en skarp minposition.</li>
+                    <li>Offline-cache (knapp <b>Spara område offline</b>): laddar ner valda kart-tiles till webbläsarens egna Cache API (<code>hv-offline-tiles-v1</code>) så att kartan fungerar utan nät. Tiles stannar lokalt på enheten och kan inte läsas av tredje part. Själva nedladdningen är ett burst av tile-requests till OpenTopoMap/OSM och avslöjar valt område för respektive tile-server — gör den helst från en annan plats än ni ska in i.</li>
                 </ul>
                 <p>All ritning, lagring och export sker lokalt i webbläsaren.
                 Export (PNG) och delning är alltid användar-initierad.</p>
@@ -1243,6 +1245,23 @@ function renderMapControls() {
         openShortcutDialog(FULLMAP_PSEUDO);
     });
     host.appendChild(fullBtn);
+
+    // Offline-cache: öppna en modal som låter användaren ladda ner
+    // tiles för nuvarande viewport till en separat Cache API-namespace.
+    // Modulen är inläst med defer; om den misslyckats (offline vid första
+    // sidladdningen, t.ex.) skippas knappen tyst för att inte krascha UI:n.
+    if (window.OfflineTiles && typeof window.OfflineTiles.openModal === 'function') {
+        const offlineBtn = document.createElement('button');
+        offlineBtn.type = 'button';
+        offlineBtn.className = 'btn btn-sm btn-ghost';
+        offlineBtn.textContent = 'Spara område offline';
+        offlineBtn.title = 'Ladda ner kart-tiles för nuvarande vy så att kartan fungerar utan nät';
+        offlineBtn.addEventListener('click', () => {
+            if (!map) return;
+            window.OfflineTiles.openModal(map);
+        });
+        host.appendChild(offlineBtn);
+    }
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()

@@ -1,4 +1,8 @@
 const CACHE = 'hv-20260503_140255';
+// Separat cache för offline-tiles. FÅR INTE rensas av activate-cleanup
+// nedan — användaren har själv laddat ner data hit och förväntar sig att
+// den överlever en deploy. Versionera bara om format ändras.
+const OFFLINE_TILES_CACHE = 'hv-offline-tiles-v1';
 const FILES = [
   './',
   './index.html',
@@ -30,6 +34,7 @@ const FILES = [
   './version.js',
   './pwa.js',
   './opsec.js',
+  './offline-tiles.js',
   './footer.js',
   './opsec.html',
   './ortnamn.json',
@@ -67,11 +72,21 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
+  // Bevara både huvudcachen (versionsstämpel) och offline-tiles-cachen.
+  // Allt annat (gamla CACHE-stämplar) raderas.
+  const KEEP = new Set([CACHE, OFFLINE_TILES_CACHE]);
   e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k)))
+    Promise.all(keys.filter(k => !KEEP.has(k)).map(k => caches.delete(k)))
   ));
   self.clients.claim();
 });
+
+// Tile-host-detektion: matchar HybridTileLayer i minkarta.html /
+// sensorskiss.html (OpenTopoMap a/b/c-subdomäner + tile.openstreetmap.org).
+function isTileHost(host) {
+  return /(^|\.)tile\.opentopomap\.org$/.test(host)
+      || host === 'tile.openstreetmap.org';
+}
 
 // Cache:a ENDAST framgångsrika svar. Tidigare cachades 403/500/etc som
 // permanenta tile-bilder — t.ex. OSMs "Access blocked"-felmeddelande som
@@ -87,6 +102,28 @@ function safePut(request, resp) {
 
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+
+  // Tile-requests: kolla offline-cachen FÖRST (oberoende av subdomän-rotation
+  // och query-strängar). Hit landar nedladdade tiles från offline-tiles.js.
+  // Faller tillbaka till nät, sedan vidare till huvudcachen om nätet är nere.
+  if (e.request.method === 'GET' && isTileHost(url.host)) {
+    e.respondWith((async () => {
+      const offline = await caches.open(OFFLINE_TILES_CACHE);
+      const hit = await offline.match(e.request);
+      if (hit) return hit;
+      try {
+        const resp = await fetch(e.request);
+        if (resp && resp.ok) safePut(e.request, resp);
+        return resp;
+      } catch (_) {
+        const cached = await caches.match(e.request);
+        if (cached) return cached;
+        throw _;
+      }
+    })());
+    return;
+  }
+
   // Network-first för HTML och JS (alltid senaste version online, cache som fallback)
   if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.js')) {
     e.respondWith(
@@ -96,7 +133,7 @@ self.addEventListener('fetch', e => {
       }).catch(() => caches.match(e.request))
     );
   } else {
-    // Cache-first för allt annat (ikoner, JSON-data, kart-tiles, etc.)
+    // Cache-first för allt annat (ikoner, JSON-data, etc.)
     e.respondWith(
       caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
         safePut(e.request, resp);
