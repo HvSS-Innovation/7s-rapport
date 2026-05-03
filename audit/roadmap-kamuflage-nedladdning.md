@@ -1,5 +1,33 @@
 # Roadmap — Kamuflage-nedladdning + beskär till verkansområde
 
+> ## STATUS 2026-05-03: BORTKOPPLAD FRÅN SAJTEN
+>
+> Funktionen är **inte aktiv** på 7srapport.com. Knapparna i `minkarta.html`
+> och `sensorskiss.html` är borttagna; `.about`-panelerna nämner den inte
+> längre. Skälet: funktionen är ett medvetet brott mot OpenStreetMap/
+> OpenTopoMap:s bulk-policy, och dess OPSEC-värde är begränsat utan VPN/Tor.
+> Vi vill fortsätta använda OSM/OTM:s ordinarie tjänst på sajten utan att
+> stöta oss med dem.
+>
+> **Koden lever kvar** i `offline-tiles-kamuflage.js` som arkiv. Filen är
+> inte importerad någonstans men den ligger i repo-roten. För att aktivera
+> igen — i den ordningen:
+>
+> 1. Lägg `<script src="offline-tiles-kamuflage.js" defer></script>` i
+>    `minkarta.html` och `sensorskiss.html` (efter `offline-tiles.js`).
+> 2. Återinför "Kamuflage-nedladdning"-knappen i `renderMapControls()` i
+>    båda filerna — se git-historik (commit `a7df397` är referens, eller
+>    den senare `c986385` som höjde max-zoom till 17).
+> 3. Återinför kamuflage-rad i `.about`-panelen i båda filerna — se commit
+>    `a7df397`. Texten finns nedan i Fas 1-beskrivningen.
+> 4. (Valfritt) Lägg `offline-tiles-kamuflage.js` i `service-worker.js`
+>    `FILES`-arrayen så den precachas vid install.
+>
+> Beskär-knappen i `renderAreasPanel` är fortfarande villkorad bakom
+> `window.OfflineTilesKamuflage` så importerade `.hvoffline`-paket med
+> `kind: kamuflage` hanteras rätt om modulen kopplas in igen — utan att
+> behöva ändra `offline-tiles.js`.
+
 **Datum:** 2026-05-03
 **Förhållande till `audit/roadmap-offline-karta.md`:** Den roadmapen löser
 "förladda området jag faktiskt ska in i" med en hård cap på 5 000 tiles per

@@ -652,7 +652,6 @@
                     <li>OpenStreetMap Standard-tiles (<code>tile.openstreetmap.org</code>) för zoomnivå 18–19, eftersom OpenTopoMap inte har data där. Aktiveras automatiskt när du zoomar in närmare; status-raden visar vilket lager som används.</li>
                     <li>Nominatim/Overpass vid adressökning och för UPK-markörers reverse-geocode — skickar endast kartans vy-center, sökfras eller UPK-markörens koordinat, aldrig minsymbolpositioner. UPK (Utgångs-Punkt-Koordinat) är en bestämbar referenspunkt i terrängen, inte en skarp minposition.</li>
                     <li>Offline-cache (knapp <b>Spara område offline</b>): laddar ner valda kart-tiles till webbläsarens egna Cache API (<code>hv-offline-tiles-v1</code>) så att kartan fungerar utan nät. Tiles stannar lokalt på enheten och kan inte läsas av tredje part. Själva nedladdningen är ett burst av tile-requests till OpenTopoMap/OSM och avslöjar valt område för respektive tile-server — gör den helst från en annan plats än ni ska in i.</li>
-                    <li><b>Kamuflage-nedladdning</b> (separat knapp): bulk-download av ett medvetet stort område (upp till ~600 MB) som omsluter verkansområdet, så att tile-leverantörens IP-logg inte avslöjar exakt var du ska verka. Funktionen är ett <em>akut OPSEC-verktyg</em> och bryter medvetet OpenStreetMap/OpenTopoMap:s bulk-policy — använd via VPN/Tor från ett annat nät än ni ska in i, helst från en plats långt från verkansområdet. Funktionen döljer <em>var</em>, inte <em>att</em> nedladdningen sker. Beskärning till verkansområdet kommer i nästa fas. Cache:n lever i samma <code>hv-offline-tiles-v1</code> och rensas av "Glöm allt" som vanligt.</li>
                 </ul>
                 <p>All ritning, lagring och export sker lokalt i webbläsaren.
                 Export (PNG) och delning är alltid användar-initierad.</p>
@@ -1270,22 +1269,6 @@ function renderMapControls() {
         host.appendChild(offlineBtn);
     }
 
-    // Kamuflage-nedladdning: medvetet stort område runt vy-centrum för att
-    // dölja verkansområdet i tile-server-loggen. Hot-modell + krav i
-    // audit/roadmap-kamuflage-nedladdning.md. Knappen visas bara om modul-en
-    // är inläst och har stöd för funktionen — annars skippas den tyst.
-    if (window.OfflineTiles && typeof window.OfflineTiles.openKamuflageModal === 'function') {
-        const kamuflageBtn = document.createElement('button');
-        kamuflageBtn.type = 'button';
-        kamuflageBtn.className = 'btn btn-sm btn-ghost';
-        kamuflageBtn.textContent = 'Kamuflage-nedladdning';
-        kamuflageBtn.title = 'Bulk-download av ett stort område runt vy-centrum för att dölja verkansområdet i tile-server-loggen. Kör via VPN/annat nät — funktionen döljer var ni ska in, inte att nedladdningen sker.';
-        kamuflageBtn.addEventListener('click', () => {
-            if (!map) return;
-            window.OfflineTiles.openKamuflageModal(map);
-        });
-        host.appendChild(kamuflageBtn);
-    }
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()
