@@ -22,6 +22,13 @@ import { leafletLayer } from './vendor/protomaps/protomaps-leaflet.esm.js';
 
 const STORAGE_KEY = 'pmtiles.hardening';
 const DEFAULT_FLAVOR = 'light'; // protomaps-leaflet: light/dark/white/grayscale/black
+const PMTILES_CACHE = 'hv-pmtiles-v1'; // separat Cache API-namespace, bevaras av SW activate-cleanup
+
+// Sverige-paketet — uppdateras när Fas 2-pipeline kört (audit/pmtiles-build.md).
+// Tom URL/hash innebär "ingen svensk fil byggd än, anv. demo".
+const SVERIGE_PMTILES_URL = '';
+const SVERIGE_PMTILES_SHA256 = '';
+const SVERIGE_PMTILES_BYTES = 0;
 
 // Tre publika test-PMTiles på protomaps GitHub (raw.githubusercontent.com har
 // CORS open). Räcker för att verifiera UI-flödet utan att bygga egen fil.
@@ -62,25 +69,109 @@ function saveState(s) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (_) {}
 }
 
-// Stub: SHA-256-verifiering aktiveras i Fas 2 när vi har en känd fil och
-// en hash i sajt-koden. För Fas 1: bara loggar, blockerar inte.
-async function verifyHashIfRequired(url, expectedSha256) {
-    if (!expectedSha256) return true;
+// SHA-256-verifiering — beräknar hash av en ArrayBuffer och jämför med
+// känd hash. Tom expected = skip. Returnerar { ok, hex }.
+async function verifyHash(buf, expectedSha256) {
     try {
-        const resp = await fetch(url);
-        const buf = await resp.arrayBuffer();
         const hash = await crypto.subtle.digest('SHA-256', buf);
         const hex = Array.from(new Uint8Array(hash))
             .map(b => b.toString(16).padStart(2, '0')).join('');
-        if (hex !== expectedSha256.toLowerCase()) {
+        const ok = !expectedSha256 || hex === expectedSha256.toLowerCase();
+        if (!ok) {
             console.error('[pmtiles] SHA-256-mismatch', { expected: expectedSha256, got: hex });
-            return false;
         }
-        return true;
+        return { ok, hex };
     } catch (err) {
-        console.error('[pmtiles] hash-verifiering misslyckades', err);
-        return false;
+        console.error('[pmtiles] hash-beräkning misslyckades', err);
+        return { ok: false, hex: null };
     }
+}
+
+// Pre-download: hämta hela pmtiles-filen, verifiera SHA-256, skriv till
+// Cache API. När den är cachad räcker Service Worker-routen för att
+// servera range-requests från lokal cache (Cache API stödjer Range).
+//
+// Returnerar Promise<{ok, bytes, hex, error}>. onProgress kallas med
+// {loaded, total, percent}.
+async function prefetchPMTiles(url, opts) {
+    opts = opts || {};
+    const onProgress = opts.onProgress || function () {};
+    const expectedSha256 = opts.expectedSha256 || '';
+    const signal = opts.signal;
+
+    try {
+        const resp = await fetch(url, { signal, mode: 'cors' });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const total = parseInt(resp.headers.get('content-length') || '0', 10);
+
+        // Stream:a in chunks så vi kan visa progress (fetch().arrayBuffer()
+        // ger ingen progress, men body.getReader() gör det).
+        const reader = resp.body.getReader();
+        const chunks = [];
+        let loaded = 0;
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            chunks.push(value);
+            loaded += value.length;
+            onProgress({
+                loaded,
+                total,
+                percent: total ? Math.round(loaded / total * 100) : 0
+            });
+        }
+
+        // Slå ihop till en ArrayBuffer för hash-beräkning.
+        const buf = new Uint8Array(loaded);
+        let pos = 0;
+        for (const c of chunks) { buf.set(c, pos); pos += c.length; }
+
+        const verification = await verifyHash(buf.buffer, expectedSha256);
+        if (!verification.ok) {
+            return {
+                ok: false,
+                bytes: loaded,
+                hex: verification.hex,
+                error: 'SHA-256 stämmer inte med förväntad hash. Filen avvisas.'
+            };
+        }
+
+        // Skriv till Cache API. Vi konstruerar en Response så range-requests
+        // mot samma URL hittar i cachen via SW:s caches.match().
+        const cache = await caches.open(PMTILES_CACHE);
+        const cacheResp = new Response(buf, {
+            status: 200,
+            statusText: 'OK',
+            headers: {
+                'Content-Type': 'application/octet-stream',
+                'Content-Length': String(loaded),
+                'Accept-Ranges': 'bytes'
+            }
+        });
+        await cache.put(url, cacheResp);
+
+        return { ok: true, bytes: loaded, hex: verification.hex };
+    } catch (err) {
+        if (err && err.name === 'AbortError') {
+            return { ok: false, error: 'Avbruten' };
+        }
+        return { ok: false, error: (err && err.message) || 'okänt fel' };
+    }
+}
+
+async function isPrefetched(url) {
+    try {
+        const cache = await caches.open(PMTILES_CACHE);
+        const hit = await cache.match(url);
+        return !!hit;
+    } catch (_) { return false; }
+}
+
+async function removePrefetched(url) {
+    try {
+        const cache = await caches.open(PMTILES_CACHE);
+        return await cache.delete(url);
+    } catch (_) { return false; }
 }
 
 function createController(map, normalLayer, opts) {
@@ -232,6 +323,33 @@ function createController(map, normalLayer, opts) {
         Promise.resolve().then(() => activate());
     }
 
+    // Pre-download-wrapper bunden till nuvarande URL + signal.
+    let activeAbortController = null;
+    async function prefetch(prefetchOpts) {
+        prefetchOpts = prefetchOpts || {};
+        if (!url) {
+            return { ok: false, error: 'Ingen URL satt — aktivera Härdat läge först.' };
+        }
+        if (activeAbortController) {
+            return { ok: false, error: 'Pre-download pågår redan.' };
+        }
+        activeAbortController = new AbortController();
+        try {
+            return await prefetchPMTiles(url, {
+                signal: activeAbortController.signal,
+                expectedSha256: prefetchOpts.expectedSha256 || '',
+                onProgress: prefetchOpts.onProgress
+            });
+        } finally {
+            activeAbortController = null;
+        }
+    }
+    function cancelPrefetch() {
+        if (activeAbortController) activeAbortController.abort();
+    }
+    function checkPrefetched() { return isPrefetched(url); }
+    function clearPrefetched() { return removePrefetched(url); }
+
     return {
         isActive, activate, deactivate, toggle,
         getUrl, setUrl,
@@ -239,9 +357,21 @@ function createController(map, normalLayer, opts) {
         getKind,
         setDemo, listDemos,
         onChange,
-        verifyHashIfRequired
+        prefetch, cancelPrefetch, checkPrefetched, clearPrefetched
     };
 }
+
+// Globala helpers (oberoende av controller-instans).
+window.PMTilesPrefetch = {
+    fetch: prefetchPMTiles,
+    isPrefetched: isPrefetched,
+    remove: removePrefetched,
+    verifyHash: verifyHash,
+    SVERIGE_URL: SVERIGE_PMTILES_URL,
+    SVERIGE_SHA256: SVERIGE_PMTILES_SHA256,
+    SVERIGE_BYTES: SVERIGE_PMTILES_BYTES,
+    CACHE_NAME: PMTILES_CACHE
+};
 
 // Globalt namespace så icke-modul-script (renderMapControls i minkarta/
 // sensorskiss) kan skapa en controller per karta.

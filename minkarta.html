@@ -1317,6 +1317,82 @@ function renderMapControls() {
     }
     refreshHardenBtn();
     host.appendChild(hardenBtn);
+
+    // Pre-download (Fas 2): laddar ner hela aktiv PMTiles-fil till lokal
+    // cache. Efter download serverar SW alla range-requests lokalt — noll
+    // utgående anrop. Knappen visas bara när Härdat läge är aktivt.
+    const prefetchBtn = document.createElement('button');
+    prefetchBtn.type = 'button';
+    prefetchBtn.className = 'btn btn-sm btn-ghost';
+    prefetchBtn.style.display = 'none';
+    prefetchBtn.title = 'Ladda ner hela pmtiles-filen lokalt. Efter det är kart-vyn helt offline.';
+
+    let prefetchRunning = false;
+    async function refreshPrefetchBtn() {
+        const ctrl = window.MK_HARDENING;
+        const active = ctrl && ctrl.isActive();
+        if (!active) {
+            prefetchBtn.style.display = 'none';
+            return;
+        }
+        prefetchBtn.style.display = '';
+        if (prefetchRunning) return;
+        const cached = await ctrl.checkPrefetched();
+        prefetchBtn.textContent = cached ? '✓ Lokalt cachad' : '⬇ Ladda ner offline';
+        prefetchBtn.style.borderColor = cached ? '#4caf50' : '';
+        prefetchBtn.style.color = cached ? '#4caf50' : '';
+        prefetchBtn.disabled = false;
+    }
+
+    prefetchBtn.addEventListener('click', async () => {
+        const ctrl = window.MK_HARDENING;
+        if (!ctrl) return;
+        if (prefetchRunning) return;
+
+        const cached = await ctrl.checkPrefetched();
+        if (cached) {
+            if (!window.confirm('Filen finns redan cachad lokalt. Radera och ladda ner igen?')) return;
+            await ctrl.clearPrefetched();
+            await refreshPrefetchBtn();
+            return;
+        }
+
+        prefetchRunning = true;
+        prefetchBtn.disabled = true;
+        prefetchBtn.textContent = 'Hämtar… 0%';
+
+        // Hash krävs bara för svensk fil (Fas 2). Demo-filer kör utan.
+        const url = ctrl.getUrl();
+        const expectedHash = (window.PMTilesPrefetch && url === window.PMTilesPrefetch.SVERIGE_URL)
+            ? window.PMTilesPrefetch.SVERIGE_SHA256 : '';
+
+        const result = await ctrl.prefetch({
+            expectedSha256: expectedHash,
+            onProgress: (p) => {
+                prefetchBtn.textContent = 'Hämtar… ' + (p.percent || 0) + '%';
+            }
+        });
+
+        prefetchRunning = false;
+        if (result.ok) {
+            const mb = (result.bytes / (1024 * 1024)).toFixed(1);
+            window.alert('Klart — ' + mb + ' MB cachad lokalt. Slå på flygplansläge och pan:a fritt för att verifiera.');
+        } else {
+            window.alert('Pre-download misslyckades: ' + (result.error || 'okänt fel'));
+        }
+        await refreshPrefetchBtn();
+    });
+
+    if (window.MK_HARDENING) {
+        window.MK_HARDENING.onChange(refreshPrefetchBtn);
+    } else {
+        window.addEventListener('MK_HARDENING:ready', () => {
+            window.MK_HARDENING.onChange(refreshPrefetchBtn);
+            refreshPrefetchBtn();
+        }, { once: true });
+    }
+    refreshPrefetchBtn();
+    host.appendChild(prefetchBtn);
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()

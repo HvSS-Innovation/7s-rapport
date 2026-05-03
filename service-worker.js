@@ -3,6 +3,9 @@ const CACHE = 'hv-20260503_202748';
 // nedan — användaren har själv laddat ner data hit och förväntar sig att
 // den överlever en deploy. Versionera bara om format ändras.
 const OFFLINE_TILES_CACHE = 'hv-offline-tiles-v1';
+// PMTiles pre-download cache (Fas 2). Helt fil cachad — Range-requests
+// serveras från denna utan extra fetch. Bevaras vid SW activate-cleanup.
+const PMTILES_CACHE = 'hv-pmtiles-v1';
 const FILES = [
   './',
   './index.html',
@@ -75,9 +78,9 @@ self.addEventListener('install', e => {
 });
 
 self.addEventListener('activate', e => {
-  // Bevara både huvudcachen (versionsstämpel) och offline-tiles-cachen.
-  // Allt annat (gamla CACHE-stämplar) raderas.
-  const KEEP = new Set([CACHE, OFFLINE_TILES_CACHE]);
+  // Bevara både huvudcachen (versionsstämpel), offline-tiles-cachen och
+  // pmtiles-cachen. Allt annat (gamla CACHE-stämplar) raderas.
+  const KEEP = new Set([CACHE, OFFLINE_TILES_CACHE, PMTILES_CACHE]);
   e.waitUntil(caches.keys().then(keys =>
     Promise.all(keys.filter(k => !KEEP.has(k)).map(k => caches.delete(k)))
   ));
@@ -103,8 +106,55 @@ function safePut(request, resp) {
   }
 }
 
+// Range-stöd för pmtiles cachade i PMTILES_CACHE. Klienten gör
+// HTTP Range-requests när protomaps-leaflet plockar individuella tiles ur
+// filen. Cache API matchar utan Range-header by default — vi måste
+// extrahera byte-rangen själva och returnera 206 Partial Content.
+async function servePmtilesRange(request) {
+  const cache = await caches.open(PMTILES_CACHE);
+  const cached = await cache.match(request, { ignoreVary: true });
+  if (!cached) return null;
+
+  const range = request.headers.get('range');
+  if (!range) return cached.clone();
+
+  const m = range.match(/^bytes=(\d+)-(\d*)$/);
+  if (!m) return cached.clone();
+
+  const buf = await cached.clone().arrayBuffer();
+  const start = parseInt(m[1], 10);
+  const end = m[2] ? parseInt(m[2], 10) : buf.byteLength - 1;
+  if (start >= buf.byteLength || end < start) {
+    return new Response(null, { status: 416, statusText: 'Range Not Satisfiable' });
+  }
+  const slice = buf.slice(start, end + 1);
+  return new Response(slice, {
+    status: 206,
+    statusText: 'Partial Content',
+    headers: {
+      'Content-Type': cached.headers.get('content-type') || 'application/octet-stream',
+      'Content-Length': String(slice.byteLength),
+      'Content-Range': 'bytes ' + start + '-' + end + '/' + buf.byteLength,
+      'Accept-Ranges': 'bytes'
+    }
+  });
+}
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
+
+  // PMTiles-fil: kolla pre-download-cachen först. Cache hit → svara med
+  // Range-stöd lokalt (inga utgående requests). Cache miss → låt vanlig
+  // fetch gå igenom (klienten gör range-requests mot original-host som
+  // måste stödja CORS + Range; SW cachar ej automatiskt).
+  if (e.request.method === 'GET' && url.pathname.endsWith('.pmtiles')) {
+    e.respondWith((async () => {
+      const local = await servePmtilesRange(e.request);
+      if (local) return local;
+      return fetch(e.request);
+    })());
+    return;
+  }
 
   // Tile-requests: kolla offline-cachen FÖRST (oberoende av subdomän-rotation
   // och query-strängar). Hit landar nedladdade tiles från offline-tiles.js.
