@@ -170,8 +170,8 @@
                 '<div class="sr-section">' +
                     '<div class="sr-label">Ställe <span class="sr-current" id="srStalleCur"></span></div>' +
                     '<div class="sr-row">' +
-                        '<button type="button" class="sr-btn" id="srGps">📍 GPS</button>' +
-                        '<input type="text" class="sr-input" id="srStalleIn" placeholder="MGRS / plats" autocomplete="off">' +
+                        '<button type="button" class="sr-btn" id="srGps">📍 MGRS</button>' +
+                        '<input type="text" class="sr-input" id="srStalleIn" placeholder="MGRS, t.ex. 33VWE 12345 67890" autocomplete="off">' +
                     '</div>' +
                 '</div>' +
 
@@ -358,11 +358,11 @@
                     showStatus('Kunde inte konvertera till MGRS: ' + (e && e.message || ''), 'warn');
                 }
                 gpsBtn.disabled = false;
-                gpsBtn.textContent = '📍 GPS';
+                gpsBtn.textContent = '📍 MGRS';
             }
             function fail(err) {
                 gpsBtn.disabled = false;
-                gpsBtn.textContent = '📍 GPS';
+                gpsBtn.textContent = '📍 MGRS';
                 var msg = 'GPS misslyckades';
                 if (err && err.code === 1) msg = 'Tillstånd nekat — tillåt platsåtkomst eller skriv manuellt.';
                 else if (err && err.code === 2) msg = 'Position ej tillgänglig.';
@@ -390,17 +390,8 @@
 
         var submitBtn = overlay.querySelector('#srSubmit');
         submitBtn.addEventListener('click', async function () {
-            // Validera minimum: Styrka + Slag + Stalle ar de operativt
-            // viktiga falten i ett akut lage. Sysselsattning ar onskvart men
-            // inte krav — ofta vet man inte vad de gor an.
-            var missing = [];
-            if (!val('styrka')) missing.push('Styrka');
-            if (!val('slag')) missing.push('Slag');
-            if (!val('stalle')) missing.push('Ställe');
-            if (missing.length) {
-                showStatus('Fyll i: ' + missing.join(', ') + '.', 'warn');
-                return;
-            }
+            // Inga krav — operatoren kan skicka rapporten med precis sa
+            // mycket information de har. Tomma falt blir "-" i utdata.
 
             submitBtn.disabled = true;
             submitBtn.textContent = 'Genererar…';
