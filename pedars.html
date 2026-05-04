@@ -81,6 +81,10 @@
         .sv-btn.selected-gron{border-color:#4caf50;background:#1e3d1e;color:#4caf50;}
         .sv-btn.selected-gul{border-color:#f9a825;background:#3e2800;color:#f9a825;}
         .sv-btn.selected-rod{border-color:#c62828;background:#3e0000;color:#ef5350;}
+        .sv-dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle;margin-right:6px;}
+        .sv-dot-gron{background:#4caf50;}
+        .sv-dot-gul{background:#f9a825;}
+        .sv-dot-rod{background:#c62828;}
 
         .saved-items{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;}
         .saved-item{display:inline-flex;align-items:center;gap:4px;background:var(--accent-dim);color:var(--text-secondary);font-size:.78rem;padding:4px 8px;border-radius:20px;cursor:pointer;transition:background .15s;}
@@ -274,9 +278,9 @@
                 </div>
             </div>
             <div class="sv-grid">
-                <button class="sv-btn" id="sv0" onclick="selectSV(0)">🟢 Grön<br><span style="font-size:.72rem;font-weight:400">Fullt stridsduglig</span></button>
-                <button class="sv-btn" id="sv1" onclick="selectSV(1)">🟡 Gul<br><span style="font-size:.72rem;font-weight:400">Reducerad förmåga</span></button>
-                <button class="sv-btn" id="sv2" onclick="selectSV(2)">🔴 Röd<br><span style="font-size:.72rem;font-weight:400">Ej stridsduglig</span></button>
+                <button class="sv-btn" id="sv0" onclick="selectSV(0)"><span class="sv-dot sv-dot-gron"></span>Grön<br><span style="font-size:.72rem;font-weight:400">Fullt stridsduglig</span></button>
+                <button class="sv-btn" id="sv1" onclick="selectSV(1)"><span class="sv-dot sv-dot-gul"></span>Gul<br><span style="font-size:.72rem;font-weight:400">Reducerad förmåga</span></button>
+                <button class="sv-btn" id="sv2" onclick="selectSV(2)"><span class="sv-dot sv-dot-rod"></span>Röd<br><span style="font-size:.72rem;font-weight:400">Ej stridsduglig</span></button>
             </div>
             <textarea id="s_motivering" rows="3" placeholder="Motivering / samlad förmågebedömning. Beskriv vad som begränsar förmågan och vad som behövs för att återställa den.
 

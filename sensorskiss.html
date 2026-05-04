@@ -515,7 +515,7 @@
         </div>
 
         <div class="map-wrap">
-            <div style="background:#2a1a0a;border-bottom:1px solid #c8a24e;padding:8px 14px;font-size:0.72rem;color:#c8a24e;line-height:1.4;text-align:center">⚠ Kartbakgrunden laddas från extern server som ser IP och visat område. Undvik i skarpt läge.</div>
+            <div style="background:#2a1a0a;border-bottom:1px solid #c8a24e;padding:8px 14px;font-size:0.72rem;color:#c8a24e;line-height:1.4;text-align:center">OBS: Kartbakgrunden laddas från extern server som ser IP och visat område. Undvik i skarpt läge.</div>
             <div id="mapContainer"><div class="map-spinner" id="mapSpinner"></div></div>
             <div class="status-row">
                 <span class="status-mgrs" id="statusMgrs">—</span>
@@ -591,7 +591,7 @@
         <details class="about" id="tipsPanel">
             <summary>Tips &amp; genvägar</summary>
             <div class="about-body">
-                <p style="margin-bottom:8px"><b>Fullskärm.</b> Klicka <b>⛶ Maximera</b> ovanför kartan eller tryck <b>F</b>.
+                <p style="margin-bottom:8px"><b>Fullskärm.</b> Klicka <b>Maximera</b> ovanför kartan eller tryck <b>F</b>.
                 Esc stänger. <b>Shift+klick</b> på knappen ger äkta fullskärm (även webbläsarens flikrad göms).
                 Dubbelklicka knappen för att välja en annan tangent.</p>
 
@@ -1648,7 +1648,7 @@ function attachMapDrawHandlers() {
         if (!document.fullscreenElement && document.body.classList.contains('is-fullmap')) {
             document.body.classList.remove('is-fullmap');
             const btn = document.getElementById('skFullBtn');
-            if (btn) btn.textContent = '⛶ Maximera';
+            if (btn) btn.textContent = 'Maximera';
             if (map) setTimeout(() => map.invalidateSize(), 50);
         }
     });
@@ -1871,7 +1871,7 @@ function renderMapControls() {
     const fullBadge = fullKey
         ? '<span class="sk-tool-shortcut">' + fullKey.toUpperCase() + '</span>'
         : '';
-    fullBtn.innerHTML = '⛶ Maximera' + fullBadge;
+    fullBtn.innerHTML = 'Maximera' + fullBadge;
     fullBtn.title = 'Maximera kartan i fönstret' +
         (fullKey ? ' (' + fullKey.toUpperCase() + ')' : '') +
         '. Shift+klick = äkta fullskärm. Dubbelklicka för att ändra tangent.';
@@ -2068,7 +2068,7 @@ function toggleFullmap(opts) {
     }
 
     const btn = document.getElementById('skFullBtn');
-    if (btn) btn.textContent = turningOn ? '⛶ Återställ' : '⛶ Maximera';
+    if (btn) btn.textContent = turningOn ? 'Återställ' : 'Maximera';
 
     if (map) {
         setTimeout(() => map.invalidateSize(), 50);

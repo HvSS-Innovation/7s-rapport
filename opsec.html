@@ -99,7 +99,7 @@
 
 <div class="card">
   <h2>Rensa</h2>
-  <button type="button" id="btn1" class="danger">🧹 Glöm allt på den här enheten</button>
+  <button type="button" id="btn1" class="danger">Glöm allt på den här enheten</button>
   <p><small>Två tryck krävs. Ingen ångra.</small></p>
 </div>
 
@@ -193,7 +193,7 @@ async function nukeEverything() {
         const req = indexedDB.deleteDatabase(name);
         req.onsuccess = () => { log('IndexedDB raderad: ' + name, 'ok'); r(); };
         req.onerror = () => { log('FEL: IndexedDB fel för ' + name + ': ' + (req.error?.message || 'okänt'), 'err'); r(); };
-        req.onblocked = () => { log('⚠ IndexedDB blockad för ' + name + ' (annan flik håller den)', 'warn'); r(); };
+        req.onblocked = () => { log('OBS: IndexedDB blockad för ' + name + ' (annan flik håller den)', 'warn'); r(); };
       });
     }
   }
@@ -229,12 +229,12 @@ btn.addEventListener('click', async () => {
   if (!armed) {
     armed = true;
     btn.classList.add('step2');
-    btn.textContent = '⚠ Tryck igen för att RADERA — ingen ångra';
+    btn.textContent = 'OBS: Tryck igen för att RADERA — ingen ångra';
     setTimeout(() => {
       if (armed) {
         armed = false;
         btn.classList.remove('step2');
-        btn.textContent = '🧹 Glöm allt på den här enheten';
+        btn.textContent = 'Glöm allt på den här enheten';
       }
     }, 6000);
     return;
