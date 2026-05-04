@@ -108,12 +108,9 @@ const SYMBOLS = {
     larm: {
         label: 'Larmmina',
         category: 'point',
-        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1050 520">' +
-            '<circle cx="210" cy="260" r="200" fill="black"/>' +
-            '<line x1="410" y1="260" x2="1030" y2="260" stroke="black" stroke-width="14" stroke-linecap="square"/>' +
-            '<line x1="660" y1="155" x2="730" y2="155" stroke="black" stroke-width="14" stroke-linecap="square"/>' +
-            '<line x1="660" y1="155" x2="660" y2="400" stroke="black" stroke-width="14" stroke-linecap="square"/>' +
-            '<path d="M 660,400 Q 660,478 720,478 Q 775,478 795,445" fill="none" stroke="black" stroke-width="14" stroke-linecap="round"/>' +
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 420">' +
+            '<circle cx="210" cy="210" r="195" fill="black"/>' +
+            '<line x1="405" y1="210" x2="980" y2="210" stroke="black" stroke-width="22" stroke-linecap="square"/>' +
         '</svg>'
     },
 
