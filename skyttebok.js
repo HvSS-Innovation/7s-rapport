@@ -3,12 +3,19 @@
 // Datastruktur i localStorage:
 //   skyttebok_pass_<uuid>          — JSON-objekt för ett pass
 //   skyttebok_settings_displayname — sträng (visningsnamn)
+//   skyttebok_sakerhetsprov        — JSON-objekt för säkerhetsprov BAS
 //
 // Pass-objekt:
 //   { id, ovningNr, datum, skott, traff, godkand, anteckning, skapad }
 //
+// Säkerhetsprov-objekt:
+//   { datum, instruktor, anteckning, godkand, sparad }
+//
 // Hela `skyttebok_*`-prefixet rensas vid `localStorage.clear()`
 // (anropas av opsec.html-flödet).
+//
+// Export/import-format ('skyttebok-v1'):
+//   { format, exportedAt, displayName, pass: [...], sakerhetsprov: {...}|null }
 
 (function () {
     'use strict';
@@ -23,9 +30,33 @@
 
     var PASS_PREFIX = 'skyttebok_pass_';
     var SETTING_PREFIX = 'skyttebok_settings_';
+    var SAKERHETSPROV_KEY = 'skyttebok_sakerhetsprov';
+    var EXPORT_FORMAT = 'skyttebok-v1';
 
     // Pending-confirm callback. Sätts av showConfirm(), nollställs efter klick.
     var pendingConfirm = null;
+
+    // Säkerhetsprov BAS — hand-curerad referens från H SKJUTB AK 2021,
+    // Bilaga 1 (sid 121–122). Skytten loggar EN status (godkänd/ej godk.)
+    // för hela provet. Momenttexterna visas som info så soldaten ser vad
+    // som testas.
+    var SAKERHETSPROV_MOMENT = [
+        { nr: 1,  txt: 'Redogör för de fyra grundläggande säkerhetsreglerna för vapenhantering' },
+        { nr: 2,  txt: 'Beskriv begreppet "ofarlig riktning"' },
+        { nr: 3,  txt: 'Beskriv vad som gäller för överlämning av vapen' },
+        { nr: 4,  txt: 'Redogör för när hörselskydd och skyddsglasögon ska bäras' },
+        { nr: 5,  txt: 'Skilj på laddblind, skarp, spårljus- och lös patron' },
+        { nr: 6,  txt: 'Ladda vapnet enligt manual på kommando "Ladda"' },
+        { nr: 7,  txt: 'Inta färdigställning på kommando "Färdigställning"' },
+        { nr: 8,  txt: 'Inta anläggning på kommando "Anläggning"' },
+        { nr: 9,  txt: 'Inta grundställning på kommando "Grundställning"' },
+        { nr: 10, txt: 'Genomför patron ur enligt manual på kommando "Patron ur"' },
+        { nr: 11, txt: 'Ange vapnets riskområde (tryck, riskvinkel V/Q)' },
+        { nr: 12, txt: 'Beskriv begreppen "skjutgräns" och "eldområde"' },
+        { nr: 13, txt: 'Redogör för när vapnet får vara osäkrat' },
+        { nr: 14, txt: 'Ange hur många skott som får skjutas i snabb följd' },
+        { nr: 15, txt: 'Ange kortaste avstånd till ammunition vid öppen eld/rökning' }
+    ];
 
     // ── Storage ─────────────────────────────────────────────────────────
     function loadAllPass() {
@@ -57,6 +88,17 @@
     function setSetting(name, value) {
         if (value) localStorage.setItem(SETTING_PREFIX + name, value);
         else localStorage.removeItem(SETTING_PREFIX + name);
+    }
+
+    function loadSakerhetsprov() {
+        var raw = localStorage.getItem(SAKERHETSPROV_KEY);
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch (_) { return null; }
+    }
+
+    function saveSakerhetsprov(sp) {
+        if (sp) localStorage.setItem(SAKERHETSPROV_KEY, JSON.stringify(sp));
+        else localStorage.removeItem(SAKERHETSPROV_KEY);
     }
 
     // ── Hjälpare ────────────────────────────────────────────────────────
@@ -103,12 +145,13 @@
         document.getElementById('confirmOverlay').classList.remove('open');
     };
 
-    document.getElementById('confirmOk').addEventListener('click', function () {
+    function confirmOkHandler() {
         var fn = pendingConfirm;
         pendingConfirm = null;
         document.getElementById('confirmOverlay').classList.remove('open');
         if (fn) fn();
-    });
+    }
+    document.getElementById('confirmOk').addEventListener('click', confirmOkHandler);
 
     // ── Render ──────────────────────────────────────────────────────────
     function passByOvning() {
@@ -318,6 +361,130 @@
         root.innerHTML = html;
     }
 
+    // ── Säkerhetsprov ───────────────────────────────────────────────────
+    function renderSakerhetsprov() {
+        var sp = loadSakerhetsprov();
+        var root = document.getElementById('sakerhetsprovRoot');
+        if (!root) return;
+
+        var statusClass, statusText, cardClass;
+        if (!sp) {
+            statusClass = 'tom';
+            statusText = 'EJ LOGGAT';
+            cardClass = '';
+        } else if (sp.godkand) {
+            statusClass = 'ok';
+            statusText = 'GODKÄND';
+            cardClass = 'godkand';
+        } else {
+            statusClass = 'ej';
+            statusText = 'EJ GODK.';
+            cardClass = 'underkand';
+        }
+
+        var current = '';
+        if (sp) {
+            current = '<dl class="sp-current">' +
+                '<dt>Datum</dt><dd>' + escapeHtml(sp.datum || '') + '</dd>' +
+                (sp.instruktor ? '<dt>Instruktör</dt><dd>' + escapeHtml(sp.instruktor) + '</dd>' : '') +
+                (sp.anteckning ? '<dt>Anteckning</dt><dd>' + escapeHtml(sp.anteckning) + '</dd>' : '') +
+            '</dl>';
+        }
+
+        var momentList = SAKERHETSPROV_MOMENT.map(function (m) {
+            return '<li>' + escapeHtml(m.txt) + '</li>';
+        }).join('');
+
+        var today = sp && sp.datum ? sp.datum : todayIso();
+        var instr = sp && sp.instruktor ? escapeHtml(sp.instruktor) : '';
+        var ant = sp && sp.anteckning ? escapeHtml(sp.anteckning) : '';
+        var godkandClass = sp && sp.godkand === true ? ' is-active' : '';
+        var underkandClass = sp && sp.godkand === false ? ' is-active' : '';
+
+        root.innerHTML = '' +
+            '<div class="sp-card ' + cardClass + '" id="spCard">' +
+                '<button class="sp-summary" type="button" onclick="skyttebokToggleSakerhetsprov()">' +
+                    '<div class="sp-titel">Säkerhetsprov BAS<small>Bilaga 1, H SKJUTB AK 2021</small></div>' +
+                    '<span class="sp-status ' + statusClass + '">' + statusText + '</span>' +
+                    '<span class="sp-toggle">›</span>' +
+                '</button>' +
+                '<div class="sp-body">' +
+                    current +
+                    '<div class="pass-form" style="margin-top:12px">' +
+                        '<div class="pass-form-title">' + (sp ? 'Uppdatera prov' : 'Logga prov') + '</div>' +
+                        '<div class="pass-form-row">' +
+                            '<div>' +
+                                '<label for="sp-datum">Datum</label>' +
+                                '<input type="date" id="sp-datum" value="' + today + '">' +
+                            '</div>' +
+                            '<div>' +
+                                '<label>Resultat</label>' +
+                                '<div class="chip-group" data-chip-group="sp-godkand">' +
+                                    '<button type="button" class="chip godkand' + godkandClass + '" data-value="true" onclick="skyttebokSetChip(this)">Godkänd</button>' +
+                                    '<button type="button" class="chip underkand' + underkandClass + '" data-value="false" onclick="skyttebokSetChip(this)">Ej godk.</button>' +
+                                '</div>' +
+                            '</div>' +
+                        '</div>' +
+                        '<div>' +
+                            '<label for="sp-instruktor">Instruktör (frivilligt)</label>' +
+                            '<input type="text" id="sp-instruktor" autocomplete="off" maxlength="60" value="' + instr + '" placeholder="T.ex. namn eller signatur">' +
+                        '</div>' +
+                        '<div style="margin-top:8px">' +
+                            '<label for="sp-anteckning">Anteckning</label>' +
+                            '<textarea id="sp-anteckning" rows="2" placeholder="Anteckningar till provet">' + ant + '</textarea>' +
+                        '</div>' +
+                        '<button class="btn btn-primary" type="button" onclick="skyttebokSparaSakerhetsprov()">Spara prov</button>' +
+                        (sp ? '<button class="btn btn-sm btn-danger" type="button" style="width:100%;margin-top:6px" onclick="skyttebokRaderaSakerhetsprov()">Ta bort logg</button>' : '') +
+                    '</div>' +
+                    '<div class="sp-moment-list">' +
+                        '<strong>Provet omfattar 15 moment</strong> ' +
+                        '<em>(referens från PDF):</em>' +
+                        '<ol>' + momentList + '</ol>' +
+                    '</div>' +
+                '</div>' +
+            '</div>';
+    }
+
+    window.skyttebokToggleSakerhetsprov = function () {
+        var card = document.getElementById('spCard');
+        if (card) card.classList.toggle('open');
+    };
+
+    window.skyttebokSparaSakerhetsprov = function () {
+        var datum = document.getElementById('sp-datum').value || todayIso();
+        var instruktor = document.getElementById('sp-instruktor').value.trim();
+        var anteckning = document.getElementById('sp-anteckning').value.trim();
+        var chip = document.querySelector('[data-chip-group="sp-godkand"] .chip.is-active');
+        if (!chip) {
+            showConfirm('Välj resultat',
+                'Markera Godkänd eller Ej godk. innan du sparar.',
+                function () { /* no-op — bara info */ });
+            return;
+        }
+        var godkand = chip.getAttribute('data-value') === 'true';
+        saveSakerhetsprov({
+            datum: datum,
+            instruktor: instruktor,
+            anteckning: anteckning,
+            godkand: godkand,
+            sparad: Date.now()
+        });
+        renderSakerhetsprov();
+        var card = document.getElementById('spCard');
+        if (card) card.classList.add('open');
+    };
+
+    window.skyttebokRaderaSakerhetsprov = function () {
+        showConfirm(
+            'Ta bort säkerhetsprov',
+            'Tar bort den loggade säkerhetsprovs-statusen. Åtgärden kan inte ångras.',
+            function () {
+                saveSakerhetsprov(null);
+                renderSakerhetsprov();
+            }
+        );
+    };
+
     // ── Event-handlers (globala — anropas från inline onclick) ─────────
     window.skyttebokToggleOvning = function (ovningNr) {
         var card = document.querySelector('.ovning-card[data-ovning="' + ovningNr + '"]');
@@ -391,6 +558,163 @@
         );
     };
 
+    // ── Export / Import ─────────────────────────────────────────────────
+    // Format: alla `skyttebok_*`-data + visningsnamn paketerat med en
+    // version-stämpel. Importen kan därför migrera bakåt-kompatibelt om
+    // formatet ändras senare.
+    function buildExportPayload() {
+        return {
+            format: EXPORT_FORMAT,
+            exportedAt: new Date().toISOString(),
+            displayName: getSetting('displayname') || null,
+            pass: loadAllPass(),
+            sakerhetsprov: loadSakerhetsprov()
+        };
+    }
+
+    function exportToFile() {
+        var payload = buildExportPayload();
+        var json = JSON.stringify(payload, null, 2);
+        var blob = new Blob([json], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'skyttebok-' + todayIso() + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        // Frigör objekt-URL efter en kort fördröjning så browsern hinner
+        // initiera nedladdningen innan vi släpper referensen.
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    }
+
+    function validateImportPayload(p) {
+        if (!p || typeof p !== 'object') return 'Filen är inte giltig JSON-data.';
+        if (p.format !== EXPORT_FORMAT) {
+            return 'Okänt format ("' + (p.format || '?') + '"). Förväntade "' +
+                EXPORT_FORMAT + '".';
+        }
+        if (!Array.isArray(p.pass)) return 'Saknar pass-lista.';
+        for (var i = 0; i < p.pass.length; i++) {
+            var pp = p.pass[i];
+            if (!pp || !pp.id || (pp.ovningNr === undefined || pp.ovningNr === null)) {
+                return 'Pass nr ' + (i + 1) + ' saknar id eller ovningNr.';
+            }
+        }
+        return null;
+    }
+
+    function applyImport(payload, mode) {
+        // mode: 'merge' (lägg till nya, behåll befintliga med samma id)
+        //       'replace' (rensa allt befintligt först)
+        if (mode === 'replace') {
+            loadAllPass().forEach(function (p) { deletePass(p.id); });
+            saveSakerhetsprov(null);
+            // displayName lämnas — den ärvs nedan om export hade ett.
+        }
+
+        var existingIds = {};
+        loadAllPass().forEach(function (p) { existingIds[p.id] = true; });
+
+        var added = 0, skipped = 0;
+        payload.pass.forEach(function (pp) {
+            if (existingIds[pp.id]) { skipped++; return; }
+            // Numeriska ovningNr i JSON återställs som number; sträng-id
+            // (kp_bas) bevaras.
+            savePass(pp);
+            added++;
+        });
+
+        if (payload.sakerhetsprov) saveSakerhetsprov(payload.sakerhetsprov);
+        if (payload.displayName) setSetting('displayname', payload.displayName);
+
+        return { added: added, skipped: skipped };
+    }
+
+    function importFromFile(file) {
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function () {
+            var payload;
+            try { payload = JSON.parse(reader.result); }
+            catch (_) {
+                showConfirm('Importfel',
+                    'Kunde inte tolka filen som JSON.',
+                    function () { /* no-op */ });
+                return;
+            }
+            var err = validateImportPayload(payload);
+            if (err) {
+                showConfirm('Importfel', err, function () { /* no-op */ });
+                return;
+            }
+            // Bekräftelse + val: merge (default) eller replace.
+            var nNytt = payload.pass.length;
+            var nFinns = loadAllPass().length;
+            var msg = 'Filen innehåller ' + nNytt + ' pass' +
+                (payload.sakerhetsprov ? ' + säkerhetsprov-logg' : '') +
+                (payload.displayName ? ' (visningsnamn: ' + payload.displayName + ')' : '') +
+                '. Du har ' + nFinns + ' pass på enheten.\n\n' +
+                'Välj sammanslagning eller ersätt.';
+            showImportChoice(msg, function (mode) {
+                var res = applyImport(payload, mode);
+                renderAll();
+                showConfirm('Klart',
+                    'Importerade ' + res.added + ' pass' +
+                    (res.skipped ? ' (' + res.skipped + ' redan befintliga ignorerade)' : '') + '.',
+                    function () { /* no-op */ });
+            });
+        };
+        reader.onerror = function () {
+            showConfirm('Importfel', 'Kunde inte läsa filen.', function () { /* no-op */ });
+        };
+        reader.readAsText(file);
+    }
+
+    // Tre-knappars-bekräftelse: "Slå ihop" / "Ersätt" / "Avbryt".
+    // Bygger på samma overlay som showConfirm men injicerar två primär-knappar.
+    function showImportChoice(message, onChoice) {
+        document.getElementById('confirmTitle').textContent = 'Importera skjutbok';
+        document.getElementById('confirmMessage').textContent = message;
+
+        var actions = document.querySelector('#confirmOverlay .confirm-actions');
+        // Spara originalknappar för återställning
+        var orig = actions.innerHTML;
+
+        actions.innerHTML = '';
+        var btnAvbryt = document.createElement('button');
+        btnAvbryt.className = 'btn btn-secondary';
+        btnAvbryt.textContent = 'Avbryt';
+        btnAvbryt.onclick = function () { close(); };
+
+        var btnMerge = document.createElement('button');
+        btnMerge.className = 'btn btn-primary';
+        btnMerge.style.flex = '1';
+        btnMerge.style.minHeight = '44px';
+        btnMerge.style.marginTop = '0';
+        btnMerge.textContent = 'Slå ihop';
+        btnMerge.onclick = function () { close(); onChoice('merge'); };
+
+        var btnReplace = document.createElement('button');
+        btnReplace.className = 'btn btn-danger';
+        btnReplace.textContent = 'Ersätt allt';
+        btnReplace.onclick = function () { close(); onChoice('replace'); };
+
+        actions.appendChild(btnAvbryt);
+        actions.appendChild(btnMerge);
+        actions.appendChild(btnReplace);
+
+        document.getElementById('confirmOverlay').classList.add('open');
+
+        function close() {
+            document.getElementById('confirmOverlay').classList.remove('open');
+            // Återställ original-knappar för framtida showConfirm-anrop.
+            actions.innerHTML = orig;
+            // Återbinda click-handler på återställd OK-knapp.
+            document.getElementById('confirmOk').addEventListener('click', confirmOkHandler);
+        }
+    }
+
     // ── Settings ────────────────────────────────────────────────────────
     function initSettings() {
         var input = document.getElementById('displayName');
@@ -402,29 +726,63 @@
             setSetting('displayname', input.value.trim());
         });
 
+        document.getElementById('btnExport').addEventListener('click', function () {
+            var nPass = loadAllPass().length;
+            var hasSp = !!loadSakerhetsprov();
+            if (nPass === 0 && !hasSp) {
+                showConfirm('Inget att exportera',
+                    'Skjutboken är tom. Logga ett pass eller säkerhetsprov först.',
+                    function () { /* no-op */ });
+                return;
+            }
+            exportToFile();
+        });
+
+        var importFileEl = document.getElementById('importFile');
+        document.getElementById('btnImport').addEventListener('click', function () {
+            importFileEl.value = '';
+            importFileEl.click();
+        });
+        importFileEl.addEventListener('change', function () {
+            if (importFileEl.files && importFileEl.files[0]) {
+                importFromFile(importFileEl.files[0]);
+            }
+        });
+
         document.getElementById('btnRensaAlla').addEventListener('click', function () {
             var all = loadAllPass();
-            if (all.length === 0) {
+            var sp = loadSakerhetsprov();
+            if (all.length === 0 && !sp) {
                 showConfirm('Inget att rensa',
                     'Skjutboken är redan tom på den här enheten.',
                     function () { /* no-op */ });
                 return;
             }
+            var parts = [];
+            if (all.length) parts.push(all.length + ' pass');
+            if (sp) parts.push('säkerhetsprov-logg');
             showConfirm(
                 'Rensa hela skjutboken',
-                'Tar bort alla ' + all.length + ' pass från den här enheten. ' +
+                'Tar bort ' + parts.join(' + ') + ' från den här enheten. ' +
                 'Visningsnamnet bevaras. Åtgärden kan inte ångras.',
                 function () {
                     all.forEach(function (p) { deletePass(p.id); });
-                    render();
+                    saveSakerhetsprov(null);
+                    renderAll();
                 }
             );
         });
     }
 
+    // ── Render-helper som täcker både övningar och säkerhetsprov ───────
+    function renderAll() {
+        renderSakerhetsprov();
+        render();
+    }
+
     // ── Init ────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         initSettings();
-        render();
+        renderAll();
     });
 })();
