@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta name="referrer" content="strict-origin">
+    <meta name="google" content="notranslate">
+    <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d1f0d">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="alternate icon" href="favicon.ico">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SKYTTEBOK">
+    <title>SKYTTEBOK – Skjutdokumentation BAS</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="fonts/inter.css">
+    <style>
+        :root {
+            --bg-primary:#0d1f0d;--bg-secondary:#152815;--bg-card:#1a321a;--bg-input:#0f240f;
+            --border:#2d4a2d;--border-focus:#4a7c4a;--text-primary:#e8f0e8;--text-secondary:#8aaa8a;
+            --text-muted:#5a7a5a;--accent:#4caf50;--accent-hover:#66bb6a;--accent-dim:#1e3d1e;
+            --danger:#c62828;--danger-hover:#e53935;--info:#1565c0;--info-hover:#1976d2;
+            --radius:8px;--radius-sm:4px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; padding: 16px; }
+        .container { max-width: 560px; margin: 0 auto; }
+
+        header { text-align: center; padding: 20px 0 16px; }
+        header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+        header p { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.06em; margin-top: 2px; }
+        .beta-badge { display: inline-block; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; font-size: 0.6rem; font-weight: 700; letter-spacing: 0.1em; padding: 2px 8px; margin-left: 6px; vertical-align: middle; }
+
+        .tab-nav { display: flex; gap: 4px; margin-bottom: 4px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-link { flex: 1; text-align: center; padding: 9px 2px; border-radius: var(--radius-sm); color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
+        .tab-link:hover { background: var(--bg-card); color: var(--text-secondary); }
+        .tab-link.active { background: var(--accent-dim); color: var(--accent); }
+        .tab-nav-sub { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
+
+        .form-group { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 10px; }
+        label { font-weight: 600; font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-bottom: 6px; }
+        .field-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 5px; opacity: 0.85; line-height: 1.4; }
+
+        input[type="text"], input[type="number"], input[type="date"], textarea {
+            width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm);
+            color: var(--text-primary); font-family: inherit; font-size: 1rem; padding: 12px 14px;
+            outline: none; transition: border-color 0.15s; -webkit-appearance: none; appearance: none;
+        }
+        input[type="text"]:focus, input[type="number"]:focus, input[type="date"]:focus, textarea:focus { border-color: var(--border-focus); }
+        input[type="date"] { color-scheme: dark; }
+        textarea { resize: vertical; min-height: 60px; line-height: 1.5; }
+
+        .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; border: none; border-radius: var(--radius); font-family: inherit; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { width: 100%; background: var(--accent); color: #fff; margin-top: 8px; font-size: 1rem; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-sm { min-height: 36px; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.82rem; }
+        .btn-secondary { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
+        .btn-danger { background: var(--danger); color: #fff; border: none; }
+        .btn-danger:hover { background: var(--danger-hover); }
+
+        /* Settings card */
+        .settings-card { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 14px; }
+        .settings-card summary { cursor: pointer; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; list-style: none; display: flex; align-items: center; justify-content: space-between; }
+        .settings-card summary::-webkit-details-marker { display: none; }
+        .settings-card summary::after { content: '▾'; color: var(--text-muted); font-size: 0.8rem; transition: transform 0.15s; }
+        .settings-card[open] summary::after { transform: rotate(180deg); }
+        .settings-card .settings-body { margin-top: 12px; }
+
+        /* Delmoment-grupper */
+        .delmoment-group { margin-bottom: 16px; }
+        .delmoment-header { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 6px; display: flex; align-items: baseline; gap: 8px; }
+        .delmoment-nr { color: var(--accent); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.06em; }
+        .delmoment-namn { color: var(--text-secondary); font-size: 0.85rem; font-weight: 600; flex: 1; }
+        .delmoment-summa { color: var(--text-muted); font-size: 0.7rem; font-family: 'Courier New', monospace; }
+
+        /* Övningskort */
+        .ovning-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 6px; overflow: hidden; }
+        .ovning-card.has-pass { border-left: 3px solid var(--accent); }
+        .ovning-summary { width: 100%; background: none; border: none; color: var(--text-primary); font-family: inherit; padding: 10px 14px; cursor: pointer; display: flex; align-items: center; gap: 10px; text-align: left; -webkit-tap-highlight-color: transparent; min-height: 48px; }
+        .ovning-summary:hover { background: var(--bg-secondary); }
+        .ovning-summary:active { background: var(--accent-dim); }
+        .ovning-nr { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 3px 8px; font-size: 0.72rem; font-weight: 700; min-width: 38px; text-align: center; flex-shrink: 0; }
+        .ovning-titel { flex: 1; font-size: 0.88rem; font-weight: 600; line-height: 1.3; }
+        .ovning-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 2px; font-family: 'Courier New', monospace; }
+        .ovning-badge { font-size: 0.7rem; color: var(--text-muted); font-weight: 700; flex-shrink: 0; }
+        .ovning-badge.ok { color: var(--accent); }
+        .ovning-toggle { color: var(--text-muted); font-size: 0.85rem; flex-shrink: 0; transition: transform 0.15s; }
+        .ovning-card.open .ovning-toggle { transform: rotate(90deg); }
+
+        .ovning-body { display: none; padding: 0 14px 14px; border-top: 1px dashed var(--border); }
+        .ovning-card.open .ovning-body { display: block; }
+
+        /* Kortfakta */
+        .fakta-grid { display: grid; grid-template-columns: max-content 1fr; gap: 4px 12px; margin-top: 12px; padding: 10px 12px; background: var(--bg-input); border-radius: var(--radius-sm); font-size: 0.82rem; line-height: 1.45; }
+        .fakta-grid dt { color: var(--text-muted); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; font-size: 0.7rem; padding-top: 2px; }
+        .fakta-grid dd { color: var(--text-primary); }
+        .fakta-grid dd.empty { color: var(--text-muted); font-style: italic; }
+        .raw-block { display: none; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-top: 10px; font-family: 'Courier New', monospace; font-size: 0.75rem; line-height: 1.5; color: var(--text-secondary); white-space: pre-wrap; }
+        .raw-block.show { display: block; }
+        .raw-toggle { background: none; border: none; color: var(--text-muted); font-size: 0.72rem; cursor: pointer; padding: 6px 0; font-family: inherit; text-decoration: underline; text-underline-offset: 2px; }
+        .raw-toggle:hover { color: var(--text-secondary); }
+
+        /* Pass-form */
+        .pass-form { margin-top: 14px; padding: 12px; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+        .pass-form-title { font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px; }
+        .pass-form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+        .pass-form-row > div { min-width: 0; }
+        .pass-form-row label { font-size: 0.7rem; margin-bottom: 4px; }
+
+        .chip-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .chip { background: var(--bg-secondary); border: 1px solid var(--border); color: var(--text-secondary); font-size: 0.85rem; padding: 8px 16px; border-radius: 20px; cursor: pointer; font-family: inherit; transition: all 0.15s; min-height: 40px; -webkit-tap-highlight-color: transparent; font-weight: 600; }
+        .chip:active { transform: scale(0.95); }
+        .chip.is-active.godkand { background: var(--accent-dim); border-color: var(--accent); color: var(--accent); }
+        .chip.is-active.underkand { background: rgba(198,40,40,0.18); border-color: var(--danger); color: var(--danger-hover); }
+
+        /* Pass-lista */
+        .pass-list { margin-top: 14px; }
+        .pass-list-title { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+        .pass-row { display: grid; grid-template-columns: max-content 1fr max-content max-content; gap: 10px; align-items: center; padding: 8px 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 4px; font-size: 0.82rem; }
+        .pass-row.godkand { border-left: 3px solid var(--accent); }
+        .pass-row.underkand { border-left: 3px solid var(--danger); }
+        .pass-row .pass-datum { color: var(--text-muted); font-family: 'Courier New', monospace; font-size: 0.78rem; white-space: nowrap; }
+        .pass-row .pass-resultat { color: var(--text-primary); font-family: 'Courier New', monospace; }
+        .pass-row .pass-status { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; padding: 2px 8px; border-radius: var(--radius-sm); white-space: nowrap; }
+        .pass-row .pass-status.ok { background: var(--accent-dim); color: var(--accent); }
+        .pass-row .pass-status.ej { background: rgba(198,40,40,0.18); color: var(--danger-hover); }
+        .pass-row .pass-delete { background: none; border: none; color: var(--text-muted); font-size: 1.1rem; cursor: pointer; padding: 4px 6px; border-radius: var(--radius-sm); font-family: inherit; line-height: 1; }
+        .pass-row .pass-delete:hover { color: var(--danger-hover); background: rgba(198,40,40,0.1); }
+        .pass-row .pass-anteckning { grid-column: 1 / -1; color: var(--text-muted); font-size: 0.75rem; font-style: italic; padding-top: 2px; line-height: 1.4; }
+
+        /* Sammanställning */
+        .summary-card { background: var(--bg-card); border: 1px solid var(--accent-dim); border-radius: var(--radius); padding: 14px 16px; margin-bottom: 14px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; text-align: center; }
+        .summary-stat { display: flex; flex-direction: column; gap: 2px; }
+        .summary-stat-value { font-size: 1.1rem; font-weight: 700; color: var(--accent); font-family: 'Courier New', monospace; }
+        .summary-stat-label { font-size: 0.65rem; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+
+        /* Bekräftelsedialog */
+        .confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:11000; align-items:center; justify-content:center; padding:16px; }
+        .confirm-overlay.open { display:flex; }
+        .confirm-dialog { width:100%; max-width:400px; background:var(--bg-primary); border:1px solid var(--accent); border-radius:var(--radius); padding:24px; }
+        .confirm-dialog h3 { color:var(--accent); font-size:1rem; margin-bottom:12px; letter-spacing:0.04em; }
+        .confirm-dialog p { color:var(--text-secondary); font-size:0.88rem; line-height:1.5; margin-bottom:18px; }
+        .confirm-actions { display:flex; gap:10px; }
+        .confirm-actions .btn { flex:1; min-height:44px; }
+
+        /* Tom-state */
+        .empty-state { text-align: center; padding: 24px 16px; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
+    </style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Verktyget kräver JavaScript. Aktivera i webbläsarens inställningar och ladda om sidan.</div></noscript>
+<div class="container">
+
+    <header>
+        <h1>SKYTTEBOK <span class="beta-badge">BETA</span></h1>
+        <p>Digital skjutdokumentation – BAS övning 1–40</p>
+    </header>
+
+    <nav class="tab-nav">
+        <a href="index.html" class="tab-link">7S</a>
+        <a href="what.html" class="tab-link">WHAT</a>
+        <a href="scrim.html" class="tab-link">SCRIM</a>
+        <a href="weft.html" class="tab-link">WEFT</a>
+        <a href="ah.html" class="tab-link">A–H</a>
+    </nav>
+    <nav class="tab-nav-sub">
+        <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+        <a href="fors.html" class="tab-link">FORS</a>
+        <a href="pedars.html" class="tab-link">PEDARS</a>
+        <a href="postschema.html" class="tab-link">SCHEMA</a>
+        <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+        <a href="obo.html" class="tab-link">OBO</a>
+        <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+        <a href="vader.html" class="tab-link">VÄDER</a>
+        <a href="minkarta.html" class="tab-link">MINKARTA</a>
+        <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+        <a href="skyttebok.html" class="tab-link active">SKYTTE</a>
+    </nav>
+
+    <main>
+        <!-- Sammanfattning (totalt) -->
+        <div class="summary-card" id="summaryCard">
+            <div class="summary-stat">
+                <div class="summary-stat-value" id="statPass">0</div>
+                <div class="summary-stat-label">Pass</div>
+            </div>
+            <div class="summary-stat">
+                <div class="summary-stat-value" id="statGodkanda">0</div>
+                <div class="summary-stat-label">Godkända</div>
+            </div>
+            <div class="summary-stat">
+                <div class="summary-stat-value" id="statTraff">0%</div>
+                <div class="summary-stat-label">Träffkvot</div>
+            </div>
+        </div>
+
+        <!-- Inställningar -->
+        <details class="settings-card">
+            <summary>Inställningar</summary>
+            <div class="settings-body">
+                <label for="displayName">Visningsnamn (frivilligt)</label>
+                <input type="text" id="displayName" autocomplete="off" placeholder="T.ex. AQ eller initialer" maxlength="40">
+                <div class="field-hint">Används bara i export och PDF. Lämna tomt om du inte vill spara namn lokalt.</div>
+                <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+                <button class="btn btn-sm btn-danger" id="btnRensaAlla" style="width:100%">Rensa hela skjutboken…</button>
+                <div class="field-hint" style="margin-top:6px">Tar bort alla pass på den här enheten. Bekräftas innan radering.</div>
+            </div>
+        </details>
+
+        <!-- Övningslista, renderas av JS -->
+        <div id="ovningarRoot"></div>
+
+        <p style="text-align:center;font-size:0.7rem;color:var(--text-muted);margin:20px 0 4px;line-height:1.5">
+            Övningstexterna är tagna ur <em>H SKJUTB AK 2021</em>.<br>
+            All data sparas <strong>endast lokalt</strong> i din webbläsare.
+        </p>
+    </main>
+
+    <!-- Bekräftelsedialog -->
+    <div class="confirm-overlay" id="confirmOverlay" onclick="if(event.target===this)skyttebokCancelConfirm()">
+        <div class="confirm-dialog">
+            <h3 id="confirmTitle">Bekräfta</h3>
+            <p id="confirmMessage">Är du säker?</p>
+            <div class="confirm-actions">
+                <button class="btn btn-secondary" onclick="skyttebokCancelConfirm()">Avbryt</button>
+                <button class="btn btn-danger" id="confirmOk">Ta bort</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="skyttebok-data.js"></script>
+<script src="skyttebok.js"></script>
+<script src="opsec.js"></script>
+<script src="pwa.js"></script>
+<script>window.FORM_ID = { title: 'SKYTTEBOK', body: 'SKYTTEBOK' };</script>
+<script src="footer.js"></script>
+<script src="version.js"></script>
+</body>
+</html>
