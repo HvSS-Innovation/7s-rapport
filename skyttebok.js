@@ -111,6 +111,36 @@
         else localStorage.removeItem(SETTING_PREFIX + name);
     }
 
+    // Filter (BAS / TILLÄGG / Båda) — persistent val via settings.
+    function getFilter() {
+        var v = getSetting('visa');
+        return (v === 'tillagg' || v === 'bada') ? v : 'bas';
+    }
+
+    function setFilter(v) {
+        setSetting('visa', v);
+    }
+
+    window.skyttebokSetFilter = function (v) {
+        setFilter(v);
+        renderAll();
+    };
+
+    function isDelmomentInFilter(dmNr, filter) {
+        if (filter === 'bada') return true;
+        if (filter === 'bas') return dmNr <= 12;
+        if (filter === 'tillagg') return dmNr >= 13;
+        return true;
+    }
+
+    function syncFilterButtons() {
+        var f = getFilter();
+        var buttons = document.querySelectorAll('#filterBar [data-filter]');
+        for (var i = 0; i < buttons.length; i++) {
+            buttons[i].classList.toggle('is-active', buttons[i].getAttribute('data-filter') === f);
+        }
+    }
+
     function loadSakerhetsprov() {
         var raw = localStorage.getItem(SAKERHETSPROV_KEY);
         if (!raw) return null;
@@ -798,9 +828,11 @@
         var byNr = passByOvning();
         renderSummary(byNr);
 
+        var filter = getFilter();
         var root = document.getElementById('ovningarRoot');
         var html = '';
         DATA.delmoment.forEach(function (dm) {
+            if (!isDelmomentInFilter(dm.nr, filter)) return;
             // Antal pass i delmomentet (för rubrik-summa)
             var passISummering = 0;
             dm.ovningar.forEach(function (nr) {
@@ -833,9 +865,14 @@
 
     // ── Säkerhetsprov ───────────────────────────────────────────────────
     function renderSakerhetsprov() {
-        var sp = loadSakerhetsprov();
         var root = document.getElementById('sakerhetsprovRoot');
         if (!root) return;
+        // Säkerhetsprov BAS hör till BAS — döljs i ren TILLÄGG-vy.
+        if (getFilter() === 'tillagg') {
+            root.innerHTML = '';
+            return;
+        }
+        var sp = loadSakerhetsprov();
 
         var statusClass, statusText, cardClass;
         if (!sp) {
@@ -1253,6 +1290,7 @@
 
     // ── Render-helper som täcker både övningar och säkerhetsprov ───────
     function renderAll() {
+        syncFilterButtons();
         renderSakerhetsprov();
         render();
     }

@@ -35,10 +35,12 @@ if (!fs.existsSync(PDF)) {
 }
 
 // pdftotext med -layout bevarar tabellstruktur. -enc UTF-8 fixar åäö.
-// PDF-sidnumreringen är förskjuten 2 mot logiska sidor. BAS övning 1-40
-// + Kompetensprov ligger PDF-sidor 53-72.
+// PDF-sidnumreringen är förskjuten 2 mot logiska sidor.
+//   BAS övning 1-40 + Kompetensprov: PDF-sidor 53-72
+//   TILLÄGG övning 41-129:           PDF-sidor 73-120 (delmoment 13-31)
+// Vi parsar hela spannet i ett svep — formaten är identiska.
 const raw = execSync(
-  `pdftotext -layout -enc UTF-8 -f 53 -l 72 "${PDF}" -`,
+  `pdftotext -layout -enc UTF-8 -f 53 -l 120 "${PDF}" -`,
   { encoding: 'utf8', maxBuffer: 16 * 1024 * 1024 }
 );
 
@@ -47,7 +49,7 @@ const lines = raw.split(/\r?\n/);
 // ── Delmoment ───────────────────────────────────────────────────────────
 // Hårdkodad lista enligt PDF Tabell 4.2 sid 51. Att försöka parsa just
 // den tabellen ur layout-PDF är spilld tid — strukturen är stabil.
-const DELMOMENT = [
+const DELMOMENT_BAS = [
   { nr: 1,  namn: 'Målbildsförevisning',                        ovningar: [] },
   { nr: 2,  namn: 'SAR Stående',                                ovningar: [1, 2, 3] },
   { nr: 3,  namn: 'SAR Knästående utan stöd',                   ovningar: [4, 5] },
@@ -61,6 +63,32 @@ const DELMOMENT = [
   { nr: 11, namn: 'Skyddsmask',                                 ovningar: [37, 38, 39, 40] },
   { nr: 12, namn: 'Kompetensprov BAS',                          ovningar: ['kp_bas'] },
 ];
+
+// TILLÄGG: PDF Tabell 5.1 (sid 71). DM 13-15 är teori, ingen pass-form.
+// DM 26 är "urval ur DM 21-25", ingen egen övning.
+const DELMOMENT_TILLAGG = [
+  { nr: 13, namn: 'Fördjupning säkerhet (teori)',                              ovningar: [] },
+  { nr: 14, namn: 'Fördjupad teknisk förståelse + förebyggande underhåll (teori)', ovningar: [] },
+  { nr: 15, namn: 'Fördjupad ammunitionskunskap (teori)',                       ovningar: [] },
+  { nr: 16, namn: '200 m',                                                     ovningar: [41, 42, 43] },
+  { nr: 17, namn: '300 m',                                                     ovningar: [44, 45, 46] },
+  { nr: 18, namn: 'Mörker längre avstånd',                                     ovningar: [47, 48, 49, 50] },
+  { nr: 19, namn: 'Öppna riktmedel',                                           ovningar: [51, 52, 53, 54, 55, 56, 57, 58] },
+  { nr: 20, namn: 'Skjutning med burna sensorer 1',                            ovningar: [59, 60, 61] },
+  { nr: 21, namn: 'Skjuttabellsskjutning',                                     ovningar: [62, 63] },
+  { nr: 22, namn: 'Skytte från stödaxel',                                      ovningar: [64, 65, 66, 67, 68, 69, 70, 71, 72] },
+  { nr: 23, namn: 'Skjutning med begränsande vapen, ställnings- och riktmedelslägen', ovningar: [73, 74, 75, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85, 86] },
+  { nr: 24, namn: 'Skjutning från tillämpade skjutställningar',                ovningar: [87, 88, 89, 90, 91, 92] },
+  { nr: 25, namn: 'Skjutning från eldställning med skjutstöd',                 ovningar: [93, 94, 95, 96, 97, 98, 99, 100] },
+  { nr: 26, namn: 'Skjutning med burna sensorer 2 (urval ur DM 21-25)',        ovningar: [] },
+  { nr: 27, namn: 'Rörligt mål',                                               ovningar: [101, 102, 103] },
+  { nr: 28, namn: 'Skjutning under förflyttning',                              ovningar: [104, 105, 106, 107, 108, 109, 110, 111, 112, 113] },
+  { nr: 29, namn: 'Nödförfarande eldhandgrepp',                                ovningar: [114, 115, 116, 117, 118, 119, 120] },
+  { nr: 30, namn: 'Automateld',                                                ovningar: [121, 122, 123, 124] },
+  { nr: 31, namn: 'Skjutning med påtagna skidor eller snöskor',                ovningar: [125, 126, 127, 128, 129] },
+];
+
+const DELMOMENT = DELMOMENT_BAS.concat(DELMOMENT_TILLAGG);
 
 // ── Övningsblock ────────────────────────────────────────────────────────
 // Strategi:
@@ -200,13 +228,13 @@ for (const b of blocks) {
 
 // ── Validering ──────────────────────────────────────────────────────────
 const expected = [];
-for (let i = 1; i <= 40; i++) expected.push(i);
+for (let i = 1; i <= 129; i++) expected.push(i);
 expected.push('kp_bas');
 const missing = expected.filter(n => !(n in ovningar));
 if (missing.length) {
   console.warn('VARNING: saknar övning(ar):', missing.join(', '));
 } else {
-  console.log('OK — alla 40 BAS-övningar + kompetensprov hittade.');
+  console.log('OK — alla 129 övningar + kompetensprov hittade.');
 }
 
 // ── Skriv ut ────────────────────────────────────────────────────────────

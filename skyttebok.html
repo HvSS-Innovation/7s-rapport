@@ -190,6 +190,12 @@
         .pass-row-figure .figure-svg { width: 70px; }
         .pass-row-figure .pass-zon-summary { flex: 1; font-size: 0.72rem; color: var(--text-muted); font-family: 'Courier New', monospace; line-height: 1.4; }
 
+        /* BAS/TILLÄGG-filter — Fas 5 */
+        .filter-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; }
+        .filter-bar button { background: none; border: none; color: var(--text-muted); font-family: inherit; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; padding: 9px 4px; border-radius: var(--radius-sm); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s, color 0.15s; }
+        .filter-bar button:hover { background: var(--bg-card); color: var(--text-secondary); }
+        .filter-bar button.is-active { background: var(--accent-dim); color: var(--accent); }
+
         /* Kompetensprov BAS — Fas 4 */
         .kp-form { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-top: 14px; }
         .kp-meta { font-size: 0.78rem; color: var(--text-secondary); padding: 8px 10px; background: var(--bg-secondary); border-radius: var(--radius-sm); border-left: 3px solid var(--accent); }
@@ -314,6 +320,13 @@
                 <div class="field-hint" style="margin-top:6px">Tar bort alla pass på den här enheten. Bekräftas innan radering.</div>
             </div>
         </details>
+
+        <!-- BAS/TILLÄGG-filter, renderas av JS för att kunna spara state -->
+        <div class="filter-bar" id="filterBar">
+            <button type="button" data-filter="bas" onclick="skyttebokSetFilter('bas')">BAS · 1–40 + KP</button>
+            <button type="button" data-filter="tillagg" onclick="skyttebokSetFilter('tillagg')">TILLÄGG · 41–129</button>
+            <button type="button" data-filter="bada" onclick="skyttebokSetFilter('bada')">Båda</button>
+        </div>
 
         <!-- Säkerhetsprov BAS-kort, renderas av JS -->
         <div id="sakerhetsprovRoot"></div>
