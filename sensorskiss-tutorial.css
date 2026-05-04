@@ -13,6 +13,13 @@
 }
 @keyframes skTutFade { from { opacity: 0; } to { opacity: 1; } }
 
+/* Respektera prefers-reduced-motion: hoppa fade-in. Modalen visas
+   direkt utan overgang — innehallet ar fortfarande lasbart, bara utan
+   animation. */
+@media (prefers-reduced-motion: reduce) {
+    .sk-tut-overlay { animation: none; }
+}
+
 .sk-tut-panel {
     background: var(--bg-card);
     border: 1px solid var(--accent);
@@ -99,6 +106,10 @@
     -webkit-tap-highlight-color: transparent;
 }
 .sk-tut-skip:hover { color: var(--text-secondary); border-color: var(--text-muted); }
+.sk-tut-skip:focus { outline: none; }
+.sk-tut-skip:focus-visible {
+    box-shadow: var(--btn-focus-ring, 0 0 0 2px rgba(76,175,80,0.45));
+}
 .sk-tut-actions { display: flex; gap: 8px; }
 .sk-tut-prev, .sk-tut-next, .sk-tut-finish {
     border: none; border-radius: var(--radius-sm);
@@ -111,6 +122,14 @@
 .sk-tut-next, .sk-tut-finish { background: var(--accent); color: #fff; }
 .sk-tut-next:hover, .sk-tut-finish:hover { background: var(--accent-hover); }
 .sk-tut-prev:disabled { opacity: 0.4; cursor: not-allowed; }
+.sk-tut-prev:focus,
+.sk-tut-next:focus,
+.sk-tut-finish:focus { outline: none; }
+.sk-tut-prev:focus-visible,
+.sk-tut-next:focus-visible,
+.sk-tut-finish:focus-visible {
+    box-shadow: var(--btn-focus-ring, 0 0 0 2px rgba(76,175,80,0.45));
+}
 
 /* Lökprincip-figur (CSS-only "ringar runt objekt") */
 .sk-tut-onion {

@@ -8,10 +8,16 @@
     --mkt-bubble-fg:   var(--text-primary, #f1f1f1);
     --mkt-bubble-mute: var(--text-muted, #9aa0a6);
     --mkt-bubble-bord: var(--border, #2c3036);
-    --mkt-accent:      var(--accent, #d4a256);
+    /* Fallback ar samma grona som --accent (4caf50), inte ett gammalt
+       gulorange arv. Pa sidor utan --accent definierad far vi exakt
+       samma ton som designsystemet anvander overallt. */
+    --mkt-accent:      var(--accent, #4caf50);
     --mkt-radius:      12px;
     --mkt-shadow:      0 12px 40px rgba(0,0,0,0.5);
     --mkt-dim:         rgba(0,0,0,0.55);
+    /* Fokusring fran designsystem v1. Lokal fallback sa tutorial fungerar
+       aven nar minkarta.html:s :root inte ar inom rackhall. */
+    --mkt-focus-ring:  var(--btn-focus-ring, 0 0 0 2px rgba(76,175,80,0.45));
 }
 
 /* ─── Auto-start-toast (icke-blockerande) ───────────────────────────────── */
@@ -54,6 +60,8 @@
     font-weight: 600;
 }
 .mkt-toast-actions button:hover { filter: brightness(1.08); }
+.mkt-toast-actions button:focus { outline: none; }
+.mkt-toast-actions button:focus-visible { box-shadow: var(--mkt-focus-ring); }
 
 /* ─── Overlay + dim-lager med "hål" ─────────────────────────────────────── */
 #mktOverlay {
@@ -85,9 +93,14 @@
     50%      { transform: scale(1.025); opacity: 0.92; }
 }
 .mkt-pulse-target {
-    animation: mktTargetPulse 1.6s ease-in-out infinite;
     transform-origin: center center;
-    will-change: transform, opacity;
+}
+/* Animationen kor bara nar anvandaren inte begart reducerad rorelse. */
+@media (prefers-reduced-motion: no-preference) {
+    .mkt-pulse-target {
+        animation: mktTargetPulse 1.6s ease-in-out infinite;
+        will-change: transform, opacity;
+    }
 }
 
 /* Starkare puls — for skarmar dar diskret pulserande inte rackt for att
@@ -97,8 +110,10 @@
     0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(212,162,86,0); }
     50%      { transform: scale(1.06); box-shadow: 0 0 0 6px rgba(212,162,86,0.45); }
 }
-.mkt-pulse-target.mkt-pulse-strong {
-    animation-name: mktTargetPulseStrong;
+@media (prefers-reduced-motion: no-preference) {
+    .mkt-pulse-target.mkt-pulse-strong {
+        animation-name: mktTargetPulseStrong;
+    }
 }
 
 /* Pekande pil fran bubblan mot target. Triangel via border-trick. JS
@@ -185,6 +200,8 @@
     transition: background 0.14s ease;
 }
 .mkt-bubble-actions button:hover { background: rgba(255,255,255,0.06); }
+.mkt-bubble-actions button:focus { outline: none; }
+.mkt-bubble-actions button:focus-visible { box-shadow: var(--mkt-focus-ring); }
 .mkt-bubble-actions button.mkt-primary {
     background: var(--mkt-accent);
     color: #1a1a1a;
@@ -209,6 +226,8 @@
     -webkit-tap-highlight-color: transparent;
 }
 .mkt-bubble-close:hover { background: rgba(255,255,255,0.08); color: var(--mkt-bubble-fg); }
+.mkt-bubble-close:focus { outline: none; }
+.mkt-bubble-close:focus-visible { box-shadow: var(--mkt-focus-ring); }
 
 .mkt-bubble-progress {
     font-size: 0.72rem;
@@ -256,6 +275,8 @@
     -webkit-tap-highlight-color: transparent;
 }
 .mkt-menu-item:hover { background: rgba(255,255,255,0.06); }
+.mkt-menu-item:focus { outline: none; }
+.mkt-menu-item:focus-visible { box-shadow: var(--mkt-focus-ring); }
 .mkt-menu-item-status {
     font-size: 0.72rem;
     color: var(--mkt-bubble-mute);
@@ -342,6 +363,8 @@
     flex-shrink: 0;
 }
 .mkt-album-close:hover { background: rgba(255,255,255,0.08); color: var(--mkt-bubble-fg); }
+.mkt-album-close:focus { outline: none; }
+.mkt-album-close:focus-visible { box-shadow: var(--mkt-focus-ring); }
 
 /* Beskrivning */
 .mkt-album-desc {
@@ -403,6 +426,11 @@
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(0,0,0,0.35);
 }
+.mkt-album-card:focus { outline: none; }
+.mkt-album-card:focus-visible {
+    border-color: var(--mkt-accent);
+    box-shadow: var(--mkt-focus-ring);
+}
 .mkt-album-card-svg {
     width: 48px;
     height: 48px;
@@ -443,7 +471,9 @@
     70%  { transform: scale(0.98); }
     100% { transform: scale(1); }
 }
-.mkt-album-card.mkt-pop { animation: mktCardPop 0.45s ease-out; }
+@media (prefers-reduced-motion: no-preference) {
+    .mkt-album-card.mkt-pop { animation: mktCardPop 0.45s ease-out; }
+}
 
 /* ─── Tap-hint: subtil puls pa alla oupptackta kort tills anvandaren
        ror skarmen forsta gangen. Stagger via nth-child sa det blir en
@@ -452,12 +482,16 @@
     0%, 60%, 100% { transform: scale(1); }
     30%           { transform: scale(1.035); }
 }
-#mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered) {
-    animation: mktTapHint 1.6s ease-in-out infinite;
+/* Tap-hint-pulsen kor bara nar reduced-motion inte ar pa. Aven utan
+   pulsen visar borderfargen och hover-glowet att korten ar klickbara. */
+@media (prefers-reduced-motion: no-preference) {
+    #mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered) {
+        animation: mktTapHint 1.6s ease-in-out infinite;
+    }
+    #mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(2n) { animation-delay: 0.20s; }
+    #mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(3n) { animation-delay: 0.45s; }
+    #mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(5n) { animation-delay: 0.75s; }
 }
-#mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(2n) { animation-delay: 0.20s; }
-#mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(3n) { animation-delay: 0.45s; }
-#mktAlbum.mkt-tap-hint-active .mkt-album-card:not(.discovered):nth-child(5n) { animation-delay: 0.75s; }
 
 /* Info-banner — uppdateras vid varje kort-klick med kort beskrivning av
    symbolen. Sticky over footern sa anvandaren alltid ser texten utan att
@@ -504,6 +538,8 @@
 }
 .mkt-album-footer button.mkt-primary:hover { filter: brightness(1.08); }
 .mkt-album-footer button.mkt-ghost { color: var(--mkt-bubble-mute); border-color: transparent; }
+.mkt-album-footer button:focus { outline: none; }
+.mkt-album-footer button:focus-visible { box-shadow: var(--mkt-focus-ring); }
 
 /* Mobil: tätare grid */
 @media (max-width: 600px) {
@@ -637,8 +673,29 @@
 .mkt-diploma-actions button.mkt-primary:hover {
     background: #333;
 }
+.mkt-diploma-actions button:focus { outline: none; }
+.mkt-diploma-actions button:focus-visible {
+    box-shadow: 0 0 0 3px rgba(76,175,80,0.55);
+}
 @media (max-width: 600px) {
     .mkt-diploma-card { padding: 32px 18px 18px; }
     .mkt-diploma-title { font-size: 1.15rem; }
     .mkt-diploma-line { font-size: 0.86rem; }
+}
+
+/* Reduced-motion-skydd for in-fade-animationer. Elementen ar fortfarande
+   synliga utan animation eftersom de inte deklarerar opacity:0 i bas-stil.
+   Hover-overgangar pa enskilda knappar lats vara — de ar korta och kraver
+   anvandar-interaktion. */
+@media (prefers-reduced-motion: reduce) {
+    .mkt-toast,
+    .mkt-bubble,
+    .mkt-menu,
+    #mktAlbum,
+    #mktDiploma {
+        animation: none;
+        transition: none;
+    }
+    .mkt-toast { transform: none; opacity: 1; }
+    .mkt-spotlight { transition: none; }
 }
