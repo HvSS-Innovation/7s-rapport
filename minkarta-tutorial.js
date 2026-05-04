@@ -945,7 +945,7 @@
         }
         btn = el('button', {
             type: 'button',
-            class: 'mkt-launcher',
+            class: 'btn btn-sm btn-default mkt-launcher',
             text: txt,
             title: 'Starta interaktiv rundtur av kartan'
         });

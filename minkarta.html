@@ -122,9 +122,87 @@
         .btn-accent:hover:not(:disabled) { background: var(--accent-hover); }
         .btn-ghost { background: var(--accent-dim); color: var(--accent); }
         .btn-ghost:hover:not(:disabled) { background: var(--border-focus); color: #fff; }
+
+        /* Designsystem v1 (Fas 2): neutral knapp + toggle + select-wrapper.
+           .btn-default ar ny grund-stil for toolbar/secondary actions. Den
+           ersatter .btn-ghost i kart-controls dar vi vill ha en lugnare
+           visuell vikt. .btn-toggle agerar pa-/av-state via aria-pressed.
+           .btn-select stylar native <select> sa den smalter in i raden. */
+        .btn-default {
+            background: var(--btn-bg);
+            color: var(--btn-fg);
+            border-color: var(--btn-border);
+        }
+        .btn-default:hover:not(:disabled) {
+            background: var(--btn-bg-hover);
+            color: var(--btn-fg-hover);
+            border-color: var(--btn-border-hover);
+        }
+        .btn-default.is-success {
+            border-color: var(--accent);
+            color: var(--accent);
+        }
+        .btn-default.is-warn {
+            border-color: var(--warn);
+            color: var(--warn);
+        }
+
+        .btn-toggle {
+            background: var(--btn-bg);
+            color: var(--btn-fg);
+            border-color: var(--btn-border);
+            gap: var(--btn-gap);
+        }
+        .btn-toggle:hover:not(:disabled) {
+            background: var(--btn-bg-hover);
+            color: var(--btn-fg-hover);
+            border-color: var(--btn-border-hover);
+        }
+        .btn-toggle[aria-pressed="true"] {
+            background: var(--btn-bg-active);
+            border-color: var(--btn-border-active);
+            color: var(--btn-fg-active);
+        }
+        /* Visuell PA-indikator: en liten prick fore texten. Sitter pa
+           toggle-knappar oavsett state men lyser starkare nar pressed,
+           sa anvandaren ser PA-/AV-laget aven utan att lasa texten. */
+        .btn-toggle::before {
+            content: '';
+            width: 8px; height: 8px; border-radius: 50%;
+            background: currentColor;
+            opacity: 0.25;
+            transition: opacity 0.15s, transform 0.15s;
+        }
+        .btn-toggle[aria-pressed="true"]::before { opacity: 1; transform: scale(1.1); }
+
+        .btn-select {
+            background-color: var(--btn-bg);
+            color: var(--btn-fg);
+            border-color: var(--btn-border);
+            padding-right: 32px;
+            -webkit-appearance: none;
+            -moz-appearance: none;
+            appearance: none;
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 12 12"><path fill="none" stroke="%238aaa8a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M2 4l4 4 4-4"/></svg>');
+            background-repeat: no-repeat;
+            background-position: right 10px center;
+            background-size: 12px 12px;
+            cursor: pointer;
+        }
+        .btn-select:hover:not(:disabled) {
+            background-color: var(--btn-bg-hover);
+            color: var(--btn-fg-hover);
+            border-color: var(--btn-border-hover);
+        }
+        .btn-select option {
+            background: var(--bg-secondary);
+            color: var(--text-primary);
+        }
+
         @media (prefers-reduced-motion: reduce) {
             .btn { transition: none; }
             .btn:active:not(:disabled) { transform: none; }
+            .btn-toggle::before { transition: none; }
         }
 
         /* Sökraden */
@@ -1260,43 +1338,52 @@ function renderMapControls() {
     host.appendChild(row1);
     host.appendChild(row2);
 
-    // Namn-etiketter-toggle (samma logik som v3 .palette-layers)
-    const labelsLabel = document.createElement('label');
-    const labelsCb = document.createElement('input');
-    labelsCb.type = 'checkbox';
-    labelsCb.id = 'mkToggleLabels';
-    labelsCb.checked = state.showLabels;
-    labelsCb.addEventListener('change', () => {
-        state.showLabels = labelsCb.checked;
-        saveLayerState();
-        rebuildLayers();
-    });
-    labelsLabel.appendChild(labelsCb);
-    labelsLabel.appendChild(document.createTextNode(' Namn-etiketter'));
-    row1.appendChild(labelsLabel);
+    // Helper: skapar en .btn-toggle-knapp. aria-pressed speglar getState();
+    // klick anropar onToggle(nyttVarde) som ansvarar for att uppdatera
+    // state och kalla rebuild. CSS-klassen renderar pricken-indikator +
+    // farg-byte automatiskt baserat pa aria-pressed.
+    function makeToggleBtn(text, getState, onToggle, opts) {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-toggle';
+        btn.textContent = text;
+        if (opts && opts.id) btn.id = opts.id;
+        if (opts && opts.title) btn.title = opts.title;
+        function refresh() {
+            btn.setAttribute('aria-pressed', getState() ? 'true' : 'false');
+        }
+        btn.addEventListener('click', () => {
+            onToggle(!getState());
+            refresh();
+        });
+        refresh();
+        return btn;
+    }
 
-    // Visa modell-toggle (v4.1) — när på + obj.modell finns blir brickan
-    // "Stridsvagnsmina 5" istället för bara "Stridsvagnsmina".
-    const modelLabel = document.createElement('label');
-    const modelCb = document.createElement('input');
-    modelCb.type = 'checkbox';
-    modelCb.id = 'mkToggleModel';
-    modelCb.checked = state.showModel;
-    modelCb.addEventListener('change', () => {
-        state.showModel = modelCb.checked;
-        saveLayerState();
-        rebuildLayers();
-    });
-    modelLabel.appendChild(modelCb);
-    modelLabel.appendChild(document.createTextNode(' Visa modell'));
-    row1.appendChild(modelLabel);
+    // Namn-etiketter-toggle. Tidigare en checkbox+label; nu en knapp med
+    // aria-pressed sa hela raden ar visuellt enhetlig.
+    row1.appendChild(makeToggleBtn(
+        'Namn-etiketter',
+        () => state.showLabels,
+        (v) => { state.showLabels = v; saveLayerState(); rebuildLayers(); },
+        { id: 'mkToggleLabels', title: 'Visa namn under symboler pa kartan' }
+    ));
+
+    // Visa modell-toggle (v4.1) — nar pa + obj.modell finns blir brickan
+    // "Stridsvagnsmina 5" istallet for bara "Stridsvagnsmina".
+    row1.appendChild(makeToggleBtn(
+        'Visa modell',
+        () => state.showModel,
+        (v) => { state.showModel = v; saveLayerState(); rebuildLayers(); },
+        { id: 'mkToggleModel', title: 'Visa modell-suffix i namn-brickan' }
+    ));
 
     // "Panorera / välj"-knappen (tidigare "Pan-läge"). Samma logik — sätter
     // activeTool=null så kartan kan panoreras OCH klick på utlagda symboler
     // öppnar deras edit-popup. Tooltip förtydligar dubbelfunktionen.
     const panBtn = document.createElement('button');
     panBtn.type = 'button';
-    panBtn.className = 'btn btn-sm btn-ghost';
+    panBtn.className = 'btn btn-sm btn-default';
     panBtn.textContent = 'Panorera / välj';
     panBtn.title = 'Panorera kartan; klicka en symbol för att redigera eller ta bort';
     panBtn.addEventListener('click', () => setActiveTool(null));
@@ -1307,7 +1394,7 @@ function renderMapControls() {
     // mapping-dialog så användaren kan ommappa tangenten.
     const fullBtn = document.createElement('button');
     fullBtn.type = 'button';
-    fullBtn.className = 'btn btn-sm btn-ghost';
+    fullBtn.className = 'btn btn-sm btn-default';
     fullBtn.id = 'mkFullBtn';
     const fullKey = shortcutForTool(FULLMAP_PSEUDO);
     const fullBadge = fullKey
@@ -1341,7 +1428,7 @@ function renderMapControls() {
     if (window.OfflineTiles && typeof window.OfflineTiles.openModal === 'function') {
         const offlineBtn = document.createElement('button');
         offlineBtn.type = 'button';
-        offlineBtn.className = 'btn btn-sm btn-ghost';
+        offlineBtn.className = 'btn btn-sm btn-default';
         offlineBtn.textContent = 'Spara område offline';
         offlineBtn.title = 'Ladda ner kart-tiles för nuvarande vy så att kartan fungerar utan nät';
         offlineBtn.addEventListener('click', () => {
@@ -1357,14 +1444,13 @@ function renderMapControls() {
     // PMTilesHardening:ready event.
     const hardenBtn = document.createElement('button');
     hardenBtn.type = 'button';
-    hardenBtn.className = 'btn btn-sm btn-ghost';
+    hardenBtn.className = 'btn btn-sm btn-toggle';
     hardenBtn.title = 'Använd en PMTiles-fil istället för OTM/OSM. Inga utgående tile-requests under härdat läge.';
     function refreshHardenBtn() {
         const ctrl = window.MK_HARDENING;
         const active = ctrl && ctrl.isActive();
-        hardenBtn.textContent = active ? '🛡 Härdat läge: PÅ' : '🛡 Härdat läge';
-        hardenBtn.style.borderColor = active ? '#c8a24e' : '';
-        hardenBtn.style.color = active ? '#c8a24e' : '';
+        hardenBtn.textContent = active ? 'Härdat läge: PÅ' : 'Härdat läge';
+        hardenBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
     }
     hardenBtn.addEventListener('click', async () => {
         const ctrl = window.MK_HARDENING;
@@ -1387,7 +1473,7 @@ function renderMapControls() {
 
     // Stil-väljare för Härdat läge — bara aktiv när PMTiles är på.
     const flavorSel = document.createElement('select');
-    flavorSel.className = 'btn btn-sm btn-ghost';
+    flavorSel.className = 'btn btn-sm btn-select';
     flavorSel.style.display = 'none';
     flavorSel.title = 'Stil för Härdat läge';
     [
@@ -1428,7 +1514,7 @@ function renderMapControls() {
     // utgående anrop. Knappen visas bara när Härdat läge är aktivt.
     const prefetchBtn = document.createElement('button');
     prefetchBtn.type = 'button';
-    prefetchBtn.className = 'btn btn-sm btn-ghost';
+    prefetchBtn.className = 'btn btn-sm btn-default';
     prefetchBtn.style.display = 'none';
     prefetchBtn.title = 'Ladda ner hela pmtiles-filen lokalt. Efter det är kart-vyn helt offline.';
 
@@ -1443,9 +1529,8 @@ function renderMapControls() {
         prefetchBtn.style.display = '';
         if (prefetchRunning) return;
         const cached = await ctrl.checkPrefetched();
-        prefetchBtn.textContent = cached ? '✓ Lokalt cachad' : '⬇ Ladda ner offline';
-        prefetchBtn.style.borderColor = cached ? '#4caf50' : '';
-        prefetchBtn.style.color = cached ? '#4caf50' : '';
+        prefetchBtn.textContent = cached ? 'Lokalt cachad' : 'Ladda ner offline';
+        prefetchBtn.classList.toggle('is-success', !!cached);
         prefetchBtn.disabled = false;
     }
 

@@ -227,18 +227,9 @@
 }
 
 /* ─── "Lär dig MINKARTA"-knapp i mapControls ────────────────────────────── */
-.mkt-launcher {
-    background: transparent;
-    color: var(--mkt-bubble-fg);
-    border: 1px solid var(--mkt-bubble-bord);
-    border-radius: 8px;
-    padding: 6px 12px;
-    font-size: 0.82rem;
-    font-family: inherit;
-    cursor: pointer;
-    -webkit-tap-highlight-color: transparent;
-}
-.mkt-launcher:hover { background: rgba(255,255,255,0.06); }
+/* .mkt-launcher arver utseendet fran .btn .btn-sm .btn-default i sidans
+   eget stylblock (designsystem v1, Fas 2). Klassen halls kvar som
+   selektor for ev. positions-overrides eller framtida tutorials-special. */
 
 /* ─── Återstart-meny (popover under launcher-knappen) ───────────────────── */
 .mkt-menu {
