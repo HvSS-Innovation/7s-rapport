@@ -1,19 +1,15 @@
 // ─────────────────────────────────────────────────────────────────────────────
-//  SENSORSKISS — symbolbibliotek (v3 — RPAS-skala, prototypprofil)
+//  SENSORSKISS — symbolbibliotek
 //
-//  Symbolerna kommer från Utbildningsanvisning sensorer Hemvärn 2025
-//  (FM2025-8701:1) sid 72 + JL.pdf och prototyperna i stab/Ny mapp/.
+//  TILLFÄLLIG STATUS: markbundna sensorer (CIM/PIR/KAMERA/UMRA) är just nu
+//  text-placeholders. Slutgiltiga vektorformer ritas i externt program och
+//  byts in senare via textIcon → riktig svg.
 //
-//  Designprinciper:
-//    • UMRA UMRA: stjärnan ÄR symbolen → stor stjärna fyller ikonen.
-//    • CIM/PIR/KAMERA: liten stjärna i centrum (knutpunkt), delsymbolen
-//      (pärllooper / V-strålar / lång stråle) är det visuellt dominanta.
-//      Detta speglar prototyperna där pärllooparna är 3.6× stjärnan.
-//    • Larmmina: stor fylld cirkel + utlösningsriktning.
-//    • Enkelpost/Dubbelpost: stor ring + stam(mar) som pekar i riktning.
+//  Övriga symboler (Larmmina, RPAS, Enkelpost, Dubbelpost, In/Utfartspost,
+//  Sensorområde) är reglementsenliga (PDF s. 72 + JL.pdf).
 //
-//  Rotationsmodell: en inre <g transform="rotate({ROT},12,12)"> innesluter
-//  bara den roterande delen — stjärnan/ringen/cirkeln står still.
+//  Rotationsmodell för directional symboler: inre <g transform="rotate({ROT},
+//  12,12)"> innesluter bara den roterande delen — central form står still.
 //  makeIcon ersätter {ROT} med obj.rotation vid render.
 //
 //  Kategorier:
@@ -25,15 +21,17 @@ const SK_INK  = '#000000';
 const SK_HALO = '#ffffff';
 const SK_DASH = '6 4';   // streckad riktningslinje (PDF s. 72)
 
-// UMRA-stjärnan i två varianter — anpassad efter visuell roll:
-//  • STJÄRNA STOR (yttre r=10): UMRA UMRA där stjärnan ÄR symbolen.
-//  • STJÄRNA LITEN (yttre r=3): CIM/PIR/KAMERA där delsymbolen dominerar.
-const STAR_BIG_PATH =
-    '<path d="M 12,2 Q 15.1,9.2 22,12 Q 15.1,14.8 12,22 ' +
-    'Q 8.9,14.8 2,12 Q 8.9,9.2 12,2 Z" fill="' + SK_INK + '"/>';
-const STAR_SMALL_PATH =
-    '<path d="M 12,9 Q 12.94,11.16 15,12 Q 12.94,12.84 12,15 ' +
-    'Q 11.06,12.84 9,12 Q 11.06,11.16 12,9 Z" fill="' + SK_INK + '"/>';
+// PLACEHOLDER för markbundna sensorer (CIM/PIR/KAMERA/UMRA): bara texten
+// renderas i ikonen tills slutgiltiga vektorformer är klara. Anpassar
+// fontstorlek efter teckenantal så även "KAMERA" (6 tecken) ryms.
+function textIcon(label) {
+    const fs = label.length <= 4 ? 8 : 5.6;
+    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+        '<text x="12" y="15" text-anchor="middle" ' +
+            'font-family="Inter,Arial,sans-serif" font-size="' + fs + '" ' +
+            'font-weight="800" fill="' + SK_INK + '">' + label + '</text>' +
+    '</svg>';
+}
 
 // Bygger en SVG där den roterande delen ligger inne i en <g> som tar emot
 // {ROT}-placeholder. Den statiska delen (stjärnan/ringen/cirkeln) ligger
@@ -46,79 +44,40 @@ function rotSvg(rotatingInner, staticInner) {
     '</svg>';
 }
 
-// ── Roterande delar för stjärn-symbolerna ────────────────────────────────────
-
-// CIM "flugvingar" — två lodrätta dashade ellipser ovan/under stjärnan,
-// nästan från viewBox-toppen till -botten. Speglar prototypens pärllooper
-// (rx=3, ry=5 = ratio 1:1.7, kompromiss för kvadratisk viewBox).
-const CIM_ROT =
-    '<ellipse cx="12" cy="6" rx="3" ry="5" fill="none" ' +
-        'stroke="' + SK_INK + '" stroke-width="1.2" ' +
-        'stroke-dasharray="1.4 0.8"/>' +
-    '<ellipse cx="12" cy="18" rx="3" ry="5" fill="none" ' +
-        'stroke="' + SK_INK + '" stroke-width="1.2" ' +
-        'stroke-dasharray="1.4 0.8"/>';
-
-// Vit "clearing disk" som döljer pärlloop-skärningen runt stjärnan i CIM.
-const CIM_CLEARING = '<circle cx="12" cy="12" r="3" fill="' + SK_HALO + '"/>';
-
-// PIR — lång streckad stråle +17.5° från norr. Startar vid LILLA stjärnans
-// yttre kant (avstånd 3 från centrum) och sträcker sig ända till nära
-// viewBox-toppen (avstånd 11). Längd ≈ 8 = 4 fulla dashes — inte längre
-// någon "blindtarm". Den extra LÅNGA externa riktningslinjen ritas separat
-// på kartan för PIR via externalLine-flaggan.
-const PIR_ROT =
-    '<line x1="12.9" y1="9.14" x2="15.31" y2="1.51" ' +
-        'stroke="' + SK_INK + '" stroke-width="1.5" ' +
-        'stroke-dasharray="1.8 1.2" stroke-linecap="round"/>';
-
-// KAMERA — V-strålar, ±17.5° från norr, samma längd som PIR (8 ≈ 2 dashes
-// längre per spröt än tidigare designversion).
-const KAMERA_ROT =
-    PIR_ROT +
-    '<line x1="11.1" y1="9.14" x2="8.69" y2="1.51" ' +
-        'stroke="' + SK_INK + '" stroke-width="1.5" ' +
-        'stroke-dasharray="1.8 1.2" stroke-linecap="round"/>';
-
 // ── Symboldefinitioner ───────────────────────────────────────────────────────
 
 const SYMBOLS = {
 
-    // Markbundna sensorer
+    // Markbundna sensorer — PLACEHOLDER med ren text. Ersätts senare med
+    // vektorformer (slutar PR-cykeln med dem i externt program). Inget
+    // prefix → ingen auto-numrering, inget "C1"/"P1" etiketten — bara typen.
     cim: {
         label: 'CIM',
         category: 'point',
-        prefix: 'C',
-        directional: true,
-        // Render-ordning: pärllooper (roterande) → clearing-disk (vit) →
-        // stjärna (svart, ovanpå clearing). Looparna döljs där de korsar
-        // stjärncentrum, som i prototypen.
-        svg: rotSvg(CIM_ROT, CIM_CLEARING + STAR_SMALL_PATH)
+        prefix: null,
+        directional: false,
+        svg: textIcon('CIM')
     },
     pir: {
         label: 'PIR',
         category: 'point',
-        prefix: 'P',
-        directional: true,
-        externalLine: true,  // Endast PIR ritar lång riktningslinje på kartan
-        svg: rotSvg(PIR_ROT, STAR_SMALL_PATH)
+        prefix: null,
+        directional: false,
+        svg: textIcon('PIR')
     },
     kamera: {
         label: 'KAMERA',
         category: 'point',
-        prefix: 'K',
-        directional: true,
-        svg: rotSvg(KAMERA_ROT, STAR_SMALL_PATH)
+        prefix: null,
+        directional: false,
+        svg: textIcon('KAMERA')
     },
     umra: {
-        // UMRA = bara stjärnan, ingen stråle. Inte directional — stjärnan
-        // har fyra uddar och anger inte en specifik riktning. Stor stjärna
-        // (r=10) fyller ikonen som RPAS gör.
         label: 'UMRA',
         category: 'point',
-        prefix: 'U',
+        prefix: null,
         directional: false,
-        svg: rotSvg('', STAR_BIG_PATH)
+        svg: textIcon('UMRA')
     },
 
     // Larmmina — stor fylld svart cirkel + linje. Linjen anger
