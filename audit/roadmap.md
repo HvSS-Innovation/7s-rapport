@@ -49,12 +49,15 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 - **Risk:** Bryter inget. Möjlig friktion: stavningsindikatorer i fritextfält försvinner — men det är önskat.
 - **Mätbart:** DevTools `$$('input').every(el => el.getAttribute('autocomplete') === 'off')` är `true`.
 
-### 1.7 Ta bort emoji ur UI-knappar
+### 1.7 Ta bort emoji ur UI-knappar — ✅ KLAR (2026-05-04, `5af0684` ✓-svep + `7d0f057` övriga)
 - **Problem:** 📍 🗺 ✓ ⏳ ✅ 🛰 🚁 ☁ 🌐 ⚙ — emoji renderar olika över OS, kraschar vissa skärmläsare, och bryter designdirektivets ikon-system.
-- **Lösning:** En liten `icons.svg` med 12 inline-symboler (gps-pin, map, check, hourglass, satellite, drone, cloud, globe, settings, broom, eye, eye-off, share, copy). Ett `<svg><use href="#icon-gps"/></svg>`-mönster ersätter emoji-en-på-en.
-- **Tid:** 3 timmar (många knappar att uppdatera).
-- **Risk:** Lätt att glömma någon. Mitigation: grep efter emoji-block (`[\u{1F300}-\u{1FAFF}]`) före commit.
-- **Mätbart:** 0 emoji i `<button>`-innehåll efter sweep.
+- **Lösning (genomförd):** Strategi-byte från SVG-ikonsystem till **ren text + CSS-prick**:
+  - Feedback-strängar (`✓ Kopierat`, `✓ Tid hämtad...`) → bara texten. Visuell succé hanteras av befintlig `.copy-feedback`-CSS och log-typen i opsec.
+  - Knapp-emoji (`🗺 Karta`, `📷 Hämta...`, `🧹 Glöm allt`, `🎲 Slumpa`, `⛶ Maximera`) → bara texten.
+  - Varningar (`⚠ ...`) → text-prefix `OBS: ...` (konsekvent med `FEL: ...` i opsec).
+  - Stridsvärdesknapparna i pedars (`🟢🟡🔴`) → CSS-prick (`.sv-dot-gron/gul/rod`) som matchar befintliga selected-state-färger.
+- **Faktiskt utfall:** ~109 emoji-förekomster bort i 16 produktionsfiler. SVG-ikon-system bedömdes onödigt — texten säger redan vad knapparna gör. Audit/cot-fuzz.html lämnades (debug-test) och `&#10005;` (✕) i obo/rassoika lämnades (Unicode text-symbol, inte emoji).
+- **Mätbart:** 0 emoji kvar i produktions-HTML (verifierat med Python regex `[\U0001F300-\U0001FAFF☀-➿⌀-⏿]`).
 
 ### 1.8 Footer- och versions-städ — ✅ KLAR (delad `footer.js` `63cf200`, råa XML-källor exkluderade `6dc6a36`, dubblett `parse-ortnamn` borttagen `24ff08c`, `roadmap-*.md` ignorerade `94dc672`)
 - **Problem:** Roten har `Screenshot_*.png`, `20260409_153702.png`, `kriterier.xml`, `sjöar.xml`, `öar.xml` (filnamn med å,ö), två `parse-ortnamn`-script. Skräpig att navigera.
@@ -182,7 +185,7 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 4. ◐ 1.2 — CSP-skärpning (delvis: opsec.html klar; resterande 14 sidor kvarstår)
 5. ☑ 1.5 — "Glöm allt"-knapp
 6. ☑ 1.4 — XML-escape (kräver mest verifiering)
-7. ☐ 1.7 — emoji-borttagning (störst sveptid)
+7. ☑ 1.7 — emoji-borttagning (klar 2026-05-04 via ren text + CSS-prick, inte SVG)
 8. ☑ 1.8 — root-städ (efter användarens OK)
 
 ---

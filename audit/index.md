@@ -26,7 +26,7 @@ Denna mapp innehåller statisk audit, OPSEC-rapport, roadmap och löpande sessio
 | 1.4 CoT-XML-escape | ✅ | `85ade1d` |
 | 1.5 "Glöm enheten"-knapp | ✅ | `56ea164` |
 | 1.6 opsec.js form-sweep | ✅ | `bbdbd30` |
-| 1.7 Emoji → SVG-ikoner | ⏳ Skippad i denna omgång (stor sveptid; görs när inline-script är utbruten) |
+| 1.7 Emoji-svep ur UI | ✅ | `5af0684` (✓), `7d0f057` (övriga) — strategi-byte: ren text + CSS-prick istället för SVG-ikoner |
 | 1.8 Root-städ | ⏳ Avvaktar beslut om screenshots / gamla XML-källfiler |
 
 ## Hur navigera

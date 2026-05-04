@@ -372,11 +372,13 @@ Ljudsignaler (separat sektion): Flyglarm, Gaslarm, Faran över, Viktigt meddelan
 
 ---
 
-#### ⚠️ [Tier 1 - Kritisk] Säkerhetsrisk: Förhindra ofrivilligt röjande av egen position (Issue #10)
-**FARA FÖR PROJEKTET:** Användare riskerar att oavsiktligt rapportera (och därmed röja) sin egen GPS-position när avsikten var att ange _målets/observationens_ position. Detta kan leda till svåra taktiska fel eller riskera förbandets säkerhet om t.ex. artilleri leds mot fel koordinater. 
-**Åtgärd för att lösa:**
-- **Separation:** Tydliggör skillnaden mellan "Egen position" och "Observerad position" (bör byta namn från "Ställe" till "Målets position").
-- **Ingen auto-fyll:** Kartverktyget och plats-fälten får absolut inte auto-fyllarapportörens egen position utan ett uttryckligt och tydligt bekräftelseval från användaren. Kartvalet ska enkom avse den observerade positionen.
+#### ✅ [Tier 1 - Kritisk] Säkerhetsrisk: Förhindra ofrivilligt röjande av egen position (Issue #10) — ÅTGÄRDAT
+**FARA FÖR PROJEKTET:** Användare riskerar att oavsiktligt rapportera (och därmed röja) sin egen GPS-position när avsikten var att ange _målets/observationens_ position. Detta kan leda till svåra taktiska fel eller riskera förbandets säkerhet om t.ex. artilleri leds mot fel koordinater.
+
+**Åtgärder genomförda:**
+- ✅ **Ingen auto-fyll** (commit `bbdbd30`, audit §1.1): passiva `getCurrentPosition()`-anrop borttagna ur kartmodalen. Kartan visar `mapLastPos`-cache eller Sverige som initialvy. Användaren måste klicka explicit för att välja punkt.
+- ✅ **MGRS-knapp ut ur HTML** (samma sweep): `📍 MGRS`-knappen finns inte längre i UI:t. Tillhörande GPS-funktioner (haversine, applyGPSPosition, gpsErrorMessage, getGPS) raderades som dead code i `9b13dd0`.
+- ✅ **Namn-separering** (commit `2a0a689`): label "Ställe" → "Målets position" i alla 5 rapportfiler (index, scrim, what, weft, ah). Info-tooltip förstärkt med explicit **"INTE din egen position"**. Field-id (`stalle`) och rapportutskrift ("Ställe:") behålls oförändrade — id för intern referens, rapport-rubrik är doktrinär standard för mottagaren.
 
 #### 🐛 [Bugg & UX] Förbättringar från Automatiserad Buggtestning
 #### ✅ ~~Väder API "Silent Failure" (Dålig Felhantering)~~ — Åtgärdat
