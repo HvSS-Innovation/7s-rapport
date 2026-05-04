@@ -494,74 +494,6 @@ function showVerifyBtn(mgrsStr) {
     };
 }
 
-function haversine(lat1, lon1, lat2, lon2) {
-    const R = 6371000, dLat = (lat2-lat1)*Math.PI/180, dLon = (lon2-lon1)*Math.PI/180;
-    const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-
-async function applyGPSPosition(pos) {
-    const { latitude: lat, longitude: lon } = pos.coords;
-    const mgrs = MGRS.forward(lat, lon);
-    const parts = [mgrs];
-    let road = '', houseNumber = '';
-    try {
-        const nomResp = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lon}&zoom=19&addressdetails=1&accept-language=sv`);
-        const addr = (await nomResp.json()).address || {};
-        road = addr.road || addr.pedestrian || addr.footway || '';
-        houseNumber = addr.house_number || '';
-    } catch (_) {}
-
-    let bestNames = null;
-    try {
-        const q = `[out:json][timeout:10];way(around:50,${lat},${lon})[highway][name];out body;>;out skel qt;`;
-        const ovData = await (await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`)).json();
-        const ways = ovData.elements.filter(e => e.type === 'way');
-        const nodes = {};
-        ovData.elements.filter(e => e.type === 'node').forEach(n => { nodes[n.id] = n; });
-        const nodeWays = {};
-        ways.forEach(w => { const name = w.tags?.name; if (!name) return; (w.nodes||[]).forEach(nid => { if (!nodeWays[nid]) nodeWays[nid] = new Set(); nodeWays[nid].add(name); }); });
-        let bestDist = Infinity;
-        for (const [nid, nameSet] of Object.entries(nodeWays)) {
-            if (nameSet.size < 2) continue;
-            const n = nodes[nid]; if (!n) continue;
-            const d = haversine(lat, lon, n.lat, n.lon);
-            if (d < 50 && d < bestDist) { bestDist = d; bestNames = [...nameSet]; }
-        }
-    } catch (_) {}
-
-    if (bestNames) parts.push(`korsningen ${bestNames.join(', ')}`);
-    else if (road) parts.push(houseNumber ? `${road} ${houseNumber}` : road);
-    const field = document.getElementById('stalle');
-    const result = parts.join(', ');
-    field.value = field.value ? field.value + ', ' + result : result;
-}
-function gpsErrorMessage(err) {
-    if (err.code === 1) return 'Platsåtkomst nekad – tillåt i webbläsarens inställningar och ladda om sidan.';
-    if (err.code === 2) return 'Positionen kunde inte bestämmas – försök igen utomhus.';
-    if (err.code === 3) return 'Tidsgräns överskreds – gå utomhus och försök igen.';
-    return 'Kunde inte hämta position: ' + err.message;
-}
-async function getGPS() {
-    const btn = document.getElementById('gpsBtn');
-    if (!navigator.geolocation) { alert('Geolocation stöds ej i denna webbläsare.'); return; }
-    btn.textContent = '⏳ Hämtar...'; btn.disabled = true;
-    const done = () => { btn.textContent = '📍 MGRS'; btn.disabled = false; };
-    navigator.geolocation.getCurrentPosition(
-        async pos => { await applyGPSPosition(pos); done(); },
-        err => {
-            if (err.code === 3) {
-                navigator.geolocation.getCurrentPosition(
-                    async pos => { await applyGPSPosition(pos); done(); },
-                    err2 => { alert(gpsErrorMessage(err2)); done(); },
-                    { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
-                );
-            } else { alert(gpsErrorMessage(err)); done(); }
-        },
-        { enableHighAccuracy: true, timeout: 20000, maximumAge: 30000 }
-    );
-}
-
 let lastFotoFilename = '';
 async function readFoto(input) {
     const file = input.files[0]; if (!file) return;
@@ -1019,7 +951,7 @@ function openMapModal() {
         if (cached && typeof cached.lat === 'number' && typeof cached.lng === 'number') { mapInstance.setView([cached.lat, cached.lng], cached.z || 13); }
         else { mapInstance.setView([59.33, 18.07], 5); }
         // OPSEC: ingen passiv geolocation-prompt vid kartmodal-öppning.
-        // Användaren har explicit gpsBtn (📍 MGRS) eller drar/klickar på kartan manuellt.
+        // Användaren drar/klickar på kartan manuellt för att välja punkt.
     }, 100);
 }
 function closeMapModal() {

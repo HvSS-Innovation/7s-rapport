@@ -558,20 +558,6 @@ function showVerifyBtn(mgrsStr) {
     };
 }
 
-async function getGPS() {
-    const btn = document.getElementById('gpsBtn');
-    if (!navigator.geolocation) { alert('Geolocation stöds ej.'); return; }
-    btn.textContent = '⏳'; btn.disabled = true;
-    const done = () => { btn.textContent = '📍 MGRS'; btn.disabled = false; };
-    navigator.geolocation.getCurrentPosition(async pos => {
-        const {latitude: lat, longitude: lon} = pos.coords;
-        const mgrs = MGRS.forward(lat, lon);
-        const f = document.getElementById('plats');
-        f.value = mgrs;
-        done();
-    }, () => done(), {enableHighAccuracy: true, timeout: 20000, maximumAge: 30000});
-}
-
 // ── Hjälpfunktioner ───────────────────────────────────────────────────────────
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
 let tnrLong = false;
@@ -932,7 +918,7 @@ function openMapModal() {
         if (cached && typeof cached.lat === 'number' && typeof cached.lng === 'number') { mapInstance.setView([cached.lat, cached.lng], cached.z || 13); }
         else { mapInstance.setView([59.33, 18.07], 5); }
         // OPSEC: ingen passiv geolocation-prompt vid kartmodal-öppning.
-        // Användaren har explicit gpsBtn (📍 MGRS) eller drar/klickar på kartan manuellt.
+        // Användaren drar/klickar på kartan manuellt för att välja punkt.
     }, 100);
 }
 function closeMapModal() {
