@@ -1318,6 +1318,44 @@ function renderMapControls() {
     refreshHardenBtn();
     host.appendChild(hardenBtn);
 
+    // Stil-väljare för Härdat läge — bara aktiv när PMTiles är på.
+    const flavorSel = document.createElement('select');
+    flavorSel.className = 'btn btn-sm btn-ghost';
+    flavorSel.style.display = 'none';
+    flavorSel.title = 'Stil för Härdat läge';
+    [
+        ['topo', 'Topo (svart bygg)'],
+        ['light', 'Light'],
+        ['dark', 'Dark'],
+        ['white', 'White'],
+        ['grayscale', 'Grayscale'],
+        ['black', 'Black']
+    ].forEach(([v, label]) => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = label;
+        flavorSel.appendChild(o);
+    });
+    function refreshFlavorSel() {
+        const ctrl = window.MK_HARDENING;
+        const active = ctrl && ctrl.isActive();
+        flavorSel.style.display = active ? '' : 'none';
+        if (ctrl) flavorSel.value = ctrl.getFlavor();
+    }
+    flavorSel.addEventListener('change', () => {
+        const ctrl = window.MK_HARDENING;
+        if (ctrl) ctrl.setFlavor(flavorSel.value);
+    });
+    if (window.MK_HARDENING) {
+        window.MK_HARDENING.onChange(refreshFlavorSel);
+    } else {
+        window.addEventListener('MK_HARDENING:ready', () => {
+            window.MK_HARDENING.onChange(refreshFlavorSel);
+            refreshFlavorSel();
+        }, { once: true });
+    }
+    refreshFlavorSel();
+    host.appendChild(flavorSel);
+
     // Pre-download (Fas 2): laddar ner hela aktiv PMTiles-fil till lokal
     // cache. Efter download serverar SW alla range-requests lokalt — noll
     // utgående anrop. Knappen visas bara när Härdat läge är aktivt.

@@ -18,7 +18,54 @@
 // ─────────────────────────────────────────────────────────────────────────────
 
 import { PMTiles, leafletRasterLayer } from './vendor/pmtiles/pmtiles.esm.js';
-import { leafletLayer } from './vendor/protomaps/protomaps-leaflet.esm.js';
+import {
+    leafletLayer,
+    PolygonSymbolizer,
+    LineSymbolizer
+} from './vendor/protomaps/protomaps-leaflet.esm.js';
+
+// Custom 'topo'-flavor som efterliknar OpenTopoMap-känslan: byggnader
+// svarta, kvarter ljusgrå, natur grön, vatten blå. Default Protomaps-
+// flavors (light/dark/etc.) visar buggrå byggnader och vit landuse,
+// vilket inte stack:ar mot terrängen i fält.
+function topoPaintRules() {
+    return [
+        // Bakgrund: ljus grå för land som inte har specifik täckning
+        {
+            dataLayer: 'earth',
+            symbolizer: new PolygonSymbolizer({ fill: '#f0ede5' })
+        },
+        // Naturmark: skog / parker — ljus grön
+        {
+            dataLayer: 'natural',
+            symbolizer: new PolygonSymbolizer({ fill: '#c8dfb8' })
+        },
+        {
+            dataLayer: 'land',
+            symbolizer: new PolygonSymbolizer({ fill: '#c8dfb8' })
+        },
+        // Bebyggelse-landuse: kvarter, industri etc. — ljusgrå
+        {
+            dataLayer: 'landuse',
+            symbolizer: new PolygonSymbolizer({ fill: '#d8d4cc' })
+        },
+        // Vatten — ljusblå
+        {
+            dataLayer: 'water',
+            symbolizer: new PolygonSymbolizer({ fill: '#a4cce0' })
+        },
+        // Vägar — mörkgrå linjer
+        {
+            dataLayer: 'roads',
+            symbolizer: new LineSymbolizer({ color: '#666', width: 1.2 })
+        },
+        // Byggnader — svarta polygoner (det Joel bad om)
+        {
+            dataLayer: 'buildings',
+            symbolizer: new PolygonSymbolizer({ fill: '#000' })
+        }
+    ];
+}
 
 const STORAGE_KEY = 'pmtiles.hardening';
 const DEFAULT_FLAVOR = 'light'; // protomaps-leaflet: light/dark/white/grayscale/black
@@ -312,11 +359,16 @@ function createController(map, normalLayer, opts) {
         try {
             kind = await detectKind(url);
             if (kind === 'vector') {
-                hardLayer = leafletLayer({
-                    url: url,
-                    flavor: flavor,
-                    lang: 'sv'
-                });
+                // 'topo' = vår custom paintRules (OTM-likt: svarta byggnader,
+                // grå kvarter, grön natur). Övriga flavors = protomaps inbyggda
+                // light/dark/white/grayscale/black.
+                const layerOpts = { url: url, lang: 'sv' };
+                if (flavor === 'topo') {
+                    layerOpts.paintRules = topoPaintRules();
+                } else {
+                    layerOpts.flavor = flavor;
+                }
+                hardLayer = leafletLayer(layerOpts);
             } else {
                 const p = new PMTiles(url);
                 hardLayer = leafletRasterLayer(p, {

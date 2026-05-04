@@ -1685,6 +1685,44 @@ function renderMapControls() {
     refreshHardenBtn();
     host.appendChild(hardenBtn);
 
+    // Stil-väljare för Härdat läge — se minkarta.html.
+    const flavorSel = document.createElement('select');
+    flavorSel.className = 'btn btn-sm btn-ghost';
+    flavorSel.style.display = 'none';
+    flavorSel.title = 'Stil för Härdat läge';
+    [
+        ['topo', 'Topo (svart bygg)'],
+        ['light', 'Light'],
+        ['dark', 'Dark'],
+        ['white', 'White'],
+        ['grayscale', 'Grayscale'],
+        ['black', 'Black']
+    ].forEach(([v, label]) => {
+        const o = document.createElement('option');
+        o.value = v; o.textContent = label;
+        flavorSel.appendChild(o);
+    });
+    function refreshFlavorSel() {
+        const ctrl = window.SK_HARDENING;
+        const active = ctrl && ctrl.isActive();
+        flavorSel.style.display = active ? '' : 'none';
+        if (ctrl) flavorSel.value = ctrl.getFlavor();
+    }
+    flavorSel.addEventListener('change', () => {
+        const ctrl = window.SK_HARDENING;
+        if (ctrl) ctrl.setFlavor(flavorSel.value);
+    });
+    if (window.SK_HARDENING) {
+        window.SK_HARDENING.onChange(refreshFlavorSel);
+    } else {
+        window.addEventListener('SK_HARDENING:ready', () => {
+            window.SK_HARDENING.onChange(refreshFlavorSel);
+            refreshFlavorSel();
+        }, { once: true });
+    }
+    refreshFlavorSel();
+    host.appendChild(flavorSel);
+
     // Pre-download (Fas 2) — se motsvarande block i minkarta.html.
     const prefetchBtn = document.createElement('button');
     prefetchBtn.type = 'button';
