@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f8f8f5;
+    font-family: Georgia, serif;
+  }
+  svg {
+    width: 360px;
+    height: 540px;
+    overflow: visible;
+  }
+</style>
+</head>
+<body>
+
+<svg id="umra-svg" viewBox="0 0 310 510" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- White clearing disk + 4-pointed star (fixed) -->
+  <circle cx="130" cy="248" r="26" fill="white"/>
+  <path d="M 130,216 Q 140,239 162,248 Q 140,257 130,280 Q 120,257 98,248 Q 120,239 130,216 Z"
+        fill="#111"/>
+
+  <!-- UMRA label — draggable via mouse / long-press
+       Default position: same rule as CIM (star edge 162 + 33% of loop diam 34 = x=196) -->
+  <text id="umra-label" x="196" y="260"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-style="italic"
+        font-size="26"
+        fill="#111"
+        letter-spacing="1"
+        cursor="grab"
+        style="user-select:none;-webkit-user-select:none;">UMRA</text>
+
+  <!-- Drag-hint ring (shown during long-press countdown on mobile) -->
+  <circle id="hint" cx="220" cy="248" r="18"
+          fill="none" stroke="#aaa" stroke-width="1.5"
+          stroke-dasharray="4 3" opacity="0"/>
+
+</svg>
+
+<script>
+  const svg   = document.getElementById('umra-svg');
+  const label = document.getElementById('umra-label');
+  const hint  = document.getElementById('hint');
+
+  let dragging    = false;
+  let longTimer   = null;
+  let startClient = null;
+  let startSVG    = null;
+
+  function clientToSVG(cx, cy) {
+    const pt = svg.createSVGPoint();
+    pt.x = cx; pt.y = cy;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function beginDrag(clientX, clientY) {
+    dragging = true;
+    label.style.cursor = 'grabbing';
+    hint.setAttribute('opacity', '0');
+    const sp = clientToSVG(clientX, clientY);
+    startSVG = {
+      dx: parseFloat(label.getAttribute('x')) - sp.x,
+      dy: parseFloat(label.getAttribute('y')) - sp.y
+    };
+  }
+
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    const p = clientToSVG(clientX, clientY);
+    label.setAttribute('x', p.x + startSVG.dx);
+    label.setAttribute('y', p.y + startSVG.dy);
+  }
+
+  function endDrag() {
+    dragging = false;
+    label.style.cursor = 'grab';
+    clearTimeout(longTimer);
+    hint.setAttribute('opacity', '0');
+  }
+
+  /* ── Mouse (desktop) ── */
+  label.addEventListener('mousedown', function (e) {
+    e.preventDefault();
+    beginDrag(e.clientX, e.clientY);
+  });
+  window.addEventListener('mousemove', function (e) { moveDrag(e.clientX, e.clientY); });
+  window.addEventListener('mouseup', endDrag);
+
+  /* ── Touch (mobile) — long-press unlocks drag ── */
+  const LONG_MS = 450;
+
+  label.addEventListener('touchstart', function (e) {
+    const t = e.touches[0];
+    startClient = { x: t.clientX, y: t.clientY };
+
+    /* show hint ring near text */
+    const sp = clientToSVG(t.clientX, t.clientY);
+    hint.setAttribute('cx', parseFloat(label.getAttribute('x')) + 28);
+    hint.setAttribute('cy', parseFloat(label.getAttribute('y')) - 8);
+    hint.setAttribute('opacity', '0.7');
+
+    longTimer = setTimeout(function () {
+      hint.setAttribute('opacity', '0');
+      beginDrag(startClient.x, startClient.y);
+    }, LONG_MS);
+  }, { passive: true });
+
+  label.addEventListener('touchmove', function (e) {
+    const t = e.touches[0];
+    if (!dragging) {
+      const dx = t.clientX - startClient.x;
+      const dy = t.clientY - startClient.y;
+      if (Math.sqrt(dx * dx + dy * dy) > 8) {
+        clearTimeout(longTimer);
+        hint.setAttribute('opacity', '0');
+      }
+    }
+    if (dragging) {
+      e.preventDefault();
+      moveDrag(t.clientX, t.clientY);
+    }
+  }, { passive: false });
+
+  label.addEventListener('touchend', endDrag);
+  label.addEventListener('touchcancel', endDrag);
+</script>
+
+</body>
+</html>

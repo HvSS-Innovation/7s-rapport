@@ -1,7 +1,8 @@
 verktyg/obsidian/
 verktyg/m_blankett/
 verktyg/parmrobot/
-stab/
+stab/*
+!stab/Ny mapp/
 
 # Lokala screenshots och tmp-bilder i repo-roten — hör inte till prod
 /Screenshot_*.png

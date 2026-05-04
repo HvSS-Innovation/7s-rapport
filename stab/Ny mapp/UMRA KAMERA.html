@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f8f8f5;
+    font-family: Georgia, serif;
+  }
+  svg {
+    width: 360px;
+    height: 540px;
+    overflow: visible;
+  }
+  .controls {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    color: #444;
+  }
+  input[type=range] {
+    width: 260px;
+    accent-color: #111;
+  }
+  .deg {
+    min-width: 38px;
+    font-variant-numeric: tabular-nums;
+    color: #111;
+  }
+</style>
+</head>
+<body>
+
+<svg id="kamera-svg" viewBox="0 0 310 510" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ══ ROTATING GROUP: two dashed lines, 35° opening angle (V-shape) ══
+       Each arm ±17.5° from vertical → 35° between them.
+       Each line = 115 px. stroke-width 7.2 / dash 14 / gap 12.
+       Rotates around star center (130, 248). -->
+  <g id="lines" transform="rotate(0,130,248)">
+
+    <!-- Line 1 — right arm (+17.5° from vertical) -->
+    <line x1="139.6" y1="217.5" x2="174.2" y2="107.8"
+          stroke="#111" stroke-width="7.2"
+          stroke-dasharray="14 12" stroke-linecap="round"/>
+
+    <!-- Line 2 — left arm (−17.5° from vertical) -->
+    <line x1="120.4" y1="217.5" x2="85.8"  y2="107.8"
+          stroke="#111" stroke-width="7.2"
+          stroke-dasharray="14 12" stroke-linecap="round"/>
+
+  </g><!-- end #lines -->
+
+  <!-- ══ FIXED: white clearing disk + star ══ -->
+  <circle cx="130" cy="248" r="26" fill="white"/>
+  <path d="M 130,216 Q 140,239 162,248 Q 140,257 130,280 Q 120,257 98,248 Q 120,239 130,216 Z"
+        fill="#111"/>
+
+  <!-- ══ FIXED: KAMERA label — draggable via mouse / long-press ══
+       x = star outer edge (162) + 33% of line length (0.33×115≈38) = 200 -->
+  <text id="kamera-label" x="200" y="260"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-style="italic"
+        font-size="24"
+        fill="#111"
+        letter-spacing="1"
+        cursor="grab"
+        style="user-select:none;-webkit-user-select:none;">KAMERA</text>
+
+  <!-- Drag-hint ring (mobile long-press feedback) -->
+  <circle id="hint" cx="220" cy="248" r="18"
+          fill="none" stroke="#aaa" stroke-width="1.5"
+          stroke-dasharray="4 3" opacity="0"/>
+
+</svg>
+
+<div class="controls">
+  <span>Rotera linjer</span>
+  <input type="range" id="rot" min="0" max="360" value="0" step="1">
+  <span class="deg" id="deg">0°</span>
+</div>
+
+<script>
+  /* ── line rotation ── */
+  const slider = document.getElementById('rot');
+  const lines  = document.getElementById('lines');
+  const degLbl = document.getElementById('deg');
+  slider.addEventListener('input', function () {
+    lines.setAttribute('transform', `rotate(${this.value},130,248)`);
+    degLbl.textContent = this.value + '°';
+  });
+
+  /* ── KAMERA drag ── */
+  const svg   = document.getElementById('kamera-svg');
+  const label = document.getElementById('kamera-label');
+  const hint  = document.getElementById('hint');
+
+  let dragging    = false;
+  let longTimer   = null;
+  let startClient = null;
+  let startSVG    = null;
+
+  function clientToSVG(cx, cy) {
+    const pt = svg.createSVGPoint();
+    pt.x = cx; pt.y = cy;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function beginDrag(clientX, clientY) {
+    dragging = true;
+    label.style.cursor = 'grabbing';
+    hint.setAttribute('opacity', '0');
+    const sp = clientToSVG(clientX, clientY);
+    startSVG = {
+      dx: parseFloat(label.getAttribute('x')) - sp.x,
+      dy: parseFloat(label.getAttribute('y')) - sp.y
+    };
+  }
+
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    const p = clientToSVG(clientX, clientY);
+    label.setAttribute('x', p.x + startSVG.dx);
+    label.setAttribute('y', p.y + startSVG.dy);
+  }
+
+  function endDrag() {
+    dragging = false;
+    label.style.cursor = 'grab';
+    clearTimeout(longTimer);
+    hint.setAttribute('opacity', '0');
+  }
+
+  /* ── Mouse (desktop) ── */
+  label.addEventListener('mousedown', function (e) {
+    e.preventDefault();
+    beginDrag(e.clientX, e.clientY);
+  });
+  window.addEventListener('mousemove', function (e) { moveDrag(e.clientX, e.clientY); });
+  window.addEventListener('mouseup', endDrag);
+
+  /* ── Touch (mobile) — long-press unlocks drag ── */
+  const LONG_MS = 450;
+
+  label.addEventListener('touchstart', function (e) {
+    const t = e.touches[0];
+    startClient = { x: t.clientX, y: t.clientY };
+    hint.setAttribute('cx', parseFloat(label.getAttribute('x')) + 36);
+    hint.setAttribute('cy', parseFloat(label.getAttribute('y')) - 8);
+    hint.setAttribute('opacity', '0.7');
+    longTimer = setTimeout(function () {
+      hint.setAttribute('opacity', '0');
+      beginDrag(startClient.x, startClient.y);
+    }, LONG_MS);
+  }, { passive: true });
+
+  label.addEventListener('touchmove', function (e) {
+    const t = e.touches[0];
+    if (!dragging) {
+      const dx = t.clientX - startClient.x;
+      const dy = t.clientY - startClient.y;
+      if (Math.sqrt(dx * dx + dy * dy) > 8) {
+        clearTimeout(longTimer);
+        hint.setAttribute('opacity', '0');
+      }
+    }
+    if (dragging) {
+      e.preventDefault();
+      moveDrag(t.clientX, t.clientY);
+    }
+  }, { passive: false });
+
+  label.addEventListener('touchend', endDrag);
+  label.addEventListener('touchcancel', endDrag);
+</script>
+
+</body>
+</html>

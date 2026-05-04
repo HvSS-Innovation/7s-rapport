@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 126">
+  <!-- Stem -->
+  <line x1="51" y1="0" x2="51" y2="27" stroke="#000" stroke-width="6.2" stroke-linecap="square"/>
+  <!-- Circle ring -->
+  <circle cx="51" cy="76" r="46" fill="none" stroke="#000" stroke-width="6.2"/>
+</svg>

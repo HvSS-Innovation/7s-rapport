@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 130">
+  <!-- Left stem -->
+  <line x1="34" y1="0" x2="34" y2="30" stroke="#000" stroke-width="6" stroke-linecap="square"/>
+  <!-- Right stem -->
+  <line x1="63" y1="0" x2="63" y2="30" stroke="#000" stroke-width="6" stroke-linecap="square"/>
+  <!-- Perfect circle ring -->
+  <circle cx="50" cy="77" r="47" fill="none" stroke="#000" stroke-width="6"/>
+</svg>
