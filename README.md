@@ -46,6 +46,67 @@ Verktyget kommer nu att fungera även när du har flygplansläge eller är i rad
 ## Teknisk Arkitektur
 Applikationen är byggd som en "Modern Vanilla" webbapplikation med ren HTML5, CSS3 och JavaScript (ES6). Den använder inga tunga bibliotek eller ramverk för att säkerställa extremt snabb uppstart och minimal batteriförbrukning på mobila enheter. Service Workers hanterar cachning för offline-bruk.
 
+## Säkerhet och integritet (tekniska detaljer)
+
+För dig som vill förstå exakt vad appen gör med data, var den ligger och vilka risker som finns kvar. Mer om "Glöm enheten"-knappen och vad den *inte* räcker till finns på [opsec-sidan](https://7srapport.com/opsec.html).
+
+### Vad skickas till externa servrar
+
+| Tab / funktion | Externt anrop | Vad skickas | Mottagaren ser |
+|---|---|---|---|
+| MINKARTA, SENSORSKISS — vanlig karta | OpenTopoMap / OpenStreetMap tile-servers | z/x/y per kart-tile | IP + ungefärligt visat område |
+| MINKARTA, SENSORSKISS — *Härdat läge* | Cloudflare R2 (engångs-nedladdning) | range-requests mot `sverige.pmtiles` | IP + att du laddar ner Sverige-paketet en gång |
+| Adress-/UPK-uppslag (kartmodal i 7S/SCRIM/WEFT/A-H/OBSLÖSA + UPK i MINKARTA) | Nominatim (OSM) | klickad lat/lon | IP + koordinat |
+| VÄDER | Nominatim, Open-Meteo, SMHI autocomplete | ortnamn → koordinat → prognosanrop | IP + ort/position |
+| Övriga formulär (7S, WHAT, SCRIM, WEFT, A-H, OBSLÖSA, FORS, PEDARS, SCHEMA, EOBUSARE, OBO, RASSOIKA) | inga | — | — |
+| Egna ritningar, sparade utkast, sensor-/minpositioner, formulärtext | aldrig | — | — |
+
+Allt rapport- och kartritningsmaterial stannar lokalt på enheten. Inga koordinater eller ifyllda fält skickas till någon backend (det finns ingen backend).
+
+### Lokal lagring
+
+Allt du ritar, sparar och konfigurerar bor i:
+
+- **localStorage** — slider-state, sparade offline-områden, PMTiles-inställningar, TNR-format, formulärutkast, autocompletion-listor
+- **IndexedDB** — ritningar i MINKARTA och SENSORSKISS
+- **Cache API** — Service Workerns offline-bundle (HTML/JS/CSS/fonter), nedladdade kart-tiles (`hv-offline-tiles-v1`), Sverige-PMTiles-paketet (flera GB om Härdat läge använts)
+
+Allt rensas av "Glöm enheten" på [opsec.html](https://7srapport.com/opsec.html). Webbläsarens egen HTTP-cache, browser history och OS-nivå spår kvarstår — se opsec-sidan för scenarier som kräver mer (överlämning, beslagtagen enhet).
+
+### Härdat läge
+
+Härdat läge byter ut OSM/OpenTopoMap mot ett lokalt PMTiles-paket av Sverige (~4 GB, z 0–15). När det är på görs **noll utgående tile-requests** under kart-användning. Pre-download via streaming så mobil-RAM räcker, cache invalideras automatiskt om paketet byts.
+
+**Kvarvarande risker:**
+- Första nedladdningen sker från Cloudflare R2 — hostingen ser din IP och att du laddar ner Sverige-paketet en gång
+- För filer >256 MB hoppas SHA-256-verifiering över (mobil-RAM-hänsyn) — TLS + ETag används istället. Svagare än full hash, men praktiskt nödvändigt på mobil
+- VÄDER-fliken anropar externa servrar (Nominatim, Open-Meteo, SMHI) oavsett om Härdat läge är på
+
+### Innehållsleverantörer som tagits bort
+
+- ~~jsDelivr CDN (Leaflet)~~ — nu lokalt i `vendor/leaflet/`
+- ~~unpkg CDN (exifr)~~ — nu lokalt i `vendor/exifr/`
+- ~~Tesseract.js OCR~~ — borttaget 2026-04-09 (fungerade inte tillförlitligt)
+- ~~MGRS/GPS-knapp i VÄDER~~ — läckte position, borttagen 2026-05-03
+- ~~Passiva geolocation-prompts vid kartmodal-öppning~~ — borttagna 2026-04-30 i 7S, A-H, SCRIM, WHAT, WEFT, OBSLÖSA
+
+### CSP — status
+
+Strikt `default-src 'self'` med explicit `connect-src` är på plats på `opsec.html`. Övriga 14 sidor har fortfarande den bredare originalvarianten med `upgrade-insecure-requests`. Att rulla ut strikt CSP brett är på roadmappen ([audit/roadmap.md](audit/roadmap.md) Sväng 1.2). XML-escape i CoT-export, OPSEC-formulär-sweep (`autocomplete=off`, `spellcheck=false`, `data-1p-ignore`), referrer-policy `strict-origin` och `notranslate` är gjorda.
+
+### Threat model
+
+| Skyddar mot | Skyddar inte mot |
+|---|---|
+| Passiv tile-server-loggning av varje fält-användning (via Härdat läge) | Aktiv adversary med endpoint-access (rotad mobil, MitM på TLS via egen CA) |
+| Tredjeparts-CDN-loggning vid sidladdning | Beslagtagen enhet med forensiska verktyg (Cellebrite, GrayKey) |
+| Auto-prompts som läcker GPS / lägger position i extern logg | Användarfel ("råkar" skicka skarp data via VÄDER) |
+| Att en sajt-besökare ser annan användares ritningar (det finns ingen sådan delning) | OS-nivå spår: kameraroll, swap-fil, app-switcher-thumbnails |
+| Supply-chain-attack via CDN (vendor/-mapp + integritetshashar) | Felaktig hantering: skärmdump som delas vidare, screenshot-via-iCloud-backup |
+| Password manager / autofill som sparar taktisk text (`opsec.js`) | Felaktig OPSEC-hygien: appen installerad på samma enhet som personlig användning |
+
+För fältdrift: Härdat läge + offline-cache + "Glöm enheten" före/efter känsliga moment + manuell webbläsar-rensning vid överlämning. För beslagtagen-scenariot: fabriksåterställning av enheten är det enda som närmar sig garanti — appens "Glöm enheten" är ett bidrag, inte en garanti.
+
 ## Licens
 Detta projekt är licensierat under **Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International** (CC BY-NC-SA 4.0).
 
