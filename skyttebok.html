@@ -190,6 +190,42 @@
         .pass-row-figure .figure-svg { width: 70px; }
         .pass-row-figure .pass-zon-summary { flex: 1; font-size: 0.72rem; color: var(--text-muted); font-family: 'Courier New', monospace; line-height: 1.4; }
 
+        /* Utskriftsvy — Fas 6 */
+        @media screen {
+            .print-view { display: none; }
+        }
+        @media print {
+            body { padding: 0; background: #fff; color: #000; font-family: 'Inter', system-ui, sans-serif; }
+            .container { display: none !important; }
+            .print-view { display: block; padding: 0; }
+            @page { size: A4; margin: 1.5cm 1.2cm; }
+
+            .print-view h1 { font-size: 18pt; margin: 0 0 4pt; letter-spacing: 0.06em; text-transform: uppercase; }
+            .print-view h2 { font-size: 12pt; margin: 16pt 0 6pt; padding-bottom: 2pt; border-bottom: 1pt solid #000; letter-spacing: 0.04em; }
+            .print-view h3 { font-size: 10pt; margin: 10pt 0 3pt; color: #333; }
+            .print-view p { font-size: 9pt; margin: 2pt 0; }
+            .print-view .print-meta { font-size: 9pt; color: #555; margin-bottom: 6pt; }
+            .print-view .print-summary { font-size: 9pt; padding: 6pt 8pt; background: #eee; border-radius: 3pt; margin-bottom: 12pt; }
+            .print-view section { page-break-inside: avoid; margin-bottom: 8pt; }
+
+            .print-view table.print-table { width: 100%; border-collapse: collapse; font-size: 8.5pt; margin-top: 3pt; }
+            .print-view table.print-table th { background: #ddd; padding: 3pt 5pt; text-align: left; border: 0.5pt solid #000; font-weight: 700; }
+            .print-view table.print-table td { padding: 3pt 5pt; border: 0.5pt solid #999; vertical-align: top; }
+            .print-view table.print-table td.col-status-g { background: #d9f0d9; font-weight: 700; }
+            .print-view table.print-table td.col-status-u { background: #f0d9d9; font-weight: 700; }
+            .print-view table.print-table td.col-num { text-align: center; white-space: nowrap; }
+            .print-view table.print-table td.col-anteckning { color: #444; font-size: 8pt; }
+
+            .print-view dl.print-dl { font-size: 9pt; margin: 0; }
+            .print-view dl.print-dl dt { font-weight: 700; display: inline-block; min-width: 90pt; }
+            .print-view dl.print-dl dd { display: inline; margin: 0; }
+            .print-view dl.print-dl dt::after { content: ''; }
+            .print-view dl.print-dl dd::after { content: '\A'; white-space: pre; }
+
+            .print-view .print-empty { font-style: italic; color: #777; font-size: 9pt; }
+            .print-view .print-footer { margin-top: 18pt; padding-top: 6pt; border-top: 0.5pt dashed #999; font-size: 8pt; color: #777; text-align: center; }
+        }
+
         /* BAS/TILLÄGG-filter — Fas 5 */
         .filter-bar { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 14px; }
         .filter-bar button { background: none; border: none; color: var(--text-muted); font-family: inherit; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; padding: 9px 4px; border-radius: var(--radius-sm); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: background 0.15s, color 0.15s; }
@@ -316,6 +352,12 @@
 
                 <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
 
+                <label>Skriv ut / PDF</label>
+                <button class="btn btn-sm btn-secondary" id="btnSkrivUt" style="width:100%">Skriv ut hela skjutboken</button>
+                <div class="field-hint" style="margin-top:6px">Använder webbläsarens skriv ut-funktion. Välj "Spara som PDF" för en digital kopia.</div>
+
+                <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+
                 <button class="btn btn-sm btn-danger" id="btnRensaAlla" style="width:100%">Rensa hela skjutboken…</button>
                 <div class="field-hint" style="margin-top:6px">Tar bort alla pass på den här enheten. Bekräftas innan radering.</div>
             </div>
@@ -339,6 +381,9 @@
             All data sparas <strong>endast lokalt</strong> i din webbläsare.
         </p>
     </main>
+
+    <!-- Utskriftsvy — fylls av JS innan window.print() -->
+    <div class="print-view" id="printView"></div>
 
     <!-- Bekräftelsedialog -->
     <div class="confirm-overlay" id="confirmOverlay" onclick="if(event.target===this)skyttebokCancelConfirm()">

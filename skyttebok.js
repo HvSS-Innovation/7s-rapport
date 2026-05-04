@@ -1263,6 +1263,10 @@
             }
         });
 
+        document.getElementById('btnSkrivUt').addEventListener('click', function () {
+            skrivUt();
+        });
+
         document.getElementById('btnRensaAlla').addEventListener('click', function () {
             var all = loadAllPass();
             var sp = loadSakerhetsprov();
@@ -1286,6 +1290,148 @@
                 }
             );
         });
+    }
+
+    // ── Utskriftsvy (Fas 6) ─────────────────────────────────────────────
+    // Bygger en kompakt skrivvänlig vy och anropar window.print().
+    // Inga vendor-bibliotek — användaren kan välja "Spara som PDF" i
+    // skrivar-dialogen för digital kopia.
+
+    function buildPrintView() {
+        var d = new Date();
+        var datum = d.toLocaleDateString('sv-SE');
+        var displayName = getSetting('displayname') || '';
+        var allPass = loadAllPass();
+        var sp = loadSakerhetsprov();
+
+        var byNr = {};
+        allPass.forEach(function (p) {
+            var k = ovningKey(p.ovningNr);
+            (byNr[k] = byNr[k] || []).push(p);
+        });
+
+        var totalPass = allPass.length;
+        var totalGodkand = allPass.filter(function (p) { return p.godkand; }).length;
+        var totalSkott = allPass.reduce(function (s, p) { return s + (+p.skott || 0); }, 0);
+        var totalTraff = allPass.reduce(function (s, p) { return s + (+p.traff || 0); }, 0);
+        var pct = totalSkott > 0 ? Math.round(100 * totalTraff / totalSkott) : 0;
+
+        var html = '';
+        html += '<h1>Skyttebok</h1>';
+        html += '<div class="print-meta">';
+        if (displayName) html += '<strong>' + escapeHtml(displayName) + '</strong> · ';
+        html += 'Utskrivet ' + escapeHtml(datum) + ' · ';
+        html += 'Källa: H SKJUTB AK 2021';
+        html += '</div>';
+        html += '<div class="print-summary">' +
+            '<strong>' + totalPass + '</strong> pass · ' +
+            '<strong>' + totalGodkand + '</strong> godkända · ' +
+            'träffkvot <strong>' + pct + '%</strong>' +
+            '</div>';
+
+        // Säkerhetsprov BAS
+        html += '<section><h2>Säkerhetsprov BAS</h2>';
+        if (sp) {
+            html += '<dl class="print-dl">' +
+                '<dt>Status:</dt><dd><strong>' +
+                    (sp.godkand ? 'GODKÄND' : 'EJ GODKÄND') + '</strong></dd>' +
+                '<dt>Datum:</dt><dd>' + escapeHtml(sp.datum || '') + '</dd>' +
+                (sp.instruktor ? '<dt>Instruktör:</dt><dd>' + escapeHtml(sp.instruktor) + '</dd>' : '') +
+                (sp.anteckning ? '<dt>Anteckning:</dt><dd>' + escapeHtml(sp.anteckning) + '</dd>' : '') +
+            '</dl>';
+        } else {
+            html += '<p class="print-empty">Ej loggat på den här enheten.</p>';
+        }
+        html += '</section>';
+
+        // Pass per delmoment, bara DM med ≥1 pass tas med i utskriften.
+        html += '<section><h2>Skjutpass</h2>';
+        var nagonRad = false;
+        DATA.delmoment.forEach(function (dm) {
+            var dmPasser = [];
+            dm.ovningar.forEach(function (nr) {
+                (byNr[ovningKey(nr)] || []).forEach(function (p) {
+                    var copy = {};
+                    for (var k in p) if (p.hasOwnProperty(k)) copy[k] = p[k];
+                    copy._displayNr = nr;
+                    dmPasser.push(copy);
+                });
+            });
+            if (dmPasser.length === 0) return;
+            nagonRad = true;
+
+            html += '<h3>DM ' + dm.nr + ' · ' + escapeHtml(dm.namn) + '</h3>';
+            html += '<table class="print-table"><thead><tr>' +
+                '<th style="width:18%">Datum</th>' +
+                '<th style="width:8%">Övn</th>' +
+                '<th style="width:30%">Resultat</th>' +
+                '<th style="width:10%">Status</th>' +
+                '<th>Anteckning</th>' +
+            '</tr></thead><tbody>';
+
+            dmPasser.sort(function (a, b) {
+                // Sort: nyast först, sekundärt efter övningsnr.
+                var t = (b.skapad || 0) - (a.skapad || 0);
+                if (t !== 0) return t;
+                return (a._displayNr === 'kp_bas' ? 999 : a._displayNr) -
+                       (b._displayNr === 'kp_bas' ? 999 : b._displayNr);
+            });
+
+            dmPasser.forEach(function (p) {
+                var resultat;
+                if (p.ovningNr === 'kp_bas' && p.tid !== undefined) {
+                    resultat = (p.traffar ? p.traffar.length : 0) + ' träff · ' +
+                        p.tid.toFixed(1) + ' s · PK ' +
+                        (p.poangKvot !== undefined ? p.poangKvot.toFixed(2) : '?');
+                } else {
+                    var pPct = p.skott > 0 ? Math.round(100 * p.traff / p.skott) : 0;
+                    resultat = (p.traff || 0) + '/' + (p.skott || 0) +
+                        (p.skott > 0 ? ' (' + pPct + '%)' : '');
+                    if (p.traffar && p.traffar.length > 0) {
+                        var zonCount = {};
+                        p.traffar.forEach(function (mk) {
+                            zonCount[mk.zon] = (zonCount[mk.zon] || 0) + 1;
+                        });
+                        var byZon = ['H', 'A', 'B', 'C', 'D', 'utanför']
+                            .filter(function (z) { return zonCount[z]; })
+                            .map(function (z) { return zonCount[z] + '×' + z; })
+                            .join(' · ');
+                        if (byZon) resultat += ' [' + byZon + ']';
+                    }
+                }
+
+                var ovnLabel = p._displayNr === 'kp_bas' ? 'KP' : ('Ö' + p._displayNr);
+                var statusClass = p.godkand ? 'col-status-g' : 'col-status-u';
+                var statusTxt = p.godkand ? 'G' : 'U';
+
+                html += '<tr>' +
+                    '<td class="col-num">' + escapeHtml(p.datum || '') + '</td>' +
+                    '<td class="col-num">' + escapeHtml(ovnLabel) + '</td>' +
+                    '<td>' + escapeHtml(resultat) + '</td>' +
+                    '<td class="col-num ' + statusClass + '">' + statusTxt + '</td>' +
+                    '<td class="col-anteckning">' + escapeHtml(p.anteckning || '') + '</td>' +
+                '</tr>';
+            });
+            html += '</tbody></table>';
+        });
+        if (!nagonRad) {
+            html += '<p class="print-empty">Inga pass loggade på den här enheten.</p>';
+        }
+        html += '</section>';
+
+        html += '<div class="print-footer">' +
+            'Skyttebok · 7s-rapport · all data lokal i webbläsaren' +
+            '</div>';
+
+        return html;
+    }
+
+    function skrivUt() {
+        var pv = document.getElementById('printView');
+        if (!pv) return;
+        pv.innerHTML = buildPrintView();
+        // Liten timeout så DOM hinner uppdateras innan dialogen öppnas.
+        setTimeout(function () { window.print(); }, 50);
     }
 
     // ── Render-helper som täcker både övningar och säkerhetsprov ───────
