@@ -6,7 +6,8 @@
 //   skyttebok_sakerhetsprov        — JSON-objekt för säkerhetsprov BAS
 //
 // Pass-objekt:
-//   { id, ovningNr, datum, skott, traff, godkand, anteckning, skapad }
+//   { id, ovningNr, datum, skott, traff, godkand, anteckning, skapad,
+//     traffar?: [{x: 0-100, y: 0-200, zon: 'H'|'A'|'B'|'C'|'D'|'utanför'}] }
 //
 // Säkerhetsprov-objekt:
 //   { datum, instruktor, anteckning, godkand, sparad }
@@ -35,6 +36,12 @@
 
     // Pending-confirm callback. Sätts av showConfirm(), nollställs efter klick.
     var pendingConfirm = null;
+
+    // Träffmarkeringar i öppna pass-formulär — keyed på ovningNr.
+    // Lever utanför DOM eftersom render() river/återskapar formuläret.
+    // Töms när användaren klickar "Spara pass" eller stänger formuläret
+    // (vi behåller datan öppet/stängt-tillstånd ignorerat).
+    var formMarks = {};
 
     // Säkerhetsprov BAS — hand-curerad referens från H SKJUTB AK 2021,
     // Bilaga 1 (sid 121–122). Skytten loggar EN status (godkänd/ej godk.)
@@ -268,6 +275,159 @@
         return html;
     }
 
+    // ── 1/1-figur (rektangulär approximation av FM helfigur 2020) ──────
+    // viewBox 0..100 horisontellt, 0..200 vertikalt. Zoner ritas från
+    // ytterst (D) till innerst (A) + huvud (H) separat.
+    //
+    // TODO: bekräfta exakta proportioner mot Reglemente Skjutning Ak.
+    // Vi använder approximationer som är tillräckliga för att skytten
+    // ska kunna markera och se var träffen hamnade.
+    //
+    // Klick på en zon → mark sparas med zon-bokstaven.
+    // Klick på en befintlig mark → marken tas bort.
+
+    function zoneAt(x, y) {
+        // H: huvud-cirkel (50, 22) r=12
+        var dxH = x - 50, dyH = y - 22;
+        if (dxH * dxH + dyH * dyH <= 144) return 'H';
+        // A: bröst-cirkel (50, 100) r=7
+        var dxA = x - 50, dyA = y - 100;
+        if (dxA * dxA + dyA * dyA <= 49) return 'A';
+        // B: bröst-rektangel (38..62, 75..130)
+        if (x >= 38 && x <= 62 && y >= 75 && y <= 130) return 'B';
+        // C: trapets (28,50) - (72,50) - (68,180) - (32,180)
+        if (y >= 50 && y <= 180) {
+            var hwC = 22 + (18 - 22) * (y - 50) / 130;
+            if (Math.abs(x - 50) <= hwC) return 'C';
+        }
+        // D: trapets (20,38) - (80,38) - (75,195) - (25,195)
+        if (y >= 38 && y <= 195) {
+            var hwD = 30 + (25 - 30) * (y - 38) / 157;
+            if (Math.abs(x - 50) <= hwD) return 'D';
+        }
+        return 'utanför';
+    }
+
+    function buildFigureSvg(svgId, marks, interactive) {
+        var ro = interactive ? '' : ' readonly';
+        var clickAttr = interactive
+            ? ' onclick="skyttebokFigureClick(this, event)"'
+            : '';
+        var svg = '<svg id="' + svgId + '"' + clickAttr +
+            ' class="figure-svg' + ro + '" viewBox="0 0 100 200" ' +
+            'xmlns="http://www.w3.org/2000/svg" aria-label="1/1-figur med träffzoner">';
+        svg += '<rect class="z-bg" data-zon="utanför" x="0" y="0" width="100" height="200"/>';
+        // Kropp: D yttersta, sedan C, B, A; huvud H sist (på topp men
+        // separat geometriskt).
+        svg += '<polygon class="z-d" data-zon="D" points="20,38 80,38 75,195 25,195"/>';
+        svg += '<polygon class="z-c" data-zon="C" points="28,50 72,50 68,180 32,180"/>';
+        svg += '<rect class="z-b" data-zon="B" x="38" y="75" width="24" height="55"/>';
+        svg += '<circle class="z-a" data-zon="A" cx="50" cy="100" r="7"/>';
+        svg += '<circle class="z-h" data-zon="H" cx="50" cy="22" r="12"/>';
+        // Etiketter
+        svg += '<text class="z-label" x="50" y="22">H</text>';
+        svg += '<text class="z-label" x="50" y="55">D</text>';
+        svg += '<text class="z-label" x="50" y="170">C</text>';
+        svg += '<text class="z-label" x="44" y="80">B</text>';
+        svg += '<text class="z-label" x="50" y="100">A</text>';
+        // Marks
+        (marks || []).forEach(function (m, idx) {
+            svg += '<circle class="mark" data-mark-idx="' + idx + '" cx="' +
+                m.x + '" cy="' + m.y + '" r="3"/>';
+        });
+        svg += '</svg>';
+        return svg;
+    }
+
+    // Inline onclick-handler från SVG:n. Hittar ovningNr från SVG-id.
+    window.skyttebokFigureClick = function (svgEl, event) {
+        // svg-id: "fig-svg-<ovningNr>"
+        var m = svgEl.id.match(/^fig-svg-(.+)$/);
+        if (!m) return;
+        var ovningNr = m[1];
+
+        var target = event.target;
+
+        // Klick på existerande mark → ta bort.
+        if (target && target.classList && target.classList.contains('mark')) {
+            var idx = parseInt(target.getAttribute('data-mark-idx'), 10);
+            if (!isNaN(idx) && formMarks[ovningNr]) {
+                formMarks[ovningNr].splice(idx, 1);
+                refreshFigureForOvning(ovningNr);
+            }
+            return;
+        }
+
+        // Annars — lägg ny mark vid klickposition.
+        var pt = svgEl.createSVGPoint();
+        pt.x = event.clientX;
+        pt.y = event.clientY;
+        var ctm = svgEl.getScreenCTM();
+        if (!ctm) return;
+        var loc = pt.matrixTransform(ctm.inverse());
+        var x = Math.max(0, Math.min(100, loc.x));
+        var y = Math.max(0, Math.min(200, loc.y));
+        var zon = (target && target.getAttribute && target.getAttribute('data-zon')) || zoneAt(x, y);
+
+        if (!formMarks[ovningNr]) formMarks[ovningNr] = [];
+        formMarks[ovningNr].push({
+            x: Math.round(x * 10) / 10,
+            y: Math.round(y * 10) / 10,
+            zon: zon
+        });
+        refreshFigureForOvning(ovningNr);
+    };
+
+    window.skyttebokRensaMarks = function (ovningNr) {
+        formMarks[ovningNr] = [];
+        refreshFigureForOvning(ovningNr);
+    };
+
+    function refreshFigureForOvning(ovningNr) {
+        var marks = formMarks[ovningNr] || [];
+        var wrap = document.getElementById('fig-wrap-' + ovningNr);
+        if (wrap) wrap.innerHTML = buildFigureSvg('fig-svg-' + ovningNr, marks, true);
+        var meta = document.getElementById('fig-meta-' + ovningNr);
+        if (meta) {
+            var zonCount = {};
+            marks.forEach(function (mk) {
+                zonCount[mk.zon] = (zonCount[mk.zon] || 0) + 1;
+            });
+            var byZon = ['H', 'A', 'B', 'C', 'D', 'utanför']
+                .filter(function (z) { return zonCount[z]; })
+                .map(function (z) { return zonCount[z] + '×' + z; })
+                .join(' · ');
+            meta.innerHTML = '<strong>' + marks.length + '</strong> markerade' +
+                (byZon ? ' — ' + byZon : '');
+        }
+    }
+
+    function buildFigureSection(ovningNr) {
+        // ovningNr kan vara number eller 'kp_bas'. För DOM-id används det
+        // som det är (kp_bas blir 'fig-svg-kp_bas' osv).
+        var marks = formMarks[ovningNr] || [];
+        return '' +
+            '<details class="figure-section">' +
+                '<summary>Markera träffar (frivilligt)</summary>' +
+                '<div class="figure-body">' +
+                    '<div class="figure-wrap">' +
+                        '<div id="fig-wrap-' + ovningNr + '">' +
+                            buildFigureSvg('fig-svg-' + ovningNr, marks, true) +
+                        '</div>' +
+                        '<div class="figure-meta" id="fig-meta-' + ovningNr + '"><strong>' +
+                            marks.length + '</strong> markerade</div>' +
+                        '<div class="figure-actions">' +
+                            '<button class="btn btn-sm btn-secondary" type="button" ' +
+                                'onclick="skyttebokRensaMarks(\'' + ovningNr + '\')">Rensa markeringar</button>' +
+                        '</div>' +
+                        '<div class="figure-hint">Tryck på figuren för att lägga till en träff. ' +
+                            'Tryck på en befintlig mark för att ta bort den.<br>' +
+                            'Markeringar är ett komplement till siffran ovan, inte krav.</div>' +
+                    '</div>' +
+                '</div>' +
+            '</details>';
+    }
+
     function renderPassForm(ovningNr) {
         var today = todayIso();
         var formId = 'form-' + ovningNr;
@@ -301,6 +461,7 @@
                     '<label for="' + formId + '-anteckning">Anteckning (frivilligt)</label>' +
                     '<textarea id="' + formId + '-anteckning" rows="2" placeholder="T.ex. ställning, riktpunkt, väder…"></textarea>' +
                 '</div>' +
+                buildFigureSection(ovningNr) +
                 '<button class="btn btn-primary" type="button" ' +
                     'onclick="skyttebokSparaPass(\'' + ovningNr + '\')">Spara pass</button>' +
             '</div>';
@@ -314,6 +475,28 @@
         var resultatText = (p.traff || 0) + '/' + (p.skott || 0) +
             (p.skott > 0 ? ' (' + pct + '%)' : '');
 
+        // Mini-figur om träffmarkeringar finns. Read-only, ingen klick.
+        var figureHtml = '';
+        if (p.traffar && p.traffar.length > 0) {
+            var zonCount = {};
+            p.traffar.forEach(function (mk) {
+                zonCount[mk.zon] = (zonCount[mk.zon] || 0) + 1;
+            });
+            var byZon = ['H', 'A', 'B', 'C', 'D', 'utanför']
+                .filter(function (z) { return zonCount[z]; })
+                .map(function (z) { return zonCount[z] + '×' + z; })
+                .join(' · ');
+            // Eget svg-id med pass-id för att undvika DOM-kollision.
+            var svgId = 'fig-pass-' + p.id;
+            figureHtml = '<div class="pass-row-figure">' +
+                buildFigureSvg(svgId, p.traffar, false) +
+                '<span class="pass-zon-summary">' +
+                    p.traffar.length + ' träff markerade<br>' +
+                    escapeHtml(byZon) +
+                '</span>' +
+            '</div>';
+        }
+
         return '<div class="pass-row ' + rowClass + '" data-pass="' + p.id + '">' +
             '<span class="pass-datum">' + escapeHtml(p.datum || '') + '</span>' +
             '<span class="pass-resultat">' + resultatText + '</span>' +
@@ -321,6 +504,7 @@
             '<button class="pass-delete" type="button" title="Ta bort pass" ' +
                 'onclick="skyttebokRaderaPass(\'' + p.id + '\')">×</button>' +
             (p.anteckning ? '<div class="pass-anteckning">' + escapeHtml(p.anteckning) + '</div>' : '') +
+            figureHtml +
         '</div>';
     }
 
@@ -523,6 +707,9 @@
         // Numeriskt id sparas som number, sträng-id (kp_bas) som sträng.
         var nr = ovningNr === 'kp_bas' ? 'kp_bas' : parseInt(ovningNr, 10);
 
+        // Träffmarkeringar (frivilliga). Tas bara med om något markerats.
+        var marks = formMarks[ovningNr] || [];
+
         var pass = {
             id: uuid(),
             ovningNr: nr,
@@ -533,7 +720,11 @@
             anteckning: anteckning,
             skapad: Date.now()
         };
+        if (marks.length > 0) pass.traffar = marks.slice();
         savePass(pass);
+
+        // Töm form-state efter sparat pass — nästa pass börjar tomt.
+        delete formMarks[ovningNr];
 
         // Behåll öppet kort efter render
         var wasOpen = true;

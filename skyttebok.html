@@ -157,6 +157,39 @@
         .settings-actions { display: flex; gap: 8px; margin-top: 6px; }
         .settings-actions .btn { flex: 1; }
 
+        /* 1/1-figur — träffmarkering */
+        .figure-section { margin-top: 10px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+        .figure-section summary { cursor: pointer; padding: 10px 12px; font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.04em; text-transform: uppercase; list-style: none; display: flex; align-items: center; justify-content: space-between; -webkit-tap-highlight-color: transparent; }
+        .figure-section summary::-webkit-details-marker { display: none; }
+        .figure-section summary::after { content: '▾'; color: var(--text-muted); font-size: 0.8rem; transition: transform 0.15s; }
+        .figure-section[open] summary::after { transform: rotate(180deg); }
+        .figure-section .figure-body { padding: 8px 12px 12px; }
+
+        .figure-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; }
+        .figure-svg { display: block; width: 140px; max-width: 100%; height: auto; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); -webkit-tap-highlight-color: transparent; touch-action: manipulation; cursor: crosshair; }
+        .figure-svg.readonly { cursor: default; pointer-events: none; }
+
+        /* Zon-färger — mörkgrön bas, ljusare mot mitten för bättre kontrast */
+        .figure-svg .z-bg { fill: var(--bg-input); }
+        .figure-svg .z-d { fill: #2a4a2a; stroke: #1a321a; stroke-width: 0.4; }
+        .figure-svg .z-c { fill: #355c35; stroke: #1a321a; stroke-width: 0.3; }
+        .figure-svg .z-b { fill: #4a7a4a; stroke: #1a321a; stroke-width: 0.3; }
+        .figure-svg .z-a { fill: #7ab87a; stroke: #1a321a; stroke-width: 0.3; }
+        .figure-svg .z-h { fill: #5a8c5a; stroke: #1a321a; stroke-width: 0.3; }
+        .figure-svg .z-label { fill: #0d1f0d; font-size: 9px; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; font-family: monospace; }
+        .figure-svg .mark { fill: #ffe066; stroke: #1a321a; stroke-width: 0.6; pointer-events: all; }
+        .figure-svg .mark:hover { fill: #ff5252; }
+
+        .figure-meta { font-size: 0.78rem; color: var(--text-secondary); font-family: 'Courier New', monospace; letter-spacing: 0.04em; }
+        .figure-meta strong { color: var(--accent); }
+        .figure-actions { display: flex; gap: 6px; }
+        .figure-hint { font-size: 0.7rem; color: var(--text-muted); text-align: center; line-height: 1.4; }
+
+        /* Mini-figur i pass-rad */
+        .pass-row-figure { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding-top: 6px; }
+        .pass-row-figure .figure-svg { width: 70px; }
+        .pass-row-figure .pass-zon-summary { flex: 1; font-size: 0.72rem; color: var(--text-muted); font-family: 'Courier New', monospace; line-height: 1.4; }
+
         /* Säkerhetsprov-kort */
         .sp-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--text-muted); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
         .sp-card.godkand { border-left-color: var(--accent); }
