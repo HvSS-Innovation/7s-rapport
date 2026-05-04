@@ -24,16 +24,23 @@ const STORAGE_KEY = 'pmtiles.hardening';
 const DEFAULT_FLAVOR = 'light'; // protomaps-leaflet: light/dark/white/grayscale/black
 const PMTILES_CACHE = 'hv-pmtiles-v1'; // separat Cache API-namespace, bevaras av SW activate-cleanup
 
-// Sverige-paketet — uppdateras när Fas 2-pipeline kört (audit/pmtiles-build.md).
-// Tom URL/hash innebär "ingen svensk fil byggd än, anv. demo".
-const SVERIGE_PMTILES_URL = '';
-const SVERIGE_PMTILES_SHA256 = '';
-const SVERIGE_PMTILES_BYTES = 0;
+// Sverige-paketet — byggt 2026-05-04 via Planetiler 0.10.2 (OpenMapTiles 3.16.0
+// schema), z 0–13. Hostat på Cloudflare R2 med CORS för 7srapport.com.
+// Bygg-pipeline: audit/pmtiles-build.md.
+const SVERIGE_PMTILES_URL = 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/sverige.pmtiles';
+const SVERIGE_PMTILES_SHA256 = 'c4305c6515e3b795870cfc2ca21cd129074a666a960383917a1a9f82527527df';
+const SVERIGE_PMTILES_BYTES = 567077891;
 
-// Tre publika test-PMTiles på protomaps GitHub (raw.githubusercontent.com har
-// CORS open). Räcker för att verifiera UI-flödet utan att bygga egen fil.
-// Fas 2 byter till en svensk hostad fil med SHA-256-verifiering.
+// Sverige + tre demo-filer. Sverige är default; demos kvar för testing av
+// stilar mot publika små filer.
 const DEMO_URLS = [
+    {
+        name: 'Sverige z 0–13 (vector, 567 MB)',
+        url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/sverige.pmtiles',
+        description: 'Hela Sverige från OpenStreetMap. Pre-download rekommenderas.',
+        center: [62.0, 16.5],
+        zoom: 5
+    },
     {
         name: 'Florens (vector, 6,6 MB)',
         url: 'https://raw.githubusercontent.com/protomaps/PMTiles/main/spec/v3/protomaps%28vector%29ODbL_firenze.pmtiles',

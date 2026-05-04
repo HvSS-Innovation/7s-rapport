@@ -172,21 +172,25 @@ för testing).
 **Ej klart i Fas 1:** ingen pre-download (kommer i Fas 2 när hosting är
 löst). Bara on-demand range-requests mot demo-URL.
 
-### Fas 2 — Hosting + pre-download *(KLIENT LEVERERAD 2026-05-03, FILEN BLOCKERAD PÅ ANVÄNDARE-BUILD)*
+### Fas 2 — Hosting + pre-download *(LEVERERAD 2026-05-04)*
 
-**Status:** klient-koden för pre-download + SHA-256 + lokal Range-stöd
-via Service Worker är klar och pushad. Testbar mot demo-pmtiles direkt
-(ingen hash-verifiering på demos). Återstår innan helt körigt:
+**Status:** Sverige-pmtiles byggd, hostad på Cloudflare R2 med CORS för
+7srapport.com. Pre-download + SHA-256-verifiering aktiv i klient.
 
-1. Användaren följer [audit/pmtiles-build.md](pmtiles-build.md) för att
-   bygga `sverige.pmtiles` och ladda upp till GitHub Releases.
-2. Uppdatera tre konstanter högst upp i [pmtiles-layer.js](../pmtiles-layer.js):
-   - `SVERIGE_PMTILES_URL` — Releases download-URL
-   - `SVERIGE_PMTILES_SHA256` — hash från `sha256sum sverige.pmtiles`
-   - `SVERIGE_PMTILES_BYTES` — filstorlek
-3. Commit + push. CI deployar.
-4. Användaren klickar Härdat läge → ⬇ Ladda ner offline → progress-bar
-   → SHA-256 verifieras automatiskt → klart.
+- **Fil:** `sverige.pmtiles` 567 MB, z 0–13, OpenMapTiles-schema
+- **Host:** `https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/sverige.pmtiles`
+  (Cloudflare R2 bucket `hv-pmtiles`, gratis under 10 GB)
+- **SHA-256:** `c4305c6515e3b795870cfc2ca21cd129074a666a960383917a1a9f82527527df`
+- **Backup:** GitHub Releases `pmtiles-v1` (samma SHA-256, men utan CORS
+  så används inte direkt — kvar som fallback om R2 sägs upp)
+
+**Bygg-pipeline:** Planetiler 0.10.2 via Java JAR (utan Docker).
+Sverige-extract från Geofabrik. ~5 min build-tid på Joel:s maskin.
+Detaljerad i [audit/pmtiles-build.md](pmtiles-build.md).
+
+**Upload-pipeline:** `boto3` failade pga Windows TLS-stack-problem mot
+`*.r2.cloudflarestorage.com` — vi använde **rclone** (Go-binär, egen
+TLS-stack) med `--s3-no-check-bucket`-flagga. ~45 sek upload @ 12 MiB/s.
 
 
 
