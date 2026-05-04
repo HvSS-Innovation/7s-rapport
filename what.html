@@ -205,11 +205,11 @@
             <!-- STÄLLE -->
             <div class="form-group">
                 <div class="label-row">
-                    <label for="stalle">Ställe</label>
+                    <label for="stalle">Målets position</label>
                     <button class="field-clear" tabindex="-1" onclick="document.getElementById('stalle').value=''">RENSA ×</button>
-                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStalle')" aria-label="Info om Ställe">i</button>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStalle')" aria-label="Info om Målets position">i</button>
                 </div>
-                <div class="info-text" id="infoStalle">Var fordonet observerades. MGRS-koordinater eller beskrivning.</div>
+                <div class="info-text" id="infoStalle">Var fordonet observerades — <strong>INTE din egen position</strong>. MGRS-koordinater eller beskrivning.</div>
                 <div class="input-row">
                     <input type="text" id="stalle" placeholder="Plats / koordinater" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="openMapModal()">🗺 Karta</button>
