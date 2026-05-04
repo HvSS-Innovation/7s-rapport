@@ -72,13 +72,24 @@
 <div class="card">
   <h2>Vad rensas</h2>
   <ul>
-    <li><b>localStorage</b> — kartcache, TNR-format, sliders, formdata</li>
+    <li><b>localStorage</b> — kartcache, TNR-format, sliders, formdata, sparade offline-områden, PMTiles-inställningar</li>
     <li><b>sessionStorage</b> — tillfällig flik-data</li>
     <li><b>IndexedDB</b> — minkarta- och sensorskiss-ritningar</li>
-    <li><b>Cache API</b> — Service Workerns offline-bundle (HTML, JS, fonter, ortnamn) <em>och</em> nedladdade kart-tiles (<code>hv-offline-tiles-v1</code>) som du sparat via <b>Spara område offline</b> i MINKARTA/SENSORSKISS</li>
+    <li><b>Cache API</b> — Service Workerns offline-bundle (HTML, JS, fonter, ortnamn), nedladdade kart-tiles (<code>hv-offline-tiles-v1</code>) <em>och</em> ev. PMTiles-paket från Härdat läge — alla GB</li>
     <li><b>Service Worker</b> — avregistreras helt</li>
   </ul>
-  <p><small><b>Rensas inte:</b> webbläsarens egna historik, cookies satta av andra sajter, kameraroll, eller filer du själv har laddat ner. Det måste du rensa via webbläsarens inställningar och OS:et.</small></p>
+</div>
+
+<div class="card" style="border-color:var(--warn)">
+  <h2 style="color:var(--warn)">Vad detta INTE räcker till</h2>
+  <p><small>Detta är inte en kryptoradio-zeroize. Knappen rensar appens egen sandbox men inte OS- eller webbläsarspår utanför den.</small></p>
+  <ul>
+    <li><b>Webbläsarens egen HTTP-cache och historik</b> — URL:er du besökt och resurser webbläsaren cachat utanför Service Worker. Måste rensas via webbläsarens egna inställningar (Rensa surfdata → All tid).</li>
+    <li><b>Auto-fyll och formulärförslag</b> som sparats innan <code>opsec.js</code> började blockera dem. Rensas via webbläsarens inställningar.</li>
+    <li><b>OS-nivå spår</b> — automatiska screenshots i kameraroll, app-switcher-thumbnails (iOS/Android tar bild när du växlar app, kan visa ritning på kartan), swap-fil, clipboard-historik. Endast OS-rensning eller fabriksåterställning hjälper.</li>
+    <li><b>Forensisk återställning vid beslagtagen enhet</b> — verktyg som Cellebrite/GrayKey kan rekonstruera raderad data från flash/SSD. Endast fabriksåterställning <em>plus</em> flera överskrivningar (eller fysisk förstöring) är nära garanti.</li>
+  </ul>
+  <p><small><b>Praktiskt:</b> daglig rensning innan känslig övning → "Glöm enheten" räcker. Enhet som ska lämnas över → "Glöm enheten" + manuell webbläsar-rensning. Beslagtagen / förlorad enhet → fabriksåterställning av enheten är det som krävs.</small></p>
 </div>
 
 <div class="card">
