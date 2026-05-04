@@ -943,6 +943,14 @@
             if (btn.textContent !== txt) btn.textContent = txt;
             return;
         }
+        // Lagg launcher i en egen .mk-controls-row sa CSS-delaren mellan
+        // rader (.mk-controls-row + .mk-controls-row) ritas mellan
+        // offline/hardat-raden och launchern.
+        let row = host.querySelector('.mkt-launcher-row');
+        if (!row) {
+            row = el('div', { class: 'mk-controls-row mkt-launcher-row' });
+            host.appendChild(row);
+        }
         btn = el('button', {
             type: 'button',
             class: 'btn btn-sm btn-default mkt-launcher',
@@ -950,7 +958,7 @@
             title: 'Starta interaktiv rundtur av kartan'
         });
         btn.addEventListener('click', () => openMenu(btn));
-        host.appendChild(btn);
+        row.appendChild(btn);
     }
 
     // ── Init ─────────────────────────────────────────────────────────────────
