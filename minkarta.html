@@ -286,9 +286,16 @@
 
         /* Genvägsrad under kartan (v4): Namn-etiketter-toggle + Pan-läge */
         .map-controls {
-            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            display: block;
             margin-top: 8px; padding: 8px 10px;
             background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+        }
+        .map-controls .mk-controls-row {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+        }
+        .map-controls .mk-controls-row + .mk-controls-row {
+            border-top: 1px solid var(--border);
+            margin-top: 8px; padding-top: 8px;
         }
         .map-controls label {
             display: flex; align-items: center; gap: 6px;
@@ -296,8 +303,6 @@
             cursor: pointer; letter-spacing: 0.02em; text-transform: none; font-weight: 500;
         }
         .map-controls input[type="checkbox"] { accent-color: var(--accent); width: 16px; height: 16px; }
-        .map-controls .btn-sm { margin-left: auto; }
-        @media (max-width: 360px) { .map-controls .btn-sm { margin-left: 0; } }
 
         /* Export-popover (Ladda ner / Dela) */
         .mk-share-popover {
@@ -1193,6 +1198,16 @@ function renderMapControls() {
     if (!host) return;
     host.innerHTML = '';
 
+    // Tva rader: vy/interaktion ovan, offline/hardat under. Layout-uppdelning
+    // gor det tydligt vilka kontroller som hor ihop. Befintliga knappar
+    // appendas till respektive row-container istallet for direkt till host.
+    const row1 = document.createElement('div');
+    row1.className = 'mk-controls-row';
+    const row2 = document.createElement('div');
+    row2.className = 'mk-controls-row';
+    host.appendChild(row1);
+    host.appendChild(row2);
+
     // Namn-etiketter-toggle (samma logik som v3 .palette-layers)
     const labelsLabel = document.createElement('label');
     const labelsCb = document.createElement('input');
@@ -1206,7 +1221,7 @@ function renderMapControls() {
     });
     labelsLabel.appendChild(labelsCb);
     labelsLabel.appendChild(document.createTextNode(' Namn-etiketter'));
-    host.appendChild(labelsLabel);
+    row1.appendChild(labelsLabel);
 
     // Visa modell-toggle (v4.1) — när på + obj.modell finns blir brickan
     // "Stridsvagnsmina 5" istället för bara "Stridsvagnsmina".
@@ -1222,7 +1237,7 @@ function renderMapControls() {
     });
     modelLabel.appendChild(modelCb);
     modelLabel.appendChild(document.createTextNode(' Visa modell'));
-    host.appendChild(modelLabel);
+    row1.appendChild(modelLabel);
 
     // "Panorera / välj"-knappen (tidigare "Pan-läge"). Samma logik — sätter
     // activeTool=null så kartan kan panoreras OCH klick på utlagda symboler
@@ -1233,7 +1248,7 @@ function renderMapControls() {
     panBtn.textContent = 'Panorera / välj';
     panBtn.title = 'Panorera kartan; klicka en symbol för att redigera eller ta bort';
     panBtn.addEventListener('click', () => setActiveTool(null));
-    host.appendChild(panBtn);
+    row1.appendChild(panBtn);
 
     // Fullskärmsknapp — tangent slås upp i shortcutMap (default F).
     // Shift+klick kör även äkta requestFullscreen(). Dubbelklick öppnar
@@ -1265,7 +1280,7 @@ function renderMapControls() {
         if (fullClickTimer) { clearTimeout(fullClickTimer); fullClickTimer = null; }
         openShortcutDialog(FULLMAP_PSEUDO);
     });
-    host.appendChild(fullBtn);
+    row1.appendChild(fullBtn);
 
     // Offline-cache: öppna en modal som låter användaren ladda ner
     // tiles för nuvarande viewport till en separat Cache API-namespace.
@@ -1281,7 +1296,7 @@ function renderMapControls() {
             if (!map) return;
             window.OfflineTiles.openModal(map);
         });
-        host.appendChild(offlineBtn);
+        row2.appendChild(offlineBtn);
     }
 
     // Härdat läge (PMTiles, Fas 1). Knappen visas alltid; klick utan att
@@ -1316,7 +1331,7 @@ function renderMapControls() {
         }, { once: true });
     }
     refreshHardenBtn();
-    host.appendChild(hardenBtn);
+    row2.appendChild(hardenBtn);
 
     // Stil-väljare för Härdat läge — bara aktiv när PMTiles är på.
     const flavorSel = document.createElement('select');
@@ -1354,7 +1369,7 @@ function renderMapControls() {
         }, { once: true });
     }
     refreshFlavorSel();
-    host.appendChild(flavorSel);
+    row2.appendChild(flavorSel);
 
     // Pre-download (Fas 2): laddar ner hela aktiv PMTiles-fil till lokal
     // cache. Efter download serverar SW alla range-requests lokalt — noll
@@ -1430,7 +1445,7 @@ function renderMapControls() {
         }, { once: true });
     }
     refreshPrefetchBtn();
-    host.appendChild(prefetchBtn);
+    row2.appendChild(prefetchBtn);
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()

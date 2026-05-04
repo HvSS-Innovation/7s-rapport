@@ -155,9 +155,16 @@
 
         /* Genvägsrad under kartan */
         .map-controls {
-            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+            display: block;
             margin-top: 8px; padding: 8px 10px;
             background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+        }
+        .map-controls .mk-controls-row {
+            display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+        }
+        .map-controls .mk-controls-row + .mk-controls-row {
+            border-top: 1px solid var(--border);
+            margin-top: 8px; padding-top: 8px;
         }
         .map-controls label {
             display: flex; align-items: center; gap: 6px;
@@ -1568,11 +1575,18 @@ function closeExportPopover() {
     document.removeEventListener('click', outsideExportClick, true);
 }
 
-// ── map-controls-rad (Namn-etiketter + Pan-läge) ───────────────────────────
+// ── map-controls-rader: vy/interaktion + offline/hardat ────────────────────
 function renderMapControls() {
     const host = document.getElementById('mapControls');
     if (!host) return;
     host.innerHTML = '';
+
+    const row1 = document.createElement('div');
+    row1.className = 'mk-controls-row';
+    const row2 = document.createElement('div');
+    row2.className = 'mk-controls-row';
+    host.appendChild(row1);
+    host.appendChild(row2);
 
     const labelsLabel = document.createElement('label');
     const labelsCb = document.createElement('input');
@@ -1586,7 +1600,7 @@ function renderMapControls() {
     });
     labelsLabel.appendChild(labelsCb);
     labelsLabel.appendChild(document.createTextNode(' Namn-etiketter'));
-    host.appendChild(labelsLabel);
+    row1.appendChild(labelsLabel);
 
     const panBtn = document.createElement('button');
     panBtn.type = 'button';
@@ -1595,7 +1609,7 @@ function renderMapControls() {
     panBtn.title = 'Panorera kartan; klicka en symbol för att redigera';
     panBtn.style.marginLeft = 'auto';
     panBtn.addEventListener('click', () => setActiveTool(null));
-    host.appendChild(panBtn);
+    row1.appendChild(panBtn);
 
     const tutBtn = document.createElement('button');
     tutBtn.type = 'button';
@@ -1605,7 +1619,7 @@ function renderMapControls() {
     tutBtn.addEventListener('click', () => {
         if (window.SK_TUTORIAL) window.SK_TUTORIAL.start('welcome');
     });
-    host.appendChild(tutBtn);
+    row1.appendChild(tutBtn);
 
     // Fullskärmsknapp — tangent slås upp i shortcutMap (default F).
     // Shift+klick = äkta fullskärm. Dubbelklick öppnar mapping-dialog.
@@ -1636,7 +1650,7 @@ function renderMapControls() {
         if (fullClickTimer) { clearTimeout(fullClickTimer); fullClickTimer = null; }
         openShortcutDialog(FULLMAP_PSEUDO);
     });
-    host.appendChild(fullBtn);
+    row1.appendChild(fullBtn);
 
     // Offline-cache (Fas 1/2): nedladdning av tiles for nuvarande viewport
     // till en separat Cache API-namespace ('hv-offline-tiles-v1'). Modulen
@@ -1651,7 +1665,7 @@ function renderMapControls() {
             if (!map) return;
             window.OfflineTiles.openModal(map);
         });
-        host.appendChild(offlineBtn);
+        row2.appendChild(offlineBtn);
     }
 
     // Härdat läge (PMTiles, Fas 1) — se motsvarande knapp i minkarta.html.
@@ -1683,7 +1697,7 @@ function renderMapControls() {
         }, { once: true });
     }
     refreshHardenBtn();
-    host.appendChild(hardenBtn);
+    row2.appendChild(hardenBtn);
 
     // Stil-väljare för Härdat läge — se minkarta.html.
     const flavorSel = document.createElement('select');
@@ -1721,7 +1735,7 @@ function renderMapControls() {
         }, { once: true });
     }
     refreshFlavorSel();
-    host.appendChild(flavorSel);
+    row2.appendChild(flavorSel);
 
     // Pre-download (Fas 2) — se motsvarande block i minkarta.html.
     const prefetchBtn = document.createElement('button');
@@ -1794,7 +1808,7 @@ function renderMapControls() {
         }, { once: true });
     }
     refreshPrefetchBtn();
-    host.appendChild(prefetchBtn);
+    row2.appendChild(prefetchBtn);
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()
