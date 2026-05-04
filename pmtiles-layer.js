@@ -24,23 +24,30 @@ const STORAGE_KEY = 'pmtiles.hardening';
 const DEFAULT_FLAVOR = 'light'; // protomaps-leaflet: light/dark/white/grayscale/black
 const PMTILES_CACHE = 'hv-pmtiles-v1'; // separat Cache API-namespace, bevaras av SW activate-cleanup
 
-// Sverige-paketet — byggt 2026-05-04 via Planetiler 0.10.2 (OpenMapTiles 3.16.0
-// schema), z 0–15. Hostat på Cloudflare R2 med CORS för 7srapport.com.
-// Bygg-pipeline: audit/pmtiles-build.md.
+// Sverige-paketet — Protomaps Basemap-schema (matchar protomaps-leaflet
+// flavor:light renderer). Extraherat 2026-05-04 från Protomaps daily build
+// 20260503 via `pmtiles extract --bbox=10.5,55.0,24.5,69.5 --maxzoom=15`.
+// Hostat på Cloudflare R2 med CORS för 7srapport.com.
 //
-// 2026-05-04: bumpat maxzoom från 13 till 15 efter att gator inte syntes vid
-// hög zoom. Storlek 567 MB → 2.1 GB. Inom R2-gratis-tier (10 GB).
+// Tidigare attempts:
+//   2026-05-04 (567 MB, maxzoom=13): Planetiler default OpenMapTiles
+//     schema. Inga detaljer över z 13.
+//   2026-05-04 (2.1 GB, maxzoom=15): Planetiler default OpenMapTiles
+//     schema. Schema-mismatch mot protomaps-leaflet → bara landuse/water
+//     renderades, inga gator/byggnader synliga.
+//   2026-05-04 (4.1 GB, Protomaps Basemap): denna. Korrekt schema, gator
+//     + byggnader renderas via flavor:light.
 const SVERIGE_PMTILES_URL = 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/sverige.pmtiles';
-const SVERIGE_PMTILES_SHA256 = '1af655eb764aec570f47f81fa5c4189e4a0e40a5d9efd66fe7ca4435abd974a8';
-const SVERIGE_PMTILES_BYTES = 2189906834;
+const SVERIGE_PMTILES_SHA256 = '296561038cbde633f7c17b49e54157649ab4fd547f868c00b3d744c5fc472d80';
+const SVERIGE_PMTILES_BYTES = 4376446035;
 
 // Sverige + tre demo-filer. Sverige är default; demos kvar för testing av
 // stilar mot publika små filer.
 const DEMO_URLS = [
     {
-        name: 'Sverige z 0–15 (vector, 2,1 GB)',
+        name: 'Sverige z 0–15 (Protomaps, 4,1 GB)',
         url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/sverige.pmtiles',
-        description: 'Hela Sverige från OpenStreetMap. Pre-download rekommenderas (2,1 GB engångsdownload).',
+        description: 'Hela Sverige, Protomaps Basemap-schema. Gator + byggnader synliga vid z 14–15.',
         center: [62.0, 16.5],
         zoom: 5
     },

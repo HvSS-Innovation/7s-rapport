@@ -1,9 +1,42 @@
 # PMTiles bygg-pipeline (Sverige)
 
-**Datum:** 2026-05-03
-**Syfte:** Bygga `sverige.pmtiles` från svenska OpenStreetMap-data, beräkna
-SHA-256, ladda upp till GitHub Releases. Allt utanför 7srapport.com — du
-kör detta lokalt en gång eller per kvartal.
+**Datum:** 2026-05-04 (uppdaterad — bytt från Planetiler-bygge till
+Protomaps daily-extract pga schema-mismatch).
+**Syfte:** Skapa `sverige.pmtiles` med **Protomaps Basemap-schema** så att
+protomaps-leaflet:s renderare visar gator + byggnader korrekt. Snabbaste
+vägen: `pmtiles extract` mot Protomaps publika daily-build.
+
+> **Tidigare approach (kvar för referens):** Planetiler bygge från OSM
+> extract producerar OpenMapTiles-schema, vilket protomaps-leaflet inte
+> renderar fullt ut (bara landuse/water). Använd extract-vägen istället.
+
+**Snabbpipeline (~5 min):**
+```bash
+# 1. Hämta pmtiles CLI (Windows-binär eller Linux/Mac equivalent)
+curl -fsSL https://github.com/protomaps/go-pmtiles/releases/latest/download/go-pmtiles_*_Windows_x86_64.zip -o pmtiles-cli.zip
+unzip pmtiles-cli.zip
+
+# 2. Extracta Sverige från senaste Protomaps daily build
+./pmtiles.exe extract \
+  https://build.protomaps.com/$(date -u +%Y%m%d).pmtiles \
+  sverige.pmtiles \
+  --bbox=10.5,55.0,24.5,69.5 \
+  --maxzoom=15
+
+# 3. SHA-256 + bytes
+sha256sum sverige.pmtiles
+stat -c %s sverige.pmtiles  # eller wc -c
+```
+
+Resterande steg (R2 upload + uppdatera klient) är samma som beskrivet
+nedan, men du hoppar över Planetiler-sektionen.
+
+---
+
+## Gamla pipeline (Planetiler-bygge — DEPRECATED för 7srapport.com)
+
+Schema-mismatch — använd inte. Behållen för referens om annat
+renderingssystem används framöver.
 
 **Slutprodukt:**
 - `sverige.pmtiles` — ~150–250 MB beroende på max-zoom
