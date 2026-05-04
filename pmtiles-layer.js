@@ -25,19 +25,22 @@ const DEFAULT_FLAVOR = 'light'; // protomaps-leaflet: light/dark/white/grayscale
 const PMTILES_CACHE = 'hv-pmtiles-v1'; // separat Cache API-namespace, bevaras av SW activate-cleanup
 
 // Sverige-paketet — byggt 2026-05-04 via Planetiler 0.10.2 (OpenMapTiles 3.16.0
-// schema), z 0–13. Hostat på Cloudflare R2 med CORS för 7srapport.com.
+// schema), z 0–15. Hostat på Cloudflare R2 med CORS för 7srapport.com.
 // Bygg-pipeline: audit/pmtiles-build.md.
+//
+// 2026-05-04: bumpat maxzoom från 13 till 15 efter att gator inte syntes vid
+// hög zoom. Storlek 567 MB → 2.1 GB. Inom R2-gratis-tier (10 GB).
 const SVERIGE_PMTILES_URL = 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/sverige.pmtiles';
-const SVERIGE_PMTILES_SHA256 = 'c4305c6515e3b795870cfc2ca21cd129074a666a960383917a1a9f82527527df';
-const SVERIGE_PMTILES_BYTES = 567077891;
+const SVERIGE_PMTILES_SHA256 = '1af655eb764aec570f47f81fa5c4189e4a0e40a5d9efd66fe7ca4435abd974a8';
+const SVERIGE_PMTILES_BYTES = 2189906834;
 
 // Sverige + tre demo-filer. Sverige är default; demos kvar för testing av
 // stilar mot publika små filer.
 const DEMO_URLS = [
     {
-        name: 'Sverige z 0–13 (vector, 567 MB)',
+        name: 'Sverige z 0–15 (vector, 2,1 GB)',
         url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/sverige.pmtiles',
-        description: 'Hela Sverige från OpenStreetMap. Pre-download rekommenderas.',
+        description: 'Hela Sverige från OpenStreetMap. Pre-download rekommenderas (2,1 GB engångsdownload).',
         center: [62.0, 16.5],
         zoom: 5
     },
