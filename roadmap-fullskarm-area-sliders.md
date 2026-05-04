@@ -6,7 +6,12 @@ Tre funktioner i `minkarta.html` / `sensorskiss.html`:
 2. **Areal för "Minerat område"** (bara `minkarta.html` — `minomrade` är polygon)
 3. **Sliders för Räckvidd & Öppningsvinkel i verkansområde** (bara `minkarta.html` — `verkansomrade` finns inte i sensorskiss)
 
-> **Status: ej startad. Inväntar "kör".**
+> **STATUS: ✅ KLAR — alla 4 faser levererade 2026-04-29.**
+>
+> - Fas 1 (`caf180b`): MINKARTA fullskärmsläge (knapp + tangent F)
+> - Fas 2 (`08c87a0`): SENSORSKISS fullskärmsläge
+> - Fas 3 (`4c8e4a6`): areal (m²/ha/km²) i edit-popup för minerat område
+> - Fas 4 (`c43fa1f`): sliders för Räckvidd + Öppningsvinkel + rename `is-rotating` → `is-editing-live`
 
 ---
 

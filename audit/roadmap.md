@@ -7,42 +7,42 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 
 ## Sväng 1 — idag, push live
 
-### 1.1 Ta bort passiva geolocation-prompts vid kartmodal
+### 1.1 Ta bort passiva geolocation-prompts vid kartmodal — ✅ KLAR (2026-04-30, `bbdbd30`)
 - **Problem:** `openMapModal()` i sex filer (index, ah, scrim, what, weft, obslosa) anropar `navigator.geolocation.getCurrentPosition()` automatiskt vid öppning, vilket utlöser webbläsarens permission-prompt utan att användaren bett om det. Bryter explicit den hårda OPSEC-regeln.
 - **Lösning:** Ta bort `if (navigator.geolocation) { ... }`-blocket. Behåll `mapLastPos`-cache som initialvy. Användaren har redan `gpsBtn` (📍 MGRS) för explicit position och kan dra/klicka manuellt på kartan.
 - **Tid:** 15 min.
 - **Risk:** Minimal. Användare som hittills *fick* automatisk centrering på sin position behöver nu antingen trycka MGRS-knappen eller dra kartan. UX-friktion: 1 extra tap för dem som vill det.
 - **Mätbart:** 0 passiva geolocation-anrop kvar i grep.
 
-### 1.2 Skärp CSP-meta i alla 15 HTML-filer
+### 1.2 Skärp CSP-meta i alla 15 HTML-filer — ✅ DELVIS KLAR (strikt CSP på `opsec.html` levererad `61e7ea7`; bredare utrullning till alla 15 filer kvarstår)
 - **Problem:** Nuvarande CSP är bara `upgrade-insecure-requests`. Ingen sandboxing.
 - **Lösning:** Byt ut till en restriktiv `default-src 'self'`-policy som tillåter exakt de tre tile-domänerna, Nominatim, Overpass, SMHI, jsDelivr (för exifr), unpkg (för Leaflet) — och inget annat. `'unsafe-inline'` behövs för inline-script tills Sväng 2.
 - **Tid:** 30 min (centraliserat genom en sed-aktig multi-fil-redigering).
 - **Risk:** Om något inline-script försöker fetch:a en odeklarerad domän slutar det fungera tyst. Mitigation: testa varje sida efter deploy och justera.
 - **Mätbart:** `securityheaders.com`-betyg för 7srapport.com går från D till B (full A+ kräver server-headers, Sväng 3).
 
-### 1.3 Lägg till Referrer-Policy och no-translate
+### 1.3 Lägg till Referrer-Policy och no-translate — ✅ KLAR (referrer-policy → strict-origin via `c6f79fc`; no-translate och övriga meta lagda i samma sweep)
 - **Problem:** Default referrer-policy läcker `https://7srapport.com` till varje extern domän. Google Translate föreslår automatöversätta sidan.
 - **Lösning:** `<meta name="referrer" content="no-referrer">` och `<meta name="google" content="notranslate">` i alla 15 filer.
 - **Tid:** 10 min.
 - **Risk:** Ingen.
 - **Mätbart:** `Referer:` är tom på alla utgående requests.
 
-### 1.4 XML-escape i CoT-genereringen
+### 1.4 XML-escape i CoT-genereringen — ✅ KLAR (2026-04-30, `85ade1d` + regression-test i `audit/cot-fuzz.html`; konsoliderat i `opsec.js` via `74a4931`)
 - **Problem:** Användarinput hamnar oescape:ad i `<contact callsign="...">` och i text-noder. Användaren kan av misstag bryta XML eller, värre, injicera fientliga taggar i CoT-flödet.
 - **Lösning:** Ny `escapeXml()`-helpers, applicerad konsekvent runt varje `${...}` i CoT-strings. Verifiera med testfältet `</cot><evil/>`.
 - **Tid:** 1–2 timmar (5 filer × ~10 templates).
 - **Risk:** Om en escape glöms blir CoT-fil ogiltig och går inte att importera i TAK. Mitigation: lägg en regression-test (manuell kallad: testfältet) i en `audit/cot-fuzz.html`.
 - **Mätbart:** Testfältet `</cot><evil/>"&'<` rinner igenom varje formulär och producerar en valid XML-fil där det är `&lt;/cot&gt;` etc.
 
-### 1.5 "Glöm allt"-knapp
+### 1.5 "Glöm allt"-knapp — ✅ KLAR (2026-04-30, `56ea164` "Glöm enheten"-sida med dubbelbekräftelse; offline-tiles-cachen explicit nämnd via `57a9a24`)
 - **Problem:** Inget enkelt sätt att rensa storage på enheten innan den lämnas över / tas. localStorage, sessionStorage, IndexedDB, Cache API, Service Worker — fyra ställen att rensa manuellt.
 - **Lösning:** Ny gemensam OPSEC-meny (knapp i footern på alla sidor — eller en dedikerad `/opsec.html`). En knapp "🧹 Glöm allt på den här enheten" med dubbelbekräftelse. Rensar localStorage, sessionStorage, alla IDB-databaser, alla cache:s, avregistrerar Service Worker, navigerar till `about:blank`.
 - **Tid:** 1 timme.
 - **Risk:** Användaren råkar trycka — det är därför dubbelbekräftelse finns. Sekundärrisk: kan göra appen offline-trasig till nästa nätuppkoppling. Beskriv det rakt i bekräftelsedialogen.
 - **Mätbart:** `localStorage.length === 0`, `(await caches.keys()).length === 0`, `await new Promise(r=>{const req=indexedDB.databases();req.onsuccess=()=>r(req.result);})` ger tom array efter klick.
 
-### 1.6 OPSEC form-sweep
+### 1.6 OPSEC form-sweep — ✅ KLAR (2026-04-30, `bbdbd30` härdar formulär globalt; `a7df397`-7f7a81e a11y-stöd för select i `opsec.js`)
 - **Problem:** `autocomplete`/`spellcheck`/`data-1p-ignore` saknas konsekvent — webbläsare och password managers kan föreslå att spara taktisk text.
 - **Lösning:** Ny `opsec.js` som vid `DOMContentLoaded` sätter `autocomplete="off"`, `spellcheck="false"`, `autocorrect="off"`, `autocapitalize="off"`, `data-1p-ignore`, `data-bwignore`, `data-lpignore`, `data-form-type="other"` på alla `<input>` och `<textarea>` (utom `type="file"`). Inkludera `opsec.js` före övriga script i alla 15 sidor.
 - **Tid:** 30 min.
@@ -56,7 +56,7 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 - **Risk:** Lätt att glömma någon. Mitigation: grep efter emoji-block (`[\u{1F300}-\u{1FAFF}]`) före commit.
 - **Mätbart:** 0 emoji i `<button>`-innehåll efter sweep.
 
-### 1.8 Footer- och versions-städ
+### 1.8 Footer- och versions-städ — ✅ KLAR (delad `footer.js` `63cf200`, råa XML-källor exkluderade `6dc6a36`, dubblett `parse-ortnamn` borttagen `24ff08c`, `roadmap-*.md` ignorerade `94dc672`)
 - **Problem:** Roten har `Screenshot_*.png`, `20260409_153702.png`, `kriterier.xml`, `sjöar.xml`, `öar.xml` (filnamn med å,ö), två `parse-ortnamn`-script. Skräpig att navigera.
 - **Lösning:** Flytta screenshots till `audit/screenshots/` (eller `git rm` om de inte används). XML-källfilerna till `raw/`. Ta bort dubbletten av `parse-ortnamn`. Beslut tas tillsammans med användaren — jag listar vad jag ser men rör inte filer som kan vara underlag i pågående arbete.
 - **Tid:** 5 min beslut + 5 min flytt.
@@ -67,7 +67,7 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 
 ## Sväng 2 — denna vecka
 
-### 2.1 Self-hosta Leaflet och exifr
+### 2.1 Self-hosta Leaflet och exifr — ✅ KLAR (2026-05-03, `3b62c07`)
 - **Problem:** Två tredjepart-CDN:er (jsDelivr, unpkg) loggar IP vid varje sidöppning. Bryter "ingen extern part ska se besök".
 - **Lösning:** Lägg `vendor/leaflet-1.9.4/` och `vendor/exifr-7.1.3/` lokalt. Ändra `<script>`/`<link>` till lokala paths. Släpp SRI-attribut.
 - **Tid:** 1 timme.
@@ -129,7 +129,8 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 
 ## Sväng 3 — vision
 
-### 3.1 PMTiles offline-bundles
+### 3.1 PMTiles offline-bundles — ✅ KLAR Fas 1+2 (2026-05-03/04). Detaljerad roadmap i [`roadmap-pmtiles.md`](roadmap-pmtiles.md)
+> Fas 1 `7f30a13`: PMTiles-klient + UI-toggle "Härdat läge". Fas 2: Sverige z 0-15 (~4 GB) hostad på Cloudflare R2, streaming-nedladdning + SHA-256-verifiering, auto-cache-invalidering vid storleks-mismatch, Protomaps Basemap-schema (gator visas), stil-dropdown. Fas 3 (vector tiles via MapLibre GL) återstår som "kanske aldrig" / overstretch.
 - **Problem:** Karta loggar position till tile-server vid varje fält-användning. Den enda fix:en är offline.
 - **Lösning:** Bygg fyra-fem `.pmtiles`-bundles via `tippecanoe` från Lantmäteriets terränGData (eller OSM som fallback): Sverige-low-zoom (z 5–10), och fyra hi-zoom-regioner (z 11–17). Hosta som statisk fil på 7srapport.com. Ny "Härdat läge"-toggle som låser kartan till offline. Storlek: ~50 MB Sverige-low + ~200 MB per hi-zoom-region.
 - **Tid:** 2–3 dagar för pipeline + UI.
@@ -175,11 +176,72 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 
 ## Prioriteringslista (vad att göra först i Sväng 1)
 
-1. ☐ 1.1 — passiv geolocation (kritiskt OPSEC)
-2. ☐ 1.3 — referrer + no-translate (5 min, ren vinst)
-3. ☐ 1.6 — opsec.js form-sweep (30 min, ren vinst)
-4. ☐ 1.2 — CSP-skärpning
-5. ☐ 1.5 — "Glöm allt"-knapp
-6. ☐ 1.4 — XML-escape (kräver mest verifiering)
+1. ☑ 1.1 — passiv geolocation (kritiskt OPSEC)
+2. ☑ 1.3 — referrer + no-translate (5 min, ren vinst)
+3. ☑ 1.6 — opsec.js form-sweep (30 min, ren vinst)
+4. ◐ 1.2 — CSP-skärpning (delvis: opsec.html klar; resterande 14 sidor kvarstår)
+5. ☑ 1.5 — "Glöm allt"-knapp
+6. ☑ 1.4 — XML-escape (kräver mest verifiering)
 7. ☐ 1.7 — emoji-borttagning (störst sveptid)
-8. ☐ 1.8 — root-städ (efter användarens OK)
+8. ☑ 1.8 — root-städ (efter användarens OK)
+
+---
+
+## Implementerat utan att stå i roadmap (30 april – 4 maj)
+
+Saker som blev byggda men inte fanns som planerade rader i någon roadmap.
+Listad här som retroaktiv referens.
+
+### Hårdning / a11y / drift
+- **noscript-fallback på alla 16 sidor** (`0f051db`)
+- **aria-label + button-type-fixes** över hela sajten (`085b393`, `7f7a81e`, `cea61a5`)
+- **Robust localStorage-parse:** `JSON.parse` wrappad i try/catch i alla läsningar (`747d6ea`)
+- **Service Worker:** cache:a endast 2xx-svar — 403-tile fastnade tidigare (`0983985`)
+- **mobile-web-app-capable + manifest.json-meta** + utvidgad CI paths-ignore (`bf73ad1`)
+- **strikt CSP på `opsec.html`** + utvidgad CI paths-ignore (`61e7ea7`)
+- **Tre små opsec/SW-hardningar** (`9f2b282`)
+- **Fyra audit-sessioner dokumenterade** (`session-1.md` t.o.m. `session-4.md`) med t.ex. tnr-fuzz-sida, regression-test-utvidgning för CoT-fuzz, button-type-fix
+- **Refaktor:** `parseTnrToISO` + `escapeXml` konsoliderade till `opsec.js` (`74a4931`, `0b82ab9`)
+
+### Designsystem & UI-konsistens
+- **Designsystem-tokens + härdade `.btn`** Fas 1 (`c14a1b3`)
+- **Toggle + select-varianter, harmoniserade kartkontroller** Fas 2 (`da1e94f`)
+- **Kontrollraden uppdelad i två tydliga grupper** (`d469410`)
+- **Launcher-knapp får egen `.mk-controls-row`-grupp** (`23e9440`)
+- **Topo-flavor + stil-dropdown för Härdat läge** (`de5afbf`)
+- **(BETA)-badge på CoT/TAK-knappar på 5 sidor** (`7a5c8fb`) — `revert(reports)` i `a47af93` tog bort den från text-rapport och CoT-remarks per beslut
+- **Tutorial focus-ring + reduced-motion + accent-fallback** (`02e166a`)
+- **"Om projektet"-tab med design-tokens** (`a3e7c54`, `1d6f8e0`)
+
+### MINKARTA
+- **Räckvidds-etiketter på verkansområdets raka yttergränser** (`63f9d4f`)
+- **Räckvidds-etikett opak vit + center-mitten + zoom-låst storlek** (`2006461`)
+- **Larmmina-symbol förenklad enligt ny ritning** (`fc09440`)
+
+### SENSORSKISS
+- **Footer med integritetstext + feedback-länk + versionsrad** (`942050d`)
+- **Röd "Rensa allt"-knapp matchar minkarta** (`30d917b`)
+- **Exportera PNG-knapp i palette-toolbar** (popover, cache, dela) (`29586d0`)
+- **Reglementsenliga symboler m. inre rotation** (CIM/PIR/KAMERA/UMRA, Larmmina, Enkelpost, Dubbelpost, RPAS) (`62c765f`, `7eed0a3`, `43eb40e`, `643cc6b`)
+- **Drag-bara namnetiketter per symbol** (separat L.marker, lagras i `obj.labelLat/labelLng`, följer symbolen vid symboldrag) (`43eb40e`)
+- **Extern lång riktningslinje bara för PIR** via ny `externalLine`-flagga
+- **Text-placeholders för CIM/PIR/KAMERA/UMRA** i väntan på vektorformer (`d0eff65`)
+- **Roterbara HTML-prototyper** för enkelpost/dubbelpost/larmmina/UMRA-varianter i `stab/Ny mapp/` (`a9aad63`)
+
+### Kamuflage
+- **MVP-modal för bulk-nedladdning som döljer verkansområdet** (`a7df397`)
+- **Maxzoom 14 → 17 i bulk-modalen** (`c986385`)
+- **Beskär kamuflage-område till verkansområdet** Fas 2 (`e0f88e6`)
+- **Schemalagd hastighet, auto-paus, wake lock, resume** Fas 3 (`c793ce3`)
+- **Splittra till egen fil + koppla bort från sajten** efter beslut (`3e9882f`) — kvar som arkiv
+
+### CI / repo-drift
+- **GitHub Actions auto-svar på issues** (`c7de3bc`)
+- **`.claude/` ignorerad** (lokal Claude Code-config) (`ec9fda3`)
+- **`roadmap-*.md` ignorerade och borttagna ur repo** (innehöll lokal Dropbox-sökväg) (`94dc672`)
+- **`guide_egen_kopia.html` borttagen** (läckte lokal sökväg) (`c0fe529`)
+- **`fetch-ortnamn.sh` committad, obsolet `parse-ortnamn.js` raderad** (`24ff08c`)
+
+### Avskrivet/återtaget efter test
+- **7S Snabbrapport-läge** (Sväng 2.4): byggt + testat 2026-05-03, **togs bort** efter beslut att fullständiga 7S räcker. Avskrivningen är redan markerad i 2.4 ovan.
+- **Kamuflage-funktionen** kopplades bort från sajten efter beslut att inte stöta sig med OSM ToS — kvar som filsen referens.

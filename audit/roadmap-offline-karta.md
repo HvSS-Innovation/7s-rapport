@@ -64,7 +64,7 @@ ska in i" och funkar för dagens MVP.
 
 ---
 
-## Fas 1 — MVP (push idag)
+## Fas 1 — MVP (push idag) — ✅ LEVERERAD 2026-05-03 (`cc3aed5`)
 
 **Mål:** Användaren kan markera nuvarande viewport, ladda ner tiles, slå på
 flygplansläge, och se kartan i `minkarta.html`.
@@ -113,7 +113,7 @@ flygplansläge, och se kartan i `minkarta.html`.
 3. Reload `minkarta.html`. Pan inom området → tiles syns; pan utanför →
    grå rutor.
 
-## Fas 2 — Per-område-hantering (denna vecka)
+## Fas 2 — Per-område-hantering (denna vecka) — ✅ LEVERERAD 2026-05-03 (`d1bf9b0` + `ebc3103` enhetlig coverage-pille i alla sju kartor)
 
 - Samma "Spara offline"-knapp i `sensorskiss.html` (delar `offline-tiles.js`).
 - Lista av sparade områden i en `<details class="about">`-panel:
@@ -125,7 +125,7 @@ flygplansläge, och se kartan i `minkarta.html`.
 - Migrera `localStorage`-listan till IndexedDB om vi närmar oss 5 MB
   (osannolikt, men metadata växer linjärt).
 
-## Fas 3 — Underhåll (om tid finns)
+## Fas 3 — Underhåll (om tid finns) — ✅ LEVERERAD 2026-05-03 (Fas 3a `ad88aa0`: uppdatera-område + bakgrundsläge med flytande progress-pill. Fas 3b `54e34bf`: export/import av `.hvoffline`-paket)
 
 - Auto-uppdatera tiles äldre än X dagar (default 30) — bara när användaren
   manuellt klickar "Uppdatera område".
