@@ -331,7 +331,7 @@
             <div class="result-header">Rapport redo att kopieras</div>
             <div class="report-output" id="reportOutput"></div>
             <button class="btn btn-copy" onclick="copyToClipboard()">Kopiera till urklipp</button>
-            <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
+            <div class="copy-feedback" id="copyFeedback">Kopierat</div>
             <button class="btn btn-tak" onclick="showPublishDialog()">Publicera till TAK + dela via Signal<span style="font-family:ui-monospace,monospace;font-size:0.72em;font-weight:400;opacity:0.55;margin-left:8px;letter-spacing:0.05em;vertical-align:middle">(BETA)</span></button>
             <div class="cot-group">
                 <button class="btn btn-cot" onclick="copyCoT()">Kopiera CoT XML<span style="font-family:ui-monospace,monospace;font-size:0.72em;font-weight:400;opacity:0.55;margin-left:8px;letter-spacing:0.05em;vertical-align:middle">(BETA)</span></button>
@@ -472,7 +472,7 @@ function showVerifyBtn(mgrsStr) {
     if (!btn) {
         btn = document.createElement('button'); btn.id = 'verifyMapBtn';
         btn.className = 'btn btn-sm btn-time'; btn.tabIndex = -1;
-        btn.textContent = '✓ Visa på karta';
+        btn.textContent = 'Visa på karta';
         btn.style.cssText = 'margin-top:8px;width:100%;padding:14px;font-size:1rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer';
         const row = (document.getElementById('stalle') || document.getElementById('plats')).closest('.input-row');
         row.parentNode.insertBefore(btn, row.nextSibling);
@@ -509,7 +509,7 @@ async function readFoto(input) {
             const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
             const tz = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
             document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${tz}${months[d.getMonth()]}${d.getFullYear()}`;
-            status.textContent = '✓ Tid hämtad från foto.';
+            status.textContent = 'Tid hämtad från foto.';
         } else { status.textContent = 'Ingen tidsstämpel i bilden.'; }
     } catch(e) { status.textContent = 'Kunde inte läsa bilden: ' + e.message; }
     input.value = '';
@@ -610,8 +610,8 @@ function generateCoTXML() {
 }
 function copyCoT() {
     const xml = generateCoTXML();
-    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('✓ CoT XML kopierat')); }
-    else { const ta = document.createElement('textarea'); ta.value = xml; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showCotFeedback('✓ CoT XML kopierat'); } catch(e) { alert('Kunde inte kopiera.'); } document.body.removeChild(ta); }
+    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat')); }
+    else { const ta = document.createElement('textarea'); ta.value = xml; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showCotFeedback('CoT XML kopierat'); } catch(e) { alert('Kunde inte kopiera.'); } document.body.removeChild(ta); }
 }
 // ── Minimal ZIP-generator (ATAK Data Package) ──────────────────────────────
 function buildZip(files) {
@@ -680,12 +680,12 @@ function downloadCoT() {
     const url = URL.createObjectURL(dpBlob);
     const a = document.createElement('a'); a.href = url; a.download = `WHAT-rapport-${new Date().toISOString().slice(0,10)}.zip`;
     document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-    showCotFeedback('✓ Data Package nedladdad');
+    showCotFeedback('Data Package nedladdad');
 }
 function showCotFeedback(msg) {
     const el = document.getElementById('copyFeedback');
     el.textContent = msg; el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
-    setTimeout(() => { el.textContent = '✓ Kopierat'; }, 2500);
+    setTimeout(() => { el.textContent = 'Kopierat'; }, 2500);
 }
 function showPublishDialog() {
     const v = id => document.getElementById(id).value.trim();
@@ -705,11 +705,11 @@ function executePublish() {
     if (navigator.share) {
         const shareData = { text, files };
         if (navigator.canShare?.(shareData)) {
-            navigator.share(shareData).then(() => showCotFeedback('✓ Rapport delad')).catch(() => { fallbackDownloadCoT(xml); shareTextOnly(text); });
+            navigator.share(shareData).then(() => showCotFeedback('Rapport delad')).catch(() => { fallbackDownloadCoT(xml); shareTextOnly(text); });
         } else { fallbackDownloadCoT(xml); shareTextOnly(text); }
     } else {
         fallbackDownloadCoT(xml);
-        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(() => showCotFeedback('✓ Data Package nedladdad + text kopierad'));
+        if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(() => showCotFeedback('Data Package nedladdad + text kopierad'));
     }
 }
 function fallbackDownloadCoT(xml) {

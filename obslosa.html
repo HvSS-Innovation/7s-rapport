@@ -456,7 +456,7 @@
         <div class="result-header">OBSLÖSA redo att kopieras</div>
         <div class="report-output" id="reportOutput"></div>
         <button class="btn btn-copy" onclick="copyReport()">Kopiera till urklipp</button>
-        <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
+        <div class="copy-feedback" id="copyFeedback">Kopierat</div>
         <div class="button-group">
             <button class="btn btn-secondary" onclick="backToEdit()">Redigera</button>
             <button class="btn btn-danger" onclick="resetForm()">Nollställ</button>
@@ -536,7 +536,7 @@ function showVerifyBtn(mgrsStr) {
     if (!btn) {
         btn = document.createElement('button'); btn.id = 'verifyMapBtn';
         btn.className = 'btn btn-sm btn-time'; btn.tabIndex = -1;
-        btn.textContent = '✓ Visa på karta';
+        btn.textContent = 'Visa på karta';
         btn.style.cssText = 'margin-top:8px;width:100%;padding:14px;font-size:1rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer';
         var row = document.getElementById('plats').closest('.input-row');
         row.parentNode.insertBefore(btn, row.nextSibling);

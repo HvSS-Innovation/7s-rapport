@@ -123,7 +123,7 @@
         <div class="result-header">VÄDER redo att kopieras</div>
         <div class="prompt-box" id="promptOutput" contenteditable="true"></div>
         <button class="btn btn-copy" onclick="kopiera()">Kopiera till urklipp</button>
-        <div class="copy-feedback" id="copyFeedback">✓ Kopierat</div>
+        <div class="copy-feedback" id="copyFeedback">Kopierat</div>
         <div class="button-group" style="margin-top:8px">
             <button class="btn btn-secondary" onclick="document.getElementById('promptOutput').focus()">Redigera</button>
             <button class="btn btn-danger" onclick="nollstall()">Nollställ</button>
@@ -371,7 +371,7 @@ function toggleSmhi() {
     const btn = document.getElementById('smhiBtn');
     if (!smhiToggled) {
         el.textContent = el.textContent + '\n\nSMHI: ' + smhiUrl;
-        btn.textContent = '✓ SMHI-länk tillagd';
+        btn.textContent = 'SMHI-länk tillagd';
         smhiToggled = true;
     } else {
         el.textContent = el.textContent.replace(/\n\nSMHI: .+$/, '');
