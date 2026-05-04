@@ -130,47 +130,56 @@ async function prefetchPMTiles(url, opts) {
         const cache = await caches.open(PMTILES_CACHE);
 
         if (tooBigForHash) {
-            // Stora filer: streama via Response -> Cache API utan att
-            // buffra i JS-RAM. Cache API:s underliggande lagring är
-            // disk-backed (IndexedDB/QuotaManager) så detta funkar
-            // även för 2+ GB-filer på telefon.
-            //
-            // Vi måste tee:a body:n för progress-räkning + cache-skrivning.
-            const [forProgress, forCache] = resp.body.tee();
-
+            // Stora filer: läs streamen i chunks och bygg upp en Blob-of-
+            // blobs. Browser:n disk-backar stora Blobs automatiskt, så vi
+            // håller inte 4 GB Uint8Array i JS-RAM. Tee-approach (förra
+            // versionen) gav ingen progress eftersom cache.put konsumerade
+            // streamen synkront utan att schemalägga progress-tee:n.
+            const reader = resp.body.getReader();
+            const blobChunks = [];
             let loaded = 0;
-            const reader = forProgress.getReader();
-            const progressLoop = (async () => {
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-                    loaded += value.length;
-                    onProgress({
-                        loaded,
-                        total,
-                        percent: total ? Math.round(loaded / total * 100) : 0
-                    });
+            while (true) {
+                if (signal && signal.aborted) {
+                    throw Object.assign(new Error('Avbruten'), { name: 'AbortError' });
                 }
-            })();
+                const { done, value } = await reader.read();
+                if (done) break;
+                // new Blob([Uint8Array]) släpper referensen till typed
+                // array:en så GC kan ta den. Browser flyttar Blob:s data
+                // till disk när total storlek överstiger threshold (oftast
+                // ~64 MB). Progress-callbacken triggas per chunk.
+                blobChunks.push(new Blob([value]));
+                loaded += value.length;
+                onProgress({
+                    loaded,
+                    total,
+                    percent: total ? Math.round(loaded / total * 100) : 0
+                });
+            }
 
-            const cacheResponse = new Response(forCache, {
+            // Bygg final Blob — referenserar samma underliggande disk-data
+            // som chunk-bloben, ingen kopiering. type='octet-stream' för
+            // korrekt MIME i Cache.
+            const fullBlob = new Blob(blobChunks, { type: 'application/octet-stream' });
+            blobChunks.length = 0; // släpp chunk-references
+
+            const cacheResponse = new Response(fullBlob, {
                 status: 200,
                 statusText: 'OK',
                 headers: {
                     'Content-Type': 'application/octet-stream',
-                    'Content-Length': String(total),
+                    'Content-Length': String(loaded),
                     'Accept-Ranges': 'bytes'
                 }
             });
-            // cache.put konsumerar streamen — kör samtidigt med progress.
-            await Promise.all([cache.put(url, cacheResponse), progressLoop]);
+            await cache.put(url, cacheResponse);
 
             if (expectedSha256) {
                 console.warn('[pmtiles] Hoppar SHA-256 för fil > ' +
                     Math.round(SHA_THRESHOLD_BYTES / 1024 / 1024) + ' MB. ' +
                     'Litar på TLS + R2 ETag för integritet.');
             }
-            return { ok: true, bytes: loaded || total, hex: null, hashSkipped: true };
+            return { ok: true, bytes: loaded, hex: null, hashSkipped: true };
         }
 
         // Små filer: buffer + hash (demos).
