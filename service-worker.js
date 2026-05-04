@@ -108,8 +108,10 @@ function safePut(request, resp) {
 
 // Range-stöd för pmtiles cachade i PMTILES_CACHE. Klienten gör
 // HTTP Range-requests när protomaps-leaflet plockar individuella tiles ur
-// filen. Cache API matchar utan Range-header by default — vi måste
-// extrahera byte-rangen själva och returnera 206 Partial Content.
+// filen. Cache API matchar utan Range-header by default — vi extraherar
+// byte-rangen via Blob.slice() (disk-backed, lazy) istället för att läsa
+// hela filen i RAM. Tidigare arrayBuffer()-versionen sprängde mobil-RAM
+// vid 2+ GB-filer.
 async function servePmtilesRange(request) {
   const cache = await caches.open(PMTILES_CACHE);
   const cached = await cache.match(request, { ignoreVary: true });
@@ -121,20 +123,23 @@ async function servePmtilesRange(request) {
   const m = range.match(/^bytes=(\d+)-(\d*)$/);
   if (!m) return cached.clone();
 
-  const buf = await cached.clone().arrayBuffer();
+  const blob = await cached.clone().blob();
   const start = parseInt(m[1], 10);
-  const end = m[2] ? parseInt(m[2], 10) : buf.byteLength - 1;
-  if (start >= buf.byteLength || end < start) {
+  const end = m[2] ? parseInt(m[2], 10) : blob.size - 1;
+  if (start >= blob.size || end < start) {
     return new Response(null, { status: 416, statusText: 'Range Not Satisfiable' });
   }
-  const slice = buf.slice(start, end + 1);
+  // blob.slice() ar O(1) och kopierar inte data — bara en view in i samma
+  // underliggande lagring. Browser läser bara dessa bytes från disk när
+  // Response-konsumenten begär dem.
+  const slice = blob.slice(start, end + 1);
   return new Response(slice, {
     status: 206,
     statusText: 'Partial Content',
     headers: {
       'Content-Type': cached.headers.get('content-type') || 'application/octet-stream',
-      'Content-Length': String(slice.byteLength),
-      'Content-Range': 'bytes ' + start + '-' + end + '/' + buf.byteLength,
+      'Content-Length': String(slice.size),
+      'Content-Range': 'bytes ' + start + '-' + end + '/' + blob.size,
       'Accept-Ranges': 'bytes'
     }
   });

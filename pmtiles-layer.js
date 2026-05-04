@@ -97,12 +97,17 @@ async function verifyHash(buf, expectedSha256) {
     }
 }
 
-// Pre-download: hämta hela pmtiles-filen, verifiera SHA-256, skriv till
-// Cache API. När den är cachad räcker Service Worker-routen för att
-// servera range-requests från lokal cache (Cache API stödjer Range).
+// Pre-download: hämta hela pmtiles-filen och skriv till Cache API. För
+// stora filer (>SHA_THRESHOLD) hoppas SHA-256-verifieringen över för att
+// undvika OOM på mobila enheter — Web Crypto API saknar streaming-digest
+// så vi måste annars buffra hela filen i RAM, vilket sprängde Array
+// buffer-allokeringen vid 2 GB. Fallback: lita på TLS + R2 ETag.
 //
+// För filer under tröskeln behålls hash-verifiering (demos är 0,7–6,6 MB).
 // Returnerar Promise<{ok, bytes, hex, error}>. onProgress kallas med
 // {loaded, total, percent}.
+const SHA_THRESHOLD_BYTES = 256 * 1024 * 1024; // 256 MB
+
 async function prefetchPMTiles(url, opts) {
     opts = opts || {};
     const onProgress = opts.onProgress || function () {};
@@ -114,8 +119,54 @@ async function prefetchPMTiles(url, opts) {
         if (!resp.ok) throw new Error('HTTP ' + resp.status);
         const total = parseInt(resp.headers.get('content-length') || '0', 10);
 
-        // Stream:a in chunks så vi kan visa progress (fetch().arrayBuffer()
-        // ger ingen progress, men body.getReader() gör det).
+        const tooBigForHash = total > SHA_THRESHOLD_BYTES;
+        const cache = await caches.open(PMTILES_CACHE);
+
+        if (tooBigForHash) {
+            // Stora filer: streama via Response -> Cache API utan att
+            // buffra i JS-RAM. Cache API:s underliggande lagring är
+            // disk-backed (IndexedDB/QuotaManager) så detta funkar
+            // även för 2+ GB-filer på telefon.
+            //
+            // Vi måste tee:a body:n för progress-räkning + cache-skrivning.
+            const [forProgress, forCache] = resp.body.tee();
+
+            let loaded = 0;
+            const reader = forProgress.getReader();
+            const progressLoop = (async () => {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    loaded += value.length;
+                    onProgress({
+                        loaded,
+                        total,
+                        percent: total ? Math.round(loaded / total * 100) : 0
+                    });
+                }
+            })();
+
+            const cacheResponse = new Response(forCache, {
+                status: 200,
+                statusText: 'OK',
+                headers: {
+                    'Content-Type': 'application/octet-stream',
+                    'Content-Length': String(total),
+                    'Accept-Ranges': 'bytes'
+                }
+            });
+            // cache.put konsumerar streamen — kör samtidigt med progress.
+            await Promise.all([cache.put(url, cacheResponse), progressLoop]);
+
+            if (expectedSha256) {
+                console.warn('[pmtiles] Hoppar SHA-256 för fil > ' +
+                    Math.round(SHA_THRESHOLD_BYTES / 1024 / 1024) + ' MB. ' +
+                    'Litar på TLS + R2 ETag för integritet.');
+            }
+            return { ok: true, bytes: loaded || total, hex: null, hashSkipped: true };
+        }
+
+        // Små filer: buffer + hash (demos).
         const reader = resp.body.getReader();
         const chunks = [];
         let loaded = 0;
@@ -131,7 +182,6 @@ async function prefetchPMTiles(url, opts) {
             });
         }
 
-        // Slå ihop till en ArrayBuffer för hash-beräkning.
         const buf = new Uint8Array(loaded);
         let pos = 0;
         for (const c of chunks) { buf.set(c, pos); pos += c.length; }
@@ -146,9 +196,6 @@ async function prefetchPMTiles(url, opts) {
             };
         }
 
-        // Skriv till Cache API. Vi konstruerar en Response så range-requests
-        // mot samma URL hittar i cachen via SW:s caches.match().
-        const cache = await caches.open(PMTILES_CACHE);
         const cacheResp = new Response(buf, {
             status: 200,
             statusText: 'OK',
