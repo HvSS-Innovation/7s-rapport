@@ -47,6 +47,34 @@
             --warn: #e65100;
             --radius: 8px;
             --radius-sm: 4px;
+
+            /* Knapp-tokens — designsystem v1 (Fas 1).
+               Anvanda av .btn + dess varianter. Centraliserade har sa
+               nya knapp-stilar kan delas mellan filer utan duplicering. */
+            --btn-radius-sm: 4px;
+            --btn-radius-md: 8px;
+            --btn-h-sm: 36px;
+            --btn-h-md: 44px;
+            --btn-h-lg: 52px;
+            --btn-pad-x-sm: 12px;
+            --btn-pad-x-md: 16px;
+            --btn-pad-x-lg: 20px;
+            --btn-font-sm: 0.82rem;
+            --btn-font-md: 0.92rem;
+            --btn-font-lg: 1.0rem;
+            --btn-gap: 8px;
+            --btn-row-gap: 8px;
+            --btn-bg: var(--bg-card);
+            --btn-bg-hover: var(--accent-dim);
+            --btn-bg-active: var(--accent-dim);
+            --btn-border: var(--border);
+            --btn-border-hover: var(--border-focus);
+            --btn-border-active: var(--accent);
+            --btn-fg: var(--text-secondary);
+            --btn-fg-hover: var(--text-primary);
+            --btn-fg-active: var(--accent);
+            --btn-disabled-opacity: 0.45;
+            --btn-focus-ring: 0 0 0 2px rgba(76,175,80,0.45);
         }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; padding: 16px; }
@@ -67,13 +95,37 @@
         input[type="text"] { width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 1rem; padding: 12px 14px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; }
         input[type="text"]:focus { border-color: var(--border-focus); }
 
-        .btn { display: inline-flex; align-items: center; justify-content: center; min-height: 48px; padding: 12px 20px; border: none; border-radius: var(--radius); font-family: inherit; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s; -webkit-tap-highlight-color: transparent; }
-        .btn:active { transform: scale(0.97); }
-        .btn-sm { min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm); font-size: 0.85rem; white-space: nowrap; flex-shrink: 0; }
+        /* Knapp-bas (designsystem v1).
+           Bevarar bakatkompat med .btn-accent / .btn-ghost / .btn-primary i
+           ovriga sidor. Border ar 1px solid transparent som standard sa
+           varianter kan farga in den utan att hojden andras. */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 48px; padding: 12px 20px;
+            border: 1px solid transparent; border-radius: var(--radius);
+            font-family: inherit; font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em;
+            cursor: pointer;
+            transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s, box-shadow 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active:not(:disabled) { transform: scale(0.97); }
+        .btn:focus { outline: none; }
+        .btn:focus-visible { box-shadow: var(--btn-focus-ring); }
+        .btn:disabled, .btn[aria-disabled="true"] {
+            opacity: var(--btn-disabled-opacity); cursor: not-allowed;
+            transform: none !important;
+        }
+        .btn-sm { min-height: var(--btn-h-sm); padding: 6px var(--btn-pad-x-sm); border-radius: var(--btn-radius-sm); font-size: var(--btn-font-sm); white-space: nowrap; flex-shrink: 0; }
+        .btn-md { min-height: var(--btn-h-md); padding: 8px var(--btn-pad-x-md); border-radius: var(--btn-radius-md); font-size: var(--btn-font-md); }
+        .btn-lg { min-height: var(--btn-h-lg); padding: 12px var(--btn-pad-x-lg); border-radius: var(--btn-radius-md); font-size: var(--btn-font-lg); }
         .btn-accent { background: var(--accent); color: #fff; }
-        .btn-accent:hover { background: var(--accent-hover); }
+        .btn-accent:hover:not(:disabled) { background: var(--accent-hover); }
         .btn-ghost { background: var(--accent-dim); color: var(--accent); }
-        .btn-ghost:hover { background: var(--border-focus); color: #fff; }
+        .btn-ghost:hover:not(:disabled) { background: var(--border-focus); color: #fff; }
+        @media (prefers-reduced-motion: reduce) {
+            .btn { transition: none; }
+            .btn:active:not(:disabled) { transform: none; }
+        }
 
         /* Sökraden */
         .search-row { display: flex; gap: 8px; margin-bottom: 10px; }
