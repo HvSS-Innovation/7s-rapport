@@ -43,6 +43,20 @@
     // (vi behåller datan öppet/stängt-tillstånd ignorerat).
     var formMarks = {};
 
+    // Poäng per träffzon enligt H SKJUTB AK 2021 kap 1.3.1, Helfigur 2020.
+    // X-zonen finns i reglementet (2 p) men är ej tecknad i vår SVG-
+    // approximation — skytten kan inte markera X i Fas 4.
+    // De 9 bästa träffarna räknas vid kompetensprov BAS.
+    var ZON_POANG = { H: 1, A: 5, X: 2, B: 4, C: 3, D: 3, 'utanför': 0 };
+
+    // Timer-state för Kompetensprov BAS. Lever i modul-scope så att
+    // sidans render() inte nollställer pågående mätning.
+    var kpTimerState = {
+        startedAt: null,    // ms timestamp vid START
+        finishedAt: null,   // ms timestamp vid SISTA SKOTT
+        intervalId: null    // setInterval-handle för live-display
+    };
+
     // Säkerhetsprov BAS — hand-curerad referens från H SKJUTB AK 2021,
     // Bilaga 1 (sid 121–122). Skytten loggar EN status (godkänd/ej godk.)
     // för hela provet. Momenttexterna visas som info så soldaten ser vad
@@ -263,7 +277,12 @@
             return html;
         }
 
-        html += renderPassForm(ovningNr);
+        // Kompetensprov BAS — eget flöde med timer + poängkvot (Fas 4).
+        if (ovningNr === 'kp_bas') {
+            html += renderKpBasForm(pass || []);
+        } else {
+            html += renderPassForm(ovningNr);
+        }
 
         if (pass && pass.length > 0) {
             html += '<div class="pass-list">' +
@@ -353,7 +372,7 @@
             var idx = parseInt(target.getAttribute('data-mark-idx'), 10);
             if (!isNaN(idx) && formMarks[ovningNr]) {
                 formMarks[ovningNr].splice(idx, 1);
-                refreshFigureForOvning(ovningNr);
+                refreshAfterFigureChange(ovningNr);
             }
             return;
         }
@@ -375,12 +394,29 @@
             y: Math.round(y * 10) / 10,
             zon: zon
         });
-        refreshFigureForOvning(ovningNr);
+        refreshAfterFigureChange(ovningNr);
     };
+
+    // KP-BAS-formuläret innehåller poängkvots-display som måste räkna om
+    // efter varje markförändring. Övriga övningar nöjer sig med att SVG:n
+    // och meta-raden uppdateras lätt.
+    function refreshAfterFigureChange(ovningNr) {
+        if (ovningNr === 'kp_bas') {
+            var card = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+            var wasOpen = card && card.classList.contains('open');
+            render();
+            if (wasOpen) {
+                var c = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+                if (c) c.classList.add('open');
+            }
+        } else {
+            refreshFigureForOvning(ovningNr);
+        }
+    }
 
     window.skyttebokRensaMarks = function (ovningNr) {
         formMarks[ovningNr] = [];
-        refreshFigureForOvning(ovningNr);
+        refreshAfterFigureChange(ovningNr);
     };
 
     function refreshFigureForOvning(ovningNr) {
@@ -467,13 +503,263 @@
             '</div>';
     }
 
+    // ── Kompetensprov BAS — Fas 4 ───────────────────────────────────────
+    // Tar emot historik (alla tidigare kp_bas-pass) för att visa
+    // försök-idag-räknare och 3-försök-varning.
+
+    function getKpElapsed() {
+        if (!kpTimerState.startedAt) return 0;
+        var end = kpTimerState.finishedAt || Date.now();
+        return (end - kpTimerState.startedAt) / 1000;
+    }
+
+    // De 9 bästa träffarna räknas. Sortera traffar fallande efter zon-poäng,
+    // ta de 9 första, summera. Returnerar { sum, kept, all }.
+    function topNineScore(traffar) {
+        var poangs = (traffar || []).map(function (m) {
+            return ZON_POANG[m.zon] !== undefined ? ZON_POANG[m.zon] : 0;
+        });
+        poangs.sort(function (a, b) { return b - a; });
+        var kept = poangs.slice(0, 9);
+        var sum = kept.reduce(function (a, b) { return a + b; }, 0);
+        return { sum: sum, kept: kept.length, all: poangs.length };
+    }
+
+    function kpForsokIdag(history) {
+        var today = todayIso();
+        return history.filter(function (p) { return p.datum === today; }).length;
+    }
+
+    function renderKpBasForm(history) {
+        var marks = formMarks['kp_bas'] || [];
+        var elapsed = getKpElapsed();
+        var running = !!kpTimerState.startedAt && !kpTimerState.finishedAt;
+        var done = !!kpTimerState.finishedAt;
+
+        var score = topNineScore(marks);
+        var pk = elapsed > 0 ? (score.sum / elapsed) : 0;
+        var godkand = (marks.length >= 9 && pk >= 1.0 && elapsed > 0);
+
+        // Timer-knappar
+        var timerControls;
+        if (!kpTimerState.startedAt) {
+            timerControls = '<button class="btn btn-primary" type="button" onclick="skyttebokKpStart()">START</button>';
+        } else if (running) {
+            timerControls = '<button class="btn btn-primary" type="button" style="background:var(--danger)" onclick="skyttebokKpStop()">SISTA SKOTT</button>';
+        } else {
+            timerControls = '<button class="btn btn-secondary" type="button" onclick="skyttebokKpReset()">Återställ timer</button>';
+        }
+
+        var forsok = kpForsokIdag(history);
+        var forsokText = forsok === 0
+            ? 'Inga försök idag.'
+            : ('Försök idag: <strong>' + forsok + '</strong> / 3');
+        var forsokClass = forsok >= 3 ? ' kp-forsok-warn' : '';
+
+        var datumDefault = todayIso();
+
+        return '' +
+            '<div class="kp-form">' +
+                '<div class="kp-meta' + forsokClass + '">' + forsokText +
+                    (forsok >= 3 ? ' — fler tillåts men dokumenteras enligt regelverk' : '') +
+                '</div>' +
+
+                '<div class="pass-form-row" style="margin-top:10px">' +
+                    '<div>' +
+                        '<label for="kp-datum">Datum</label>' +
+                        '<input type="date" id="kp-datum" value="' + datumDefault + '">' +
+                    '</div>' +
+                    '<div>' +
+                        '<label>Tid</label>' +
+                        '<div class="kp-timer">' +
+                            '<span class="kp-timer-display" id="kp-timer-display">' +
+                                elapsed.toFixed(1) + ' s' +
+                            '</span>' +
+                            timerControls +
+                        '</div>' +
+                    '</div>' +
+                '</div>' +
+
+                '<div class="kp-figure-wrap">' +
+                    '<div id="fig-wrap-kp_bas">' +
+                        buildFigureSvg('fig-svg-kp_bas', marks, true) +
+                    '</div>' +
+                    '<div class="figure-meta" id="fig-meta-kp_bas"><strong>' +
+                        marks.length + '</strong> markerade</div>' +
+                    '<div class="figure-hint">Tryck på figuren för varje träff. ' +
+                        'De 9 bästa räknas vid bättringar.</div>' +
+                    '<button class="btn btn-sm btn-secondary" type="button" ' +
+                        'onclick="skyttebokRensaMarks(\'kp_bas\')" style="width:auto">Rensa markeringar</button>' +
+                '</div>' +
+
+                '<div class="kp-result' + (godkand ? ' godkand' : (marks.length || elapsed ? ' ovissa' : '')) + '" id="kp-result">' +
+                    '<div class="kp-result-row">' +
+                        '<span class="kp-result-label">Träff</span>' +
+                        '<span class="kp-result-value">' + marks.length + ' (' +
+                            (marks.length >= 9 ? '9 räknas' : 'minst 9 krävs') + ')</span>' +
+                    '</div>' +
+                    '<div class="kp-result-row">' +
+                        '<span class="kp-result-label">Poäng</span>' +
+                        '<span class="kp-result-value">' + score.sum +
+                            ' p</span>' +
+                    '</div>' +
+                    '<div class="kp-result-row">' +
+                        '<span class="kp-result-label">Poängkvot</span>' +
+                        '<span class="kp-result-value">' +
+                            (elapsed > 0 ? pk.toFixed(2) : '—') +
+                            ' <small>(krav ≥ 1,00)</small></span>' +
+                    '</div>' +
+                    '<div class="kp-result-row">' +
+                        '<span class="kp-result-label">Status</span>' +
+                        '<span class="kp-result-value kp-status ' +
+                            (godkand ? 'ok' : 'ej') + '">' +
+                            (godkand ? 'GODKÄND' : 'EJ KLAR') +
+                        '</span>' +
+                    '</div>' +
+                '</div>' +
+
+                '<div style="margin-top:10px">' +
+                    '<label for="kp-anteckning">Anteckning (frivilligt)</label>' +
+                    '<textarea id="kp-anteckning" rows="2" placeholder="T.ex. instruktör, vapen, vapen-individ"></textarea>' +
+                '</div>' +
+
+                '<button class="btn btn-primary" type="button" ' +
+                    (done && marks.length > 0
+                        ? 'onclick="skyttebokSparaKpBas()"'
+                        : 'disabled style="opacity:0.55;cursor:not-allowed"') +
+                    '>' +
+                    (done ? 'Spara prov' : 'Spara prov (kräver tid + minst 1 träff)') +
+                '</button>' +
+            '</div>';
+    }
+
+    window.skyttebokKpStart = function () {
+        kpTimerState.startedAt = Date.now();
+        kpTimerState.finishedAt = null;
+        if (kpTimerState.intervalId) clearInterval(kpTimerState.intervalId);
+        kpTimerState.intervalId = setInterval(updateKpTimerDisplay, 100);
+        // Töm marks vid start så användaren börjar rent. Bekräfta om något fanns.
+        if ((formMarks.kp_bas || []).length > 0) {
+            // Tyst rensning vid start — användaren har precis tryckt på timer.
+            // Antag att tidigare markeringar var test/felklick.
+            formMarks.kp_bas = [];
+        }
+        // Re-render för att byta knappläge
+        var card = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+        var wasOpen = card && card.classList.contains('open');
+        render();
+        if (wasOpen) {
+            var c = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+            if (c) c.classList.add('open');
+        }
+    };
+
+    window.skyttebokKpStop = function () {
+        if (!kpTimerState.startedAt || kpTimerState.finishedAt) return;
+        kpTimerState.finishedAt = Date.now();
+        if (kpTimerState.intervalId) {
+            clearInterval(kpTimerState.intervalId);
+            kpTimerState.intervalId = null;
+        }
+        var card = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+        var wasOpen = card && card.classList.contains('open');
+        render();
+        if (wasOpen) {
+            var c = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+            if (c) c.classList.add('open');
+        }
+    };
+
+    window.skyttebokKpReset = function () {
+        kpTimerState.startedAt = null;
+        kpTimerState.finishedAt = null;
+        if (kpTimerState.intervalId) {
+            clearInterval(kpTimerState.intervalId);
+            kpTimerState.intervalId = null;
+        }
+        formMarks.kp_bas = [];
+        var card = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+        var wasOpen = card && card.classList.contains('open');
+        render();
+        if (wasOpen) {
+            var c = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+            if (c) c.classList.add('open');
+        }
+    };
+
+    function updateKpTimerDisplay() {
+        var el = document.getElementById('kp-timer-display');
+        if (el) el.textContent = getKpElapsed().toFixed(1) + ' s';
+    }
+
+    window.skyttebokSparaKpBas = function () {
+        var datum = (document.getElementById('kp-datum') || {}).value || todayIso();
+        var anteckning = (document.getElementById('kp-anteckning') || {}).value || '';
+        anteckning = anteckning.trim();
+        var marks = formMarks.kp_bas || [];
+        var elapsed = getKpElapsed();
+        if (!kpTimerState.finishedAt || marks.length === 0) {
+            showConfirm('Ej klart',
+                'Provet behöver minst 1 träff och en stoppad timer innan det kan sparas.',
+                function () { /* no-op */ });
+            return;
+        }
+        var score = topNineScore(marks);
+        var pk = elapsed > 0 ? Math.round((score.sum / elapsed) * 100) / 100 : 0;
+        var godkand = (marks.length >= 9 && pk >= 1.0);
+
+        var pass = {
+            id: uuid(),
+            ovningNr: 'kp_bas',
+            datum: datum,
+            tid: Math.round(elapsed * 10) / 10,
+            traffar: marks.slice(),
+            poangSumma: score.sum,
+            poangKvot: pk,
+            godkand: godkand,
+            anteckning: anteckning,
+            // Bevarar bakåtkompat med pass-listan: skott=traffar.length som
+            // ett rimligt approxvärde, träff=räknade.
+            skott: marks.length,
+            traff: Math.min(marks.length, 9),
+            skapad: Date.now()
+        };
+        savePass(pass);
+
+        // Nollställ allt — nästa försök börjar rent.
+        formMarks.kp_bas = [];
+        kpTimerState.startedAt = null;
+        kpTimerState.finishedAt = null;
+        if (kpTimerState.intervalId) {
+            clearInterval(kpTimerState.intervalId);
+            kpTimerState.intervalId = null;
+        }
+
+        render();
+        var c = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+        if (c) {
+            c.classList.add('open');
+            c.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+    };
+
     function renderPassRow(p) {
-        var pct = p.skott > 0 ? Math.round(100 * p.traff / p.skott) : 0;
         var statusClass = p.godkand ? 'ok' : 'ej';
         var statusText = p.godkand ? 'GODKÄND' : 'EJ GODK.';
         var rowClass = p.godkand ? 'godkand' : 'underkand';
-        var resultatText = (p.traff || 0) + '/' + (p.skott || 0) +
-            (p.skott > 0 ? ' (' + pct + '%)' : '');
+
+        // KP-BAS-pass har egen resultat-format (tid + PK), regular pass
+        // använder skott/träff/%.
+        var resultatText;
+        if (p.ovningNr === 'kp_bas' && p.tid !== undefined) {
+            resultatText = (p.traffar ? p.traffar.length : 0) + ' träff · ' +
+                p.tid.toFixed(1) + ' s · PK ' +
+                (p.poangKvot !== undefined ? p.poangKvot.toFixed(2) : '?');
+        } else {
+            var pct = p.skott > 0 ? Math.round(100 * p.traff / p.skott) : 0;
+            resultatText = (p.traff || 0) + '/' + (p.skott || 0) +
+                (p.skott > 0 ? ' (' + pct + '%)' : '');
+        }
 
         // Mini-figur om träffmarkeringar finns. Read-only, ingen klick.
         var figureHtml = '';

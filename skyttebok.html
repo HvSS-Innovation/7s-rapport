@@ -190,6 +190,33 @@
         .pass-row-figure .figure-svg { width: 70px; }
         .pass-row-figure .pass-zon-summary { flex: 1; font-size: 0.72rem; color: var(--text-muted); font-family: 'Courier New', monospace; line-height: 1.4; }
 
+        /* Kompetensprov BAS — Fas 4 */
+        .kp-form { background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 12px; margin-top: 14px; }
+        .kp-meta { font-size: 0.78rem; color: var(--text-secondary); padding: 8px 10px; background: var(--bg-secondary); border-radius: var(--radius-sm); border-left: 3px solid var(--accent); }
+        .kp-meta.kp-forsok-warn { border-left-color: var(--danger); color: var(--danger-hover); }
+
+        .kp-timer { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
+        .kp-timer .kp-timer-display { font-family: 'Courier New', monospace; font-size: 1.4rem; font-weight: 700; color: var(--accent); min-width: 80px; padding: 8px 10px; background: var(--bg-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border); text-align: center; }
+        .kp-timer .btn { flex: 1; min-height: 44px; margin-top: 0; }
+
+        .kp-figure-wrap { display: flex; flex-direction: column; align-items: center; gap: 8px; margin-top: 14px; padding: 12px; background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); }
+        .kp-figure-wrap .figure-svg { width: 180px; }
+        .kp-figure-wrap .figure-meta { color: var(--text-secondary); font-size: 0.85rem; }
+        .kp-figure-wrap .figure-meta strong { color: var(--accent); font-size: 1.05rem; }
+        .kp-figure-wrap .figure-hint { color: var(--text-muted); font-size: 0.72rem; text-align: center; line-height: 1.4; }
+
+        .kp-result { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-top: 14px; padding: 4px 0; }
+        .kp-result.godkand { border-color: var(--accent); }
+        .kp-result.ovissa { border-color: var(--text-muted); }
+        .kp-result-row { display: flex; align-items: baseline; justify-content: space-between; padding: 6px 12px; border-bottom: 1px solid var(--border); }
+        .kp-result-row:last-child { border-bottom: none; }
+        .kp-result-label { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em; text-transform: uppercase; }
+        .kp-result-value { font-family: 'Courier New', monospace; color: var(--text-primary); font-weight: 600; }
+        .kp-result-value small { color: var(--text-muted); font-weight: 400; font-size: 0.7rem; }
+        .kp-result-value.kp-status { padding: 2px 10px; border-radius: var(--radius-sm); font-family: inherit; letter-spacing: 0.06em; font-size: 0.78rem; }
+        .kp-result-value.kp-status.ok { background: var(--accent-dim); color: var(--accent); }
+        .kp-result-value.kp-status.ej { background: var(--bg-secondary); color: var(--text-muted); }
+
         /* Säkerhetsprov-kort */
         .sp-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--text-muted); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
         .sp-card.godkand { border-left-color: var(--accent); }
