@@ -76,8 +76,9 @@
     function symbolCard(id, hint) {
         const sym = window.SK_SYMBOLS && window.SK_SYMBOLS[id];
         if (!sym) return null;
+        const svgStr = window.skSymbolSvg ? window.skSymbolSvg(id, null) : sym.svg;
         const wrap = el('div', { class: 'sk-tut-symbol-card' });
-        const svgWrap = el('div', { html: sym.svg });
+        const svgWrap = el('div', { html: svgStr });
         wrap.appendChild(svgWrap);
         wrap.appendChild(el('div', { class: 'name', text: sym.label }));
         if (hint) wrap.appendChild(el('div', { class: 'hint', text: hint }));

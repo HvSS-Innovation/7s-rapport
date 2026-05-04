@@ -1295,11 +1295,14 @@ function showHoverPreview(latlng) {
     if (!activeTool || !map) { hideHoverPreview(); return; }
     const sym = window.SK_SYMBOLS && window.SK_SYMBOLS[activeTool];
     if (!sym || !sym.svg) { hideHoverPreview(); return; }
+    const previewSvg = window.skSymbolSvg
+        ? window.skSymbolSvg(activeTool, null)
+        : sym.svg;
     if (!_hoverPreview) {
         _hoverPreview = L.marker(latlng, {
             icon: L.divIcon({
                 className: 'sk-hover-preview',
-                html: sym.svg,
+                html: previewSvg,
                 iconSize: [40, 40],
                 iconAnchor: [20, 48]  // ~28 px ovanför pekaren
             }),
@@ -1311,7 +1314,7 @@ function showHoverPreview(latlng) {
         if (_hoverPreview._toolId !== activeTool) {
             _hoverPreview.setIcon(L.divIcon({
                 className: 'sk-hover-preview',
-                html: sym.svg,
+                html: previewSvg,
                 iconSize: [40, 40],
                 iconAnchor: [20, 48]
             }));
@@ -1360,7 +1363,9 @@ function openShortcutDialog(toolId) {
     const overlay = document.createElement('div');
     overlay.className = 'sk-modal-overlay';
     const sym = (toolId === FULLMAP_PSEUDO) ? null : window.SK_SYMBOLS[toolId];
-    const titleSvg = sym && sym.svg ? sym.svg : '';
+    const titleSvg = sym && sym.svg
+        ? (window.skSymbolSvg ? window.skSymbolSvg(toolId, null) : sym.svg)
+        : '';
     const titleLbl = labelForTool(toolId);
     const currentKey = shortcutForTool(toolId);
 
@@ -2009,7 +2014,8 @@ function renderPalette() {
             const badgeHtml = shortcutKey
                 ? '<span class="sk-tool-shortcut" title="Tangentgenväg — dubbelklicka för att ändra">' + shortcutKey.toUpperCase() + '</span>'
                 : '';
-            btn.innerHTML = sym.svg + '<span>' + sym.label + '</span>' + badgeHtml;
+            const paletteSvg = window.skSymbolSvg ? window.skSymbolSvg(id, null) : sym.svg;
+            btn.innerHTML = paletteSvg + '<span>' + sym.label + '</span>' + badgeHtml;
             // Single-click = aktivera. Dubbelklick = öppna mapping-dialog.
             // 220 ms debounce hindrar trampning.
             let clickTimer = null;

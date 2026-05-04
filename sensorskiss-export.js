@@ -116,42 +116,20 @@
         return results;
     }
 
-    // Bygger SVG-strängen för en symbol med rätt numLabel + rotation. Vi
-    // återanvänder SK_SYMBOLS-objektet och ersätter SVG-text vid behov.
+    // Bygger SVG-strängen för en symbol med rätt rotation applicerad. v2-
+    // symbolerna roterar bara inre <g>-grupper (stjärna/ring/cirkel står still)
+    // — så det räcker att ersätta {ROT}-placeholdern. numLabel renderas inte
+    // inne i symbolen längre; identifieringssiffran visas via name-badge
+    // bredvid symbolen (se drawNameBadge nedan).
     function buildSymbolSvg(obj) {
+        if (global.skSymbolSvg) return global.skSymbolSvg(obj.typ, obj);
         const SYM = global.SK_SYMBOLS || {};
         const sym = SYM[obj.typ];
         if (!sym) return null;
-        // Om makeIcon finns kan vi inte använda den (den returnerar L.divIcon)
-        // men vi kan duplicera samma logik: byt ut texten i SVG:n om numLabel
-        // finns. Enkelt: regex-ersätt det första <text>-elementets innehåll.
-        let svgStr = sym.svg;
-        if (obj.numLabel && sym.shape) {
-            // Bygg om från grunden via skSymbolSvgWithLabel (helper exporterad
-            // av sensorskiss-symbols.js om den finns; annars regex-ersätt).
-            const label = obj.numLabel;
-            const len = label.length;
-            const fontSize = len <= 1 ? 11 : (len === 2 ? 9 : 7.5);
-            const yPos = len <= 1 ? 16 : 15;
-            svgStr = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
-                sym.shape +
-                '<text x="12" y="' + yPos + '" text-anchor="middle" ' +
-                'font-family="Inter,Arial,sans-serif" font-size="' + fontSize + '" ' +
-                'font-weight="800" fill="#ffffff">' + label + '</text>' +
-            '</svg>';
-        } else if (obj.numLabel && obj.typ === 'larmmina') {
-            const label = obj.numLabel;
-            const len = label.length;
-            const fontSize = len <= 1 ? 11 : (len === 2 ? 9 : 7.5);
-            const yPos = len <= 1 ? 16 : 15;
-            svgStr = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
-                '<circle cx="12" cy="12" r="10" fill="#000000"/>' +
-                '<text x="12" y="' + yPos + '" text-anchor="middle" ' +
-                'font-family="Inter,Arial,sans-serif" font-size="' + fontSize + '" ' +
-                'font-weight="800" fill="#ffffff">' + label + '</text>' +
-            '</svg>';
-        }
-        return svgStr;
+        const directional = global.SK_DIRECTIONAL_TYPES &&
+            global.SK_DIRECTIONAL_TYPES.has(obj.typ);
+        const rot = (directional && Number.isFinite(obj.rotation)) ? obj.rotation : 0;
+        return sym.svg.replace(/\{ROT\}/g, rot);
     }
 
     async function renderExportAsync(opts) {
@@ -221,14 +199,20 @@
             return { x: px, y: py };
         }
 
-        // Pre-load symbol-bilder (en per unik obj-signatur, eftersom numLabel
-        // varierar). Vi nycklar med "<typ>:<numLabel>".
+        // Pre-load symbol-bilder (en per unik typ+rotation; numLabel påverkar
+        // inte längre SVG-innehållet). Nyckel: "<typ>:<rotation>".
         const SYM = global.SK_SYMBOLS || {};
         const symbolImages = {};
+        function imgKey(o) {
+            const directional = global.SK_DIRECTIONAL_TYPES &&
+                global.SK_DIRECTIONAL_TYPES.has(o.typ);
+            const rot = (directional && Number.isFinite(o.rotation)) ? o.rotation : 0;
+            return o.typ + ':' + rot;
+        }
         await Promise.all(objects.map(o => {
             const sym = SYM[o.typ];
             if (!sym || sym.category !== 'point') return Promise.resolve();
-            const key = o.typ + ':' + (o.numLabel || '');
+            const key = imgKey(o);
             if (symbolImages[key]) return Promise.resolve();
             const svgStr = buildSymbolSvg(o);
             if (!svgStr) return Promise.resolve();
@@ -273,7 +257,7 @@
 
             if (sym.category === 'point') {
                 const p = project(o.lat, o.lng);
-                const key = o.typ + ':' + (o.numLabel || '');
+                const key = imgKey(o);
                 const img = symbolImages[key];
                 if (img) {
                     ctx.drawImage(img, p.x - SYMBOL_HALF, p.y - SYMBOL_HALF, SYMBOL_SIZE, SYMBOL_SIZE);
