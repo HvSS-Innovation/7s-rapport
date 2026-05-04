@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 612 465" width="612" height="465">
+  <!-- Top flap (M-shape) -->
+  <polygon points="82,1 333,50 552,0 552,88 306,197 82,87" fill="#000"/>
+  <!-- Envelope body (X/bowtie shape) -->
+  <polygon points="0,99 0,460 312,307 612,460 612,105 318,259" fill="#000"/>
+</svg>

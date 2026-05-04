@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f8f8f5;
+    font-family: Georgia, serif;
+  }
+  svg {
+    width: 360px;
+    height: 360px;
+    overflow: visible;
+  }
+  .controls {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    color: #444;
+  }
+  input[type=range] {
+    width: 260px;
+    accent-color: #111;
+  }
+  .deg {
+    min-width: 38px;
+    font-variant-numeric: tabular-nums;
+    color: #111;
+  }
+</style>
+</head>
+<body>
+
+<svg id="enkel-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ROTERANDE GRUPP: stammen (linje) — pivot = ringens centrum (100,100) -->
+  <g id="stem" transform="rotate(0,100,100)">
+    <line x1="100" y1="24" x2="100" y2="51"
+          stroke="#111" stroke-width="6.2" stroke-linecap="square"/>
+  </g>
+
+  <!-- FAST: ringen -->
+  <circle cx="100" cy="100" r="46" fill="none" stroke="#111" stroke-width="6.2"/>
+
+  <!-- FAST: etikett — drag-bar via mus / long-press -->
+  <text id="enkel-label" x="160" y="108"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-style="italic"
+        font-size="22"
+        fill="#111"
+        letter-spacing="1"
+        cursor="grab"
+        style="user-select:none;-webkit-user-select:none;">Enkelpost</text>
+
+  <circle id="hint" cx="180" cy="100" r="14"
+          fill="none" stroke="#aaa" stroke-width="1.5"
+          stroke-dasharray="4 3" opacity="0"/>
+</svg>
+
+<div class="controls">
+  <span>Rotera stam</span>
+  <input type="range" id="rot" min="0" max="360" value="0" step="1">
+  <span class="deg" id="deg">0°</span>
+</div>
+
+<script>
+  const slider = document.getElementById('rot');
+  const stem   = document.getElementById('stem');
+  const degLbl = document.getElementById('deg');
+  slider.addEventListener('input', function () {
+    stem.setAttribute('transform', `rotate(${this.value},100,100)`);
+    degLbl.textContent = this.value + '°';
+  });
+
+  const svg   = document.getElementById('enkel-svg');
+  const label = document.getElementById('enkel-label');
+  const hint  = document.getElementById('hint');
+
+  let dragging = false;
+  let longTimer = null;
+  let startClient = null;
+  let startSVG = null;
+
+  function clientToSVG(cx, cy) {
+    const pt = svg.createSVGPoint();
+    pt.x = cx; pt.y = cy;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function beginDrag(clientX, clientY) {
+    dragging = true;
+    label.style.cursor = 'grabbing';
+    hint.setAttribute('opacity','0');
+    const sp = clientToSVG(clientX, clientY);
+    startSVG = {
+      dx: parseFloat(label.getAttribute('x')) - sp.x,
+      dy: parseFloat(label.getAttribute('y')) - sp.y
+    };
+  }
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    const p = clientToSVG(clientX, clientY);
+    label.setAttribute('x', p.x + startSVG.dx);
+    label.setAttribute('y', p.y + startSVG.dy);
+  }
+  function endDrag() {
+    dragging = false;
+    label.style.cursor = 'grab';
+    clearTimeout(longTimer);
+    hint.setAttribute('opacity','0');
+  }
+
+  label.addEventListener('mousedown', e => { e.preventDefault(); beginDrag(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+  window.addEventListener('mouseup', endDrag);
+
+  const LONG_MS = 450;
+  label.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startClient = { x: t.clientX, y: t.clientY };
+    hint.setAttribute('cx', parseFloat(label.getAttribute('x')) + 44);
+    hint.setAttribute('cy', parseFloat(label.getAttribute('y')) - 8);
+    hint.setAttribute('opacity','0.7');
+    longTimer = setTimeout(() => {
+      hint.setAttribute('opacity','0');
+      beginDrag(startClient.x, startClient.y);
+    }, LONG_MS);
+  }, { passive: true });
+  label.addEventListener('touchmove', e => {
+    const t = e.touches[0];
+    if (!dragging) {
+      const dx = t.clientX - startClient.x;
+      const dy = t.clientY - startClient.y;
+      if (Math.sqrt(dx*dx + dy*dy) > 8) {
+        clearTimeout(longTimer);
+        hint.setAttribute('opacity','0');
+      }
+    }
+    if (dragging) { e.preventDefault(); moveDrag(t.clientX, t.clientY); }
+  }, { passive: false });
+  label.addEventListener('touchend', endDrag);
+  label.addEventListener('touchcancel', endDrag);
+</script>
+
+</body>
+</html>

@@ -24,12 +24,12 @@ const SK_HALO = '#ffffff';
 const SK_DASH = '6 4';   // streckad riktningslinje (PDF s. 72)
 
 // Gemensam UMRA-stjärna (4-uddig) centrerad på (12,12). Yttre uddar på
-// avstånd 5 (= stjärnan spänner 10×10 i 24×24-viewBoxen, syns tydligt vid
-// 34px ikonstorlek). Inre kontroll-punkter följer prototypens proportion
-// (R/r ≈ 2.4) så formen blir lika "smal-uddig" som i UMRA-prototyperna.
+// avstånd 8 (= stjärnan spänner 16×16 i 24×24-viewBoxen, fyller ikonen
+// nästan helt — visuell tyngd i nivå med RPAS). Inre kontroll-punkter
+// följer prototypens R/r-proportion (≈ 2.4).
 const STAR_PATH =
-    '<path d="M 12,7 Q 13.5,10.6 17,12 Q 13.5,13.4 12,17 ' +
-    'Q 10.5,13.4 7,12 Q 10.5,10.6 12,7 Z" fill="' + SK_INK + '"/>';
+    '<path d="M 12,4 Q 14.5,9.75 20,12 Q 14.5,14.25 12,20 ' +
+    'Q 9.5,14.25 4,12 Q 9.5,9.75 12,4 Z" fill="' + SK_INK + '"/>';
 
 // Bygger en SVG där den roterande delen ligger inne i en <g> som tar emot
 // {ROT}-placeholder. Den statiska delen (stjärnan/ringen/cirkeln) ligger
@@ -44,31 +44,34 @@ function rotSvg(rotatingInner, staticInner) {
 
 // ── Roterande delar för stjärn-symbolerna ────────────────────────────────────
 
-// CIM — två lodrätta ellipsringar ovan/under stjärnan (förenkling av
-// pärlloop-mönstret; varje loop är en tunn ellips strax utanför stjärnans
-// y-utsträckning på 7..17).
-const CIM_ROT =
-    '<ellipse cx="12" cy="3.5" rx="2.5" ry="3.5" fill="none" ' +
-        'stroke="' + SK_INK + '" stroke-width="1.1" ' +
-        'stroke-dasharray="1.2 0.7"/>' +
-    '<ellipse cx="12" cy="20.5" rx="2.5" ry="3.5" fill="none" ' +
-        'stroke="' + SK_INK + '" stroke-width="1.1" ' +
-        'stroke-dasharray="1.2 0.7"/>';
+// Stjärnan upptar nu y=4..20. Delsymbolerna sitter i den smala remsan
+// y=0..4 och y=20..24 — kortare/komprimerade jämfört med prototypen,
+// men tydligt synliga vid 34px ikonstorlek.
 
-// PIR — en streckad stråle +17.5° från norr. Startar vid stjärnans yttre
-// kant (avstånd 5 från centrum) och sticker ut till nära viewBox-toppen
-// (avstånd 11 från centrum).
+// CIM — två tunna lodrätta dashade ellipser ovan/under stjärnan.
+const CIM_ROT =
+    '<ellipse cx="12" cy="2" rx="2.2" ry="1.8" fill="none" ' +
+        'stroke="' + SK_INK + '" stroke-width="1.1" ' +
+        'stroke-dasharray="1.0 0.6"/>' +
+    '<ellipse cx="12" cy="22" rx="2.2" ry="1.8" fill="none" ' +
+        'stroke="' + SK_INK + '" stroke-width="1.1" ' +
+        'stroke-dasharray="1.0 0.6"/>';
+
+// PIR — kort streckad stråle +17.5° från norr. Startar vid stjärnans
+// yttre kant (avstånd 8 från centrum) och sträcker sig till strax inom
+// viewBox-toppen (avstånd 11 från centrum). Den LÅNGA externa
+// riktningslinjen ritas separat på kartan (se externalLine-flaggan).
 const PIR_ROT =
-    '<line x1="13.5" y1="7.2" x2="15.3" y2="1.5" ' +
-        'stroke="' + SK_INK + '" stroke-width="1.3" ' +
-        'stroke-dasharray="1.6 1.2" stroke-linecap="round"/>';
+    '<line x1="14.4" y1="4.4" x2="15.3" y2="1.5" ' +
+        'stroke="' + SK_INK + '" stroke-width="1.4" ' +
+        'stroke-dasharray="1.6 1.0" stroke-linecap="round"/>';
 
 // KAMERA — V-strålar, ±17.5° från norr (PIR + spegelbild).
 const KAMERA_ROT =
     PIR_ROT +
-    '<line x1="10.5" y1="7.2" x2="8.7" y2="1.5" ' +
-        'stroke="' + SK_INK + '" stroke-width="1.3" ' +
-        'stroke-dasharray="1.6 1.2" stroke-linecap="round"/>';
+    '<line x1="9.6" y1="4.4" x2="8.7" y2="1.5" ' +
+        'stroke="' + SK_INK + '" stroke-width="1.4" ' +
+        'stroke-dasharray="1.6 1.0" stroke-linecap="round"/>';
 
 // ── Symboldefinitioner ───────────────────────────────────────────────────────
 
@@ -87,6 +90,7 @@ const SYMBOLS = {
         category: 'point',
         prefix: 'P',
         directional: true,
+        externalLine: true,  // Endast PIR ritar lång streckad riktningslinje på kartan
         svg: rotSvg(PIR_ROT, STAR_PATH)
     },
     kamera: {
@@ -114,10 +118,10 @@ const SYMBOLS = {
         prefix: 'L',
         directional: true,
         svg: rotSvg(
-            '<line x1="12" y1="8" x2="12" y2="1.5" ' +
-                'stroke="' + SK_INK + '" stroke-width="1.8" ' +
+            '<line x1="12" y1="3.5" x2="12" y2="0.5" ' +
+                'stroke="' + SK_INK + '" stroke-width="2" ' +
                 'stroke-linecap="square"/>',
-            '<circle cx="12" cy="12" r="4" fill="' + SK_INK + '"/>'
+            '<circle cx="12" cy="12" r="8" fill="' + SK_INK + '"/>'
         )
     },
 
@@ -139,19 +143,18 @@ const SYMBOLS = {
     },
 
     // Poster — ring + stam(mar). Stammen(arna) pekar i bevakningsriktningen.
-    // Ring r=6 (matchar prototypens 46/100 ≈ 46% av bredden). Stam strax
-    // ovanför ring-kanten, längd ~3.5 (= prototypens 27/100 × 6).
+    // Ring r=8 (= 67% av halv-viewBoxen, matchar stjärnans yttre kant).
     enkelpost: {
         label: 'Enkelpost',
         category: 'point',
         prefix: null,
         directional: true,
         svg: rotSvg(
-            '<line x1="12" y1="5.2" x2="12" y2="1.5" ' +
-                'stroke="' + SK_INK + '" stroke-width="1.8" ' +
+            '<line x1="12" y1="3" x2="12" y2="0.5" ' +
+                'stroke="' + SK_INK + '" stroke-width="2" ' +
                 'stroke-linecap="square"/>',
-            '<circle cx="12" cy="12" r="6" fill="none" ' +
-                'stroke="' + SK_INK + '" stroke-width="1.8"/>'
+            '<circle cx="12" cy="12" r="8" fill="none" ' +
+                'stroke="' + SK_INK + '" stroke-width="2"/>'
         )
     },
     dubbelpost: {
@@ -160,14 +163,14 @@ const SYMBOLS = {
         prefix: null,
         directional: true,
         svg: rotSvg(
-            '<line x1="9.5" y1="5.2" x2="9.5" y2="1.5" ' +
-                'stroke="' + SK_INK + '" stroke-width="1.8" ' +
+            '<line x1="9" y1="4.5" x2="9" y2="1" ' +
+                'stroke="' + SK_INK + '" stroke-width="2" ' +
                 'stroke-linecap="square"/>' +
-            '<line x1="14.5" y1="5.2" x2="14.5" y2="1.5" ' +
-                'stroke="' + SK_INK + '" stroke-width="1.8" ' +
+            '<line x1="15" y1="4.5" x2="15" y2="1" ' +
+                'stroke="' + SK_INK + '" stroke-width="2" ' +
                 'stroke-linecap="square"/>',
-            '<circle cx="12" cy="12" r="6" fill="none" ' +
-                'stroke="' + SK_INK + '" stroke-width="1.8"/>'
+            '<circle cx="12" cy="12" r="8" fill="none" ' +
+                'stroke="' + SK_INK + '" stroke-width="2"/>'
         )
     },
     // In/Utfartspost — cirkel + pil. Pilen roterar, cirkeln står still.

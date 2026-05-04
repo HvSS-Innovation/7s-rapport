@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f8f8f5;
+    font-family: Georgia, serif;
+  }
+  svg {
+    width: 540px;
+    height: 540px;
+    overflow: visible;
+  }
+  .controls {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    color: #444;
+  }
+  input[type=range] {
+    width: 260px;
+    accent-color: #111;
+  }
+  .deg {
+    min-width: 38px;
+    font-variant-numeric: tabular-nums;
+    color: #111;
+  }
+</style>
+</head>
+<body>
+
+<svg id="larm-svg" viewBox="0 0 1600 1600" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ROTERANDE GRUPP: linjen — pivot = cirkelns centrum (800,800) -->
+  <g id="line" transform="rotate(0,800,800)">
+    <line x1="995" y1="800" x2="1570" y2="800"
+          stroke="#111" stroke-width="22" stroke-linecap="square"/>
+  </g>
+
+  <!-- FAST: fylld cirkel -->
+  <circle cx="800" cy="800" r="195" fill="#111"/>
+
+  <!-- FAST: etikett — drag-bar via mus / long-press -->
+  <text id="larm-label" x="1100" y="900"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-style="italic"
+        font-size="120"
+        fill="#111"
+        letter-spacing="4"
+        cursor="grab"
+        style="user-select:none;-webkit-user-select:none;">Larmmina</text>
+
+  <circle id="hint" cx="1300" cy="850" r="80"
+          fill="none" stroke="#aaa" stroke-width="6"
+          stroke-dasharray="20 14" opacity="0"/>
+</svg>
+
+<div class="controls">
+  <span>Rotera linje</span>
+  <input type="range" id="rot" min="0" max="360" value="0" step="1">
+  <span class="deg" id="deg">0°</span>
+</div>
+
+<script>
+  const slider = document.getElementById('rot');
+  const line   = document.getElementById('line');
+  const degLbl = document.getElementById('deg');
+  slider.addEventListener('input', function () {
+    line.setAttribute('transform', `rotate(${this.value},800,800)`);
+    degLbl.textContent = this.value + '°';
+  });
+
+  const svg   = document.getElementById('larm-svg');
+  const label = document.getElementById('larm-label');
+  const hint  = document.getElementById('hint');
+
+  let dragging = false;
+  let longTimer = null;
+  let startClient = null;
+  let startSVG = null;
+
+  function clientToSVG(cx, cy) {
+    const pt = svg.createSVGPoint();
+    pt.x = cx; pt.y = cy;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+  function beginDrag(clientX, clientY) {
+    dragging = true;
+    label.style.cursor = 'grabbing';
+    hint.setAttribute('opacity','0');
+    const sp = clientToSVG(clientX, clientY);
+    startSVG = {
+      dx: parseFloat(label.getAttribute('x')) - sp.x,
+      dy: parseFloat(label.getAttribute('y')) - sp.y
+    };
+  }
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    const p = clientToSVG(clientX, clientY);
+    label.setAttribute('x', p.x + startSVG.dx);
+    label.setAttribute('y', p.y + startSVG.dy);
+  }
+  function endDrag() {
+    dragging = false;
+    label.style.cursor = 'grab';
+    clearTimeout(longTimer);
+    hint.setAttribute('opacity','0');
+  }
+
+  label.addEventListener('mousedown', e => { e.preventDefault(); beginDrag(e.clientX, e.clientY); });
+  window.addEventListener('mousemove', e => moveDrag(e.clientX, e.clientY));
+  window.addEventListener('mouseup', endDrag);
+
+  const LONG_MS = 450;
+  label.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    startClient = { x: t.clientX, y: t.clientY };
+    hint.setAttribute('cx', parseFloat(label.getAttribute('x')) + 220);
+    hint.setAttribute('cy', parseFloat(label.getAttribute('y')) - 40);
+    hint.setAttribute('opacity','0.7');
+    longTimer = setTimeout(() => {
+      hint.setAttribute('opacity','0');
+      beginDrag(startClient.x, startClient.y);
+    }, LONG_MS);
+  }, { passive: true });
+  label.addEventListener('touchmove', e => {
+    const t = e.touches[0];
+    if (!dragging) {
+      const dx = t.clientX - startClient.x;
+      const dy = t.clientY - startClient.y;
+      if (Math.sqrt(dx*dx + dy*dy) > 8) {
+        clearTimeout(longTimer);
+        hint.setAttribute('opacity','0');
+      }
+    }
+    if (dragging) { e.preventDefault(); moveDrag(t.clientX, t.clientY); }
+  }, { passive: false });
+  label.addEventListener('touchend', endDrag);
+  label.addEventListener('touchcancel', endDrag);
+</script>
+
+</body>
+</html>

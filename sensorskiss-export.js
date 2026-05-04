@@ -46,22 +46,25 @@
     }
 
     function computeBBox(objects) {
+        const SYM = global.SK_SYMBOLS || {};
         let minLat = Infinity, maxLat = -Infinity, minLng = Infinity, maxLng = -Infinity;
+        function include(lat, lng) {
+            if (lat < minLat) minLat = lat;
+            if (lat > maxLat) maxLat = lat;
+            if (lng < minLng) minLng = lng;
+            if (lng > maxLng) maxLng = lng;
+        }
         for (const o of objects) {
             const pts = o.path ? o.path : [{ lat: o.lat, lng: o.lng }];
-            for (const p of pts) {
-                if (p.lat < minLat) minLat = p.lat;
-                if (p.lat > maxLat) maxLat = p.lat;
-                if (p.lng < minLng) minLng = p.lng;
-                if (p.lng > maxLng) maxLng = p.lng;
-            }
-            // Inkludera även riktningslinjens ändpunkt så bbox täcker pilen
-            if (o.rotation && o.lat != null && o.lng != null) {
+            for (const p of pts) include(p.lat, p.lng);
+            // Inkludera etikettens drag-bara position så den ryms i exporten.
+            if (o.labelLat != null && o.labelLng != null) include(o.labelLat, o.labelLng);
+            // Inkludera ändpunkten av den långa externa riktningslinjen så
+            // bbox täcker den. Bara symboler med externalLine-flagga (= PIR).
+            const sym = SYM[o.typ];
+            if (o.rotation && o.lat != null && o.lng != null && sym && sym.externalLine) {
                 const e = dirEndpoint(o.lat, o.lng, o.rotation, 100);
-                if (e.lat < minLat) minLat = e.lat;
-                if (e.lat > maxLat) maxLat = e.lat;
-                if (e.lng < minLng) minLng = e.lng;
-                if (e.lng > maxLng) maxLng = e.lng;
+                include(e.lat, e.lng);
             }
         }
         if (!isFinite(minLat)) return null;
@@ -232,10 +235,14 @@
         const LABEL_OFFSET = SYMBOL_HALF + 10;
         const LABEL_OPTS = { fontPx: 14, padX: 5, padY: 3 };
 
-        // Rita riktningslinjer FÖRE symboler så symbolen ligger ovanpå
+        // Rita långa externa riktningslinjer FÖRE symboler så symbolen ligger
+        // ovanpå. Bara symboler med externalLine-flagga (= PIR) får extern
+        // linje; övriga directional symboler indikerar riktning via sin
+        // inre roterande delsymbol.
         for (const o of objects) {
             if (!o.rotation) continue;
-            if (!global.SK_DIRECTIONAL_TYPES || !global.SK_DIRECTIONAL_TYPES.has(o.typ)) continue;
+            const sym = SYM[o.typ];
+            if (!sym || !sym.externalLine) continue;
             const start = project(o.lat, o.lng);
             const endLL = dirEndpoint(o.lat, o.lng, o.rotation, 100);
             const end = project(endLL.lat, endLL.lng);
@@ -264,7 +271,16 @@
                 }
                 if (drawLabels) {
                     const t = o.numLabel || sym.label;
-                    drawNameBadge(ctx, p.x, p.y + LABEL_OFFSET, t, LABEL_OPTS);
+                    // Etiketten renderas vid obj.labelLat/labelLng om satt
+                    // (= drag-bar position), annars default-offset under symbolen.
+                    let lx, ly;
+                    if (o.labelLat != null && o.labelLng != null) {
+                        const lp = project(o.labelLat, o.labelLng);
+                        lx = lp.x; ly = lp.y;
+                    } else {
+                        lx = p.x; ly = p.y + LABEL_OFFSET;
+                    }
+                    drawNameBadge(ctx, lx, ly, t, LABEL_OPTS);
                 }
             } else if (sym.category === 'polygon') {
                 ctx.beginPath();

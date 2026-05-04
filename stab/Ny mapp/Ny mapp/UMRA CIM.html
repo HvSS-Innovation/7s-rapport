@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<style>
+  body {
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background: #f8f8f5;
+    font-family: Georgia, serif;
+  }
+  svg {
+    width: 360px;
+    height: 540px;
+    overflow: visible;
+  }
+  .controls {
+    margin-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-size: 15px;
+    color: #444;
+  }
+  input[type=range] {
+    width: 260px;
+    accent-color: #111;
+  }
+  .deg {
+    min-width: 38px;
+    font-variant-numeric: tabular-nums;
+    color: #111;
+  }
+</style>
+</head>
+<body>
+
+<svg id="umra" viewBox="0 0 310 510" xmlns="http://www.w3.org/2000/svg">
+
+  <!-- ══ ROTATING GROUP: bead loops only ══
+       Rotates around star center (130, 248) -->
+  <g id="beads" transform="rotate(0,130,248)">
+
+    <!-- UPPER BEAD LOOP — rx=52, ry=115 -->
+    <ellipse cx="111.2" cy="240.2" rx="7.0" ry="3.6" fill="#111" transform="rotate(-139.3,111.2,240.2)"/>
+    <ellipse cx="95.2"  cy="218.4" rx="7.0" ry="3.6" fill="#111" transform="rotate(-116.6,95.2,218.4)"/>
+    <ellipse cx="85.7"  cy="193.1" rx="7.0" ry="3.6" fill="#111" transform="rotate(-105.5,85.7,193.1)"/>
+    <ellipse cx="80.3"  cy="166.5" rx="7.0" ry="3.6" fill="#111" transform="rotate(-97.8,80.3,166.5)"/>
+    <ellipse cx="78.1"  cy="139.4" rx="7.0" ry="3.6" fill="#111" transform="rotate(-91.4,78.1,139.4)"/>
+    <ellipse cx="78.9"  cy="112.2" rx="7.0" ry="3.6" fill="#111" transform="rotate(-85.2,78.9,112.2)"/>
+    <ellipse cx="82.7"  cy="85.3"  rx="7.0" ry="3.6" fill="#111" transform="rotate(-78.4,82.7,85.3)"/>
+    <ellipse cx="90.1"  cy="59.3"  rx="7.0" ry="3.6" fill="#111" transform="rotate(-69.3,90.1,59.3)"/>
+    <ellipse cx="102.6" cy="35.2"  rx="7.0" ry="3.6" fill="#111" transform="rotate(-53.8,102.6,35.2)"/>
+    <ellipse cx="123.7" cy="18.9"  rx="7.0" ry="3.6" fill="#111" transform="rotate(-15.1,123.7,18.9)"/>
+    <ellipse cx="148.8" cy="25.8"  rx="7.0" ry="3.6" fill="#111" transform="rotate(40.7,148.8,25.8)"/>
+    <ellipse cx="164.8" cy="47.6"  rx="7.0" ry="3.6" fill="#111" transform="rotate(63.4,164.8,47.6)"/>
+    <ellipse cx="174.3" cy="72.9"  rx="7.0" ry="3.6" fill="#111" transform="rotate(74.5,174.3,72.9)"/>
+    <ellipse cx="179.7" cy="99.5"  rx="7.0" ry="3.6" fill="#111" transform="rotate(82.2,179.7,99.5)"/>
+    <ellipse cx="181.9" cy="126.6" rx="7.0" ry="3.6" fill="#111" transform="rotate(88.6,181.9,126.6)"/>
+    <ellipse cx="181.1" cy="153.8" rx="7.0" ry="3.6" fill="#111" transform="rotate(94.8,181.1,153.8)"/>
+    <ellipse cx="177.3" cy="180.7" rx="7.0" ry="3.6" fill="#111" transform="rotate(101.6,177.3,180.7)"/>
+    <ellipse cx="169.9" cy="206.7" rx="7.0" ry="3.6" fill="#111" transform="rotate(110.7,169.9,206.7)"/>
+    <ellipse cx="157.4" cy="230.8" rx="7.0" ry="3.6" fill="#111" transform="rotate(126.2,157.4,230.8)"/>
+    <ellipse cx="136.3" cy="247.1" rx="7.0" ry="3.6" fill="#111" transform="rotate(164.9,136.3,247.1)"/>
+
+    <!-- LOWER BEAD LOOP — rx=50, ry=113 -->
+    <ellipse cx="148.3" cy="255.8" rx="7.0" ry="3.6" fill="#111" transform="rotate(41.6,148.3,255.8)"/>
+    <ellipse cx="163.6" cy="277.3" rx="7.0" ry="3.6" fill="#111" transform="rotate(64.0,163.6,277.3)"/>
+    <ellipse cx="172.7" cy="302.3" rx="7.0" ry="3.6" fill="#111" transform="rotate(74.9,172.7,302.3)"/>
+    <ellipse cx="177.9" cy="328.3" rx="7.0" ry="3.6" fill="#111" transform="rotate(82.4,177.9,328.3)"/>
+    <ellipse cx="179.9" cy="354.8" rx="7.0" ry="3.6" fill="#111" transform="rotate(88.6,179.9,354.8)"/>
+    <ellipse cx="179.2" cy="381.3" rx="7.0" ry="3.6" fill="#111" transform="rotate(94.6,179.2,381.3)"/>
+    <ellipse cx="175.5" cy="407.6" rx="7.0" ry="3.6" fill="#111" transform="rotate(101.3,175.5,407.6)"/>
+    <ellipse cx="168.5" cy="433.2" rx="7.0" ry="3.6" fill="#111" transform="rotate(110.2,168.5,433.2)"/>
+    <ellipse cx="156.5" cy="456.8" rx="7.0" ry="3.6" fill="#111" transform="rotate(125.3,156.5,456.8)"/>
+    <ellipse cx="136.2" cy="473.1" rx="7.0" ry="3.6" fill="#111" transform="rotate(164.3,136.2,473.1)"/>
+    <ellipse cx="111.7" cy="466.2" rx="7.0" ry="3.6" fill="#111" transform="rotate(-138.4,111.7,466.2)"/>
+    <ellipse cx="96.4"  cy="444.7" rx="7.0" ry="3.6" fill="#111" transform="rotate(-116.0,96.4,444.7)"/>
+    <ellipse cx="87.3"  cy="419.7" rx="7.0" ry="3.6" fill="#111" transform="rotate(-105.1,87.3,419.7)"/>
+    <ellipse cx="82.1"  cy="393.7" rx="7.0" ry="3.6" fill="#111" transform="rotate(-97.6,82.1,393.7)"/>
+    <ellipse cx="80.1"  cy="367.2" rx="7.0" ry="3.6" fill="#111" transform="rotate(-91.4,80.1,367.2)"/>
+    <ellipse cx="80.8"  cy="340.7" rx="7.0" ry="3.6" fill="#111" transform="rotate(-85.4,80.8,340.7)"/>
+    <ellipse cx="84.5"  cy="314.4" rx="7.0" ry="3.6" fill="#111" transform="rotate(-78.7,84.5,314.4)"/>
+    <ellipse cx="91.5"  cy="288.8" rx="7.0" ry="3.6" fill="#111" transform="rotate(-69.8,91.5,288.8)"/>
+    <ellipse cx="103.5" cy="265.2" rx="7.0" ry="3.6" fill="#111" transform="rotate(-54.7,103.5,265.2)"/>
+    <ellipse cx="123.8" cy="248.9" rx="7.0" ry="3.6" fill="#111" transform="rotate(-15.7,123.8,248.9)"/>
+
+  </g><!-- end #beads -->
+
+  <!-- ══ FIXED: white clearing disk + star ══ -->
+  <circle cx="130" cy="248" r="26" fill="white"/>
+  <path d="M 130,216 Q 140,239 162,248 Q 140,257 130,280 Q 120,257 98,248 Q 120,239 130,216 Z"
+        fill="#111"/>
+
+  <!-- ══ FIXED: CIM label — draggable via mouse / long-press ══
+       Start: star outer edge (162) + 33% of loop diam (34) = x=196, y=260 -->
+  <text id="cim" x="196" y="260"
+        font-family="Georgia, 'Times New Roman', serif"
+        font-style="italic"
+        font-size="26"
+        fill="#111"
+        letter-spacing="1"
+        cursor="grab"
+        style="user-select:none;-webkit-user-select:none;">CIM</text>
+
+  <!-- Drag-hint ring (hidden by default, shown during long-press countdown) -->
+  <circle id="hint" cx="196" cy="260" r="18"
+          fill="none" stroke="#aaa" stroke-width="1.5"
+          stroke-dasharray="4 3" opacity="0"/>
+
+</svg>
+
+<div class="controls">
+  <span>Rotera pärlor</span>
+  <input type="range" id="rot" min="0" max="360" value="0" step="1">
+  <span class="deg" id="deg">0°</span>
+</div>
+
+<script>
+  /* ── bead rotation ── */
+  const slider = document.getElementById('rot');
+  const beads  = document.getElementById('beads');
+  const degLbl = document.getElementById('deg');
+  slider.addEventListener('input', function () {
+    beads.setAttribute('transform', `rotate(${this.value},130,248)`);
+    degLbl.textContent = this.value + '°';
+  });
+
+  /* ── CIM drag ── */
+  const svg  = document.getElementById('umra');
+  const cim  = document.getElementById('cim');
+  const hint = document.getElementById('hint');
+
+  let dragging   = false;
+  let longTimer  = null;
+  let startClient = null;   // {x,y} of pointer at dragstart
+  let startSVG    = null;   // SVG-coord of text anchor at dragstart
+
+  /* Convert client px → SVG user-units */
+  function clientToSVG(cx, cy) {
+    const pt = svg.createSVGPoint();
+    pt.x = cx; pt.y = cy;
+    return pt.matrixTransform(svg.getScreenCTM().inverse());
+  }
+
+  function beginDrag(clientX, clientY) {
+    dragging = true;
+    cim.style.cursor = 'grabbing';
+    hint.setAttribute('opacity', '0');
+    startClient = { x: clientX, y: clientY };
+    const sp = clientToSVG(clientX, clientY);
+    // offset from pointer to text anchor
+    startSVG = {
+      dx: parseFloat(cim.getAttribute('x')) - sp.x,
+      dy: parseFloat(cim.getAttribute('y')) - sp.y
+    };
+  }
+
+  function moveDrag(clientX, clientY) {
+    if (!dragging) return;
+    const p = clientToSVG(clientX, clientY);
+    cim.setAttribute('x', p.x + startSVG.dx);
+    cim.setAttribute('y', p.y + startSVG.dy);
+  }
+
+  function endDrag() {
+    dragging = false;
+    cim.style.cursor = 'grab';
+    clearTimeout(longTimer);
+    hint.setAttribute('opacity', '0');
+  }
+
+  /* ── MOUSE events (desktop) ── */
+  cim.addEventListener('mousedown', function (e) {
+    e.preventDefault();
+    beginDrag(e.clientX, e.clientY);
+  });
+  window.addEventListener('mousemove', function (e) {
+    moveDrag(e.clientX, e.clientY);
+  });
+  window.addEventListener('mouseup', endDrag);
+
+  /* ── TOUCH events (mobile) — long-press activates drag ── */
+  const LONG_MS = 450;   // ms hold before drag unlocks
+
+  cim.addEventListener('touchstart', function (e) {
+    const t = e.touches[0];
+    startClient = { x: t.clientX, y: t.clientY };
+
+    /* show hint ring at text position */
+    const sp = clientToSVG(t.clientX, t.clientY);
+    hint.setAttribute('cx', parseFloat(cim.getAttribute('x')) + 20);
+    hint.setAttribute('cy', parseFloat(cim.getAttribute('y')) - 8);
+    hint.setAttribute('opacity', '0.7');
+
+    longTimer = setTimeout(function () {
+      hint.setAttribute('opacity', '0');
+      beginDrag(startClient.x, startClient.y);
+    }, LONG_MS);
+  }, { passive: true });
+
+  cim.addEventListener('touchmove', function (e) {
+    const t = e.touches[0];
+    /* cancel long-press if finger moves too much before timer fires */
+    if (!dragging) {
+      const dx = t.clientX - startClient.x;
+      const dy = t.clientY - startClient.y;
+      if (Math.sqrt(dx*dx + dy*dy) > 8) {
+        clearTimeout(longTimer);
+        hint.setAttribute('opacity', '0');
+      }
+    }
+    if (dragging) {
+      e.preventDefault();
+      moveDrag(t.clientX, t.clientY);
+    }
+  }, { passive: false });
+
+  cim.addEventListener('touchend', endDrag);
+  cim.addEventListener('touchcancel', endDrag);
+</script>
+
+</body>
+</html>

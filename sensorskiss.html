@@ -283,6 +283,29 @@
         }
         .leaflet-tooltip.sk-label::before { display: none; }
 
+        /* Drag-bar etikett som följer symbolen men kan flyttas separat. */
+        .sk-label-marker {
+            background: transparent !important;
+            border: none !important;
+            cursor: grab;
+        }
+        .sk-label-marker.leaflet-marker-draggable.leaflet-drag-target {
+            cursor: grabbing;
+        }
+        .sk-label-marker .sk-label-text {
+            display: inline-block;
+            font: 600 11px Inter, sans-serif;
+            background: rgba(13, 31, 13, 0.90);
+            color: #fff;
+            border: 1px solid var(--accent);
+            border-radius: 3px;
+            padding: 2px 6px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.7);
+            white-space: nowrap;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
         /* Genvägsrad under kartan */
         .map-controls {
             display: block;
@@ -979,9 +1002,54 @@ function dirLineEndpoint(lat, lng, bearingDeg, meters) {
     return [lat + dLat, lng + dLng];
 }
 
+// Skapar en drag-bar etikett-markör som följer symbolen vid symboldrag
+// men kan flyttas separat. Position lagras i obj.labelLat/labelLng.
+// Default-offset: ~12 m söder om symbolen (≈ under ikonen vid normal zoom).
+function addLabelMarker(obj) {
+    const sym = window.SK_SYMBOLS[obj.typ];
+    if (!sym) return;
+    const labelText = obj.numLabel || sym.label;
+    if (obj.labelLat == null || obj.labelLng == null) {
+        obj.labelLat = obj.lat - 0.00018;
+        obj.labelLng = obj.lng;
+    }
+    const lblIcon = L.divIcon({
+        className: 'sk-label-marker',
+        html: '<span class="sk-label-text">' + escapeHtml(labelText) + '</span>',
+        iconSize: null,
+        iconAnchor: [0, 0]
+    });
+    const lbl = L.marker([obj.labelLat, obj.labelLng], {
+        icon: lblIcon,
+        draggable: true,
+        keyboard: false,
+        zIndexOffset: 200
+    });
+    lbl.on('dragstart', () => {
+        if (L.DomUtil) L.DomUtil.addClass(lbl._icon || document.body, 'leaflet-drag-target');
+    });
+    lbl.on('dragend', () => {
+        pushUndo();
+        const ll = lbl.getLatLng();
+        obj.labelLat = ll.lat;
+        obj.labelLng = ll.lng;
+        if (lbl._icon) L.DomUtil.removeClass(lbl._icon, 'leaflet-drag-target');
+    });
+    // Klick (utan drag) öppnar samma edit-popup som symbolen.
+    lbl.on('click', e => {
+        if (activeTool) return;
+        if (L.DomEvent) L.DomEvent.stopPropagation(e);
+        const mainLayer = state.layers[obj.id];
+        if (mainLayer) openEditPopup(obj, mainLayer, e);
+    });
+    lbl.addTo(map);
+    state.layers[obj.id + '_lbl'] = lbl;
+}
+
 function addDirectionLine(obj) {
     if (!obj.rotation && obj.rotation !== 0) return;
-    if (!window.SK_DIRECTIONAL_TYPES.has(obj.typ)) return;
+    const sym = window.SK_SYMBOLS[obj.typ];
+    if (!sym || !sym.externalLine) return;  // Endast PIR (sym.externalLine===true)
     // Använd ~100 m som referenslängd vid normal zoom — synligt vid z 13–16
     const end = dirLineEndpoint(obj.lat, obj.lng, obj.rotation, 100);
     const line = L.polyline([[obj.lat, obj.lng], end], {
@@ -1002,10 +1070,22 @@ function renderObject(obj) {
         layer = L.marker([obj.lat, obj.lng], {
             icon: icon, title: sym.label, draggable: true
         });
+        layer.on('dragstart', () => {
+            layer._dragStart = { lat: obj.lat, lng: obj.lng };
+        });
         layer.on('dragend', () => {
             pushUndo();
             const ll = layer.getLatLng();
+            const dLat = ll.lat - (layer._dragStart ? layer._dragStart.lat : obj.lat);
+            const dLng = ll.lng - (layer._dragStart ? layer._dragStart.lng : obj.lng);
             obj.lat = ll.lat; obj.lng = ll.lng;
+            // Flytta etiketten med samma delta så den fortsätter följa symbolen.
+            if (obj.labelLat != null && obj.labelLng != null) {
+                obj.labelLat += dLat;
+                obj.labelLng += dLng;
+                const lbl = state.layers[obj.id + '_lbl'];
+                if (lbl) lbl.setLatLng([obj.labelLat, obj.labelLng]);
+            }
             // Flytta dir-linjen om den finns
             const dir = state.layers[obj.id + '_dir'];
             if (dir) {
@@ -1013,15 +1093,11 @@ function renderObject(obj) {
                 dir.setLatLngs([[obj.lat, obj.lng], end]);
             }
         });
-        if (state.showLabels) {
-            const labelText = obj.numLabel || sym.label;
-            layer.bindTooltip(labelText, {
-                permanent: true, direction: 'bottom', offset: [0, 14],
-                className: 'sk-label', interactive: false
-            });
-        }
         layer.addTo(map);
         state.layers[obj.id] = layer;
+        if (state.showLabels) {
+            addLabelMarker(obj);
+        }
         addDirectionLine(obj);
     } else if (sym.category === 'polygon') {
         layer = L.polygon(obj.path.map(p => [p.lat, p.lng]), {
@@ -1159,11 +1235,17 @@ function openEditPopup(obj, layer, evt) {
         };
         const liveRotate = (deg) => {
             obj.rotation = deg;
+            // Uppdatera ikonens inre roterande grupp
+            const layer = state.layers[obj.id];
+            if (layer && layer.setIcon && window.skMakeIcon) {
+                layer.setIcon(window.skMakeIcon(obj.typ, obj));
+            }
+            // Uppdatera den långa externa riktningslinjen (bara PIR har en)
             const dir = state.layers[obj.id + '_dir'];
             if (dir) {
                 const end = dirLineEndpoint(obj.lat, obj.lng, deg, 100);
                 dir.setLatLngs([[obj.lat, obj.lng], end]);
-            } else if (window.SK_DIRECTIONAL_TYPES && window.SK_DIRECTIONAL_TYPES.has(obj.typ)) {
+            } else {
                 addDirectionLine(obj);
             }
         };
@@ -1186,6 +1268,11 @@ function openEditPopup(obj, layer, evt) {
             if (rotCommitted) return;
             if (obj.rotation === origRotation) return;
             obj.rotation = origRotation;
+            // Återställ ikonens rotation
+            const layer = state.layers[obj.id];
+            if (layer && layer.setIcon && window.skMakeIcon) {
+                layer.setIcon(window.skMakeIcon(obj.typ, obj));
+            }
             const dir = state.layers[obj.id + '_dir'];
             if (!hadDirLine && dir) {
                 try { map.removeLayer(dir); } catch (_) {}
@@ -1213,13 +1300,14 @@ function openEditPopup(obj, layer, evt) {
             const note = document.getElementById('skfNote');
             if (note) obj.anteckning = note.value;
             map.closePopup();
-            // Re-render hela objektet (ersätt icon med ev. ny numLabel/rotation)
-            const old = state.layers[obj.id];
-            if (old) try { map.removeLayer(old); } catch (_) {}
-            delete state.layers[obj.id];
-            const oldDir = state.layers[obj.id + '_dir'];
-            if (oldDir) try { map.removeLayer(oldDir); } catch (_) {}
-            delete state.layers[obj.id + '_dir'];
+            // Re-render hela objektet (ersätt icon med ev. ny numLabel/rotation).
+            // Ta bort alla lager kopplade till obj (huvud-marker, dir-linje, etikett).
+            Object.keys(state.layers).forEach(k => {
+                if (k === obj.id || k.startsWith(obj.id + '_')) {
+                    try { map.removeLayer(state.layers[k]); } catch (_) {}
+                    delete state.layers[k];
+                }
+            });
             renderObject(obj);
         });
         const del = document.getElementById('skfDel');
