@@ -216,11 +216,23 @@ async function prefetchPMTiles(url, opts) {
     }
 }
 
-async function isPrefetched(url) {
+async function isPrefetched(url, expectedBytes) {
     try {
         const cache = await caches.open(PMTILES_CACHE);
         const hit = await cache.match(url);
-        return !!hit;
+        if (!hit) return false;
+        // Storlekskontroll mot expected — hindrar att gamla cachade
+        // versioner anses giltiga efter rebuild av pmtiles-filen.
+        if (expectedBytes && expectedBytes > 0) {
+            const cl = parseInt(hit.headers.get('content-length') || '0', 10);
+            if (cl > 0 && cl !== expectedBytes) {
+                console.warn('[pmtiles] cachad fil har fel storlek (' + cl +
+                    ' bytes, väntar ' + expectedBytes + '). Invaliderar.');
+                await cache.delete(url);
+                return false;
+            }
+        }
+        return true;
     } catch (_) { return false; }
 }
 
@@ -404,7 +416,13 @@ function createController(map, normalLayer, opts) {
     function cancelPrefetch() {
         if (activeAbortController) activeAbortController.abort();
     }
-    function checkPrefetched() { return isPrefetched(url); }
+    // Vid checkPrefetched: skicka med expected bytes om URL ar Sverige-
+    // filen. Det invaliderar automatiskt gamla cachade versioner efter
+    // pmtiles-rebuild (t.ex. bytt maxzoom).
+    function checkPrefetched() {
+        const expectedBytes = (url === SVERIGE_PMTILES_URL) ? SVERIGE_PMTILES_BYTES : 0;
+        return isPrefetched(url, expectedBytes);
+    }
     function clearPrefetched() { return removePrefetched(url); }
 
     return {
