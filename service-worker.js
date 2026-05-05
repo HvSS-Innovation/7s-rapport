@@ -37,6 +37,7 @@ const FILES = [
   './skyttebok.html',
   './skyttebok.js',
   './skyttebok-data.js',
+  './skyttebok-sig.js',
   './version.js',
   './pwa.js',
   './opsec.js',

@@ -1229,6 +1229,257 @@
         }
     }
 
+    // ── Instruktörssignatur (Fas 1: nyckelhantering) ────────────────────
+    // UI-bindning för window.SkyttebokSig. Rendrar dynamiskt baserat på
+    // om eget nyckelpar finns + listan av betrodda nycklar.
+
+    function escSigErr(e) {
+        return escapeHtml(e && e.message ? e.message : String(e));
+    }
+
+    function renderSigUi() {
+        if (!window.SkyttebokSig) return;
+        renderSigSelf();
+        renderSigTrusted();
+    }
+
+    function renderSigSelf() {
+        var area = document.getElementById('sigSelfArea');
+        if (!area) return;
+        var self = window.SkyttebokSig.getSelf();
+        if (!self) {
+            area.innerHTML = '' +
+                '<div class="sig-empty">Du har inget nyckelpar än. Generera ett om du är instruktör och vill kunna signera provresultat.</div>' +
+                '<button class="btn btn-sm btn-primary" type="button" onclick="skyttebokSigGenerate()" style="width:100%;margin-top:0">Generera nyckelpar</button>';
+            return;
+        }
+        var nameDisp = self.name
+            ? '<span class="sig-self-name">' + escapeHtml(self.name) + '</span>'
+            : '<span class="sig-self-name empty">(inget visningsnamn)</span>';
+        area.innerHTML = '' +
+            '<div class="sig-self-card">' +
+                nameDisp +
+                '<div class="sig-fingerprint">' + escapeHtml(self.fingerprintFormatted) + '</div>' +
+                '<div class="sig-meta">Algoritm: ' + escapeHtml(self.algo) +
+                    ' · skapad ' + escapeHtml((self.createdAt || '').slice(0, 10)) +
+                '</div>' +
+            '</div>' +
+            '<div class="sig-name-input-row">' +
+                '<div>' +
+                    '<label for="sigSelfName">Visningsnamn (frivilligt)</label>' +
+                    '<input type="text" id="sigSelfName" autocomplete="off" maxlength="60" ' +
+                        'value="' + escapeHtml(self.name || '') + '" placeholder="T.ex. Sgt Andersson">' +
+                '</div>' +
+                '<button class="btn btn-sm btn-secondary" type="button" onclick="skyttebokSigSaveName()">Spara</button>' +
+            '</div>' +
+            '<div class="sig-actions-row">' +
+                '<button class="btn btn-sm btn-secondary" type="button" onclick="skyttebokSigExportPub()">Exportera publik nyckel</button>' +
+                '<button class="btn btn-sm btn-danger" type="button" onclick="skyttebokSigDeleteSelf()">Ta bort eget nyckelpar…</button>' +
+            '</div>';
+    }
+
+    function renderSigTrusted() {
+        var area = document.getElementById('sigTrustedArea');
+        if (!area) return;
+        var trusted = window.SkyttebokSig.listTrusted();
+        var html = '<label>Betrodda instruktörer (' + trusted.length + ')</label>';
+        if (trusted.length === 0) {
+            html += '<div class="sig-empty">Inga publika nycklar importerade än.</div>';
+        } else {
+            html += '<div class="sig-trusted-list">';
+            trusted.forEach(function (t) {
+                var nameHtml = t.name
+                    ? escapeHtml(t.name)
+                    : '<em style="color:var(--text-muted)">(utan namn)</em>';
+                html += '<div class="sig-trusted-row" data-keyid="' + escapeHtml(t.keyId) + '">' +
+                    '<div class="sig-trusted-name">' + nameHtml +
+                        '<small>' + escapeHtml(t.algo) + '</small>' +
+                    '</div>' +
+                    '<button class="pass-delete" type="button" title="Ta bort betrodd nyckel" ' +
+                        'onclick="skyttebokSigRemoveTrusted(\'' + escapeHtml(t.keyId) + '\')">×</button>' +
+                    '<div class="sig-fingerprint">' + escapeHtml(t.fingerprintFormatted) + '</div>' +
+                '</div>';
+            });
+            html += '</div>';
+        }
+        html += '<button class="btn btn-sm btn-secondary" type="button" ' +
+            'onclick="skyttebokSigImportClick()" style="width:100%;margin-top:8px">' +
+            'Importera annan instruktörs publika nyckel…</button>';
+        area.innerHTML = html;
+    }
+
+    window.skyttebokSigGenerate = async function () {
+        try {
+            await window.SkyttebokSig.generateSelfKey('');
+            renderSigUi();
+        } catch (e) {
+            showConfirm('Nyckelgenerering misslyckades',
+                'Kunde inte skapa nyckelpar: ' + (e && e.message ? e.message : '?') + '. ' +
+                'Kontrollera att webbläsaren stöder Web Crypto.',
+                function () { /* no-op */ });
+        }
+    };
+
+    window.skyttebokSigSaveName = async function () {
+        var input = document.getElementById('sigSelfName');
+        if (!input) return;
+        var name = input.value.trim();
+        try {
+            await window.SkyttebokSig.setSelfName(name);
+            renderSigUi();
+        } catch (e) {
+            showConfirm('Kunde inte spara namn', escSigErr(e), function () {});
+        }
+    };
+
+    window.skyttebokSigExportPub = async function () {
+        try {
+            var payload = await window.SkyttebokSig.exportSelfPublicKeyPayload();
+            if (!payload) return;
+            var json = JSON.stringify(payload, null, 2);
+            var blob = new Blob([json], { type: 'application/json' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'pubkey-' + payload.keyId + '.json';
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+        } catch (e) {
+            showConfirm('Export misslyckades', escSigErr(e), function () {});
+        }
+    };
+
+    window.skyttebokSigDeleteSelf = function () {
+        showConfirm(
+            'Ta bort eget nyckelpar',
+            'Tar bort din privata och publika nyckel från enheten. ' +
+            'Signaturer du redan gjort förblir verifierbara av andra som har din publika nyckel sparad — ' +
+            'men du kommer inte längre kunna skapa nya signaturer med samma nyckel-id. ' +
+            'Åtgärden kan inte ångras.',
+            async function () {
+                try {
+                    await window.SkyttebokSig.deleteSelfKey();
+                    renderSigUi();
+                } catch (e) {
+                    showConfirm('Kunde inte ta bort nyckel', escSigErr(e), function () {});
+                }
+            }
+        );
+    };
+
+    window.skyttebokSigImportClick = function () {
+        var f = document.getElementById('sigImportFile');
+        if (!f) return;
+        f.value = '';
+        f.click();
+    };
+
+    function importSigFile(file, overwrite) {
+        var reader = new FileReader();
+        reader.onload = async function () {
+            var payload;
+            try { payload = JSON.parse(reader.result); }
+            catch (_) {
+                showConfirm('Importfel', 'Kunde inte tolka filen som JSON.', function () {});
+                return;
+            }
+            try {
+                var imported = await window.SkyttebokSig.importTrustedKey(
+                    payload, { overwrite: !!overwrite }
+                );
+                renderSigUi();
+                showConfirm('Nyckel importerad',
+                    'Importerade ' + (imported.name || 'utan namn') +
+                    ' med fingerprint:\n\n' + imported.fingerprintFormatted +
+                    '\n\nVerifiera fingerprint via separat kanal (Signal, fysiskt möte) ' +
+                    'innan du litar på signaturer från denna nyckel.',
+                    function () {});
+            } catch (e) {
+                if (e && e.code === 'ALREADY_EXISTS') {
+                    showImportOverwrite(e, payload);
+                    return;
+                }
+                showConfirm('Importfel', escSigErr(e), function () {});
+            }
+        };
+        reader.onerror = function () {
+            showConfirm('Importfel', 'Kunde inte läsa filen.', function () {});
+        };
+        reader.readAsText(file);
+    }
+
+    function showImportOverwrite(err, payload) {
+        // Återanvänder confirm-overlay-mönstret från showImportChoice.
+        document.getElementById('confirmTitle').textContent = 'Nyckel finns redan';
+        document.getElementById('confirmMessage').textContent =
+            'En nyckel med fingerprint ' +
+            (err.existing ? err.existing.fingerprintFormatted : '?') +
+            ' finns redan (' +
+            (err.existing && err.existing.name ? err.existing.name : 'utan namn') +
+            '). Vill du skriva över den med den nya importen?';
+        var actions = document.querySelector('#confirmOverlay .confirm-actions');
+        var orig = actions.innerHTML;
+        actions.innerHTML = '';
+        var btnAvbryt = document.createElement('button');
+        btnAvbryt.className = 'btn btn-secondary';
+        btnAvbryt.textContent = 'Avbryt';
+        btnAvbryt.onclick = function () { close(); };
+        var btnSkriv = document.createElement('button');
+        btnSkriv.className = 'btn btn-danger';
+        btnSkriv.textContent = 'Skriv över';
+        btnSkriv.onclick = async function () {
+            close();
+            try {
+                var imported = await window.SkyttebokSig.importTrustedKey(
+                    payload, { overwrite: true }
+                );
+                renderSigUi();
+                showConfirm('Nyckel ersatt',
+                    'Den befintliga nyckeln ersattes. Ny signerare: ' +
+                    (imported.name || 'utan namn') + '.',
+                    function () {});
+            } catch (e2) {
+                showConfirm('Importfel', escSigErr(e2), function () {});
+            }
+        };
+        actions.appendChild(btnAvbryt);
+        actions.appendChild(btnSkriv);
+        document.getElementById('confirmOverlay').classList.add('open');
+
+        function close() {
+            document.getElementById('confirmOverlay').classList.remove('open');
+            actions.innerHTML = orig;
+            document.getElementById('confirmOk').addEventListener('click', confirmOkHandler);
+        }
+    }
+
+    window.skyttebokSigRemoveTrusted = function (keyId) {
+        var trusted = window.SkyttebokSig.listTrusted()
+            .filter(function (t) { return t.keyId === keyId; })[0];
+        var label = trusted
+            ? (trusted.name || 'utan namn') + ' (' + trusted.fingerprintFormatted + ')'
+            : keyId;
+        showConfirm(
+            'Ta bort betrodd nyckel',
+            'Tar bort ' + label + ' från betrodd-listan. Signaturer från denna nyckel kommer ' +
+            'att visas som "okänd signatur" tills nyckeln importeras igen. Åtgärden kan inte ångras.',
+            function () {
+                window.SkyttebokSig.removeTrustedKey(keyId);
+                renderSigUi();
+            }
+        );
+    };
+
+    function initSigImportFile() {
+        var input = document.getElementById('sigImportFile');
+        if (!input) return;
+        input.addEventListener('change', function () {
+            if (input.files && input.files[0]) importSigFile(input.files[0], false);
+        });
+    }
+
     // ── Settings ────────────────────────────────────────────────────────
     function initSettings() {
         var input = document.getElementById('displayName');
@@ -1444,6 +1695,8 @@
     // ── Init ────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         initSettings();
+        initSigImportFile();
+        renderSigUi();
         renderAll();
     });
 })();
