@@ -613,3 +613,45 @@ Utbildningen är upplagd som ett *fältpass med stegrande uppdrag*, ej som flash
 
 ### ❌ Refuserade
 *(Inga refuserade issues för tillfället)*
+
+---
+
+### 🌍 Kart-cache: Sveriges grannländer (DK/NO/FI/EE/LV/LT)
+
+**Status (2026-05-05):** Inventering klar, beslut fattat — implementation pågår.
+
+**Bakgrund:** Befintlig svensk kart-cache (`offline-tiles.js` +
+`hv-offline-tiles-v1` Cache API) har en generisk bbox/zoom-pipeline men
+hard-codad URL-mall för OpenTopoMap (z ≤ 17) + OSM Standard (z 18–19).
+Saknar preset-bboxar för grannländer och UI-knappar för snabb nedladdning.
+
+**Beslut:** Använd **OpenTopoMap + OSM-hybrid** (samma källa som svensk cache)
+för alla 6 grannländer. Beslutsmatris jämförde nationella tjänster
+(Kartverket NO, Dataforsyningen DK, MML FI, Maa-amet EE, LĢIA LV,
+Geoportal LT) och internationella alternativ (ESRI, Stadia, Thunderforest).
+Motivering:
+- Enhetlig stil över gränser (operatören får ingen visuell brytning vid t.ex. Torneälv).
+- En pipeline = ett underhåll. Throttling-policy redan accepterad av leverantörerna.
+- CC BY-SA 3.0 / ODbL kompatibelt med projektets CC BY-NC-SA-paraply.
+- Ingen API-nyckel som kan läcka i klient-JS.
+- Befintlig MGRS-overlay (`MGRS.forward(lat, lon)`) fungerar globalt — inga
+  gränsöverlagring i UTM-zonerna 32V/33V/34V/35V påverkar tile-rendering.
+
+**Implementation (pågår):**
+- `countries.js` — bbox/zoom-presets per ISO-kod (SE, DK, NO, FI, EE, LV, LT
+  + ~40 övriga länder för "Andra länder"-listan).
+- Lätt utbyggnad av `offline-tiles.js` — ingen brytande refaktor:
+  - `SOURCES`-tabell (utbytbar URL-mall) med default = nuvarande hybrid.
+  - `openCountryPicker(map, code, mode)` pre-fyller modal med country-bbox.
+  - `removeAllAreas()` för "Ersätt allt"-flödet.
+- Nya knappar i minkarta.html (rad 3 i map-controls):
+  `[ 🇸🇪 SE ] [ 🇩🇰 DK ] [ 🇳🇴 NO ] [ 🇫🇮 FI ] [ 🇪🇪 EE ] [ 🇱🇻 LV ] [ 🇱🇹 LT ]  [ Andra länder ▾ ]`
+- Tre-vals-dialog vid klick: **Lägg till** (default) / **Ersätt allt** / **Avbryt**.
+- Service-worker: `countries.js` läggs i `FILES`. Cachenamespace oförändrat
+  eftersom samma OTM/OSM-domäner används.
+
+**Möjlig Fas 2 (icke-mål för v1):** Kartverket som high-detail-källa specifikt
+för Norge (z upp till 20 i fjäll). Kräver per-source URL-byggare (y/x-ordning
+skiljer). Implementeras genom att SOURCES utökas — UI behöver inga ändringar.
+
+**Detaljerad lokal arbetsanteckning:** se `roadmap-grannlander.md` (gitignored).
