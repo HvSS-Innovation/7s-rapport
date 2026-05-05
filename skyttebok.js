@@ -32,6 +32,11 @@
     var PASS_PREFIX = 'skyttebok_pass_';
     var SETTING_PREFIX = 'skyttebok_settings_';
     var SAKERHETSPROV_KEY = 'skyttebok_sakerhetsprov';
+    // Säkerhetsprov BAS lagras med en enda LS-nyckel (det finns bara ett
+    // prov per enhet). För Fas 5 sig-koppling behöver det ändå ett "id"
+    // som matchar skyttebok_sig_<id>-mönstret. Konstant — inte sparat
+    // i sp-objektet.
+    var SP_SIG_ID = 'sp_bas';
     // v1: pass + sakerhetsprov + displayName.
     // v2 (Fas 4): + signatures (passId → sigPayload) + trustedKeys (array).
     // Vi exporterar alltid till lägsta möjliga format — v1 om inga sig-data
@@ -786,6 +791,20 @@
         }
     };
 
+    // ── Säkerhetsprov-signering helper ──────────────────────────────────
+    // Säkerhetsprov-objektet i localStorage saknar id-fält och har
+    // 'sparad' (timestamp) som inte ska ingå i sig-hashen. Den här bygger
+    // ett "signable" objekt som SkyttebokSig.signPass() kan ta emot.
+    // SP_SIG_ID är konstant — det finns bara ett prov per enhet.
+    function buildSpSignable(sp) {
+        if (!sp) return null;
+        var out = { id: SP_SIG_ID };
+        ['datum', 'godkand', 'instruktor', 'anteckning'].forEach(function (k) {
+            if (sp[k] !== undefined && sp[k] !== null) out[k] = sp[k];
+        });
+        return out;
+    }
+
     // ── Sig-render-state ────────────────────────────────────────────────
     // Synkron cache som plockas upp vid varje render() — ger pass-rader
     // omedelbar info om vilka signaturer som finns. `verified` fylls
@@ -823,15 +842,21 @@
         var newVerified = {};
         var changed = false;
 
-        // Ladda alla berörda pass-objekt EN gång (synkron LS-iter).
-        // Vi behöver det fullständiga pass-objektet eftersom hashPass()
-        // räknas på exakt det som ligger i localStorage just nu —
-        // tampering visar sig då som "broken".
+        // Ladda alla berörda objekt EN gång (synkron LS-iter).
+        // Vanliga pass läses från skyttebok_pass_<id>. Säkerhetsprov-sigen
+        // (passId === SP_SIG_ID) hämtas från SAKERHETSPROV_KEY istället
+        // — vi bygger ett signable objekt med samma struktur som signed.
         var passById = {};
         for (var i = 0; i < passIds.length; i++) {
-            var raw = localStorage.getItem('skyttebok_pass_' + passIds[i]);
+            var pid = passIds[i];
+            if (pid === SP_SIG_ID) {
+                var sp = loadSakerhetsprov();
+                if (sp) passById[pid] = buildSpSignable(sp);
+                continue;
+            }
+            var raw = localStorage.getItem(PASS_PREFIX + pid);
             if (raw) {
-                try { passById[passIds[i]] = JSON.parse(raw); }
+                try { passById[pid] = JSON.parse(raw); }
                 catch (_) { /* korrupt — skippas */ }
             }
         }
@@ -841,10 +866,13 @@
             var pass = passById[pid];
             var sig = sigs[pid];
             if (!pass) {
-                // Pass saknas men sig finns — orphan. Markera som broken.
+                // Källobjekt saknas men sig finns — orphan. Markera som broken.
+                var orphanReason = pid === SP_SIG_ID
+                    ? 'Tillhörande säkerhetsprov finns inte längre'
+                    : 'Tillhörande pass finns inte längre';
                 newVerified[pid] = {
                     state: 'broken',
-                    reason: 'Tillhörande pass finns inte längre',
+                    reason: orphanReason,
                     keyId: sig.signer && sig.signer.pubKeyId,
                     signerName: sig.signer && sig.signer.name
                 };
@@ -1093,11 +1121,22 @@
         }
         var sp = loadSakerhetsprov();
 
+        // Fas 5: status-uppgradering. Om provet är godkänt OCH har en
+        // giltig signatur från trusted-key → "OFFICIELLT GODKÄND".
+        // Annars vanlig "GODKÄND" med varning under att signatur saknas.
+        var spVer = sigRenderState.verified[SP_SIG_ID];
+        var spSig = sigRenderState.sigsByPassId[SP_SIG_ID];
+        var spOfficiellt = !!(sp && sp.godkand && spVer && spVer.state === 'valid' && spVer.trusted);
+
         var statusClass, statusText, cardClass;
         if (!sp) {
             statusClass = 'tom';
             statusText = 'EJ LOGGAT';
             cardClass = '';
+        } else if (sp.godkand && spOfficiellt) {
+            statusClass = 'ok';
+            statusText = 'OFFICIELLT GODKÄND';
+            cardClass = 'godkand';
         } else if (sp.godkand) {
             statusClass = 'ok';
             statusText = 'GODKÄND';
@@ -1115,6 +1154,65 @@
                 (sp.instruktor ? '<dt>Instruktör</dt><dd>' + escapeHtml(sp.instruktor) + '</dd>' : '') +
                 (sp.anteckning ? '<dt>Anteckning</dt><dd>' + escapeHtml(sp.anteckning) + '</dd>' : '') +
             '</dl>';
+        }
+
+        // Fas 5: sig-block — visar badge (4 tillstånd som vanliga pass) +
+        // signera/ta bort-knapp. "EJ SIGNERAT"-varning om sp.godkand=true
+        // men ingen sig finns.
+        var spSigBlock = '';
+        if (sp) {
+            spSigBlock = '<div class="pass-row-sig" style="margin-top:10px;padding-top:0;justify-content:flex-start">';
+            if (spSig) {
+                var sName = (spSig.signer && spSig.signer.name) ? spSig.signer.name : '(utan namn)';
+                var sFp = spSig.signer && spSig.signer.pubKeyId
+                    ? window.SkyttebokSig.formatFingerprint(spSig.signer.pubKeyId)
+                    : '';
+                var bClass = '', bIcon = '✓', bText = sName, tooltip = '';
+                if (!spVer) {
+                    bClass = 'sig-pending'; bIcon = '⋯'; bText = 'Verifierar…';
+                } else if (spVer.state === 'valid' && spVer.trusted) {
+                    bIcon = '✓'; bText = sName;
+                } else if (spVer.state === 'valid' && !spVer.trusted) {
+                    bClass = 'sig-warn'; bIcon = '⚠';
+                    bText = 'Okänd signerare: ' + sName;
+                    tooltip = 'Nyckel ' + sFp + ' finns inte i din trusted-list. Importera den om du litar på källan.';
+                } else {
+                    bClass = 'sig-broken'; bIcon = '✗'; bText = 'Bruten signatur';
+                    tooltip = spVer.reason || 'Signaturen kunde inte verifieras';
+                }
+                var titleAttr = tooltip ? ' title="' + escapeHtml(tooltip) + '"' : '';
+                spSigBlock += '<span class="sig-badge ' + bClass + '"' + titleAttr + '>' +
+                    bIcon + ' ' + escapeHtml(bText) +
+                    (sFp ? ' <span class="sig-badge-fp">' + escapeHtml(sFp) + '</span>' : '') +
+                '</span>' +
+                '<span class="sig-row-actions">' +
+                    '<button class="btn btn-sm btn-secondary" type="button" ' +
+                        'onclick="skyttebokSpRemoveSig()">Ta bort signatur</button>' +
+                '</span>';
+            } else if (sigRenderState.hasSelf) {
+                spSigBlock += '<button class="btn btn-sm btn-secondary" type="button" ' +
+                    'onclick="skyttebokSpSign()">Signera (instruktör)</button>';
+            }
+            // Varning om provet är godkänt men saknar instruktörssignatur.
+            if (sp.godkand && !spSig) {
+                spSigBlock += '<span class="sig-badge sig-warn" style="margin-left:0">' +
+                    '⚠ EJ SIGNERAT</span>';
+            }
+            spSigBlock += '</div>';
+
+            // Hint-text under sig-blocket om provet är godkänt men inte
+            // officiellt godkänt — förklarar vad som krävs.
+            if (sp.godkand && !spOfficiellt && !spSig) {
+                spSigBlock += '<div class="field-hint" style="margin-top:6px">' +
+                    'Provet räknas som lokalt loggat. För <strong>officiellt godkänt</strong> ' +
+                    'krävs instruktörssignatur från en betrodd nyckel.' +
+                '</div>';
+            } else if (sp.godkand && !spOfficiellt && spSig && spVer && !spVer.trusted) {
+                spSigBlock += '<div class="field-hint" style="margin-top:6px">' +
+                    'Signatur finns men signerarens nyckel är inte i din trusted-list. ' +
+                    'Importera nyckeln för att uppgradera till <strong>OFFICIELLT GODKÄND</strong>.' +
+                '</div>';
+            }
         }
 
         var momentList = SAKERHETSPROV_MOMENT.map(function (m) {
@@ -1136,6 +1234,7 @@
                 '</button>' +
                 '<div class="sp-body">' +
                     current +
+                    spSigBlock +
                     '<div class="pass-form" style="margin-top:12px">' +
                         '<div class="pass-form-title">' + (sp ? 'Uppdatera prov' : 'Logga prov') + '</div>' +
                         '<div class="pass-form-row">' +
@@ -1188,25 +1287,58 @@
             return;
         }
         var godkand = chip.getAttribute('data-value') === 'true';
-        saveSakerhetsprov({
+
+        var newSp = {
             datum: datum,
             instruktor: instruktor,
             anteckning: anteckning,
             godkand: godkand,
             sparad: Date.now()
-        });
-        renderSakerhetsprov();
-        var card = document.getElementById('spCard');
-        if (card) card.classList.add('open');
+        };
+
+        // Fas 5: om provet redan har en signatur, kontrollera om innehållet
+        // ändrades. Om ja — varna eftersom signaturen då blir ogiltig.
+        var existingSig = window.SkyttebokSig
+            ? window.SkyttebokSig.readSig(SP_SIG_ID) : null;
+        var existingSp = loadSakerhetsprov();
+        var contentChanged = false;
+        if (existingSig && existingSp) {
+            ['datum', 'instruktor', 'anteckning', 'godkand'].forEach(function (k) {
+                var aVal = existingSp[k];
+                var bVal = newSp[k];
+                if ((aVal || '') !== (bVal || '')) contentChanged = true;
+            });
+        }
+
+        function commit() {
+            saveSakerhetsprov(newSp);
+            renderAll();
+            var card = document.getElementById('spCard');
+            if (card) card.classList.add('open');
+        }
+
+        if (existingSig && contentChanged) {
+            showConfirm(
+                'Signatur blir ogiltig',
+                'En instruktörssignatur finns på provet. Att ändra innehållet ' +
+                'kommer göra signaturen ogiltig (visas som "Bruten signatur"). ' +
+                'Du kan be om en ny signatur efteråt eller ta bort den befintliga.\n\n' +
+                'Vill du spara ändringen ändå?',
+                commit
+            );
+            return;
+        }
+        commit();
     };
 
     window.skyttebokRaderaSakerhetsprov = function () {
         showConfirm(
             'Ta bort säkerhetsprov',
-            'Tar bort den loggade säkerhetsprovs-statusen. Åtgärden kan inte ångras.',
+            'Tar bort den loggade säkerhetsprovs-statusen. Eventuell signatur tas också bort. Åtgärden kan inte ångras.',
             function () {
                 saveSakerhetsprov(null);
-                renderSakerhetsprov();
+                if (window.SkyttebokSig) window.SkyttebokSig.writeSig(SP_SIG_ID, null);
+                renderAll();
             }
         );
     };
@@ -1838,6 +1970,44 @@
                 escSigErr(e),
                 function () {});
         }
+    };
+
+    // ── Säkerhetsprov-signering (Fas 5) ─────────────────────────────────
+    // Eget flöde eftersom sp-objektet inte har id och hashas på en
+    // begränsad fält-uppsättning. Sig-payload sparas under skyttebok_sig_sp_bas.
+    window.skyttebokSpSign = async function () {
+        if (!window.SkyttebokSig) return;
+        var sp = loadSakerhetsprov();
+        if (!sp) {
+            showConfirm('Inget säkerhetsprov',
+                'Logga ett säkerhetsprov innan du signerar det.',
+                function () {});
+            return;
+        }
+        try {
+            var signable = buildSpSignable(sp);
+            var sigPayload = await window.SkyttebokSig.signPass(signable);
+            window.SkyttebokSig.writeSig(SP_SIG_ID, sigPayload);
+            renderAll();
+            var card = document.getElementById('spCard');
+            if (card) card.classList.add('open');
+        } catch (e) {
+            showConfirm('Signering misslyckades', escSigErr(e), function () {});
+        }
+    };
+
+    window.skyttebokSpRemoveSig = function () {
+        showConfirm(
+            'Ta bort signatur',
+            'Tar bort instruktörssignaturen från säkerhetsprovet. Provet förblir kvar som lokalt loggat. Åtgärden kan inte ångras.',
+            function () {
+                if (!window.SkyttebokSig) return;
+                window.SkyttebokSig.writeSig(SP_SIG_ID, null);
+                renderAll();
+                var card = document.getElementById('spCard');
+                if (card) card.classList.add('open');
+            }
+        );
     };
 
     window.skyttebokRemoveSig = function (passId) {

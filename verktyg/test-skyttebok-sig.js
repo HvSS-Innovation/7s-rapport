@@ -196,6 +196,41 @@ function assert(cond, msg) {
     assert(verifyE2.trusted === true, 'trusted-key reste med — grön badge på enhet2');
     assert(verifyE2.signerName === 'Sgt Andersson', 'signerns namn återges på enhet2');
 
+    console.log('— Test 12: Fas 5 — säkerhetsprov-signering & "officiellt godkänd" —');
+    // Säkerhetsprov-objektet har inget id-fält. UI-koden bygger ett
+    // signable {id: 'sp_bas', datum, godkand, instruktor, anteckning}.
+    // Hashen ska bli stabil över anrop.
+    const spSignable = {
+        id: 'sp_bas',
+        datum: '2026-05-01',
+        godkand: true,
+        instruktor: 'Lt Bergström',
+        anteckning: 'Genomförde alla 15 moment'
+    };
+    const spSig = await Sig.signPass(spSignable);
+    assert(spSig.passId === 'sp_bas', 'sp-sig har passId=sp_bas');
+    assert(spSig.signer.name === 'Sgt Andersson', 'signerns namn matchar');
+
+    // Verifiera på enhet med trusted-key (soldat-sandbox med imported pubkey).
+    const enhet3 = newSandbox();
+    const Sig3 = enhet3.SkyttebokSig;
+    await Sig3.importTrustedKey(exported);
+    const spVerify = await Sig3.verifySignature(spSig, spSignable);
+    assert(spVerify.valid === true, 'sp-sig giltig');
+    assert(spVerify.trusted === true, 'sp-sig från trusted-key (= OFFICIELLT GODKÄND)');
+
+    // Tampera med 'instruktor' (Fas 5 lade till det i hashable-listan).
+    const spTampered = Object.assign({}, spSignable, { instruktor: 'Annat namn' });
+    const spVerifyTamper = await Sig3.verifySignature(spSig, spTampered);
+    assert(spVerifyTamper.valid === false,
+        'tampering med instruktor-fältet bryter signaturen');
+
+    // Tampera med 'godkand' (kritiskt fält — omöjligt att uppgradera EJ→G).
+    const spTampered2 = Object.assign({}, spSignable, { godkand: false });
+    const spVerifyTamper2 = await Sig3.verifySignature(spSig, spTampered2);
+    assert(spVerifyTamper2.valid === false,
+        'tampering med godkand-fältet bryter signaturen');
+
     console.log('\nALLA TESTER OK');
 })().catch((e) => {
     console.error(e);

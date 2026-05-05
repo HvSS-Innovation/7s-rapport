@@ -104,8 +104,15 @@
     // som inte påverkar provresultatets innehåll. Det innebär att
     // signaturen följer med passet vid id-byte (t.ex. import-merge).
     function buildHashableObject(pass) {
+        // Vitlista — bara dessa fält ingår i passHash. Att lägga till nya
+        // fält här kräver bumpning av SIG_FORMAT eftersom det ändrar
+        // hash-formeln och ogiltigförklarar gamla signaturer.
+        //
+        // 'instruktor' (Fas 5) används av säkerhetsprov-objekt — det är
+        // den instruktör som administrerade provet, inte den som signerar.
+        // Vanliga pass har inte fältet och påverkas inte.
         var keep = [
-            'anteckning', 'datum', 'godkand', 'ovningNr',
+            'anteckning', 'datum', 'godkand', 'instruktor', 'ovningNr',
             'poangKvot', 'poangSumma', 'skott', 'tid', 'traff', 'traffar'
         ];
         var out = {};
