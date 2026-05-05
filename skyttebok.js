@@ -1686,6 +1686,7 @@
         if (!window.SkyttebokSig) return;
         renderSigSelf();
         renderSigTrusted();
+        renderSigRosters();
     }
 
     function renderSigSelf() {
@@ -1736,9 +1737,17 @@
                 var nameHtml = t.name
                     ? escapeHtml(t.name)
                     : '<em style="color:var(--text-muted)">(utan namn)</em>';
+                // Fas 1.5: visa OFFICIELL-badge per roster nyckeln tillhör.
+                // Vid ingen roster: tyst — det är default-fallet.
+                var rosterBadges = '';
+                (t.rosterNames || []).forEach(function (rn) {
+                    rosterBadges += '<div><span class="sig-officiell-badge">' +
+                        'OFFICIELL: ' + escapeHtml(rn) + '</span></div>';
+                });
                 html += '<div class="sig-trusted-row" data-keyid="' + escapeHtml(t.keyId) + '">' +
                     '<div class="sig-trusted-name">' + nameHtml +
                         '<small>' + escapeHtml(t.algo) + '</small>' +
+                        rosterBadges +
                     '</div>' +
                     '<button class="pass-delete" type="button" title="Ta bort betrodd nyckel" ' +
                         'onclick="skyttebokSigRemoveTrusted(\'' + escapeHtml(t.keyId) + '\')">×</button>' +
@@ -1749,7 +1758,50 @@
         }
         html += '<button class="btn btn-sm btn-secondary" type="button" ' +
             'onclick="skyttebokSigImportClick()" style="width:100%;margin-top:8px">' +
-            'Importera annan instruktörs publika nyckel…</button>';
+            'Importera publik nyckel eller roster…</button>';
+        area.innerHTML = html;
+    }
+
+    function renderSigRosters() {
+        var area = document.getElementById('sigRosterArea');
+        if (!area) return;
+        var rosters = window.SkyttebokSig.listRosters();
+        if (rosters.length === 0) {
+            area.innerHTML = '';
+            return;
+        }
+        var html = '<label style="margin-top:14px">Importerade rostrar (' + rosters.length + ')</label>';
+        rosters.forEach(function (r) {
+            var validUntilHtml = '';
+            if (r.validUntil) {
+                var d = (r.validUntil || '').slice(0, 10);
+                var expired = false;
+                try {
+                    expired = new Date(r.validUntil).getTime() < Date.now();
+                } catch (_) { /* ignorera datum-parse-fel */ }
+                validUntilHtml = ' · <strong>' +
+                    (expired ? '⚠ Utgången ' : 'Giltig till ') + escapeHtml(d) +
+                    '</strong>';
+            }
+            var issuerHtml = r.issuer
+                ? 'Utgivare: <strong>' + escapeHtml(r.issuer) + '</strong>'
+                : '<em>(utgivare ej angiven)</em>';
+            var issuedAtHtml = r.issuedAt
+                ? ' · ' + escapeHtml((r.issuedAt || '').slice(0, 10))
+                : '';
+            html += '<div class="sig-roster-row" data-rosterid="' + escapeHtml(r.rosterId) + '">' +
+                '<div class="sig-roster-name">' + escapeHtml(r.name || '(namnlös roster)') + '</div>' +
+                '<div class="sig-roster-meta">' +
+                    issuerHtml + issuedAtHtml +
+                    '<br>' + r.keyCount + ' nycklar' + validUntilHtml +
+                '</div>' +
+                '<div class="sig-roster-actions">' +
+                    '<button class="btn btn-sm btn-danger" type="button" ' +
+                        'onclick="skyttebokSigRemoveRoster(\'' + escapeHtml(r.rosterId) + '\')">' +
+                        'Ta bort roster…</button>' +
+                '</div>' +
+            '</div>';
+        });
         area.innerHTML = html;
     }
 
@@ -1830,13 +1882,16 @@
                 showConfirm('Importfel', 'Kunde inte tolka filen som JSON.', function () {});
                 return;
             }
+            // Fas 1.5: dispatcha mellan pubkey och roster baserat på format.
+            if (payload && payload.format === 'sb-roster-v1') {
+                await importRosterPayload(payload, overwrite);
+                return;
+            }
             try {
                 var imported = await window.SkyttebokSig.importTrustedKey(
                     payload, { overwrite: !!overwrite }
                 );
                 renderSigUi();
-                // Tidigare "okänd signerare"-pass kan nu bli "kända" → flippa
-                // gul → grön. Triggar render → postRenderVerify.
                 render();
                 showConfirm('Nyckel importerad',
                     'Importerade ' + (imported.name || 'utan namn') +
@@ -1857,6 +1912,85 @@
         };
         reader.readAsText(file);
     }
+
+    async function importRosterPayload(payload, overwrite) {
+        try {
+            var res = await window.SkyttebokSig.importRosterFile(
+                payload, { overwrite: !!overwrite }
+            );
+            renderSigUi();
+            render();
+            var msg = 'Importerade rostern "' + (res.name || '(namnlös)') + '"\n' +
+                (res.issuer ? 'Utgivare: ' + res.issuer + '\n' : '') +
+                'Nycklar: ' + res.keyCount +
+                ' (' + res.addedKeys + ' nya, ' + res.updatedKeys + ' uppdaterade)\n\n' +
+                'Verifiera utgivaren via separat kanal innan du litar på rostern.';
+            showConfirm('Roster importerad', msg, function () {});
+        } catch (e) {
+            if (e && e.code === 'ROSTER_ALREADY_EXISTS') {
+                showRosterOverwrite(e, payload);
+                return;
+            }
+            showConfirm('Importfel', escSigErr(e), function () {});
+        }
+    }
+
+    function showRosterOverwrite(err, payload) {
+        document.getElementById('confirmTitle').textContent = 'Roster finns redan';
+        document.getElementById('confirmMessage').textContent =
+            'En roster med samma namn och utgivningsdatum finns redan ("' +
+            (err.existing && err.existing.name ? err.existing.name : '?') +
+            '" med ' + (err.existing ? err.existing.keyCount : '?') +
+            ' nycklar). Vill du skriva över med den nya importen?';
+        var actions = document.querySelector('#confirmOverlay .confirm-actions');
+        var orig = actions.innerHTML;
+        actions.innerHTML = '';
+        var btnAvbryt = document.createElement('button');
+        btnAvbryt.className = 'btn btn-secondary';
+        btnAvbryt.textContent = 'Avbryt';
+        btnAvbryt.onclick = function () { close(); };
+        var btnSkriv = document.createElement('button');
+        btnSkriv.className = 'btn btn-danger';
+        btnSkriv.textContent = 'Skriv över';
+        btnSkriv.onclick = async function () {
+            close();
+            await importRosterPayload(payload, true);
+        };
+        actions.appendChild(btnAvbryt);
+        actions.appendChild(btnSkriv);
+        document.getElementById('confirmOverlay').classList.add('open');
+        function close() {
+            document.getElementById('confirmOverlay').classList.remove('open');
+            actions.innerHTML = orig;
+            document.getElementById('confirmOk').addEventListener('click', confirmOkHandler);
+        }
+    }
+
+    window.skyttebokSigRemoveRoster = function (rosterId) {
+        var roster = window.SkyttebokSig.listRosters()
+            .filter(function (r) { return r.rosterId === rosterId; })[0];
+        var label = roster
+            ? (roster.name || 'utan namn') + ' (' + roster.keyCount + ' nycklar)'
+            : rosterId;
+        showConfirm(
+            'Ta bort roster',
+            'Tar bort rostern ' + label + '. Nycklar som BARA hör till denna ' +
+            'roster tas bort också. Nycklar du även importerat manuellt eller ' +
+            'från andra rostrar behålls — bara roster-pekaren rensas. Åtgärden ' +
+            'kan inte ångras.',
+            function () {
+                var res = window.SkyttebokSig.removeRoster(rosterId);
+                renderSigUi();
+                render();
+                showConfirm('Roster borttagen',
+                    'Tog bort ' + res.removedKeys + ' nycklar.' +
+                    (res.retainedKeys
+                        ? ' ' + res.retainedKeys + ' nycklar behölls (manuella eller i annan roster).'
+                        : ''),
+                    function () {});
+            }
+        );
+    };
 
     function showImportOverwrite(err, payload) {
         // Återanvänder confirm-overlay-mönstret från showImportChoice.

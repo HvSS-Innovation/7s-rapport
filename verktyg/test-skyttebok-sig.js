@@ -231,6 +231,82 @@ function assert(cond, msg) {
     assert(spVerifyTamper2.valid === false,
         'tampering med godkand-fältet bryter signaturen');
 
+    console.log('— Test 13: Fas 1.5 — roster-import (bunt-import av flera nycklar) —');
+    // Skapa två separata instruktörs-nyckelpar för att kunna testa
+    // multi-key roster-flöde.
+    const inst1 = newSandbox();
+    const inst2 = newSandbox();
+    const inst1Self = await inst1.SkyttebokSig.generateSelfKey('Sgt Andersson');
+    const inst2Self = await inst2.SkyttebokSig.generateSelfKey('Lt Bergström');
+    const inst1Pub = await inst1.SkyttebokSig.exportSelfPublicKeyPayload();
+    const inst2Pub = await inst2.SkyttebokSig.exportSelfPublicKeyPayload();
+
+    // Kompani-utgivare bygger en roster-fil med båda nycklarna.
+    const rosterPayload = {
+        format: 'sb-roster-v1',
+        name: 'Kompani 3 / VT26',
+        issuer: 'Cap N. Eriksson',
+        issuedAt: '2026-01-15T08:00:00Z',
+        validUntil: '2026-12-31T23:59:59Z',
+        keys: [inst1Pub, inst2Pub]
+    };
+
+    // Soldatens enhet importerar rostern.
+    const soldat2 = newSandbox();
+    const SS = soldat2.SkyttebokSig;
+    const rosterRes = await SS.importRosterFile(rosterPayload);
+    assert(rosterRes.keyCount === 2, 'roster importerar 2 nycklar');
+    assert(rosterRes.addedKeys === 2, 'båda är nya på enheten');
+    assert(rosterRes.updatedKeys === 0, 'inga uppdaterades');
+
+    const tList = SS.listTrusted();
+    assert(tList.length === 2, 'trusted-listan har 2 nycklar efter roster-import');
+    const inst1Entry = tList.filter(t => t.keyId === inst1Self.keyId)[0];
+    assert(inst1Entry, 'instruktör 1:s nyckel finns i trusted-listan');
+    assert(inst1Entry.rosterNames.includes('Kompani 3 / VT26'), 'rosterName finns');
+    assert(inst1Entry.manuallyImported === false, 'roster-importerad nyckel är inte manuell');
+
+    const rList = SS.listRosters();
+    assert(rList.length === 1, 'listRosters returnerar 1 roster');
+    assert(rList[0].keyCount === 2, 'roster-projektion visar 2 nycklar');
+    assert(rList[0].validUntil === '2026-12-31T23:59:59Z', 'validUntil bevaras');
+
+    console.log('— Test 14: Fas 1.5 — manuell import ovanpå roster bevarar rosterIds —');
+    // Soldaten importerar inst1:s nyckel manuellt också (utöver rostern).
+    await SS.importTrustedKey(inst1Pub, { overwrite: true });
+    const tListAfter = SS.listTrusted();
+    const inst1AfterManual = tListAfter.filter(t => t.keyId === inst1Self.keyId)[0];
+    assert(inst1AfterManual.manuallyImported === true, 'manuell-flagga sätts');
+    assert(inst1AfterManual.rosterNames.includes('Kompani 3 / VT26'),
+        'rosterName behålls vid manuell import');
+
+    console.log('— Test 15: Fas 1.5 — atomic import: tampered nyckel avvisar HELA rostern —');
+    const rosterTampered = JSON.parse(JSON.stringify(rosterPayload));
+    rosterTampered.keys[1].keyId = '0000000000000000'; // tamper
+    rosterTampered.name = 'Skadad roster'; // ändra namn så ny rosterId
+    rosterTampered.issuedAt = '2026-02-01T00:00:00Z';
+    let rosterErr = null;
+    try { await SS.importRosterFile(rosterTampered); }
+    catch (e) { rosterErr = e; }
+    assert(rosterErr, 'tampered roster avvisades');
+    assert(/avvisades/.test(rosterErr.message), 'rätt felmeddelande');
+    // Bekräfta att INGA av de nya nycklarna landade i storage.
+    const rListAfterTamper = SS.listRosters();
+    assert(rListAfterTamper.length === 1, 'fortfarande bara den första rostern');
+
+    console.log('— Test 16: Fas 1.5 — removeRoster tar bort BARA rena roster-nycklar —');
+    // Inst2:s nyckel är rena roster-nyckel (inte manuellt importerad).
+    // Inst1:s nyckel är både roster + manuell (från Test 14).
+    const removeRes = SS.removeRoster(rList[0].rosterId);
+    assert(removeRes.removedKeys === 1, 'inst2:s nyckel togs bort (bara roster)');
+    assert(removeRes.retainedKeys === 1, 'inst1:s nyckel behölls (även manuell)');
+    const tListAfterRemove = SS.listTrusted();
+    assert(tListAfterRemove.length === 1, '1 nyckel kvar i trusted-listan');
+    assert(tListAfterRemove[0].keyId === inst1Self.keyId, 'kvarvarande är inst1');
+    assert(tListAfterRemove[0].rosterNames.length === 0,
+        'rosterName rensad efter removeRoster');
+    assert(SS.listRosters().length === 0, 'rostrar är tomma');
+
     console.log('\nALLA TESTER OK');
 })().catch((e) => {
     console.error(e);

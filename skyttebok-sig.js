@@ -26,8 +26,10 @@
 
     var SELF_KEY = 'skyttebok_keys_self';
     var TRUSTED_PREFIX = 'skyttebok_keys_trusted_';
+    var ROSTER_PREFIX = 'skyttebok_keys_roster_';
     var SIG_PREFIX = 'skyttebok_sig_';
     var PUBKEY_FORMAT = 'sb-pubkey-v1';
+    var ROSTER_FORMAT = 'sb-roster-v1';
     var SIG_FORMAT = 'sb-sig-v1';
 
     // ── Algoritm-parametrar ─────────────────────────────────────────────
@@ -249,6 +251,12 @@
 
     // ── Trusted keys ────────────────────────────────────────────────────
     function listTrusted() {
+        // Bygg roster-id → name-map en gång så projektionen kan visa
+        // "OFFICIELL: <rostername>"-badges i UI utan extra storage-läsningar.
+        var rosters = listAllRostersRaw();
+        var rosterNameById = {};
+        rosters.forEach(function (r) { rosterNameById[r.rosterId] = r.name || ''; });
+
         var out = [];
         for (var i = 0; i < localStorage.length; i++) {
             var k = localStorage.key(i);
@@ -256,19 +264,27 @@
                 try {
                     var obj = JSON.parse(localStorage.getItem(k));
                     if (obj && obj.keyId) {
+                        var rosterIds = Array.isArray(obj.rosterIds) ? obj.rosterIds : [];
+                        var rosterNames = rosterIds.map(function (rid) {
+                            return rosterNameById[rid] || '(borttagen roster)';
+                        }).filter(function (n) { return !!n; });
                         out.push({
                             algo: obj.algo,
                             name: obj.name || '',
                             keyId: obj.keyId,
                             createdAt: obj.createdAt || null,
                             importedAt: obj.importedAt || null,
+                            // Bakåt-kompat: gamla entries saknar
+                            // manuallyImported. Tolka avsaknad som "true"
+                            // eftersom de importerades innan roster-stödet.
+                            manuallyImported: obj.manuallyImported !== false,
+                            rosterNames: rosterNames,
                             fingerprintFormatted: formatFingerprint(obj.keyId)
                         });
                     }
                 } catch (_) { /* korrupt — ignorera */ }
             }
         }
-        // Sortera alfabetiskt på namn, sekundärt på keyId.
         out.sort(function (a, b) {
             var n = (a.name || '').localeCompare(b.name || '');
             if (n !== 0) return n;
@@ -283,11 +299,10 @@
         try { return JSON.parse(raw); } catch (_) { return null; }
     }
 
-    // Validerar och importerar en publik-nyckel-payload (från export-JSON
-    // eller v2-import). Returnerar den importerade nyckeln som projektion,
-    // eller kastar Error med svensk meddelande vid fel.
-    async function importTrustedKey(payload, opts) {
-        opts = opts || {};
+    // Validerar en publik-nyckel-payload (utan att skriva till storage).
+    // Återanvänds av både importTrustedKey och importRosterFile (atomic
+    // validering före partial skrivning).
+    async function validateTrustedKeyPayload(payload) {
         if (!payload || typeof payload !== 'object') {
             throw new Error('Filen är inte ett giltigt nyckel-objekt.');
         }
@@ -298,12 +313,10 @@
         if (!payload.algo || !payload.jwkPublic || !payload.keyId) {
             throw new Error('Nyckel-objektet saknar nödvändiga fält (algo, jwkPublic, keyId).');
         }
-        // Verifiera att fingerprint matchar — annars är keyId fejkad.
         var calc = await fingerprintFromJwkPub(payload.jwkPublic);
         if (calc !== payload.keyId) {
             throw new Error('Fingerprint i filen matchar inte den publika nyckeln.');
         }
-        // Verifiera att nyckeln går att importera till CryptoKey.
         try {
             await crypto.subtle.importKey(
                 'jwk', payload.jwkPublic,
@@ -312,10 +325,17 @@
         } catch (e) {
             throw new Error('Den publika nyckeln kunde inte läsas in (' + e.message + ').');
         }
+    }
+
+    // Importerar en enskild publik nyckel som "manuellt importerad". Om
+    // nyckeln redan finns från en roster behålls dess rosterIds — manuell
+    // import är ett DELANDE av tillit, inte en ersättning.
+    async function importTrustedKey(payload, opts) {
+        opts = opts || {};
+        await validateTrustedKeyPayload(payload);
 
         var existing = getTrusted(payload.keyId);
         if (existing && !opts.overwrite) {
-            // Caller måste bekräfta överskrivning.
             var err = new Error('En nyckel med denna fingerprint finns redan (' +
                 (existing.name || 'utan namn') + '). Bekräfta överskrivning.');
             err.code = 'ALREADY_EXISTS';
@@ -328,13 +348,20 @@
             throw err;
         }
 
+        // Behåll roster-metadata om nyckeln redan kommit från en roster —
+        // användaren ankrar bara nyckeln manuellt också.
+        var rosterIds = (existing && Array.isArray(existing.rosterIds))
+            ? existing.rosterIds.slice() : [];
+
         var stored = {
             algo: payload.algo,
             name: (payload.name || '').trim(),
             keyId: payload.keyId,
             jwkPublic: payload.jwkPublic,
             createdAt: payload.createdAt || null,
-            importedAt: new Date().toISOString()
+            importedAt: new Date().toISOString(),
+            manuallyImported: true,
+            rosterIds: rosterIds
         };
         localStorage.setItem(TRUSTED_PREFIX + payload.keyId, JSON.stringify(stored));
         return {
@@ -347,6 +374,14 @@
 
     function removeTrustedKey(keyId) {
         localStorage.removeItem(TRUSTED_PREFIX + keyId);
+        // Städa stale-pekare i alla rosters keyIds-listor. En tom roster
+        // kan stå kvar — användaren tar bort den separat om hen vill.
+        listAllRostersRaw().forEach(function (r) {
+            if (Array.isArray(r.keyIds) && r.keyIds.indexOf(keyId) !== -1) {
+                r.keyIds = r.keyIds.filter(function (k) { return k !== keyId; });
+                localStorage.setItem(ROSTER_PREFIX + r.rosterId, JSON.stringify(r));
+            }
+        });
     }
 
     // Exportera alla trusted-keys som en array av sb-pubkey-v1-payloads.
@@ -373,6 +408,181 @@
             }
         }
         return out;
+    }
+
+    // ── Rosters (Fas 1.5 — bunt-import av flera publika nycklar) ───────
+
+    // Beräknar deterministiskt rosterId från name + issuedAt. Fungerar
+    // som fingerprint för rostern — två rostrar med exakt samma name +
+    // issuedAt anses vara samma uppdatering. Ändras issuedAt vid omdistr.
+    async function computeRosterId(name, issuedAt) {
+        var canon = canonicalJson({
+            name: (name || '').toString(),
+            issuedAt: (issuedAt || '').toString()
+        });
+        var bytes = new TextEncoder().encode(canon);
+        var digest = await crypto.subtle.digest('SHA-256', bytes);
+        var first8 = new Uint8Array(digest).slice(0, 8);
+        return bytesToHex(first8).toUpperCase();
+    }
+
+    // Intern: läs alla raw roster-entries (med keyIds-arrayen). Används av
+    // listRosters (för projektion) och removeTrustedKey (för städning).
+    function listAllRostersRaw() {
+        var out = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf(ROSTER_PREFIX) === 0) {
+                try {
+                    var obj = JSON.parse(localStorage.getItem(k));
+                    if (obj && obj.rosterId) out.push(obj);
+                } catch (_) { /* ignorera */ }
+            }
+        }
+        return out;
+    }
+
+    function getRoster(rosterId) {
+        var raw = localStorage.getItem(ROSTER_PREFIX + rosterId);
+        if (!raw) return null;
+        try { return JSON.parse(raw); } catch (_) { return null; }
+    }
+
+    // Atomic import: validera ALLA nycklar först. Om en enda är dålig
+    // avvisas hela rostern utan att skriva något till storage. Det
+    // matchar acceptanskriteriet att tampered keyId inte ger partial.
+    async function importRosterFile(payload, opts) {
+        opts = opts || {};
+        if (!payload || typeof payload !== 'object') {
+            throw new Error('Filen är inte ett giltigt roster-objekt.');
+        }
+        if (payload.format !== ROSTER_FORMAT) {
+            throw new Error('Okänt format ("' + (payload.format || '?') + '"). ' +
+                'Förväntade "' + ROSTER_FORMAT + '".');
+        }
+        if (!Array.isArray(payload.keys) || payload.keys.length === 0) {
+            throw new Error('Rostern saknar nycklar (keys[]).');
+        }
+
+        // Steg 1: validera alla nycklar parallellt. Atomic — fångar
+        // tampering eller felaktigt format innan vi rör storage.
+        try {
+            await Promise.all(payload.keys.map(validateTrustedKeyPayload));
+        } catch (e) {
+            throw new Error('Rostern avvisades — minst en nyckel är ogiltig: ' +
+                (e && e.message ? e.message : '?'));
+        }
+
+        // Steg 2: räkna rosterId och kontrollera kollision.
+        var rosterId = await computeRosterId(payload.name, payload.issuedAt);
+        var existing = getRoster(rosterId);
+        if (existing && !opts.overwrite) {
+            var err = new Error('En roster med samma namn och utgivningsdatum finns redan (' +
+                (existing.name || '') + '). Bekräfta överskrivning.');
+            err.code = 'ROSTER_ALREADY_EXISTS';
+            err.existing = {
+                rosterId: existing.rosterId,
+                name: existing.name,
+                issuedAt: existing.issuedAt,
+                keyCount: (existing.keyIds || []).length
+            };
+            throw err;
+        }
+
+        // Steg 3: skriv alla nycklar. Behåll manuallyImported om det redan
+        // var satt; addera rosterId till entry.rosterIds.
+        var addedKeys = 0, updatedKeys = 0;
+        var keyIds = [];
+        for (var i = 0; i < payload.keys.length; i++) {
+            var pk = payload.keys[i];
+            var existingKey = getTrusted(pk.keyId);
+            var rosterIds = (existingKey && Array.isArray(existingKey.rosterIds))
+                ? existingKey.rosterIds.slice() : [];
+            if (rosterIds.indexOf(rosterId) === -1) rosterIds.push(rosterId);
+            var stored = {
+                algo: pk.algo,
+                name: (pk.name || '').trim(),
+                keyId: pk.keyId,
+                jwkPublic: pk.jwkPublic,
+                createdAt: pk.createdAt || null,
+                importedAt: new Date().toISOString(),
+                // Manuell-flagga bevaras om den var satt; ny-imports från
+                // roster sätter den till false.
+                manuallyImported: !!(existingKey && existingKey.manuallyImported),
+                rosterIds: rosterIds
+            };
+            localStorage.setItem(TRUSTED_PREFIX + pk.keyId, JSON.stringify(stored));
+            keyIds.push(pk.keyId);
+            if (existingKey) updatedKeys++; else addedKeys++;
+        }
+
+        // Steg 4: skriv roster-posten själv.
+        var roster = {
+            format: ROSTER_FORMAT,
+            rosterId: rosterId,
+            name: (payload.name || '').toString(),
+            issuer: (payload.issuer || '').toString(),
+            issuedAt: payload.issuedAt || null,
+            validUntil: payload.validUntil || null,
+            keyIds: keyIds,
+            importedAt: new Date().toISOString()
+        };
+        localStorage.setItem(ROSTER_PREFIX + rosterId, JSON.stringify(roster));
+
+        return {
+            rosterId: rosterId,
+            name: roster.name,
+            issuer: roster.issuer,
+            issuedAt: roster.issuedAt,
+            validUntil: roster.validUntil,
+            keyCount: keyIds.length,
+            addedKeys: addedKeys,
+            updatedKeys: updatedKeys
+        };
+    }
+
+    // Tar bort rostern + alla nycklar som BARA hör till denna roster.
+    // Nycklar som även är manuellt importerade ELLER som tillhör en annan
+    // roster behålls — bara rosterId tas bort från entry.rosterIds.
+    function removeRoster(rosterId) {
+        var roster = getRoster(rosterId);
+        if (!roster) return { removedKeys: 0, retainedKeys: 0 };
+
+        var removedKeys = 0, retainedKeys = 0;
+        (roster.keyIds || []).forEach(function (keyId) {
+            var entry = getTrusted(keyId);
+            if (!entry) return;
+            var newRosterIds = (entry.rosterIds || []).filter(function (rid) {
+                return rid !== rosterId;
+            });
+            if (newRosterIds.length === 0 && !entry.manuallyImported) {
+                localStorage.removeItem(TRUSTED_PREFIX + keyId);
+                removedKeys++;
+            } else {
+                entry.rosterIds = newRosterIds;
+                localStorage.setItem(TRUSTED_PREFIX + keyId, JSON.stringify(entry));
+                retainedKeys++;
+            }
+        });
+
+        localStorage.removeItem(ROSTER_PREFIX + rosterId);
+        return { removedKeys: removedKeys, retainedKeys: retainedKeys };
+    }
+
+    function listRosters() {
+        return listAllRostersRaw().map(function (r) {
+            return {
+                rosterId: r.rosterId,
+                name: r.name || '',
+                issuer: r.issuer || '',
+                issuedAt: r.issuedAt || null,
+                validUntil: r.validUntil || null,
+                keyCount: Array.isArray(r.keyIds) ? r.keyIds.length : 0,
+                importedAt: r.importedAt || null
+            };
+        }).sort(function (a, b) {
+            return (a.name || '').localeCompare(b.name || '');
+        });
     }
 
     // ── Signatur (Fas 2 — färdigt API-skelett, används från Fas 2) ─────
@@ -511,6 +721,11 @@
         importTrustedKey: importTrustedKey,
         removeTrustedKey: removeTrustedKey,
         exportAllTrustedKeys: exportAllTrustedKeys,
+
+        // Rosters (Fas 1.5 — bunt-import av flera publika nycklar)
+        importRosterFile: importRosterFile,
+        listRosters: listRosters,
+        removeRoster: removeRoster,
 
         // Signering / verifiering (Fas 2-3)
         signPass: signPass,

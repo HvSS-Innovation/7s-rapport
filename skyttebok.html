@@ -279,6 +279,15 @@
         .sig-name-input-row { display: grid; grid-template-columns: 1fr max-content; gap: 6px; align-items: end; margin-top: 8px; }
         .sig-name-input-row .btn { min-height: 44px; }
 
+        /* Roster — Fas 1.5 */
+        .sig-roster-row { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px 12px; margin-bottom: 6px; }
+        .sig-roster-name { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+        .sig-roster-meta { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; line-height: 1.5; }
+        .sig-roster-meta strong { color: var(--text-secondary); font-weight: 600; }
+        .sig-roster-actions { display: flex; gap: 6px; margin-top: 8px; }
+        .sig-roster-actions .btn { flex: 0 0 auto; }
+        .sig-officiell-badge { display: inline-block; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: var(--radius-sm); padding: 2px 7px; font-size: 0.62rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; margin-top: 4px; }
+
         /* Pass-rad signatur — Fas 2 */
         .pass-row-sig { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding-top: 4px; flex-wrap: wrap; }
         .sig-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1.4; font-family: inherit; }
@@ -393,6 +402,7 @@
                 <label>Instruktörssignatur</label>
                 <div id="sigSelfArea"></div>
                 <div id="sigTrustedArea" style="margin-top:14px"></div>
+                <div id="sigRosterArea"></div>
                 <input type="file" id="sigImportFile" accept="application/json,.json" style="display:none">
                 <div class="field-hint" style="margin-top:6px">
                     Kryptografiska signaturer för provresultat (se roadmap-instruktorssignatur.md).
