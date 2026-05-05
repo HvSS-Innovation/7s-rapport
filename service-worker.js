@@ -204,3 +204,176 @@ self.addEventListener('fetch', e => {
     );
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+//  Bakgrundsnedladdning av tiles (Fas 1, audit/roadmap-bakgrundsnedladdning.md)
+//
+//  Sidor delegerar tile-jobb till SW via postMessage. Fördel: jobbet lever
+//  vidare när användaren navigerar mellan minkarta/sensorskiss/index/etc.
+//  Cache-namespacet (`hv-offline-tiles-v1`) är oförändrat — vi flyttar bara
+//  fetch-loopen från page-scope till SW-scope.
+// ─────────────────────────────────────────────────────────────────────────
+const _otJobs = Object.create(null);
+
+function otSnapshot(j) {
+  return {
+    id: j.id, areaId: j.areaId, label: j.label, mode: j.mode, kind: j.kind,
+    bbox: j.bbox, minZoom: j.minZoom, maxZoom: j.maxZoom,
+    total: j.total, done: j.done, bytes: j.bytes, failed: j.failed,
+    status: j.status, savedAt: j.savedAt,
+    paused: j.paused, pauseReason: j.pauseReason,
+    error: j.error ? String((j.error && j.error.message) || j.error) : null
+  };
+}
+
+function otBroadcast(message) {
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then(clients => {
+      clients.forEach(c => { try { c.postMessage(message); } catch (_) {} });
+    });
+}
+
+function otEmit(job) {
+  return otBroadcast({ type: 'OT_PROGRESS', jobId: job.id, job: otSnapshot(job) });
+}
+
+async function otFetchTile(cache, item, signal) {
+  const resp = await fetch(item.url, {
+    mode: 'cors',
+    credentials: 'omit',
+    referrerPolicy: 'strict-origin',
+    signal: signal
+  });
+  if (!resp || !resp.ok) throw new Error('HTTP ' + (resp ? resp.status : '?'));
+  const clone = resp.clone();
+  const blob = await resp.blob();
+  await cache.put(item.url, clone);
+  return blob.size;
+}
+
+async function otRunTileJob(spec) {
+  // spec: {jobId, items:[{url}], totalTiles, alreadyDone, parallel, throttleMs,
+  //        bbox, minZoom, maxZoom, areaId, kind, mode, label, savedAt}
+  const items = spec.items || [];
+  const parallel = (typeof spec.parallel === 'number' && spec.parallel > 0) ? spec.parallel : 2;
+  const throttleMs = (typeof spec.throttleMs === 'number' && spec.throttleMs >= 0) ? spec.throttleMs : 100;
+  const alreadyDone = (typeof spec.alreadyDone === 'number' && spec.alreadyDone >= 0) ? spec.alreadyDone : 0;
+  const totalTiles = (typeof spec.totalTiles === 'number' && spec.totalTiles > 0) ? spec.totalTiles : items.length;
+
+  const job = {
+    id: spec.jobId,
+    areaId: spec.areaId || null,
+    label: spec.label || '',
+    mode: spec.mode || 'new',
+    kind: spec.kind || 'area',
+    bbox: spec.bbox,
+    minZoom: spec.minZoom,
+    maxZoom: spec.maxZoom,
+    total: totalTiles,
+    done: alreadyDone,
+    bytes: 0,
+    failed: 0,
+    status: 'running',
+    savedAt: spec.savedAt || new Date().toISOString(),
+    paused: false,
+    pauseReason: null,
+    controller: new AbortController(),
+    error: null
+  };
+  _otJobs[job.id] = job;
+  otEmit(job);
+
+  const cache = await caches.open(OFFLINE_TILES_CACHE);
+  let idx = 0;
+  let runDone = 0;
+  let lastEmit = 0;
+
+  function flush(force) {
+    job.done = alreadyDone + runDone;
+    const now = Date.now();
+    if (force || now - lastEmit > 250) {
+      lastEmit = now;
+      otEmit(job);
+    }
+  }
+
+  async function waitWhilePaused() {
+    while (job.paused && !job.controller.signal.aborted) {
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
+
+  async function worker() {
+    while (idx < items.length) {
+      if (job.controller.signal.aborted) return;
+      await waitWhilePaused();
+      if (job.controller.signal.aborted) return;
+      const i = idx++;
+      try {
+        const sz = await otFetchTile(cache, items[i], job.controller.signal);
+        job.bytes += sz;
+      } catch (err) {
+        if (err && err.name === 'AbortError') return;
+        if (err && err.name === 'QuotaExceededError') throw err;
+        job.failed += 1;
+      }
+      runDone += 1;
+      flush(false);
+      if (throttleMs > 0 && idx < items.length) {
+        await new Promise(r => setTimeout(r, throttleMs));
+      }
+    }
+  }
+
+  try {
+    const workers = [];
+    for (let w = 0; w < parallel; w++) workers.push(worker());
+    await Promise.all(workers);
+    job.status = job.controller.signal.aborted ? 'aborted' : 'done';
+  } catch (err) {
+    job.error = err;
+    job.status = (err && err.name === 'QuotaExceededError') ? 'quota' : 'error';
+  }
+  job.done = alreadyDone + runDone;
+  flush(true);
+  // Lämna kvar i _otJobs en kort stund så sidor som hydrerar precis efter
+  // klart-event ändå ser slutläget och kan visa "Klar"-pille.
+  setTimeout(() => {
+    delete _otJobs[job.id];
+    otBroadcast({ type: 'OT_PROGRESS', jobId: job.id, job: null });
+  }, 8000);
+}
+
+self.addEventListener('message', (e) => {
+  const data = e.data || {};
+  if (data.type === 'OT_START_JOB') {
+    const spec = data.spec || {};
+    if (!spec.jobId || !Array.isArray(spec.items)) return;
+    if (_otJobs[spec.jobId]) {
+      // Dedup: en annan flik startade redan samma job-id.
+      otEmit(_otJobs[spec.jobId]);
+      return;
+    }
+    e.waitUntil(otRunTileJob(spec).catch(err => {
+      console.error('[SW] otRunTileJob fel', err);
+    }));
+  } else if (data.type === 'OT_CANCEL') {
+    const j = _otJobs[data.jobId];
+    if (j && j.controller) j.controller.abort();
+  } else if (data.type === 'OT_PAUSE') {
+    const j = _otJobs[data.jobId];
+    if (j) {
+      j.paused = !!data.paused;
+      j.pauseReason = data.reason || null;
+      otEmit(j);
+    }
+  } else if (data.type === 'OT_LIST_JOBS') {
+    const list = Object.values(_otJobs).map(otSnapshot);
+    const target = e.source;
+    if (target) {
+      try { target.postMessage({ type: 'OT_JOBS_LIST', jobs: list }); } catch (_) {}
+    } else {
+      otBroadcast({ type: 'OT_JOBS_LIST', jobs: list });
+    }
+  }
+});

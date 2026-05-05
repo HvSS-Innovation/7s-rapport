@@ -854,7 +854,137 @@
     // Bakgrundspille:n (renderJobsBar) lyssnar på 'offline-tiles:job-update'
     // och visar alla aktiva jobb. Designen är tight-decoupled: modal och pill
     // kommunicerar bara via event, inte via shared state-references.
+    //
+    // Fas 1 (audit/roadmap-bakgrundsnedladdning.md): om Service Worker är
+    // aktiv delegeras själva fetch-loopen till SW så att jobbet överlever
+    // sid-navigering. Lokala _jobs[jobId] fungerar då som spegelbild av SW:s
+    // job-state — pille:n och modal-en bryr sig inte om var loopen kör.
     var _jobs = Object.create(null);
+
+    // ── Service Worker-bro ─────────────────────────────────────────────────
+    // canUseSW(): true om navigator.serviceWorker.controller finns. Vid
+    // första pageload (innan SW har tagit kontroll) är controller null —
+    // då hydreras lokal lista bara när SW skickar OT_JOBS_LIST efter ready.
+    function canUseSW() {
+        return typeof navigator !== 'undefined'
+            && 'serviceWorker' in navigator
+            && !!navigator.serviceWorker.controller;
+    }
+
+    function sendToSW(msg) {
+        if (!canUseSW()) return false;
+        try { navigator.serviceWorker.controller.postMessage(msg); return true; }
+        catch (_) { return false; }
+    }
+
+    // Snapshot från SW innehåller inte controller/wakeLock. Vi bevarar dem
+    // om jobbet redan finns lokalt så att cleanup på sida-sidan funkar.
+    function applyJobSnapshot(snapshot) {
+        if (!snapshot || !snapshot.id) return;
+        var existing = _jobs[snapshot.id] || {};
+        var merged = {
+            id: snapshot.id,
+            areaId: snapshot.areaId,
+            label: snapshot.label,
+            mode: snapshot.mode,
+            kind: snapshot.kind,
+            bbox: snapshot.bbox,
+            minZoom: snapshot.minZoom,
+            maxZoom: snapshot.maxZoom,
+            total: snapshot.total,
+            done: snapshot.done,
+            bytes: snapshot.bytes,
+            failed: snapshot.failed,
+            status: snapshot.status,
+            savedAt: snapshot.savedAt,
+            paused: snapshot.paused,
+            pauseReason: snapshot.pauseReason,
+            error: snapshot.error ? new Error(snapshot.error) : null,
+            // bevara sida-bara fält
+            controller: existing.controller || null,
+            wakeLock: existing.wakeLock || null,
+            cleanup: existing.cleanup || null,
+            delegated: true
+        };
+        _jobs[snapshot.id] = merged;
+        // Persistera area-meta varje ~50 tiles + vid status != running.
+        var lastSavedAt = existing.lastSavedDone || -100;
+        var shouldSave = (merged.status !== 'running')
+            || (merged.done - lastSavedAt >= 50)
+            || (merged.done === merged.total);
+        if (shouldSave && merged.bbox && typeof merged.minZoom === 'number') {
+            try {
+                saveAreaMeta({
+                    id: merged.areaId,
+                    kind: merged.kind || 'area',
+                    bbox: merged.bbox,
+                    minZoom: merged.minZoom,
+                    maxZoom: merged.maxZoom,
+                    tileCount: merged.done,
+                    bytes: merged.bytes,
+                    savedAt: merged.savedAt,
+                    complete: merged.done === merged.total
+                });
+                merged.lastSavedDone = merged.done;
+            } catch (_) { /* localStorage full / locked → ignorera */ }
+        } else {
+            merged.lastSavedDone = lastSavedAt;
+        }
+
+        ensureJobsBar();
+        emitJobUpdate(merged.id);
+
+        if (merged.status !== 'running') {
+            if (existing.cleanup) {
+                try { existing.cleanup(); } catch (_) {}
+                merged.cleanup = null;
+            }
+            if (existing.wakeLock) {
+                try { existing.wakeLock.release(); } catch (_) {}
+                merged.wakeLock = null;
+            }
+        }
+    }
+
+    function handleSwMessage(ev) {
+        var data = ev.data || {};
+        if (data.type === 'OT_PROGRESS') {
+            if (data.job === null) {
+                // SW signalerar att jobbet är färdigrensat på sin sida.
+                if (_jobs[data.jobId]) {
+                    delete _jobs[data.jobId];
+                    emitJobUpdate(data.jobId);
+                }
+                return;
+            }
+            applyJobSnapshot(data.job);
+        } else if (data.type === 'OT_JOBS_LIST') {
+            var list = Array.isArray(data.jobs) ? data.jobs : [];
+            for (var i = 0; i < list.length; i++) applyJobSnapshot(list[i]);
+        }
+    }
+
+    var _swListenerInstalled = false;
+    function ensureSwListener() {
+        if (_swListenerInstalled) return;
+        if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
+        _swListenerInstalled = true;
+        navigator.serviceWorker.addEventListener('message', handleSwMessage);
+        // Vänta på ready och fråga efter aktiva jobb. Hydrerar pille:n om
+        // ett jobb startats i annan flik och fortfarande lever i SW.
+        if (navigator.serviceWorker.ready && navigator.serviceWorker.ready.then) {
+            navigator.serviceWorker.ready.then(function () {
+                if (navigator.serviceWorker.controller) {
+                    try {
+                        navigator.serviceWorker.controller.postMessage({ type: 'OT_LIST_JOBS' });
+                    } catch (_) {}
+                }
+            });
+        }
+    }
+    // Installera lyssnaren direkt — pille:n syns även om sidan inte själv
+    // startat något jobb.
+    ensureSwListener();
 
     function emitJobUpdate(jobId) {
         try {
@@ -873,7 +1003,12 @@
 
     function cancelJob(jobId) {
         var j = _jobs[jobId];
-        if (j && j.controller) j.controller.abort();
+        if (!j) return;
+        if (j.delegated) {
+            sendToSW({ type: 'OT_CANCEL', jobId: jobId });
+            return;
+        }
+        if (j.controller) j.controller.abort();
     }
 
     // ── Auto-pause + Wake Lock (Fas 3) ─────────────────────────────────────
@@ -889,6 +1024,9 @@
         if (job.paused && job.pauseReason === reason) return;
         job.paused = true;
         job.pauseReason = reason;
+        if (job.delegated) {
+            sendToSW({ type: 'OT_PAUSE', jobId: job.id, paused: true, reason: reason });
+        }
         emitJobUpdate(job.id);
     }
     function clearJobPause(job, reason) {
@@ -898,6 +1036,9 @@
         if (reason && job.pauseReason !== reason) return;
         job.paused = false;
         job.pauseReason = null;
+        if (job.delegated) {
+            sendToSW({ type: 'OT_PAUSE', jobId: job.id, paused: false, reason: null });
+        }
         emitJobUpdate(job.id);
     }
 
@@ -967,6 +1108,11 @@
 
     // Startar en nedladdning som ett bakgrundsjobb. Returnerar jobId direkt;
     // jobbets framgång/avslut signaleras via event-strömmen.
+    //
+    // Om Service Worker är aktiv (canUseSW) körs själva fetch-loopen i SW så
+    // att jobbet överlever sid-navigering. Sidan håller ett spegel-job-objekt
+    // i _jobs och hydrerar det från OT_PROGRESS-meddelanden. Saknas SW (t.ex.
+    // Firefox incognito) går vi tillbaka till in-page-loopen oförändrat.
     function startJob(spec) {
         var jobId = 'j_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 5);
         // spec.items: valfri override som anvands av resumeArea — bara
@@ -979,7 +1125,6 @@
             : items.length;
         var alreadyDone = (typeof spec.alreadyDone === 'number' && spec.alreadyDone >= 0)
             ? spec.alreadyDone : 0;
-        var controller = (typeof AbortController !== 'undefined') ? new AbortController() : null;
         var areaId = spec.areaId || newAreaId();
         var savedAt = new Date().toISOString();
 
@@ -988,6 +1133,10 @@
         // audit/roadmap-kamuflage-nedladdning.md. Persisteras i area-meta så
         // att UI:n kan visa det och Fas 2 (beskär) kan filtrera på det.
         var kind = spec.kind || 'area';
+
+        var useSW = canUseSW();
+        var controller = (!useSW && typeof AbortController !== 'undefined')
+            ? new AbortController() : null;
 
         var job = {
             id: jobId,
@@ -1008,7 +1157,9 @@
             error: null,
             paused: false,
             pauseReason: null,
-            wakeLock: null
+            wakeLock: null,
+            delegated: useSW,
+            cleanup: null
         };
         _jobs[jobId] = job;
         emitJobUpdate(jobId);
@@ -1019,6 +1170,35 @@
         var cleanupAutoPause = installAutoPause(job);
         var cleanupWakeLock = installWakeLockReacquire(job);
         acquireWakeLock().then(function (lock) { job.wakeLock = lock; });
+        job.cleanup = function () {
+            try { cleanupAutoPause(); } catch (_) {}
+            try { cleanupWakeLock(); } catch (_) {}
+        };
+
+        if (useSW) {
+            // SW-läge: skicka spec + items, lyssna på OT_PROGRESS via global
+            // handleSwMessage. applyJobSnapshot() driver pille + saveAreaMeta.
+            sendToSW({
+                type: 'OT_START_JOB',
+                spec: {
+                    jobId: jobId,
+                    items: items,
+                    totalTiles: fullCount,
+                    alreadyDone: alreadyDone,
+                    parallel: spec.parallel,
+                    throttleMs: spec.throttleMs,
+                    bbox: spec.bbox,
+                    minZoom: spec.minZoom,
+                    maxZoom: spec.maxZoom,
+                    areaId: areaId,
+                    kind: kind,
+                    mode: spec.mode || 'new',
+                    label: spec.label || '',
+                    savedAt: savedAt
+                }
+            });
+            return jobId;
+        }
 
         (async function run() {
             try {
