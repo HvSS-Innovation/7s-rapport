@@ -26,6 +26,7 @@
     <script src="minkarta-tutorial.js" defer></script>
     <script src="offline-tiles.js" defer></script>
     <script type="module" src="pmtiles-layer.js"></script>
+    <script type="module" src="topo-overlay.js"></script>
     <style>
         :root {
             --bg-primary: #0d1f0d;
@@ -979,6 +980,21 @@ function initMap() {
         window.addEventListener('PMTilesHardening:ready', setupHardening, { once: true });
     }
 
+    // Topografi-overlay (höjdkurvor / hillshade ovanpå basemap). Modulen är
+    // fristående från Härdat läge — fungerar både ovanpå OTM och ovanpå
+    // PMTiles-basemap. Datakälla utbytbar (PMTiles raster eller online tile).
+    function setupTopoOverlay() {
+        if (window.TopoOverlay && typeof window.TopoOverlay.createController === 'function') {
+            window.MK_TOPO = window.TopoOverlay.createController(map);
+            window.dispatchEvent(new CustomEvent('MK_TOPO:ready'));
+            return true;
+        }
+        return false;
+    }
+    if (!setupTopoOverlay()) {
+        window.addEventListener('TopoOverlay:ready', setupTopoOverlay, { once: true });
+    }
+
     // Återställ senaste vy eller defaulta
     let restored = false;
     try {
@@ -1592,6 +1608,56 @@ function renderMapControls() {
     }
     refreshPrefetchBtn();
     row2.appendChild(prefetchBtn);
+
+    // Topografi-overlay: separat lager med höjdkurvor / hillshade. Tänkt för
+    // att komplettera Härdat läge (där basemap saknar topografi) men fungerar
+    // även ovanpå OTM. Källa utbytbar via window.MK_TOPO.setSource(id).
+    const topoBtn = document.createElement('button');
+    topoBtn.type = 'button';
+    topoBtn.className = 'btn btn-sm btn-toggle';
+    topoBtn.title = 'Lägg på höjdkurvor / hillshade ovanpå kartan. Använder en utbytbar datakälla — pmtiles offline eller online-tiles.';
+    topoBtn.textContent = 'Topografi';
+    function refreshTopoBtn() {
+        const ctrl = window.MK_TOPO;
+        const active = ctrl && ctrl.isActive();
+        topoBtn.textContent = active ? 'Topografi: PÅ' : 'Topografi';
+        topoBtn.setAttribute('aria-pressed', active ? 'true' : 'false');
+    }
+    topoBtn.addEventListener('click', async () => {
+        const ctrl = window.MK_TOPO;
+        if (!ctrl) {
+            window.alert('Topo-modulen är inte laddad än. Försök igen om en sekund.');
+            return;
+        }
+        if (!ctrl.isActive()) {
+            const sourceId = ctrl.getSourceId();
+            const sources = window.TopoOverlay.listSources();
+            const source = sources.find(s => s.id === sourceId);
+            // OPSEC-varning för online-källor — skickar tile-requests dit.
+            if (source && source.opsecOnline && !ctrl.hasAcceptedOpsec(sourceId)) {
+                const hard = window.MK_HARDENING && window.MK_HARDENING.isActive();
+                const msg = hard
+                    ? 'OBS: Topografi-overlay "' + source.label + '" hämtar tiles från en online-tjänst.\n\n' +
+                      'Detta bryter Härdat läges OPSEC — din IP + visat område syns hos tile-servern.\n\n' +
+                      'Aktivera ändå?'
+                    : 'Topografi-overlay "' + source.label + '" hämtar tiles från en online-tjänst.\n\n' +
+                      'Vill du fortsätta? (sparas — frågas inte igen)';
+                if (!window.confirm(msg)) return;
+                ctrl.markOpsecAccepted(sourceId);
+            }
+        }
+        await ctrl.toggle();
+    });
+    if (window.MK_TOPO) {
+        window.MK_TOPO.onChange(refreshTopoBtn);
+    } else {
+        window.addEventListener('MK_TOPO:ready', () => {
+            window.MK_TOPO.onChange(refreshTopoBtn);
+            refreshTopoBtn();
+        }, { once: true });
+    }
+    refreshTopoBtn();
+    row2.appendChild(topoBtn);
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()

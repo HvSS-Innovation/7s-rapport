@@ -56,6 +56,7 @@ För dig som vill förstå exakt vad appen gör med data, var den ligger och vil
 |---|---|---|---|
 | MINKARTA, SENSORSKISS, 7S, A-H, SCRIM, WHAT, WEFT, OBSLÖSA — vanlig karta | OpenTopoMap / OpenStreetMap tile-servers | z/x/y per kart-tile | IP + ungefärligt visat område |
 | MINKARTA, SENSORSKISS, 7S, A-H, SCRIM, WHAT, WEFT, OBSLÖSA — *Härdat läge* | Cloudflare R2 (engångs-nedladdning, sker via Min Karta) | range-requests mot `sverige.pmtiles` | IP + att du laddar ner Sverige-paketet en gång |
+| MINKARTA, SENSORSKISS — *Topografi-overlay (online-fallback)* | OpenTopoMap (opt-in, varning visas) | z/x/y per kart-tile | IP + ungefärligt visat område |
 | Adress-/UPK-uppslag (kartmodal i 7S/SCRIM/WEFT/A-H/OBSLÖSA + UPK i MINKARTA) | Nominatim (OSM) | klickad lat/lon | IP + koordinat |
 | VÄDER | Nominatim, Open-Meteo, SMHI autocomplete | ortnamn → koordinat → prognosanrop | IP + ort/position |
 | Övriga formulär (7S, WHAT, SCRIM, WEFT, A-H, OBSLÖSA, FORS, PEDARS, SCHEMA, EOBUSARE, OBO, RASSOIKA) | inga | — | — |
@@ -117,6 +118,28 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 ---
 
 ## Dagbok: Utvecklingslogg
+
+### 2026-05-05: Topografi-overlay (Fas 1)
+Ny knapp **Topografi** i `minkarta.html` + `sensorskiss.html` som lägger
+en separat tile-/raster-layer ovanpå basemap för höjdkurvor / hillshade.
+Datakälla utbytbar via [topo-overlay.js](topo-overlay.js): pmtiles-raster
+för offline-vänlig drift, online tile-template som snabb fallback.
+
+* **MVP-fallback:** OpenTopoMap online-overlay (opacity 0.55) med
+  opt-in OPSEC-varning. Aktiverad i Härdat läge varnar extra hårt
+  eftersom det skickar tile-requests till tile.opentopomap.org.
+* **Demo:** Mt Whitney USGS WebP-PMTiles (1.9 MB, publik) — låter
+  mekanismen testas direkt. Aktivera via console:
+  `MK_TOPO.setSource('mt-whitney-demo')`.
+* **Fas 2 (vänter):** `sverige-hillshade.pmtiles` byggd från Copernicus
+  DEM GLO-30 (CC-BY 4.0). Pipeline: [verktyg/build-sverige-hillshade.md](verktyg/build-sverige-hillshade.md).
+  När filen är uppladdad till R2: avkommentera `'sverige-hillshade'` i
+  `topo-overlay.js` och byt `DEFAULT_SOURCE_ID`.
+* **Säker default:** PMTiles-header inte läsbar → tyst fallback,
+  ingen krasch. State sparas i localStorage per källa.
+* Service Worker `CACHE` bumpad till `hv-20260505_topo_overlay_1`,
+  `topo-overlay.js` tillagd i FILES. Roadmap:
+  [audit/roadmap-topografi.md](audit/roadmap-topografi.md).
 
 ### 2026-05-05: Bakgrundsnedladdning över sid-navigering
 Tile-download (`hv-offline-tiles-v1`) och PMTiles-prefetch
