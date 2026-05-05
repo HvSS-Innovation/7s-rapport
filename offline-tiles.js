@@ -965,6 +965,13 @@
     }
 
     var _swListenerInstalled = false;
+    function requestJobsList() {
+        if (!navigator.serviceWorker.controller) return;
+        try {
+            navigator.serviceWorker.controller.postMessage({ type: 'OT_LIST_JOBS' });
+        } catch (_) {}
+    }
+
     function ensureSwListener() {
         if (_swListenerInstalled) return;
         if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) return;
@@ -973,14 +980,18 @@
         // Vänta på ready och fråga efter aktiva jobb. Hydrerar pille:n om
         // ett jobb startats i annan flik och fortfarande lever i SW.
         if (navigator.serviceWorker.ready && navigator.serviceWorker.ready.then) {
-            navigator.serviceWorker.ready.then(function () {
-                if (navigator.serviceWorker.controller) {
-                    try {
-                        navigator.serviceWorker.controller.postMessage({ type: 'OT_LIST_JOBS' });
-                    } catch (_) {}
-                }
-            });
+            navigator.serviceWorker.ready.then(requestJobsList);
         }
+        // På första-någonsin-besök är `controller` null tills SW activate +
+        // claim körs. controllerchange-eventet fyrar då, och vi frågar igen
+        // så pille:n hydreras även om sidan laddats innan SW tagit kontroll.
+        navigator.serviceWorker.addEventListener('controllerchange', requestJobsList);
+        // När fliken kommer tillbaka i fokus: fråga igen för att täcka
+        // edge-case där SW-meddelanden missats medan fliken var bakgrundad
+        // (browser kan throttla postMessage till bakgrundsflikar).
+        document.addEventListener('visibilitychange', function () {
+            if (document.visibilityState === 'visible') requestJobsList();
+        });
     }
     // Installera lyssnaren direkt — pille:n syns även om sidan inte själv
     // startat något jobb.

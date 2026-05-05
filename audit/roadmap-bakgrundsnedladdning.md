@@ -59,7 +59,7 @@ via `pwa.js`. Vi flyttar fetch-arbetet dit, behåller `Cache API`-namespacen
 
 Varje fas är **minimal-fungerande** vid push. Senare faser polerar.
 
-### Fas 1 — SW-driven tile-download (MVP) ✅
+### Fas 1 — SW-driven tile-download (MVP) ✅ LEVERERAD `b98b9b2`
 
 **Mål:** En tile-nedladdning startad i `minkarta.html` överlever navigering
 till `sensorskiss.html` eller index.html (7S) och fortsätter köras tills
@@ -93,7 +93,7 @@ den blir klar — utan att operatören behöver vara kvar på minkarta-sidan.
 
 ---
 
-### Fas 2 — Pille hydrerad från SW på alla sidor ✅
+### Fas 2 — Pille hydrerad från SW på alla sidor ✅ LEVERERAD (Fas 1 + controllerchange/visibility)
 
 **Mål:** Pille:n (singleton i `offline-tiles.js`) syns korrekt på vilken
 sida som helst som inkluderar `offline-tiles.js`, även om jobbet startades
