@@ -100,6 +100,12 @@
 
     function deletePass(id) {
         localStorage.removeItem(PASS_PREFIX + id);
+        // Sig-payloads (Fas 2) följer pass-id:t — om passet försvinner är
+        // signaturen meningslös. SkyttebokSig kan saknas om sig-modulen
+        // inte laddats av någon anledning.
+        if (window.SkyttebokSig && typeof window.SkyttebokSig.writeSig === 'function') {
+            window.SkyttebokSig.writeSig(id, null);
+        }
     }
 
     function getSetting(name) {
@@ -773,6 +779,55 @@
         }
     };
 
+    // ── Sig-render-state ────────────────────────────────────────────────
+    // Plockas upp vid varje renderAll() — synkron läsning från
+    // localStorage. Används av renderPassRow() för att avgöra om badge
+    // eller "Signera"-knapp ska visas.
+    var sigRenderState = { hasSelf: false, sigsByPassId: {} };
+
+    function refreshSigRenderState() {
+        if (!window.SkyttebokSig) {
+            sigRenderState = { hasSelf: false, sigsByPassId: {} };
+            return;
+        }
+        sigRenderState = {
+            hasSelf: !!window.SkyttebokSig.getSelf(),
+            sigsByPassId: window.SkyttebokSig.listAllSigs()
+        };
+    }
+
+    function renderPassSigBlock(p) {
+        var sig = sigRenderState.sigsByPassId[p.id];
+        if (sig) {
+            // Pass redan signerat — visa grön badge med namn + fp.
+            // Verifiering mot trusted-key sker i Fas 3; här litar vi bara
+            // på att signaturen finns.
+            var name = (sig.signer && sig.signer.name) ? sig.signer.name : '(utan namn)';
+            var fp = sig.signer && sig.signer.pubKeyId
+                ? window.SkyttebokSig.formatFingerprint(sig.signer.pubKeyId)
+                : '';
+            return '<div class="pass-row-sig">' +
+                '<span class="sig-badge">✓ ' + escapeHtml(name) +
+                    (fp ? ' <span class="sig-badge-fp">' + escapeHtml(fp) + '</span>' : '') +
+                '</span>' +
+                '<span class="sig-row-actions">' +
+                    '<button class="btn btn-sm btn-secondary" type="button" ' +
+                        'onclick="skyttebokRemoveSig(\'' + p.id + '\')">Ta bort signatur</button>' +
+                '</span>' +
+            '</div>';
+        }
+        if (sigRenderState.hasSelf) {
+            // Inget signerat än, men eget nyckelpar finns → visa knapp.
+            return '<div class="pass-row-sig">' +
+                '<button class="btn btn-sm btn-secondary" type="button" ' +
+                    'onclick="skyttebokSignPass(\'' + p.id + '\')">Signera (instruktör)</button>' +
+            '</div>';
+        }
+        // Inget eget nyckelpar och ingen signatur → visa inget alls
+        // (renar UI:t för soldater som aldrig genererat nyckel).
+        return '';
+    }
+
     function renderPassRow(p) {
         var statusClass = p.godkand ? 'ok' : 'ej';
         var statusText = p.godkand ? 'GODKÄND' : 'EJ GODK.';
@@ -821,10 +876,16 @@
                 'onclick="skyttebokRaderaPass(\'' + p.id + '\')">×</button>' +
             (p.anteckning ? '<div class="pass-anteckning">' + escapeHtml(p.anteckning) + '</div>' : '') +
             figureHtml +
+            renderPassSigBlock(p) +
         '</div>';
     }
 
     function render() {
+        // Sig-cache måste vara fresh — render() anropas både via renderAll()
+        // och direkt från KP-BAS-flödet, save-pass och delete-pass. Att
+        // alltid refresha här är billigt (synkron localStorage-iter) och
+        // garanterar att badge inte blir stale.
+        refreshSigRenderState();
         var byNr = passByOvning();
         renderSummary(byNr);
 
@@ -1480,6 +1541,65 @@
         });
     }
 
+    // ── Pass-signering (Fas 2) ──────────────────────────────────────────
+    // Anropas från "Signera (instruktör)"-knappen på en pass-rad. Räknar
+    // passHash, signerar med eget nyckelpar, sparar i skyttebok_sig_<id>.
+    // Bekräftelse: hämtar passet från localStorage så att vi signerar exakt
+    // det sparade objektet — inte ett objekt vi byggt själva i UI:t (det
+    // skulle kunna divergera om render-state är stale).
+    window.skyttebokSignPass = async function (passId) {
+        if (!window.SkyttebokSig) return;
+        var raw = localStorage.getItem('skyttebok_pass_' + passId);
+        if (!raw) {
+            showConfirm('Pass saknas',
+                'Kunde inte hitta passet med id ' + passId + '. Ladda om sidan.',
+                function () {});
+            return;
+        }
+        var pass;
+        try { pass = JSON.parse(raw); }
+        catch (e) {
+            showConfirm('Pass korrupt',
+                'Pass-data är korrupt och kan inte signeras.',
+                function () {});
+            return;
+        }
+        try {
+            var sigPayload = await window.SkyttebokSig.signPass(pass);
+            window.SkyttebokSig.writeSig(passId, sigPayload);
+            // Re-render för att visa badge. Behåll öppet kort.
+            var openCard = document.querySelector('.ovning-card.open');
+            var openOvning = openCard ? openCard.getAttribute('data-ovning') : null;
+            render();
+            if (openOvning) {
+                var c = document.querySelector('.ovning-card[data-ovning="' + openOvning + '"]');
+                if (c) c.classList.add('open');
+            }
+        } catch (e) {
+            showConfirm('Signering misslyckades',
+                escSigErr(e),
+                function () {});
+        }
+    };
+
+    window.skyttebokRemoveSig = function (passId) {
+        showConfirm(
+            'Ta bort signatur',
+            'Tar bort signaturen från det här passet. Passdatat förblir kvar. Åtgärden kan inte ångras.',
+            function () {
+                if (!window.SkyttebokSig) return;
+                window.SkyttebokSig.writeSig(passId, null);
+                var openCard = document.querySelector('.ovning-card.open');
+                var openOvning = openCard ? openCard.getAttribute('data-ovning') : null;
+                render();
+                if (openOvning) {
+                    var c = document.querySelector('.ovning-card[data-ovning="' + openOvning + '"]');
+                    if (c) c.classList.add('open');
+                }
+            }
+        );
+    };
+
     // ── Settings ────────────────────────────────────────────────────────
     function initSettings() {
         var input = document.getElementById('displayName');
@@ -1688,6 +1808,7 @@
     // ── Render-helper som täcker både övningar och säkerhetsprov ───────
     function renderAll() {
         syncFilterButtons();
+        refreshSigRenderState();
         renderSakerhetsprov();
         render();
     }

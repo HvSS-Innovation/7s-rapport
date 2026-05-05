@@ -279,6 +279,13 @@
         .sig-name-input-row { display: grid; grid-template-columns: 1fr max-content; gap: 6px; align-items: end; margin-top: 8px; }
         .sig-name-input-row .btn { min-height: 44px; }
 
+        /* Pass-rad signatur — Fas 2 */
+        .pass-row-sig { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding-top: 4px; flex-wrap: wrap; }
+        .sig-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1.4; font-family: inherit; }
+        .sig-badge .sig-badge-fp { font-family: 'Courier New', monospace; color: var(--text-secondary); font-weight: 500; font-size: 0.65rem; letter-spacing: 0; }
+        .sig-row-actions { margin-left: auto; display: flex; gap: 6px; }
+        .sig-row-actions .btn { min-height: 32px; padding: 4px 10px; font-size: 0.72rem; }
+
         /* Säkerhetsprov-kort */
         .sp-card { background: var(--bg-card); border: 1px solid var(--border); border-left: 3px solid var(--text-muted); border-radius: var(--radius); margin-bottom: 16px; overflow: hidden; }
         .sp-card.godkand { border-left-color: var(--accent); }
