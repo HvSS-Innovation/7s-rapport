@@ -961,7 +961,61 @@
         } else if (data.type === 'OT_JOBS_LIST') {
             var list = Array.isArray(data.jobs) ? data.jobs : [];
             for (var i = 0; i < list.length; i++) applyJobSnapshot(list[i]);
+            // Fas 4: efter hydrering — om någon area är complete:false utan
+            // aktivt job, visa resume-toast en gång per session.
+            maybeShowResumeToast();
         }
+    }
+
+    // ── Resume-toast (Fas 4) ────────────────────────────────────────────────
+    // En sida som öppnas efter att alla flikar varit stängda mid-download
+    // hittar ett complete:false-område utan aktivt SW-jobb. Toast:en
+    // pekar användaren mot offline-listan där "Återuppta"-knappen finns.
+    var RESUME_TOAST_KEY = 'ot-resume-toast-shown';
+    function maybeShowResumeToast() {
+        try {
+            if (sessionStorage.getItem(RESUME_TOAST_KEY)) return;
+        } catch (_) {}
+        var areas = getStoredAreas();
+        var incomplete = [];
+        for (var i = 0; i < areas.length; i++) {
+            if (areas[i].complete === false) incomplete.push(areas[i]);
+        }
+        if (!incomplete.length) return;
+        var activeAreaIds = Object.create(null);
+        var jobs = getActiveJobs();
+        for (var k = 0; k < jobs.length; k++) {
+            if (jobs[k].areaId) activeAreaIds[jobs[k].areaId] = true;
+        }
+        var stuckCount = 0;
+        for (var m = 0; m < incomplete.length; m++) {
+            if (!activeAreaIds[incomplete[m].id]) stuckCount++;
+        }
+        if (!stuckCount) return;
+        try { sessionStorage.setItem(RESUME_TOAST_KEY, '1'); } catch (_) {}
+        showResumeToast(stuckCount);
+    }
+
+    function showResumeToast(count) {
+        if (document.getElementById('ot-resume-toast')) return;
+        var t = document.createElement('div');
+        t.id = 'ot-resume-toast';
+        var plural = count > 1;
+        t.innerHTML =
+            'Du har ' + count + ' avbruten' + (plural ? 'a' : '') +
+            ' nedladdning' + (plural ? 'ar' : '') +
+            '.<br>Öppna offline-listan i kartan för att återuppta.';
+        t.style.cssText = 'position:fixed;top:20px;left:50%;transform:translateX(-50%);' +
+            'background:#152815;color:#c8e6c9;border:1px solid #c8a24e;border-radius:10px;' +
+            'padding:14px 20px;font-size:0.82rem;line-height:1.5;z-index:99999;max-width:340px;' +
+            'text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.5);opacity:0;' +
+            'transition:opacity 0.4s;font-family:Inter,system-ui,sans-serif';
+        document.body.appendChild(t);
+        requestAnimationFrame(function () { t.style.opacity = '1'; });
+        setTimeout(function () {
+            t.style.opacity = '0';
+            setTimeout(function () { t.remove(); }, 400);
+        }, 6000);
     }
 
     var _swListenerInstalled = false;
@@ -996,6 +1050,10 @@
     // Installera lyssnaren direkt — pille:n syns även om sidan inte själv
     // startat något jobb.
     ensureSwListener();
+
+    // Resume-toast fallback: om SW inte hinner svara med OT_JOBS_LIST inom
+    // 1.5s (eller saknas helt), kolla ändå om det finns avbrutna områden.
+    setTimeout(function () { try { maybeShowResumeToast(); } catch (_) {} }, 1500);
 
     function emitJobUpdate(jobId) {
         try {

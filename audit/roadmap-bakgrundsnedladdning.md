@@ -142,7 +142,7 @@ på samma sätt som tile-jobb.
 
 ---
 
-### Fas 4 — Resume + state-sync över SW-omstart ✅
+### Fas 4 — Resume + state-sync över SW-omstart ✅ LEVERERAD
 
 **Mål:** Om alla flikar stängs medan ett jobb pågår: SW kan fortsätta
 tills sista chunk eller pausa+spara state. Vid nästa pageload visas
