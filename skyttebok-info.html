@@ -1,0 +1,527 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta name="referrer" content="strict-origin">
+    <meta name="google" content="notranslate">
+    <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+    <script>
+        // Synkronisera tema med SKYTTEBOK — samma localStorage-nyckel.
+        (function(){
+            try {
+                var stored = localStorage.getItem('skyttebok_settings_lightmode');
+                var useLight;
+                if (stored === 'on') useLight = true;
+                else if (stored === 'off') useLight = false;
+                else useLight = window.matchMedia &&
+                    window.matchMedia('(prefers-color-scheme: light)').matches;
+                if (useLight) document.documentElement.setAttribute('data-theme', 'light');
+            } catch (_) {}
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d1f0d">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="alternate icon" href="favicon.ico">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SKYTTEBOK – INFO">
+    <title>SKYTTEBOK – Hur fungerar instruktörssignaturer?</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="fonts/inter.css">
+    <style>
+        :root {
+            --bg-primary:#0d1f0d;--bg-secondary:#152815;--bg-card:#1a321a;--bg-input:#0f240f;
+            --border:#2d4a2d;--border-focus:#4a7c4a;--text-primary:#e8f0e8;--text-secondary:#8aaa8a;
+            --text-muted:#5a7a5a;--accent:#4caf50;--accent-hover:#66bb6a;--accent-dim:#1e3d1e;
+            --danger:#c62828;--danger-hover:#e53935;--info:#1565c0;--info-hover:#1976d2;
+            --warn:#fbc02d;--warn-dim:rgba(251,192,45,0.12);
+            --radius:8px;--radius-sm:4px;
+            color-scheme: dark;
+        }
+        html[data-theme="light"] {
+            color-scheme: light;
+            --bg-primary:#ffffff;--bg-secondary:#f3f6f3;--bg-card:#ffffff;--bg-input:#fafbfa;
+            --border:#c8d4c8;--border-focus:#2e7d32;
+            --text-primary:#1a1a1a;--text-secondary:#33523a;--text-muted:#5e6f5e;
+            --accent:#2e7d32;--accent-hover:#1b5e20;--accent-dim:#e3f0e4;
+            --danger:#b71c1c;--danger-hover:#7f0000;
+            --warn:#7a5800;--warn-dim:#fff3cd;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'Inter', system-ui, sans-serif; background: var(--bg-primary); color: var(--text-primary); min-height: 100vh; padding: 16px; }
+        .container { max-width: 720px; margin: 0 auto; }
+
+        header { padding: 16px 0 8px; }
+        .back-link { display: inline-flex; align-items: center; gap: 6px; color: var(--accent); text-decoration: none; font-size: 0.88rem; font-weight: 600; padding: 10px 0; min-height: 48px; -webkit-tap-highlight-color: transparent; }
+        .back-link:hover { color: var(--accent-hover); }
+        .back-link::before { content: '←'; font-size: 1.1rem; }
+        h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); margin-top: 6px; }
+        .subtitle { font-size: 0.78rem; color: var(--text-muted); letter-spacing: 0.04em; margin-top: 4px; }
+
+        .tab-nav { display: flex; gap: 4px; margin-top: 16px; margin-bottom: 4px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-link { flex: 1; text-align: center; padding: 9px 2px; border-radius: var(--radius-sm); color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
+        .tab-link:hover { background: var(--bg-card); color: var(--text-secondary); }
+        .tab-link.active { background: var(--accent-dim); color: var(--accent); }
+        .tab-nav-sub { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
+
+        section.info-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 18px 18px 22px; margin-bottom: 14px;
+        }
+        section.info-card h2 {
+            color: var(--accent); font-size: 1.05rem; font-weight: 700;
+            letter-spacing: 0.04em; margin-bottom: 6px;
+        }
+        section.info-card h2 .num {
+            display: inline-block; min-width: 28px;
+            color: var(--accent); font-family: 'Courier New', monospace;
+            font-size: 0.92rem; margin-right: 4px;
+        }
+        section.info-card p { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.6; margin-top: 8px; }
+        section.info-card p strong { color: var(--text-primary); font-weight: 600; }
+        section.info-card ul { color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6; margin-top: 8px; padding-left: 20px; }
+        section.info-card ul li { margin-bottom: 4px; }
+        section.info-card .note {
+            background: var(--bg-input); border-left: 3px solid var(--accent);
+            border-radius: var(--radius-sm); padding: 12px 14px; margin-top: 12px;
+            font-size: 0.85rem; color: var(--text-secondary); line-height: 1.55;
+        }
+
+        /* SVG-figurer — färger via CSS-variabler så de följer ljust/mörkt */
+        .info-figure {
+            display: block; width: 100%; max-width: 100%; height: auto;
+            margin: 14px auto; background: var(--bg-input);
+            border: 1px solid var(--border); border-radius: var(--radius-sm);
+        }
+        .info-figure text {
+            font-family: 'Inter', system-ui, sans-serif;
+            fill: var(--text-primary);
+        }
+        .info-figure .fig-box-fill { fill: var(--bg-secondary); }
+        .info-figure .fig-box-stroke { stroke: var(--border); stroke-width: 1.2; fill: none; }
+        .info-figure .fig-arrow { stroke: var(--accent); stroke-width: 2; fill: none; }
+        .info-figure .fig-arrow-head { fill: var(--accent); }
+        .info-figure .fig-emoji { font-size: 26px; text-anchor: middle; dominant-baseline: central; }
+        .info-figure .fig-label { font-size: 12px; font-weight: 600; text-anchor: middle; }
+        .info-figure .fig-sub { font-size: 10px; fill: var(--text-muted); text-anchor: middle; }
+        .info-figure .fig-step { font-size: 10px; fill: var(--accent); font-family: 'Courier New', monospace; text-anchor: middle; font-weight: 700; }
+        .info-figure .fig-actor { font-weight: 700; font-size: 13px; text-anchor: middle; }
+
+        /* Badge-figurer */
+        .badge-row {
+            display: grid; grid-template-columns: 1fr; gap: 12px;
+            margin-top: 16px;
+        }
+        @media (min-width: 480px) {
+            .badge-row { grid-template-columns: repeat(3, 1fr); }
+        }
+        .badge-card {
+            background: var(--bg-input); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); padding: 14px;
+        }
+        .badge-sample {
+            display: inline-flex; align-items: center; gap: 8px;
+            border-radius: 999px; padding: 4px 12px;
+            font-size: 0.78rem; font-weight: 700; letter-spacing: 0.04em;
+            margin-bottom: 10px;
+        }
+        .badge-sample.ok { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); }
+        .badge-sample.warn { background: var(--warn-dim); color: var(--warn); border: 1px solid var(--warn); }
+        .badge-sample.broken { background: rgba(198,40,40,0.18); color: var(--danger-hover); border: 1px solid var(--danger); }
+        html[data-theme="light"] .badge-sample.broken { background: #fde2e2; color: #7f0000; }
+        .badge-card h3 {
+            color: var(--text-primary); font-size: 0.92rem;
+            margin-bottom: 6px; font-weight: 700;
+        }
+        .badge-card p {
+            color: var(--text-secondary); font-size: 0.84rem;
+            line-height: 1.55; margin-top: 4px;
+        }
+
+        /* Fingerprint-exempel */
+        .fp-sample {
+            display: inline-block; background: var(--bg-input);
+            border: 1px solid var(--border); border-radius: var(--radius-sm);
+            padding: 8px 12px; font-family: 'Courier New', monospace;
+            color: var(--accent); font-size: 0.92rem; letter-spacing: 0.04em;
+            word-break: break-all; margin: 10px 0;
+        }
+
+        /* Officiell badge-exempel */
+        .officiell-sample {
+            display: inline-block; background: var(--accent-dim); color: var(--accent);
+            border: 1px solid var(--accent); border-radius: var(--radius-sm);
+            padding: 3px 8px; font-size: 0.7rem; font-weight: 700;
+            letter-spacing: 0.06em; text-transform: uppercase;
+        }
+
+        footer { text-align: center; padding: 24px 0 12px; color: var(--text-muted); font-size: 0.72rem; line-height: 1.6; }
+
+        /* Tema-toggle (samma som skyttebok.html) */
+        .theme-toggle {
+            position: absolute; top: 16px; right: 16px;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            color: var(--text-secondary); border-radius: 999px;
+            width: 48px; height: 48px; min-height: 48px;
+            display: inline-flex; align-items: center; justify-content: center;
+            cursor: pointer; font-family: inherit;
+            -webkit-tap-highlight-color: transparent;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+        }
+        .theme-toggle:hover { background: var(--bg-card); color: var(--accent); border-color: var(--accent); }
+        .theme-toggle:active { transform: scale(0.95); }
+        .theme-toggle svg { width: 22px; height: 22px; display: block; }
+    </style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Verktyget kräver JavaScript. Aktivera i webbläsarens inställningar och ladda om sidan.</div></noscript>
+
+<button type="button" class="theme-toggle" id="themeToggle" aria-label="Växla ljust/mörkt läge" title="Växla ljust/mörkt läge">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+    </svg>
+</button>
+
+<div class="container">
+
+    <header>
+        <a href="skyttebok.html" class="back-link">SKYTTEBOK</a>
+        <h1>Hur fungerar instruktörssignaturer?</h1>
+        <p class="subtitle">Pedagogisk genomgång av signaturflödet — utan kryptografi-jargong.</p>
+    </header>
+
+    <nav class="tab-nav">
+        <a href="index.html" class="tab-link">7S</a>
+        <a href="what.html" class="tab-link">WHAT</a>
+        <a href="scrim.html" class="tab-link">SCRIM</a>
+        <a href="weft.html" class="tab-link">WEFT</a>
+        <a href="ah.html" class="tab-link">A–H</a>
+    </nav>
+    <nav class="tab-nav-sub">
+        <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+        <a href="fors.html" class="tab-link">FORS</a>
+        <a href="pedars.html" class="tab-link">PEDARS</a>
+        <a href="postschema.html" class="tab-link">SCHEMA</a>
+        <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+        <a href="obo.html" class="tab-link">OBO</a>
+        <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+        <a href="vader.html" class="tab-link">VÄDER</a>
+        <a href="minkarta.html" class="tab-link">MINKARTA</a>
+        <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+        <a href="skyttebok.html" class="tab-link active">SKYTTE</a>
+    </nav>
+
+    <main>
+
+        <!-- 1. Nyckelpar -->
+        <section class="info-card">
+            <h2><span class="num">1</span>Vad är ett nyckelpar?</h2>
+            <p>När du genererar ett <strong>nyckelpar</strong> i SKYTTEBOK skapar appen två sammanhörande nycklar — en <strong>privat</strong> och en <strong>publik</strong>. Tänk dig en brevlåda:</p>
+
+            <svg class="info-figure" viewBox="0 0 600 220" role="img" aria-label="Brevlåda-metafor: publik nyckel öppnar för att lämna brev, privat nyckel öppnar för att läsa">
+                <!-- Brevlåda -->
+                <rect x="200" y="50" width="200" height="140" rx="8" class="fig-box-fill"/>
+                <rect x="200" y="50" width="200" height="140" rx="8" class="fig-box-stroke"/>
+                <rect x="240" y="74" width="120" height="14" rx="2" class="fig-box-stroke"/>
+                <text class="fig-emoji" x="300" y="140">📬</text>
+                <text class="fig-actor" x="300" y="36">BREVLÅDA</text>
+
+                <!-- Vänster: publik nyckel -->
+                <text class="fig-emoji" x="80" y="100">🔓</text>
+                <text class="fig-label" x="80" y="140">PUBLIK NYCKEL</text>
+                <text class="fig-sub" x="80" y="158">Får delas fritt</text>
+                <text class="fig-sub" x="80" y="172">Vem som helst</text>
+                <text class="fig-sub" x="80" y="184">kan lägga brev</text>
+                <path d="M 130 110 L 195 110" class="fig-arrow"/>
+                <polygon points="195,110 187,105 187,115" class="fig-arrow-head"/>
+
+                <!-- Höger: privat nyckel -->
+                <text class="fig-emoji" x="520" y="100">🔐</text>
+                <text class="fig-label" x="520" y="140">PRIVAT NYCKEL</text>
+                <text class="fig-sub" x="520" y="158">Får ALDRIG delas</text>
+                <text class="fig-sub" x="520" y="172">Bara du kan</text>
+                <text class="fig-sub" x="520" y="184">öppna och läsa</text>
+                <path d="M 470 110 L 405 110" class="fig-arrow"/>
+                <polygon points="405,110 413,105 413,115" class="fig-arrow-head"/>
+            </svg>
+
+            <ul>
+                <li><strong>Publik nyckel</strong> får alla se. Ungefär som adressen på din brevlåda — den behövs för att andra ska kunna verifiera att signaturen verkligen kommer från dig.</li>
+                <li><strong>Privat nyckel</strong> hålls hemlig. Den används för att <em>skriva under</em> (signera) provresultat. Privat nyckel lämnar aldrig din enhet.</li>
+            </ul>
+
+            <div class="note">
+                <strong>Som soldat:</strong> du behöver inget eget nyckelpar. Du behöver bara importera din instruktörs <strong>publika</strong> nyckel för att kunna verifiera signaturer.<br><br>
+                <strong>Som instruktör:</strong> generera ett nyckelpar i Inställningar → Instruktörssignatur. Endast den enheten kan sedan signera.
+            </div>
+        </section>
+
+        <!-- 2. Fingerprint -->
+        <section class="info-card">
+            <h2><span class="num">2</span>Vad är ett fingerprint?</h2>
+            <p>En publik nyckel är lång — flera hundra tecken. För att människor ska kunna jämföra dem snabbt visar SKYTTEBOK en kort, läsbar <strong>fingerprint</strong> (16 hex-bytes):</p>
+
+            <div class="fp-sample">7c39 0f1a 9b4d 2e88<br>3a51 c0d2 4e9b 88f4</div>
+
+            <p>Två olika nycklar har <em>aldrig</em> samma fingerprint. Om någon visar dig en publik nyckel som <strong>påstås</strong> komma från din instruktör är det fingerprint du ska verifiera, inte nyckeln själv.</p>
+
+            <svg class="info-figure" viewBox="0 0 600 200" role="img" aria-label="Verifiera fingerprint via separat kanal: scanna QR eller importera fil, ring sedan instruktören och läs upp fingerprint">
+                <!-- Steg 1: importera nyckeln -->
+                <rect x="20" y="40" width="160" height="120" rx="8" class="fig-box-fill"/>
+                <rect x="20" y="40" width="160" height="120" rx="8" class="fig-box-stroke"/>
+                <text class="fig-emoji" x="100" y="80">📱</text>
+                <text class="fig-step" x="100" y="105">STEG 1</text>
+                <text class="fig-label" x="100" y="125">Importera</text>
+                <text class="fig-sub" x="100" y="142">publik nyckel</text>
+                <text class="fig-sub" x="100" y="155">(QR/fil/roster)</text>
+
+                <path d="M 185 100 L 235 100" class="fig-arrow"/>
+                <polygon points="235,100 227,95 227,105" class="fig-arrow-head"/>
+
+                <!-- Steg 2: jämför fingerprint -->
+                <rect x="240" y="40" width="160" height="120" rx="8" class="fig-box-fill"/>
+                <rect x="240" y="40" width="160" height="120" rx="8" class="fig-box-stroke"/>
+                <text class="fig-emoji" x="320" y="80">📞</text>
+                <text class="fig-step" x="320" y="105">STEG 2</text>
+                <text class="fig-label" x="320" y="125">Ring instruktör</text>
+                <text class="fig-sub" x="320" y="142">Läs upp fingerprint</text>
+                <text class="fig-sub" x="320" y="155">tecken för tecken</text>
+
+                <path d="M 405 100 L 455 100" class="fig-arrow"/>
+                <polygon points="455,100 447,95 447,105" class="fig-arrow-head"/>
+
+                <!-- Steg 3: lita på -->
+                <rect x="460" y="40" width="120" height="120" rx="8" class="fig-box-fill"/>
+                <rect x="460" y="40" width="120" height="120" rx="8" class="fig-box-stroke"/>
+                <text class="fig-emoji" x="520" y="85">✅</text>
+                <text class="fig-step" x="520" y="115">STEG 3</text>
+                <text class="fig-label" x="520" y="135">Matchar?</text>
+                <text class="fig-sub" x="520" y="152">→ lita på nyckeln</text>
+            </svg>
+
+            <p>Detta kallas <strong>trust-on-import</strong>: en gång verifierar du via separat kanal (telefon, fysiskt möte, Signal). Sedan litar du på nyckeln framöver.</p>
+
+            <div class="note">
+                Aldrig verifiera fingerprint via samma kanal som du fick nyckeln på. Om någon kapat e-posten och bytt ut nyckeln har de också bytt ut fingerprint i samma mejl.
+            </div>
+        </section>
+
+        <!-- 3. Tre badge-tillstånd -->
+        <section class="info-card">
+            <h2><span class="num">3</span>De tre badge-tillstånden</h2>
+            <p>När du har pass med signaturer visar SKYTTEBOK en färgad ikon som berättar vad signaturen betyder:</p>
+
+            <div class="badge-row">
+                <div class="badge-card">
+                    <div class="badge-sample ok">✓ Verifierad</div>
+                    <h3>Grön — allt OK</h3>
+                    <p>Signaturen är giltig <em>och</em> nyckeln den signerades med är importerad och betrodd. Du kan lita på resultatet.</p>
+                </div>
+                <div class="badge-card">
+                    <div class="badge-sample warn">! Okänd nyckel</div>
+                    <h3>Gul — inte fel, bara obekant</h3>
+                    <p>Signaturen är giltig men nyckeln är inte importerad än. Importera instruktörens publika nyckel för att gå från gul → grön.</p>
+                </div>
+                <div class="badge-card">
+                    <div class="badge-sample broken">✕ Trasig</div>
+                    <h3>Röd — manipulerad</h3>
+                    <p>Pass-data har ändrats efter signering, eller signaturen är förfalskad. Detta är allvarligt — kontakta din instruktör.</p>
+                </div>
+            </div>
+
+            <div class="note">
+                <strong>Gul är vanligast i början.</strong> Soldaten har ofta provresultat innan instruktörens publika nyckel är importerad. Kör <em>Importera publik nyckel</em> i Inställningar → Instruktörssignatur för att få badges gröna.
+            </div>
+        </section>
+
+        <!-- 4. Cross-device-flödet -->
+        <section class="info-card">
+            <h2><span class="num">4</span>Cross-device-signering — flödet</h2>
+            <p>Soldatens enhet har provresultaten. Instruktören har den privata nyckeln. För att kombinera dem utbyter de två filer (eller QR-koder).</p>
+
+            <svg class="info-figure" viewBox="0 0 720 360" role="img" aria-label="Cross-device-flöde: soldat exporterar begäran, instruktör signerar, soldat importerar svaret">
+                <!-- Aktör-rubriker -->
+                <text class="fig-actor" x="120" y="28">SOLDAT 📱</text>
+                <text class="fig-actor" x="600" y="28">INSTRUKTÖR 💻</text>
+
+                <!-- Vertikala "swimlane"-ramar -->
+                <rect x="20" y="40" width="200" height="300" rx="8" class="fig-box-fill" opacity="0.5"/>
+                <rect x="20" y="40" width="200" height="300" rx="8" class="fig-box-stroke"/>
+                <rect x="500" y="40" width="200" height="300" rx="8" class="fig-box-fill" opacity="0.5"/>
+                <rect x="500" y="40" width="200" height="300" rx="8" class="fig-box-stroke"/>
+
+                <!-- Steg 1: Soldat exporterar -->
+                <rect x="40" y="60" width="160" height="60" rx="6" class="fig-box-fill"/>
+                <rect x="40" y="60" width="160" height="60" rx="6" class="fig-box-stroke"/>
+                <text class="fig-step" x="120" y="78">STEG 1</text>
+                <text class="fig-label" x="120" y="96">Begär signatur</text>
+                <text class="fig-sub" x="120" y="112">Pass + säkerhetsprov</text>
+
+                <!-- Pil 1 → 2 (höger) -->
+                <path d="M 200 90 L 510 90" class="fig-arrow"/>
+                <polygon points="510,90 502,85 502,95" class="fig-arrow-head"/>
+                <text class="fig-sub" x="355" y="80">📨 fil eller 🔳 QR-kod</text>
+
+                <!-- Steg 2: Instruktör signerar -->
+                <rect x="520" y="60" width="160" height="100" rx="6" class="fig-box-fill"/>
+                <rect x="520" y="60" width="160" height="100" rx="6" class="fig-box-stroke"/>
+                <text class="fig-step" x="600" y="78">STEG 2</text>
+                <text class="fig-label" x="600" y="96">Mottag begäran</text>
+                <text class="fig-sub" x="600" y="114">Verifiera vad som</text>
+                <text class="fig-sub" x="600" y="128">signeras</text>
+                <text class="fig-sub" x="600" y="148">↓ signera m. privat nyckel</text>
+
+                <!-- Steg 3: Instruktör skickar svar -->
+                <rect x="520" y="180" width="160" height="60" rx="6" class="fig-box-fill"/>
+                <rect x="520" y="180" width="160" height="60" rx="6" class="fig-box-stroke"/>
+                <text class="fig-step" x="600" y="198">STEG 3</text>
+                <text class="fig-label" x="600" y="216">Exportera svar</text>
+                <text class="fig-sub" x="600" y="232">Signaturer + meta</text>
+
+                <!-- Pil 3 → 4 (vänster) -->
+                <path d="M 520 270 L 210 270" class="fig-arrow"/>
+                <polygon points="210,270 218,265 218,275" class="fig-arrow-head"/>
+                <text class="fig-sub" x="365" y="260">📨 fil eller 🔳 QR-kod</text>
+
+                <!-- Steg 4: Soldat importerar -->
+                <rect x="40" y="240" width="160" height="80" rx="6" class="fig-box-fill"/>
+                <rect x="40" y="240" width="160" height="80" rx="6" class="fig-box-stroke"/>
+                <text class="fig-step" x="120" y="258">STEG 4</text>
+                <text class="fig-label" x="120" y="276">Importera svar</text>
+                <text class="fig-sub" x="120" y="292">Verifiera signaturer</text>
+                <text class="fig-sub" x="120" y="306">→ badges blir gröna</text>
+            </svg>
+
+            <p>Inga signaturer är knutna till specifik kanal — du kan välja att skicka filerna via Signal, AirDrop, USB-sticka eller scanna QR-koderna direkt på plats. Soldatens privata data (pass) lämnar aldrig enheten i klartext utöver det som visas i begäran.</p>
+        </section>
+
+        <!-- 5. Roster -->
+        <section class="info-card">
+            <h2><span class="num">5</span>Roster och OFFICIELL-badge</h2>
+            <p>När en hel kompanis instruktörer ska kunna signera är det opraktiskt att importera varje publika nyckel manuellt. En <strong>roster</strong> är en bunt-fil med flera publika nycklar — t.ex. "Hemvärnsbataljon 17/2026" — som du importerar i ett svep.</p>
+
+            <svg class="info-figure" viewBox="0 0 600 220" role="img" aria-label="Roster: bunt med flera publika nycklar utgivet av en signaturansvarig">
+                <!-- Utgivare -->
+                <rect x="40" y="60" width="120" height="100" rx="8" class="fig-box-fill"/>
+                <rect x="40" y="60" width="120" height="100" rx="8" class="fig-box-stroke"/>
+                <text class="fig-emoji" x="100" y="98">🏛️</text>
+                <text class="fig-label" x="100" y="125">Utgivare</text>
+                <text class="fig-sub" x="100" y="142">Bn-stab</text>
+
+                <!-- Pil → roster -->
+                <path d="M 165 110 L 220 110" class="fig-arrow"/>
+                <polygon points="220,110 212,105 212,115" class="fig-arrow-head"/>
+
+                <!-- Roster -->
+                <rect x="225" y="60" width="180" height="100" rx="8" class="fig-box-fill"/>
+                <rect x="225" y="60" width="180" height="100" rx="8" class="fig-box-stroke"/>
+                <text class="fig-emoji" x="315" y="92">📋</text>
+                <text class="fig-label" x="315" y="118">Roster (.json)</text>
+                <text class="fig-sub" x="315" y="134">5 publika nycklar</text>
+                <text class="fig-sub" x="315" y="148">utgivare-signerad</text>
+
+                <!-- Pil → soldater -->
+                <path d="M 410 110 L 460 110" class="fig-arrow"/>
+                <polygon points="460,110 452,105 452,115" class="fig-arrow-head"/>
+
+                <!-- Soldat -->
+                <rect x="465" y="60" width="120" height="100" rx="8" class="fig-box-fill"/>
+                <rect x="465" y="60" width="120" height="100" rx="8" class="fig-box-stroke"/>
+                <text class="fig-emoji" x="525" y="98">📱</text>
+                <text class="fig-label" x="525" y="125">Soldater</text>
+                <text class="fig-sub" x="525" y="142">Importerar 1 fil</text>
+            </svg>
+
+            <p>Nycklar från en roster får en blå <span class="officiell-sample">OFFICIELL: bn-stab</span> -badge. Det betyder: <em>denna nyckel är utgiven av en officiell källa och ingår i en signerad bunt</em>.</p>
+
+            <div class="note">
+                Du behöver fortfarande verifiera utgivarens fingerprint via separat kanal — men efter det litar du på alla nycklar i rostern automatiskt.
+            </div>
+        </section>
+
+        <!-- 6. Officiellt godkänd -->
+        <section class="info-card">
+            <h2><span class="num">6</span>OFFICIELLT GODKÄND vs vanligt GODKÄND</h2>
+            <p>Säkerhetsprov BAS visar två tillstånd:</p>
+
+            <ul>
+                <li><strong>GODKÄND</strong> — du har själv loggat resultatet i appen. Det räknas inom enheten men har inget kryptografiskt skydd.</li>
+                <li><strong>OFFICIELLT GODKÄND</strong> — en betrodd instruktörs signatur är fäst på provet, signaturen verifieras lokalt och nyckeln är importerad eller del av en roster.</li>
+            </ul>
+
+            <div class="note">
+                <strong>Praktisk skillnad:</strong> ett OFFICIELLT GODKÄND prov är beviset på att instruktören sett resultatet och signerat under det. Det går inte att backdata eller manipulera utan att signaturen blir röd (trasig).
+            </div>
+        </section>
+
+        <!-- Avslutning -->
+        <section class="info-card">
+            <h2>Sammanfattning</h2>
+            <ul>
+                <li>Instruktören har en privat nyckel — den lämnar aldrig enheten.</li>
+                <li>Soldaten har instruktörens publika nyckel — verifierad via fingerprint.</li>
+                <li>Pass och säkerhetsprov signeras med privata nyckeln.</li>
+                <li>Soldaten verifierar signaturen lokalt — grön = OK, gul = importera nyckeln, röd = något har manipulerats.</li>
+                <li>Roster = bunt med flera officiella nycklar i ett svep.</li>
+                <li>Cross-device: soldat → fil/QR → instruktör → fil/QR → soldat.</li>
+            </ul>
+            <p style="margin-top:14px"><a href="skyttebok.html" class="back-link" style="padding-top:0">Tillbaka till SKYTTEBOK</a></p>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>Skyttebok · 7s-rapport · all data sparas lokalt i din webbläsare</p>
+    </footer>
+
+</div>
+
+<script src="opsec.js"></script>
+<script src="pwa.js"></script>
+<script>window.FORM_ID = { title: 'SKYTTEBOK – INFO', body: 'SKYTTEBOK – INFO' };</script>
+<script src="footer.js"></script>
+<script src="version.js"></script>
+<script>
+    // Theme-toggle på info-sidan — synkar mot SKYTTEBOK via samma localStorage.
+    (function () {
+        var ICON_MOON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>';
+        var ICON_SUN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+            '<circle cx="12" cy="12" r="4.2"/>' +
+            '<line x1="12" y1="2.5" x2="12" y2="5.5"/>' +
+            '<line x1="12" y1="18.5" x2="12" y2="21.5"/>' +
+            '<line x1="2.5" y1="12" x2="5.5" y2="12"/>' +
+            '<line x1="18.5" y1="12" x2="21.5" y2="12"/>' +
+            '<line x1="4.9" y1="4.9" x2="7.0" y2="7.0"/>' +
+            '<line x1="17" y1="17" x2="19.1" y2="19.1"/>' +
+            '<line x1="4.9" y1="19.1" x2="7.0" y2="17"/>' +
+            '<line x1="17" y1="7.0" x2="19.1" y2="4.9"/></svg>';
+        function isLight() { return document.documentElement.getAttribute('data-theme') === 'light'; }
+        function syncIcon() {
+            var btn = document.getElementById('themeToggle');
+            if (!btn) return;
+            btn.innerHTML = isLight() ? ICON_MOON : ICON_SUN;
+        }
+        var btn = document.getElementById('themeToggle');
+        if (btn) {
+            btn.addEventListener('click', function () {
+                var nextLight = !isLight();
+                if (nextLight) document.documentElement.setAttribute('data-theme', 'light');
+                else document.documentElement.removeAttribute('data-theme');
+                try { localStorage.setItem('skyttebok_settings_lightmode', nextLight ? 'on' : 'off'); }
+                catch (_) {}
+                syncIcon();
+                var meta = document.querySelector('meta[name="theme-color"]');
+                if (meta) meta.setAttribute('content', nextLight ? '#ffffff' : '#0d1f0d');
+            });
+        }
+        syncIcon();
+    })();
+</script>
+</body>
+</html>

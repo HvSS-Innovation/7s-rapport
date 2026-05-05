@@ -1707,9 +1707,13 @@
             '</button>' +
             '<button class="btn btn-sm btn-secondary" type="button" ' +
                 'onclick="skyttebokSigImportResponseClick()">' +
-                'Importera svar' +
+                'Importera svar (fil)' +
             '</button>' +
-        '</div>';
+        '</div>' +
+        '<button class="btn btn-sm btn-secondary" type="button" ' +
+            'onclick="skyttebokSigImportResponseQr()" style="width:100%;margin-top:6px">' +
+            'Scanna svar (QR)' +
+        '</button>';
         // Instruktör-sidan: bara synlig om eget nyckelpar finns.
         if (hasSelf) {
             html += '<button class="btn btn-sm btn-secondary" type="button" ' +
@@ -1788,7 +1792,10 @@
                 '<button class="btn btn-sm btn-secondary" type="button" onclick="skyttebokSigSaveName()">Spara</button>' +
             '</div>' +
             '<div class="sig-actions-row">' +
-                '<button class="btn btn-sm btn-secondary" type="button" onclick="skyttebokSigExportPub()">Exportera publik nyckel</button>' +
+                '<button class="btn btn-sm btn-secondary" type="button" onclick="skyttebokSigExportPub()">Exportera fil</button>' +
+                '<button class="btn btn-sm btn-secondary" type="button" onclick="skyttebokSigExportPubQr()">Visa som QR</button>' +
+            '</div>' +
+            '<div class="sig-actions-row" style="margin-top:6px">' +
                 '<button class="btn btn-sm btn-danger" type="button" onclick="skyttebokSigDeleteSelf()">Ta bort eget nyckelpar…</button>' +
             '</div>';
     }
@@ -1825,9 +1832,12 @@
             });
             html += '</div>';
         }
-        html += '<button class="btn btn-sm btn-secondary" type="button" ' +
-            'onclick="skyttebokSigImportClick()" style="width:100%;margin-top:8px">' +
-            'Importera publik nyckel eller roster…</button>';
+        html += '<div class="settings-actions" style="margin-top:8px">' +
+            '<button class="btn btn-sm btn-secondary" type="button" ' +
+                'onclick="skyttebokSigImportClick()">Importera fil…</button>' +
+            '<button class="btn btn-sm btn-secondary" type="button" ' +
+                'onclick="skyttebokSigImportPubQr()">Scanna QR</button>' +
+        '</div>';
         area.innerHTML = html;
     }
 
@@ -2210,20 +2220,36 @@
                 async function () {
                     try {
                         var response = await window.SkyttebokSig.signSignRequest(payload);
-                        var json = JSON.stringify(response, null, 2);
-                        var blob = new Blob([json], { type: 'application/json' });
-                        var url = URL.createObjectURL(blob);
-                        var a = document.createElement('a');
-                        a.href = url;
-                        a.download = 'sigs-' + todayIso() + '.json';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-                        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
-                        showConfirm('Signerat',
-                            'Signerade ' + n + ' pass och exporterade svaret. ' +
-                            'Skicka filen tillbaka till ' + soldat + '.',
-                            function () {});
+                        // Försök QR först (snabbt cross-device i samma rum).
+                        // Modalen faller tillbaka till fil automatiskt om
+                        // svaret är > 2 KB.
+                        var doFile = function () {
+                            var json = JSON.stringify(response, null, 2);
+                            var blob = new Blob([json], { type: 'application/json' });
+                            var url = URL.createObjectURL(blob);
+                            var a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'sigs-' + todayIso() + '.json';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                            showConfirm('Signerat (fil)',
+                                'Signerade ' + n + ' pass och exporterade svaret. ' +
+                                'Skicka filen tillbaka till ' + soldat + '.',
+                                function () {});
+                        };
+                        if (window.SkyttebokExtras) {
+                            window.SkyttebokExtras.showQrModal({
+                                title: 'Signaturer som QR',
+                                description: 'Soldaten (' + soldat + ') scannar QR:n ' +
+                                    'med sin enhet. Stäng efter scanning.',
+                                payload: response,
+                                onFallback: doFile
+                            });
+                        } else {
+                            doFile();
+                        }
                     } catch (e) {
                         showConfirm('Signering misslyckades', escSigErr(e), function () {});
                     }
@@ -2617,10 +2643,104 @@
         render();
     }
 
+    // ── QR-flöden (Spår C) ──────────────────────────────────────────────
+    // Återanvänder befintliga import-flöden från skyttebok-sig.js — vi
+    // bygger bara en QR-väg parallellt med fil-vägarna.
+
+    window.skyttebokSigExportPubQr = async function () {
+        if (!window.SkyttebokSig || !window.SkyttebokExtras) return;
+        try {
+            var payload = await window.SkyttebokSig.exportSelfPublicKeyPayload();
+            if (!payload) return;
+            window.SkyttebokExtras.showQrModal({
+                title: 'Publik nyckel som QR',
+                description: 'Mottagaren scannar koden från sin enhet. ' +
+                    'Verifiera fingerprint via separat kanal innan du litar ' +
+                    'på nyckeln.',
+                payload: payload,
+                onFallback: window.skyttebokSigExportPub
+            });
+        } catch (e) {
+            showConfirm('QR-export misslyckades', escSigErr(e), function () {});
+        }
+    };
+
+    window.skyttebokSigImportPubQr = function () {
+        if (!window.SkyttebokExtras) return;
+        var input = document.getElementById('sigQrPubFile');
+        if (!input) return;
+        input.value = '';
+        input.click();
+    };
+
+    function handleQrPubFile(file) {
+        if (!window.SkyttebokExtras) return;
+        window.SkyttebokExtras.decodeQrFromFile(file)
+            .then(function (text) {
+                var payload;
+                try { payload = JSON.parse(text); }
+                catch (_) {
+                    throw new Error('QR-koden innehåller inte giltig JSON.');
+                }
+                // Återanvänd befintlig fil-import-väg via en syntetisk Blob/File.
+                var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                var pseudoFile = new File([blob], 'pubkey-qr.json', { type: 'application/json' });
+                importSigFile(pseudoFile, false);
+            })
+            .catch(function (e) {
+                showConfirm('QR-scan misslyckades', escSigErr(e), function () {});
+            });
+    }
+
+    window.skyttebokSigImportResponseQr = function () {
+        var input = document.getElementById('sigQrRespFile');
+        if (!input) return;
+        input.value = '';
+        input.click();
+    };
+
+    function handleQrRespFile(file) {
+        if (!window.SkyttebokExtras) return;
+        window.SkyttebokExtras.decodeQrFromFile(file)
+            .then(function (text) {
+                var payload;
+                try { payload = JSON.parse(text); }
+                catch (_) {
+                    throw new Error('QR-koden innehåller inte giltig JSON.');
+                }
+                var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+                var pseudoFile = new File([blob], 'sigs-qr.json', { type: 'application/json' });
+                importSigResponse(pseudoFile);
+            })
+            .catch(function (e) {
+                showConfirm('QR-scan misslyckades', escSigErr(e), function () {});
+            });
+    }
+
+    function initQrInputs() {
+        var pubInput = document.getElementById('sigQrPubFile');
+        if (pubInput) {
+            pubInput.addEventListener('change', function () {
+                if (pubInput.files && pubInput.files[0]) handleQrPubFile(pubInput.files[0]);
+            });
+        }
+        var respInput = document.getElementById('sigQrRespFile');
+        if (respInput) {
+            respInput.addEventListener('change', function () {
+                if (respInput.files && respInput.files[0]) handleQrRespFile(respInput.files[0]);
+            });
+        }
+    }
+
+    // Visa QR efter signering — wrappar instruktörs-flödet utan att röra
+    // signIncomingRequest direkt. Vi monkey-patchar inte heller; istället
+    // exponeras helper som UI-knappen kan anropa explicit framöver.
+
     // ── Init ────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
         initSettings();
         initSigImportFile();
+        initQrInputs();
         renderSigUi();
         renderAll();
     });
