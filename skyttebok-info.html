@@ -176,6 +176,283 @@
         .theme-toggle:hover { background: var(--bg-card); color: var(--accent); border-color: var(--accent); }
         .theme-toggle:active { transform: scale(0.95); }
         .theme-toggle svg { width: 22px; height: 22px; display: block; }
+
+        /* ============================================================ */
+        /* Snabbstart-guide (Fas 7) — konkreta steg med UI-illustrationer */
+        /* ============================================================ */
+
+        /* Hero — välj din roll */
+        .hero-intro {
+            background: var(--accent-dim); border: 1px solid var(--accent);
+            border-radius: var(--radius); padding: 16px 18px 18px;
+            margin-bottom: 14px;
+        }
+        .hero-intro h2 {
+            color: var(--accent); font-size: 1rem; font-weight: 700;
+            letter-spacing: 0.05em; text-transform: uppercase; margin-bottom: 6px;
+        }
+        .hero-intro p {
+            color: var(--text-secondary); font-size: 0.9rem;
+            line-height: 1.55; margin-top: 4px;
+        }
+        .role-tabs {
+            display: grid; grid-template-columns: 1fr; gap: 8px;
+            margin-top: 14px;
+        }
+        @media (min-width: 480px) {
+            .role-tabs { grid-template-columns: 1fr 1fr; }
+        }
+        .role-tabs a {
+            display: inline-flex; align-items: center; justify-content: center;
+            background: var(--bg-card); border: 1px solid var(--accent);
+            color: var(--accent); text-decoration: none;
+            border-radius: var(--radius-sm); padding: 12px 8px;
+            font-size: 0.88rem; font-weight: 700; letter-spacing: 0.04em;
+            text-align: center; min-height: 48px; gap: 6px;
+            transition: background 0.15s, color 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .role-tabs a:hover { background: var(--accent); color: #fff; }
+        html[data-theme="light"] .role-tabs a:hover { color: #fff; }
+        .role-tabs a .role-arrow { font-size: 1rem; }
+
+        /* Numrerade steg */
+        .quickstart-list {
+            list-style: none; padding: 0; margin: 16px 0 0;
+        }
+        .quickstart-step {
+            background: var(--bg-input); border: 1px solid var(--border);
+            border-left: 3px solid var(--accent);
+            border-radius: var(--radius-sm);
+            padding: 14px 16px 16px; margin-bottom: 14px;
+        }
+        .quickstart-step:last-child { margin-bottom: 0; }
+        .quickstart-step h3 {
+            color: var(--text-primary); font-size: 1rem; font-weight: 700;
+            margin: 0 0 6px; display: flex; align-items: center;
+            gap: 12px; line-height: 1.35;
+        }
+        .quickstart-step h3 .step-num {
+            background: var(--accent); color: #fff;
+            border-radius: 999px; min-width: 32px; height: 32px;
+            display: inline-flex; align-items: center; justify-content: center;
+            font-family: 'Courier New', monospace; font-weight: 700;
+            font-size: 0.95rem; flex-shrink: 0;
+        }
+        html[data-theme="light"] .quickstart-step h3 .step-num { color: #fff; }
+        .quickstart-step .step-why {
+            color: var(--text-secondary); font-size: 0.88rem;
+            line-height: 1.55; margin: 4px 0 0;
+        }
+        .quickstart-step .step-why strong { color: var(--accent); font-weight: 700; }
+
+        /* UI-mock — fejk-skärmdump som följer appens design */
+        .ui-mock-frame {
+            background: var(--bg-secondary); border: 1px dashed var(--border-focus);
+            border-radius: var(--radius-sm); padding: 12px;
+            margin: 12px 0 4px;
+        }
+        .ui-mock-label {
+            display: block; font-size: 0.65rem; color: var(--text-muted);
+            letter-spacing: 0.08em; text-transform: uppercase;
+            margin-bottom: 8px; font-weight: 700;
+        }
+        .ui-mock-label + .ui-mock-label { margin-top: 12px; }
+        .ui-mock-frame .form-group,
+        .ui-mock-frame .pass-form,
+        .ui-mock-frame .sig-self-card,
+        .ui-mock-frame .pass-row,
+        .ui-mock-frame .settings-card { margin-bottom: 0; }
+        .ui-mock-target {
+            outline: 2px dashed var(--accent);
+            outline-offset: 3px;
+            border-radius: var(--radius-sm);
+        }
+        .ui-mock-caption {
+            color: var(--text-secondary); font-size: 0.88rem;
+            line-height: 1.5; margin-top: 12px; padding-left: 4px;
+        }
+        .ui-mock-caption strong { color: var(--accent); font-weight: 700; }
+
+        /* Mock-pass-rad behöver explicit grid eftersom .pass-row är scopad till skyttebok.html */
+        .ui-mock-frame .mock-pass-row {
+            display: grid;
+            grid-template-columns: max-content 1fr max-content max-content;
+            gap: 10px; align-items: center;
+            padding: 8px 10px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            border-left: 3px solid var(--accent);
+            font-size: 0.82rem;
+        }
+        .ui-mock-frame .mock-pass-row .pass-datum { color: var(--text-muted); font-family: 'Courier New', monospace; font-size: 0.78rem; white-space: nowrap; }
+        .ui-mock-frame .mock-pass-row .pass-resultat { color: var(--text-primary); font-family: 'Courier New', monospace; }
+        .ui-mock-frame .mock-pass-row .pass-status { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; padding: 2px 8px; border-radius: var(--radius-sm); white-space: nowrap; background: var(--accent-dim); color: var(--accent); }
+        .ui-mock-frame .mock-pass-row .pass-row-sig { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding-top: 4px; flex-wrap: wrap; margin: 0; }
+        .ui-mock-frame .mock-sig-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            background: var(--accent-dim); color: var(--accent);
+            border: 1px solid var(--accent); border-radius: 999px;
+            padding: 3px 10px; font-size: 0.72rem; font-weight: 700;
+            letter-spacing: 0.04em; line-height: 1.4;
+        }
+        .ui-mock-frame .mock-sig-badge .mock-sig-fp {
+            font-family: 'Courier New', monospace; color: var(--text-secondary);
+            font-weight: 500; font-size: 0.65rem; letter-spacing: 0;
+        }
+
+        /* Mock-versioner av skyttebok.html-komponenter (scopa lokalt) */
+        .ui-mock-frame .form-group {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px 16px;
+        }
+        .ui-mock-frame label {
+            font-weight: 600; font-size: 0.82rem; letter-spacing: 0.06em;
+            text-transform: uppercase; color: var(--text-secondary);
+            display: block; margin-bottom: 6px;
+        }
+        .ui-mock-frame .field-hint {
+            font-size: 0.72rem; color: var(--text-muted);
+            margin-top: 5px; opacity: 0.85; line-height: 1.4;
+        }
+        .ui-mock-frame input[type="text"] {
+            width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); color: var(--text-primary);
+            font-family: inherit; font-size: 1rem; padding: 12px 14px;
+            outline: none; -webkit-appearance: none; appearance: none;
+        }
+        .ui-mock-frame .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 48px; padding: 12px 20px; border: none;
+            border-radius: var(--radius); font-family: inherit;
+            font-size: 0.95rem; font-weight: 600; letter-spacing: 0.04em;
+            cursor: default; -webkit-tap-highlight-color: transparent;
+        }
+        .ui-mock-frame .btn-primary { width: 100%; background: var(--accent); color: #fff; margin-top: 8px; font-size: 1rem; }
+        .ui-mock-frame .btn-secondary { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+        .ui-mock-frame .btn-sm { min-height: 36px; padding: 6px 12px; border-radius: var(--radius-sm); font-size: 0.82rem; }
+
+        .ui-mock-frame .sig-name-input-row {
+            display: grid; grid-template-columns: 1fr max-content;
+            gap: 6px; align-items: end;
+        }
+        .ui-mock-frame .sig-name-input-row .btn { min-height: 44px; margin-top: 0; }
+
+        .ui-mock-frame .sig-actions-row {
+            display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px;
+        }
+        .ui-mock-frame .sig-actions-row .btn { flex: 1 1 auto; }
+
+        .ui-mock-frame .sig-self-card {
+            background: var(--bg-input); border: 1px solid var(--accent);
+            border-radius: var(--radius-sm); padding: 10px 12px;
+        }
+        .ui-mock-frame .sig-self-name {
+            font-size: 0.95rem; font-weight: 700; color: var(--text-primary);
+        }
+        .ui-mock-frame .sig-fingerprint {
+            font-family: 'Courier New', monospace; font-size: 0.85rem;
+            color: var(--accent); letter-spacing: 0.04em;
+            margin-top: 4px; word-break: break-all;
+        }
+        .ui-mock-frame .sig-meta {
+            font-size: 0.7rem; color: var(--text-muted);
+            letter-spacing: 0.04em; text-transform: uppercase; margin-top: 6px;
+        }
+        .ui-mock-frame .sig-empty {
+            color: var(--text-muted); font-size: 0.82rem;
+            line-height: 1.5; padding: 4px 0 8px;
+        }
+
+        .ui-mock-frame .settings-card {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 12px 14px;
+        }
+        .ui-mock-frame .settings-card-title {
+            font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
+            letter-spacing: 0.06em; text-transform: uppercase;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+        .ui-mock-frame .settings-card-title::after {
+            content: '▴'; color: var(--text-muted); font-size: 0.8rem;
+        }
+        .ui-mock-frame .settings-body { margin-top: 12px; }
+
+        .ui-mock-frame .pass-form {
+            padding: 12px;
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+        }
+        .ui-mock-frame .pass-form-title {
+            font-size: 0.78rem; font-weight: 700; color: var(--text-secondary);
+            letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 10px;
+        }
+        .ui-mock-frame .pass-form-row {
+            display: grid; grid-template-columns: 1fr 1fr;
+            gap: 8px; margin-bottom: 8px;
+        }
+        .ui-mock-frame .pass-form-row label { font-size: 0.7rem; margin-bottom: 4px; }
+        .ui-mock-frame .chip-group { display: flex; gap: 6px; flex-wrap: wrap; }
+        .ui-mock-frame .chip {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            color: var(--text-secondary); font-size: 0.85rem;
+            padding: 8px 16px; border-radius: 20px;
+            font-family: inherit; min-height: 40px; font-weight: 600;
+        }
+        .ui-mock-frame .chip.is-active.godkand {
+            background: var(--accent-dim); border-color: var(--accent); color: var(--accent);
+        }
+
+        /* Kanalruta för fingerprint-uppläsning (steg 4 instruktör) */
+        .channel-mock {
+            text-align: center; padding: 8px 4px;
+        }
+        .channel-mock .channel-mock-label {
+            font-size: 0.78rem; color: var(--text-muted);
+            letter-spacing: 0.05em; text-transform: uppercase;
+            margin-bottom: 8px;
+        }
+        .channel-mock .channel-mock-quote {
+            font-size: 0.85rem; color: var(--text-secondary);
+            margin-top: 10px; font-style: italic;
+        }
+        .channel-mock .fp-sample {
+            font-size: 1.05rem; line-height: 1.5;
+        }
+
+        /* Fördjupning — collapsed by default */
+        .deep-dive {
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 0;
+            margin: 24px 0 14px;
+        }
+        .deep-dive > summary {
+            cursor: pointer; padding: 16px 18px;
+            font-size: 0.95rem; font-weight: 700; color: var(--accent);
+            letter-spacing: 0.04em;
+            list-style: none; display: flex;
+            align-items: center; justify-content: space-between;
+            -webkit-tap-highlight-color: transparent;
+            min-height: 48px;
+        }
+        .deep-dive > summary::-webkit-details-marker { display: none; }
+        .deep-dive > summary::after {
+            content: '▾'; color: var(--text-muted);
+            font-size: 1rem; transition: transform 0.15s;
+        }
+        .deep-dive[open] > summary::after { transform: rotate(180deg); }
+        .deep-dive[open] > summary { border-bottom: 1px solid var(--border); }
+        .deep-dive-body { padding: 14px 14px 6px; }
+        @media (min-width: 480px) {
+            .deep-dive-body { padding: 14px 18px 6px; }
+        }
+        .deep-dive-body section.info-card:last-child { margin-bottom: 0; }
+        .deep-dive-intro {
+            color: var(--text-secondary); font-size: 0.88rem;
+            line-height: 1.55; margin-bottom: 14px;
+            background: var(--bg-input); border-radius: var(--radius-sm);
+            padding: 12px 14px;
+        }
     </style>
 </head>
 <body>
@@ -192,7 +469,7 @@
     <header>
         <a href="skyttebok.html" class="back-link">SKYTTEBOK</a>
         <h1>Hur fungerar instruktörssignaturer?</h1>
-        <p class="subtitle">Pedagogisk genomgång av signaturflödet — utan kryptografi-jargong.</p>
+        <p class="subtitle">Snabbstart med konkreta steg. Fördjupning längst ner.</p>
     </header>
 
     <nav class="tab-nav">
@@ -218,260 +495,514 @@
 
     <main>
 
-        <!-- 1. Nyckelpar -->
-        <section class="info-card">
-            <h2><span class="num">1</span>Vad är ett nyckelpar?</h2>
-            <p>När du genererar ett <strong>nyckelpar</strong> i SKYTTEBOK skapar appen två sammanhörande nycklar — en <strong>privat</strong> och en <strong>publik</strong>. Tänk dig en brevlåda:</p>
+        <!-- Hero — vilken är din roll? -->
+        <section class="hero-intro">
+            <h2>Vilken är din roll?</h2>
+            <p>SKYTTEBOK fungerar lite olika beroende på om du är soldaten som loggar pass eller instruktören som signerar dem. Välj din snabbstart nedan — fem-sex konkreta steg, sen är du igång.</p>
+            <div class="role-tabs">
+                <a href="#soldat-snabbstart"><span class="role-arrow">📱</span> Jag är soldat</a>
+                <a href="#instruktor-snabbstart"><span class="role-arrow">💻</span> Jag är instruktör</a>
+            </div>
+        </section>
 
-            <svg class="info-figure" viewBox="0 0 600 220" role="img" aria-label="Brevlåda-metafor: publik nyckel öppnar för att lämna brev, privat nyckel öppnar för att läsa">
-                <!-- Brevlåda -->
-                <rect x="200" y="50" width="200" height="140" rx="8" class="fig-box-fill"/>
-                <rect x="200" y="50" width="200" height="140" rx="8" class="fig-box-stroke"/>
-                <rect x="240" y="74" width="120" height="14" rx="2" class="fig-box-stroke"/>
-                <text class="fig-emoji" x="300" y="140">📬</text>
-                <text class="fig-actor" x="300" y="36">BREVLÅDA</text>
+        <!-- A. SOLDATENS SNABBSTART -->
+        <section class="info-card" id="soldat-snabbstart">
+            <h2><span class="num">A</span>Soldatens snabbstart</h2>
+            <p>Första gången du öppnar SKYTTEBOK — fem konkreta steg. Inget om kryptografi i starten; allt det kommer i fördjupningen längst ner om du vill.</p>
 
-                <!-- Vänster: publik nyckel -->
-                <text class="fig-emoji" x="80" y="100">🔓</text>
-                <text class="fig-label" x="80" y="140">PUBLIK NYCKEL</text>
-                <text class="fig-sub" x="80" y="158">Får delas fritt</text>
-                <text class="fig-sub" x="80" y="172">Vem som helst</text>
-                <text class="fig-sub" x="80" y="184">kan lägga brev</text>
-                <path d="M 130 110 L 195 110" class="fig-arrow"/>
-                <polygon points="195,110 187,105 187,115" class="fig-arrow-head"/>
+            <ol class="quickstart-list">
 
-                <!-- Höger: privat nyckel -->
-                <text class="fig-emoji" x="520" y="100">🔐</text>
-                <text class="fig-label" x="520" y="140">PRIVAT NYCKEL</text>
-                <text class="fig-sub" x="520" y="158">Får ALDRIG delas</text>
-                <text class="fig-sub" x="520" y="172">Bara du kan</text>
-                <text class="fig-sub" x="520" y="184">öppna och läsa</text>
-                <path d="M 470 110 L 405 110" class="fig-arrow"/>
-                <polygon points="405,110 413,105 413,115" class="fig-arrow-head"/>
-            </svg>
+                <!-- Soldat steg 1 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">1</span>Skriv in ditt visningsnamn</h3>
+                    <p class="step-why"><strong>Varför:</strong> namnet visas på dina pass och i exportfiler så instruktören vet vems pass som ska signeras. Frivilligt — du kan hoppa över det.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">📱 Inställningar → Visningsnamn</span>
+                        <div class="form-group">
+                            <label>Visningsnamn</label>
+                            <div class="sig-name-input-row">
+                                <input type="text" value="Soldat 1234" readonly class="ui-mock-target">
+                                <button type="button" class="btn btn-secondary">Spara</button>
+                            </div>
+                            <p class="field-hint">Frivilligt. Visas på dina exporterade pass.</p>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Skriv namnet i fältet och tryck <strong>Spara</strong>.</p>
+                </li>
 
-            <ul>
-                <li><strong>Publik nyckel</strong> får alla se. Ungefär som adressen på din brevlåda — den behövs för att andra ska kunna verifiera att signaturen verkligen kommer från dig.</li>
-                <li><strong>Privat nyckel</strong> hålls hemlig. Den används för att <em>skriva under</em> (signera) provresultat. Privat nyckel lämnar aldrig din enhet.</li>
-            </ul>
+                <!-- Soldat steg 2 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">2</span>Importera instruktörens publika nyckel</h3>
+                    <p class="step-why"><strong>Varför:</strong> appen behöver instruktörens publika nyckel för att kunna verifiera de signaturer du tar emot. Be instruktören om en QR-kod att scanna eller en fil att importera.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">📱 Inställningar → Instruktörssignatur</span>
+                        <div class="settings-card">
+                            <div class="settings-card-title">Instruktörssignatur</div>
+                            <div class="settings-body">
+                                <label>Importera nyckel från instruktör</label>
+                                <div class="sig-actions-row">
+                                    <button type="button" class="btn btn-secondary btn-sm ui-mock-target">Importera fil…</button>
+                                    <button type="button" class="btn btn-secondary btn-sm ui-mock-target">Scanna QR</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Tryck <strong>Importera fil…</strong> om du fick en fil — eller <strong>Scanna QR</strong> om instruktören visar en QR-kod på sin skärm.</p>
+                </li>
+
+                <!-- Soldat steg 3 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">3</span>Logga dina pass som vanligt</h3>
+                    <p class="step-why"><strong>Varför:</strong> ingenting förändras i hur du loggar pass. Tryck dig till rätt övning, fyll i resultat och status. Appen samlar dem tills du vill begära signatur.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">📱 Övning → Lägg till pass</span>
+                        <div class="pass-form">
+                            <div class="pass-form-title">Lägg till pass</div>
+                            <div class="pass-form-row">
+                                <div>
+                                    <label>Datum</label>
+                                    <input type="text" value="2026-05-04" readonly>
+                                </div>
+                                <div>
+                                    <label>Resultat</label>
+                                    <input type="text" value="48p" readonly>
+                                </div>
+                            </div>
+                            <label>Status</label>
+                            <div class="chip-group">
+                                <span class="chip is-active godkand ui-mock-target">GODKÄND</span>
+                                <span class="chip">UNDERKÄND</span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Markera <strong>GODKÄND</strong> eller <strong>UNDERKÄND</strong> och spara passet.</p>
+                </li>
+
+                <!-- Soldat steg 4 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">4</span>Begär signatur när du har pass att signera</h3>
+                    <p class="step-why"><strong>Varför:</strong> appen samlar ihop alla osignerade pass och säkerhetsprov i en begäran-fil eller QR-kod som du sedan delar med instruktören. Du väljer kanal — Signal, AirDrop, USB, fysisk QR — inget skickas över internet automatiskt.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">📱 Inställningar → Instruktörssignatur</span>
+                        <div class="sig-self-card">
+                            <div class="sig-self-name">3 osignerade pass</div>
+                            <div class="sig-meta">+ 1 säkerhetsprov BAS</div>
+                            <div class="sig-actions-row">
+                                <button type="button" class="btn btn-secondary btn-sm ui-mock-target">Begär signatur</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Tryck <strong>Begär signatur</strong>. Välj sedan att <em>spara filen</em> eller <em>visa QR-koden</em> — och skicka det till instruktören.</p>
+                </li>
+
+                <!-- Soldat steg 5 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">5</span>Importera signatur-svaret</h3>
+                    <p class="step-why"><strong>Varför:</strong> när instruktören har signerat skickar de tillbaka en svarsfil eller QR-kod. Importera den så blir badges på dina pass gröna — då är de officiellt godkända.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">📱 Inställningar → Instruktörssignatur</span>
+                        <div class="sig-actions-row">
+                            <button type="button" class="btn btn-secondary btn-sm ui-mock-target">Importera signatur-svar</button>
+                            <button type="button" class="btn btn-secondary btn-sm">Scanna QR-svar</button>
+                        </div>
+                        <span class="ui-mock-label">→ Och passet blir grönt:</span>
+                        <div class="mock-pass-row">
+                            <div class="pass-datum">2026-05-04</div>
+                            <div class="pass-resultat">48p</div>
+                            <div class="pass-status">OK</div>
+                            <div></div>
+                            <div class="pass-row-sig">
+                                <span class="mock-sig-badge">✓ Verifierad <span class="mock-sig-fp">7c39 0f1a</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 När du har importerat svaret blir badges <strong>gröna</strong> automatiskt. Klart!</p>
+                </li>
+
+            </ol>
 
             <div class="note">
-                <strong>Som soldat:</strong> du behöver inget eget nyckelpar. Du behöver bara importera din instruktörs <strong>publika</strong> nyckel för att kunna verifiera signaturer.<br><br>
-                <strong>Som instruktör:</strong> generera ett nyckelpar i Inställningar → Instruktörssignatur. Endast den enheten kan sedan signera.
+                <strong>Det är allt.</strong> Du kan upprepa steg 4 och 5 så många gånger du vill — varje gång du har nya osignerade pass begär du signatur, instruktören skickar tillbaka, du importerar svaret. Steg 1 och 2 gör du bara en gång.
             </div>
         </section>
 
-        <!-- 2. Fingerprint -->
-        <section class="info-card">
-            <h2><span class="num">2</span>Vad är ett fingerprint?</h2>
-            <p>En publik nyckel är lång — flera hundra tecken. För att människor ska kunna jämföra dem snabbt visar SKYTTEBOK en kort, läsbar <strong>fingerprint</strong> (16 hex-bytes):</p>
+        <!-- B. INSTRUKTÖRENS SNABBSTART -->
+        <section class="info-card" id="instruktor-snabbstart">
+            <h2><span class="num">B</span>Instruktörens snabbstart</h2>
+            <p>Sex steg för att komma igång som signerande instruktör — från att generera nyckelpar till att signera den första begäran.</p>
 
-            <div class="fp-sample">7c39 0f1a 9b4d 2e88<br>3a51 c0d2 4e9b 88f4</div>
+            <ol class="quickstart-list">
 
-            <p>Två olika nycklar har <em>aldrig</em> samma fingerprint. Om någon visar dig en publik nyckel som <strong>påstås</strong> komma från din instruktör är det fingerprint du ska verifiera, inte nyckeln själv.</p>
+                <!-- Instruktör steg 1 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">1</span>Generera ditt nyckelpar</h3>
+                    <p class="step-why"><strong>Varför:</strong> nyckelparet är din digitala underskrift. Den privata nyckeln stannar på din enhet och används för att signera; den publika delar du med soldater så de kan verifiera signaturen. Görs en gång — på en enda enhet.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">💻 Inställningar → Instruktörssignatur</span>
+                        <div class="settings-card">
+                            <div class="settings-card-title">Instruktörssignatur</div>
+                            <div class="settings-body">
+                                <p class="sig-empty">Du har inte genererat ett nyckelpar än.</p>
+                                <button type="button" class="btn btn-primary ui-mock-target">Generera nyckelpar</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Tryck <strong>Generera nyckelpar</strong>. Du behöver bara göra detta en gång.</p>
+                </li>
 
-            <svg class="info-figure" viewBox="0 0 600 200" role="img" aria-label="Verifiera fingerprint via separat kanal: scanna QR eller importera fil, ring sedan instruktören och läs upp fingerprint">
-                <!-- Steg 1: importera nyckeln -->
-                <rect x="20" y="40" width="160" height="120" rx="8" class="fig-box-fill"/>
-                <rect x="20" y="40" width="160" height="120" rx="8" class="fig-box-stroke"/>
-                <text class="fig-emoji" x="100" y="80">📱</text>
-                <text class="fig-step" x="100" y="105">STEG 1</text>
-                <text class="fig-label" x="100" y="125">Importera</text>
-                <text class="fig-sub" x="100" y="142">publik nyckel</text>
-                <text class="fig-sub" x="100" y="155">(QR/fil/roster)</text>
+                <!-- Instruktör steg 2 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">2</span>Skriv in ditt visningsnamn</h3>
+                    <p class="step-why"><strong>Varför:</strong> namnet följer med varje signatur så soldaten ser vem som signerade. Använd ditt riktiga namn eller tjänsteställning — t.ex. "Furir Andersson".</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">💻 Inställningar → Instruktörssignatur</span>
+                        <div class="form-group">
+                            <label>Mitt namn</label>
+                            <div class="sig-name-input-row">
+                                <input type="text" value="Furir Andersson" readonly class="ui-mock-target">
+                                <button type="button" class="btn btn-secondary">Spara</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Skriv namnet och tryck <strong>Spara</strong>.</p>
+                </li>
 
-                <path d="M 185 100 L 235 100" class="fig-arrow"/>
-                <polygon points="235,100 227,95 227,105" class="fig-arrow-head"/>
+                <!-- Instruktör steg 3 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">3</span>Dela din publika nyckel med soldaterna</h3>
+                    <p class="step-why"><strong>Varför:</strong> soldaterna behöver din publika nyckel för att kunna verifiera dina signaturer. Visa QR-koden så de kan scanna direkt på plats — eller exportera filen och skicka via Signal, AirDrop eller USB.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">💻 Min nyckel (efter generering)</span>
+                        <div class="sig-self-card">
+                            <div class="sig-self-name">Furir Andersson</div>
+                            <div class="sig-fingerprint">7c39 0f1a 9b4d 2e88<br>3a51 c0d2 4e9b 88f4</div>
+                            <div class="sig-meta">DIN PUBLIKA NYCKEL</div>
+                            <div class="sig-actions-row">
+                                <button type="button" class="btn btn-secondary btn-sm ui-mock-target">Visa QR</button>
+                                <button type="button" class="btn btn-secondary btn-sm ui-mock-target">Exportera fil</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Välj <strong>Visa QR</strong> om soldaten är på plats — annars <strong>Exportera fil</strong> och skicka via en kanal soldaten litar på.</p>
+                </li>
 
-                <!-- Steg 2: jämför fingerprint -->
-                <rect x="240" y="40" width="160" height="120" rx="8" class="fig-box-fill"/>
-                <rect x="240" y="40" width="160" height="120" rx="8" class="fig-box-stroke"/>
-                <text class="fig-emoji" x="320" y="80">📞</text>
-                <text class="fig-step" x="320" y="105">STEG 2</text>
-                <text class="fig-label" x="320" y="125">Ring instruktör</text>
-                <text class="fig-sub" x="320" y="142">Läs upp fingerprint</text>
-                <text class="fig-sub" x="320" y="155">tecken för tecken</text>
+                <!-- Instruktör steg 4 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">4</span>Verifiera fingerprintet via separat kanal</h3>
+                    <p class="step-why"><strong>Varför:</strong> en kapad e-post kan byta ut både nyckeln och fingerprintet i samma mejl. Verifiera därför fingerprintet i en separat kanal — telefonsamtal, fysiskt möte eller Signal — så soldaten vet att nyckeln verkligen är din.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">📞 Telefon, möte eller Signal</span>
+                        <div class="channel-mock">
+                            <div class="channel-mock-label">Läs upp för soldaten:</div>
+                            <div class="fp-sample">7c39 0f1a 9b4d 2e88<br>3a51 c0d2 4e9b 88f4</div>
+                            <div class="channel-mock-quote">"Stämmer det med fingerprintet du ser i appen?"</div>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Soldaten bekräftar muntligt — sedan litar deras app på din nyckel framöver. Görs en gång per soldat.</p>
+                </li>
 
-                <path d="M 405 100 L 455 100" class="fig-arrow"/>
-                <polygon points="455,100 447,95 447,105" class="fig-arrow-head"/>
+                <!-- Instruktör steg 5 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">5</span>Signera mottagna begäran</h3>
+                    <p class="step-why"><strong>Varför:</strong> när en soldat skickar en begäran-fil eller QR-kod öppnar du den i appen, granskar pass-data och signerar med din privata nyckel.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">💻 Inställningar → Instruktörssignatur</span>
+                        <div class="sig-actions-row">
+                            <button type="button" class="btn btn-primary btn-sm ui-mock-target">Signera mottagen begäran</button>
+                            <button type="button" class="btn btn-secondary btn-sm">Scanna QR-begäran</button>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Välj <strong>Signera mottagen begäran</strong> och peka ut filen — eller <strong>Scanna QR-begäran</strong>. Granska pass innan du bekräftar signeringen.</p>
+                </li>
 
-                <!-- Steg 3: lita på -->
-                <rect x="460" y="40" width="120" height="120" rx="8" class="fig-box-fill"/>
-                <rect x="460" y="40" width="120" height="120" rx="8" class="fig-box-stroke"/>
-                <text class="fig-emoji" x="520" y="85">✅</text>
-                <text class="fig-step" x="520" y="115">STEG 3</text>
-                <text class="fig-label" x="520" y="135">Matchar?</text>
-                <text class="fig-sub" x="520" y="152">→ lita på nyckeln</text>
-            </svg>
+                <!-- Instruktör steg 6 -->
+                <li class="quickstart-step">
+                    <h3><span class="step-num">6</span>Skicka tillbaka signatur-svaret</h3>
+                    <p class="step-why"><strong>Varför:</strong> efter signering genererar appen ett svar som soldaten ska importera. Visa QR-koden om soldaten är på plats — eller spara svarsfilen och skicka tillbaka.</p>
+                    <div class="ui-mock-frame">
+                        <span class="ui-mock-label">💻 Signatur-svar (efter signering)</span>
+                        <div class="sig-self-card">
+                            <div class="sig-self-name">Signatur klar — 3 pass + 1 säkerhetsprov</div>
+                            <div class="sig-meta">FÖR SOLDAT 1234</div>
+                            <div class="sig-actions-row">
+                                <button type="button" class="btn btn-secondary btn-sm ui-mock-target">Visa QR-svar</button>
+                                <button type="button" class="btn btn-secondary btn-sm ui-mock-target">Spara svarsfil</button>
+                            </div>
+                        </div>
+                    </div>
+                    <p class="ui-mock-caption">👆 Soldaten importerar svaret — då blir deras badges <strong>gröna</strong>. Klart!</p>
+                </li>
 
-            <p>Detta kallas <strong>trust-on-import</strong>: en gång verifierar du via separat kanal (telefon, fysiskt möte, Signal). Sedan litar du på nyckeln framöver.</p>
+            </ol>
 
             <div class="note">
-                Aldrig verifiera fingerprint via samma kanal som du fick nyckeln på. Om någon kapat e-posten och bytt ut nyckeln har de också bytt ut fingerprint i samma mejl.
+                <strong>Tips:</strong> du behöver bara göra steg 1, 2 och 4 en gång per soldat. Steg 5 och 6 upprepas varje gång en soldat skickar en ny begäran.
             </div>
         </section>
 
-        <!-- 3. Tre badge-tillstånd -->
-        <section class="info-card">
-            <h2><span class="num">3</span>De tre badge-tillstånden</h2>
-            <p>När du har pass med signaturer visar SKYTTEBOK en färgad ikon som berättar vad signaturen betyder:</p>
+        <!-- FÖRDJUPNING — collapsed by default -->
+        <details class="deep-dive">
+            <summary>Vill du veta mer? — fördjupning</summary>
+            <div class="deep-dive-body">
+                <p class="deep-dive-intro">Här går vi in på kryptografin bakom signaturerna — hur nyckelparen fungerar, varför fingerprint behövs, vad badge-färgerna betyder, hur cross-device-flödet ser ut och vad en roster är. Snabbstarten ovan räcker för de allra flesta — det här är för dig som vill förstå mer.</p>
 
-            <div class="badge-row">
-                <div class="badge-card">
-                    <div class="badge-sample ok">✓ Verifierad</div>
-                    <h3>Grön — allt OK</h3>
-                    <p>Signaturen är giltig <em>och</em> nyckeln den signerades med är importerad och betrodd. Du kan lita på resultatet.</p>
-                </div>
-                <div class="badge-card">
-                    <div class="badge-sample warn">! Okänd nyckel</div>
-                    <h3>Gul — inte fel, bara obekant</h3>
-                    <p>Signaturen är giltig men nyckeln är inte importerad än. Importera instruktörens publika nyckel för att gå från gul → grön.</p>
-                </div>
-                <div class="badge-card">
-                    <div class="badge-sample broken">✕ Trasig</div>
-                    <h3>Röd — manipulerad</h3>
-                    <p>Pass-data har ändrats efter signering, eller signaturen är förfalskad. Detta är allvarligt — kontakta din instruktör.</p>
-                </div>
+                <!-- 1. Nyckelpar -->
+                <section class="info-card">
+                    <h2><span class="num">1</span>Vad är ett nyckelpar?</h2>
+                    <p>När du genererar ett <strong>nyckelpar</strong> i SKYTTEBOK skapar appen två sammanhörande nycklar — en <strong>privat</strong> och en <strong>publik</strong>. Tänk dig en brevlåda:</p>
+
+                    <svg class="info-figure" viewBox="0 0 600 220" role="img" aria-label="Brevlåda-metafor: publik nyckel öppnar för att lämna brev, privat nyckel öppnar för att läsa">
+                        <!-- Brevlåda -->
+                        <rect x="200" y="50" width="200" height="140" rx="8" class="fig-box-fill"/>
+                        <rect x="200" y="50" width="200" height="140" rx="8" class="fig-box-stroke"/>
+                        <rect x="240" y="74" width="120" height="14" rx="2" class="fig-box-stroke"/>
+                        <text class="fig-emoji" x="300" y="140">📬</text>
+                        <text class="fig-actor" x="300" y="36">BREVLÅDA</text>
+
+                        <!-- Vänster: publik nyckel -->
+                        <text class="fig-emoji" x="80" y="100">🔓</text>
+                        <text class="fig-label" x="80" y="140">PUBLIK NYCKEL</text>
+                        <text class="fig-sub" x="80" y="158">Får delas fritt</text>
+                        <text class="fig-sub" x="80" y="172">Vem som helst</text>
+                        <text class="fig-sub" x="80" y="184">kan lägga brev</text>
+                        <path d="M 130 110 L 195 110" class="fig-arrow"/>
+                        <polygon points="195,110 187,105 187,115" class="fig-arrow-head"/>
+
+                        <!-- Höger: privat nyckel -->
+                        <text class="fig-emoji" x="520" y="100">🔐</text>
+                        <text class="fig-label" x="520" y="140">PRIVAT NYCKEL</text>
+                        <text class="fig-sub" x="520" y="158">Får ALDRIG delas</text>
+                        <text class="fig-sub" x="520" y="172">Bara du kan</text>
+                        <text class="fig-sub" x="520" y="184">öppna och läsa</text>
+                        <path d="M 470 110 L 405 110" class="fig-arrow"/>
+                        <polygon points="405,110 413,105 413,115" class="fig-arrow-head"/>
+                    </svg>
+
+                    <ul>
+                        <li><strong>Publik nyckel</strong> får alla se. Ungefär som adressen på din brevlåda — den behövs för att andra ska kunna verifiera att signaturen verkligen kommer från dig.</li>
+                        <li><strong>Privat nyckel</strong> hålls hemlig. Den används för att <em>skriva under</em> (signera) provresultat. Privat nyckel lämnar aldrig din enhet.</li>
+                    </ul>
+
+                    <div class="note">
+                        <strong>Som soldat:</strong> du behöver inget eget nyckelpar. Du behöver bara importera din instruktörs <strong>publika</strong> nyckel för att kunna verifiera signaturer.<br><br>
+                        <strong>Som instruktör:</strong> generera ett nyckelpar i Inställningar → Instruktörssignatur. Endast den enheten kan sedan signera.
+                    </div>
+                </section>
+
+                <!-- 2. Fingerprint -->
+                <section class="info-card">
+                    <h2><span class="num">2</span>Vad är ett fingerprint?</h2>
+                    <p>En publik nyckel är lång — flera hundra tecken. För att människor ska kunna jämföra dem snabbt visar SKYTTEBOK en kort, läsbar <strong>fingerprint</strong> (16 hex-bytes):</p>
+
+                    <div class="fp-sample">7c39 0f1a 9b4d 2e88<br>3a51 c0d2 4e9b 88f4</div>
+
+                    <p>Två olika nycklar har <em>aldrig</em> samma fingerprint. Om någon visar dig en publik nyckel som <strong>påstås</strong> komma från din instruktör är det fingerprint du ska verifiera, inte nyckeln själv.</p>
+
+                    <svg class="info-figure" viewBox="0 0 600 200" role="img" aria-label="Verifiera fingerprint via separat kanal: scanna QR eller importera fil, ring sedan instruktören och läs upp fingerprint">
+                        <!-- Steg 1: importera nyckeln -->
+                        <rect x="20" y="40" width="160" height="120" rx="8" class="fig-box-fill"/>
+                        <rect x="20" y="40" width="160" height="120" rx="8" class="fig-box-stroke"/>
+                        <text class="fig-emoji" x="100" y="80">📱</text>
+                        <text class="fig-step" x="100" y="105">STEG 1</text>
+                        <text class="fig-label" x="100" y="125">Importera</text>
+                        <text class="fig-sub" x="100" y="142">publik nyckel</text>
+                        <text class="fig-sub" x="100" y="155">(QR/fil/roster)</text>
+
+                        <path d="M 185 100 L 235 100" class="fig-arrow"/>
+                        <polygon points="235,100 227,95 227,105" class="fig-arrow-head"/>
+
+                        <!-- Steg 2: jämför fingerprint -->
+                        <rect x="240" y="40" width="160" height="120" rx="8" class="fig-box-fill"/>
+                        <rect x="240" y="40" width="160" height="120" rx="8" class="fig-box-stroke"/>
+                        <text class="fig-emoji" x="320" y="80">📞</text>
+                        <text class="fig-step" x="320" y="105">STEG 2</text>
+                        <text class="fig-label" x="320" y="125">Ring instruktör</text>
+                        <text class="fig-sub" x="320" y="142">Läs upp fingerprint</text>
+                        <text class="fig-sub" x="320" y="155">tecken för tecken</text>
+
+                        <path d="M 405 100 L 455 100" class="fig-arrow"/>
+                        <polygon points="455,100 447,95 447,105" class="fig-arrow-head"/>
+
+                        <!-- Steg 3: lita på -->
+                        <rect x="460" y="40" width="120" height="120" rx="8" class="fig-box-fill"/>
+                        <rect x="460" y="40" width="120" height="120" rx="8" class="fig-box-stroke"/>
+                        <text class="fig-emoji" x="520" y="85">✅</text>
+                        <text class="fig-step" x="520" y="115">STEG 3</text>
+                        <text class="fig-label" x="520" y="135">Matchar?</text>
+                        <text class="fig-sub" x="520" y="152">→ lita på nyckeln</text>
+                    </svg>
+
+                    <p>Detta kallas <strong>trust-on-import</strong>: en gång verifierar du via separat kanal (telefon, fysiskt möte, Signal). Sedan litar du på nyckeln framöver.</p>
+
+                    <div class="note">
+                        Aldrig verifiera fingerprint via samma kanal som du fick nyckeln på. Om någon kapat e-posten och bytt ut nyckeln har de också bytt ut fingerprint i samma mejl.
+                    </div>
+                </section>
+
+                <!-- 3. Tre badge-tillstånd -->
+                <section class="info-card">
+                    <h2><span class="num">3</span>De tre badge-tillstånden</h2>
+                    <p>När du har pass med signaturer visar SKYTTEBOK en färgad ikon som berättar vad signaturen betyder:</p>
+
+                    <div class="badge-row">
+                        <div class="badge-card">
+                            <div class="badge-sample ok">✓ Verifierad</div>
+                            <h3>Grön — allt OK</h3>
+                            <p>Signaturen är giltig <em>och</em> nyckeln den signerades med är importerad och betrodd. Du kan lita på resultatet.</p>
+                        </div>
+                        <div class="badge-card">
+                            <div class="badge-sample warn">! Okänd nyckel</div>
+                            <h3>Gul — inte fel, bara obekant</h3>
+                            <p>Signaturen är giltig men nyckeln är inte importerad än. Importera instruktörens publika nyckel för att gå från gul → grön.</p>
+                        </div>
+                        <div class="badge-card">
+                            <div class="badge-sample broken">✕ Trasig</div>
+                            <h3>Röd — manipulerad</h3>
+                            <p>Pass-data har ändrats efter signering, eller signaturen är förfalskad. Detta är allvarligt — kontakta din instruktör.</p>
+                        </div>
+                    </div>
+
+                    <div class="note">
+                        <strong>Gul är vanligast i början.</strong> Soldaten har ofta provresultat innan instruktörens publika nyckel är importerad. Kör <em>Importera publik nyckel</em> i Inställningar → Instruktörssignatur för att få badges gröna.
+                    </div>
+                </section>
+
+                <!-- 4. Cross-device-flödet -->
+                <section class="info-card">
+                    <h2><span class="num">4</span>Cross-device-signering — flödet</h2>
+                    <p>Soldatens enhet har provresultaten. Instruktören har den privata nyckeln. För att kombinera dem utbyter de två filer (eller QR-koder).</p>
+
+                    <svg class="info-figure" viewBox="0 0 720 360" role="img" aria-label="Cross-device-flöde: soldat exporterar begäran, instruktör signerar, soldat importerar svaret">
+                        <!-- Aktör-rubriker -->
+                        <text class="fig-actor" x="120" y="28">SOLDAT 📱</text>
+                        <text class="fig-actor" x="600" y="28">INSTRUKTÖR 💻</text>
+
+                        <!-- Vertikala "swimlane"-ramar -->
+                        <rect x="20" y="40" width="200" height="300" rx="8" class="fig-box-fill" opacity="0.5"/>
+                        <rect x="20" y="40" width="200" height="300" rx="8" class="fig-box-stroke"/>
+                        <rect x="500" y="40" width="200" height="300" rx="8" class="fig-box-fill" opacity="0.5"/>
+                        <rect x="500" y="40" width="200" height="300" rx="8" class="fig-box-stroke"/>
+
+                        <!-- Steg 1: Soldat exporterar -->
+                        <rect x="40" y="60" width="160" height="60" rx="6" class="fig-box-fill"/>
+                        <rect x="40" y="60" width="160" height="60" rx="6" class="fig-box-stroke"/>
+                        <text class="fig-step" x="120" y="78">STEG 1</text>
+                        <text class="fig-label" x="120" y="96">Begär signatur</text>
+                        <text class="fig-sub" x="120" y="112">Pass + säkerhetsprov</text>
+
+                        <!-- Pil 1 → 2 (höger) -->
+                        <path d="M 200 90 L 510 90" class="fig-arrow"/>
+                        <polygon points="510,90 502,85 502,95" class="fig-arrow-head"/>
+                        <text class="fig-sub" x="355" y="80">📨 fil eller 🔳 QR-kod</text>
+
+                        <!-- Steg 2: Instruktör signerar -->
+                        <rect x="520" y="60" width="160" height="100" rx="6" class="fig-box-fill"/>
+                        <rect x="520" y="60" width="160" height="100" rx="6" class="fig-box-stroke"/>
+                        <text class="fig-step" x="600" y="78">STEG 2</text>
+                        <text class="fig-label" x="600" y="96">Mottag begäran</text>
+                        <text class="fig-sub" x="600" y="114">Verifiera vad som</text>
+                        <text class="fig-sub" x="600" y="128">signeras</text>
+                        <text class="fig-sub" x="600" y="148">↓ signera m. privat nyckel</text>
+
+                        <!-- Steg 3: Instruktör skickar svar -->
+                        <rect x="520" y="180" width="160" height="60" rx="6" class="fig-box-fill"/>
+                        <rect x="520" y="180" width="160" height="60" rx="6" class="fig-box-stroke"/>
+                        <text class="fig-step" x="600" y="198">STEG 3</text>
+                        <text class="fig-label" x="600" y="216">Exportera svar</text>
+                        <text class="fig-sub" x="600" y="232">Signaturer + meta</text>
+
+                        <!-- Pil 3 → 4 (vänster) -->
+                        <path d="M 520 270 L 210 270" class="fig-arrow"/>
+                        <polygon points="210,270 218,265 218,275" class="fig-arrow-head"/>
+                        <text class="fig-sub" x="365" y="260">📨 fil eller 🔳 QR-kod</text>
+
+                        <!-- Steg 4: Soldat importerar -->
+                        <rect x="40" y="240" width="160" height="80" rx="6" class="fig-box-fill"/>
+                        <rect x="40" y="240" width="160" height="80" rx="6" class="fig-box-stroke"/>
+                        <text class="fig-step" x="120" y="258">STEG 4</text>
+                        <text class="fig-label" x="120" y="276">Importera svar</text>
+                        <text class="fig-sub" x="120" y="292">Verifiera signaturer</text>
+                        <text class="fig-sub" x="120" y="306">→ badges blir gröna</text>
+                    </svg>
+
+                    <p>Inga signaturer är knutna till specifik kanal — du kan välja att skicka filerna via Signal, AirDrop, USB-sticka eller scanna QR-koderna direkt på plats. Soldatens privata data (pass) lämnar aldrig enheten i klartext utöver det som visas i begäran.</p>
+                </section>
+
+                <!-- 5. Roster -->
+                <section class="info-card">
+                    <h2><span class="num">5</span>Roster och OFFICIELL-badge</h2>
+                    <p>När en hel kompanis instruktörer ska kunna signera är det opraktiskt att importera varje publika nyckel manuellt. En <strong>roster</strong> är en bunt-fil med flera publika nycklar — t.ex. "Hemvärnsbataljon 17/2026" — som du importerar i ett svep.</p>
+
+                    <svg class="info-figure" viewBox="0 0 600 220" role="img" aria-label="Roster: bunt med flera publika nycklar utgivet av en signaturansvarig">
+                        <!-- Utgivare -->
+                        <rect x="40" y="60" width="120" height="100" rx="8" class="fig-box-fill"/>
+                        <rect x="40" y="60" width="120" height="100" rx="8" class="fig-box-stroke"/>
+                        <text class="fig-emoji" x="100" y="98">🏛️</text>
+                        <text class="fig-label" x="100" y="125">Utgivare</text>
+                        <text class="fig-sub" x="100" y="142">Bn-stab</text>
+
+                        <!-- Pil → roster -->
+                        <path d="M 165 110 L 220 110" class="fig-arrow"/>
+                        <polygon points="220,110 212,105 212,115" class="fig-arrow-head"/>
+
+                        <!-- Roster -->
+                        <rect x="225" y="60" width="180" height="100" rx="8" class="fig-box-fill"/>
+                        <rect x="225" y="60" width="180" height="100" rx="8" class="fig-box-stroke"/>
+                        <text class="fig-emoji" x="315" y="92">📋</text>
+                        <text class="fig-label" x="315" y="118">Roster (.json)</text>
+                        <text class="fig-sub" x="315" y="134">5 publika nycklar</text>
+                        <text class="fig-sub" x="315" y="148">utgivare-signerad</text>
+
+                        <!-- Pil → soldater -->
+                        <path d="M 410 110 L 460 110" class="fig-arrow"/>
+                        <polygon points="460,110 452,105 452,115" class="fig-arrow-head"/>
+
+                        <!-- Soldat -->
+                        <rect x="465" y="60" width="120" height="100" rx="8" class="fig-box-fill"/>
+                        <rect x="465" y="60" width="120" height="100" rx="8" class="fig-box-stroke"/>
+                        <text class="fig-emoji" x="525" y="98">📱</text>
+                        <text class="fig-label" x="525" y="125">Soldater</text>
+                        <text class="fig-sub" x="525" y="142">Importerar 1 fil</text>
+                    </svg>
+
+                    <p>Nycklar från en roster får en blå <span class="officiell-sample">OFFICIELL: bn-stab</span> -badge. Det betyder: <em>denna nyckel är utgiven av en officiell källa och ingår i en signerad bunt</em>.</p>
+
+                    <div class="note">
+                        Du behöver fortfarande verifiera utgivarens fingerprint via separat kanal — men efter det litar du på alla nycklar i rostern automatiskt.
+                    </div>
+                </section>
+
+                <!-- 6. Officiellt godkänd -->
+                <section class="info-card">
+                    <h2><span class="num">6</span>OFFICIELLT GODKÄND vs vanligt GODKÄND</h2>
+                    <p>Säkerhetsprov BAS visar två tillstånd:</p>
+
+                    <ul>
+                        <li><strong>GODKÄND</strong> — du har själv loggat resultatet i appen. Det räknas inom enheten men har inget kryptografiskt skydd.</li>
+                        <li><strong>OFFICIELLT GODKÄND</strong> — en betrodd instruktörs signatur är fäst på provet, signaturen verifieras lokalt och nyckeln är importerad eller del av en roster.</li>
+                    </ul>
+
+                    <div class="note">
+                        <strong>Praktisk skillnad:</strong> ett OFFICIELLT GODKÄND prov är beviset på att instruktören sett resultatet och signerat under det. Det går inte att backdata eller manipulera utan att signaturen blir röd (trasig).
+                    </div>
+                </section>
+
+                <!-- Sammanfattning -->
+                <section class="info-card">
+                    <h2>Sammanfattning</h2>
+                    <ul>
+                        <li>Instruktören har en privat nyckel — den lämnar aldrig enheten.</li>
+                        <li>Soldaten har instruktörens publika nyckel — verifierad via fingerprint.</li>
+                        <li>Pass och säkerhetsprov signeras med privata nyckeln.</li>
+                        <li>Soldaten verifierar signaturen lokalt — grön = OK, gul = importera nyckeln, röd = något har manipulerats.</li>
+                        <li>Roster = bunt med flera officiella nycklar i ett svep.</li>
+                        <li>Cross-device: soldat → fil/QR → instruktör → fil/QR → soldat.</li>
+                    </ul>
+                </section>
             </div>
+        </details>
 
-            <div class="note">
-                <strong>Gul är vanligast i början.</strong> Soldaten har ofta provresultat innan instruktörens publika nyckel är importerad. Kör <em>Importera publik nyckel</em> i Inställningar → Instruktörssignatur för att få badges gröna.
-            </div>
-        </section>
-
-        <!-- 4. Cross-device-flödet -->
-        <section class="info-card">
-            <h2><span class="num">4</span>Cross-device-signering — flödet</h2>
-            <p>Soldatens enhet har provresultaten. Instruktören har den privata nyckeln. För att kombinera dem utbyter de två filer (eller QR-koder).</p>
-
-            <svg class="info-figure" viewBox="0 0 720 360" role="img" aria-label="Cross-device-flöde: soldat exporterar begäran, instruktör signerar, soldat importerar svaret">
-                <!-- Aktör-rubriker -->
-                <text class="fig-actor" x="120" y="28">SOLDAT 📱</text>
-                <text class="fig-actor" x="600" y="28">INSTRUKTÖR 💻</text>
-
-                <!-- Vertikala "swimlane"-ramar -->
-                <rect x="20" y="40" width="200" height="300" rx="8" class="fig-box-fill" opacity="0.5"/>
-                <rect x="20" y="40" width="200" height="300" rx="8" class="fig-box-stroke"/>
-                <rect x="500" y="40" width="200" height="300" rx="8" class="fig-box-fill" opacity="0.5"/>
-                <rect x="500" y="40" width="200" height="300" rx="8" class="fig-box-stroke"/>
-
-                <!-- Steg 1: Soldat exporterar -->
-                <rect x="40" y="60" width="160" height="60" rx="6" class="fig-box-fill"/>
-                <rect x="40" y="60" width="160" height="60" rx="6" class="fig-box-stroke"/>
-                <text class="fig-step" x="120" y="78">STEG 1</text>
-                <text class="fig-label" x="120" y="96">Begär signatur</text>
-                <text class="fig-sub" x="120" y="112">Pass + säkerhetsprov</text>
-
-                <!-- Pil 1 → 2 (höger) -->
-                <path d="M 200 90 L 510 90" class="fig-arrow"/>
-                <polygon points="510,90 502,85 502,95" class="fig-arrow-head"/>
-                <text class="fig-sub" x="355" y="80">📨 fil eller 🔳 QR-kod</text>
-
-                <!-- Steg 2: Instruktör signerar -->
-                <rect x="520" y="60" width="160" height="100" rx="6" class="fig-box-fill"/>
-                <rect x="520" y="60" width="160" height="100" rx="6" class="fig-box-stroke"/>
-                <text class="fig-step" x="600" y="78">STEG 2</text>
-                <text class="fig-label" x="600" y="96">Mottag begäran</text>
-                <text class="fig-sub" x="600" y="114">Verifiera vad som</text>
-                <text class="fig-sub" x="600" y="128">signeras</text>
-                <text class="fig-sub" x="600" y="148">↓ signera m. privat nyckel</text>
-
-                <!-- Steg 3: Instruktör skickar svar -->
-                <rect x="520" y="180" width="160" height="60" rx="6" class="fig-box-fill"/>
-                <rect x="520" y="180" width="160" height="60" rx="6" class="fig-box-stroke"/>
-                <text class="fig-step" x="600" y="198">STEG 3</text>
-                <text class="fig-label" x="600" y="216">Exportera svar</text>
-                <text class="fig-sub" x="600" y="232">Signaturer + meta</text>
-
-                <!-- Pil 3 → 4 (vänster) -->
-                <path d="M 520 270 L 210 270" class="fig-arrow"/>
-                <polygon points="210,270 218,265 218,275" class="fig-arrow-head"/>
-                <text class="fig-sub" x="365" y="260">📨 fil eller 🔳 QR-kod</text>
-
-                <!-- Steg 4: Soldat importerar -->
-                <rect x="40" y="240" width="160" height="80" rx="6" class="fig-box-fill"/>
-                <rect x="40" y="240" width="160" height="80" rx="6" class="fig-box-stroke"/>
-                <text class="fig-step" x="120" y="258">STEG 4</text>
-                <text class="fig-label" x="120" y="276">Importera svar</text>
-                <text class="fig-sub" x="120" y="292">Verifiera signaturer</text>
-                <text class="fig-sub" x="120" y="306">→ badges blir gröna</text>
-            </svg>
-
-            <p>Inga signaturer är knutna till specifik kanal — du kan välja att skicka filerna via Signal, AirDrop, USB-sticka eller scanna QR-koderna direkt på plats. Soldatens privata data (pass) lämnar aldrig enheten i klartext utöver det som visas i begäran.</p>
-        </section>
-
-        <!-- 5. Roster -->
-        <section class="info-card">
-            <h2><span class="num">5</span>Roster och OFFICIELL-badge</h2>
-            <p>När en hel kompanis instruktörer ska kunna signera är det opraktiskt att importera varje publika nyckel manuellt. En <strong>roster</strong> är en bunt-fil med flera publika nycklar — t.ex. "Hemvärnsbataljon 17/2026" — som du importerar i ett svep.</p>
-
-            <svg class="info-figure" viewBox="0 0 600 220" role="img" aria-label="Roster: bunt med flera publika nycklar utgivet av en signaturansvarig">
-                <!-- Utgivare -->
-                <rect x="40" y="60" width="120" height="100" rx="8" class="fig-box-fill"/>
-                <rect x="40" y="60" width="120" height="100" rx="8" class="fig-box-stroke"/>
-                <text class="fig-emoji" x="100" y="98">🏛️</text>
-                <text class="fig-label" x="100" y="125">Utgivare</text>
-                <text class="fig-sub" x="100" y="142">Bn-stab</text>
-
-                <!-- Pil → roster -->
-                <path d="M 165 110 L 220 110" class="fig-arrow"/>
-                <polygon points="220,110 212,105 212,115" class="fig-arrow-head"/>
-
-                <!-- Roster -->
-                <rect x="225" y="60" width="180" height="100" rx="8" class="fig-box-fill"/>
-                <rect x="225" y="60" width="180" height="100" rx="8" class="fig-box-stroke"/>
-                <text class="fig-emoji" x="315" y="92">📋</text>
-                <text class="fig-label" x="315" y="118">Roster (.json)</text>
-                <text class="fig-sub" x="315" y="134">5 publika nycklar</text>
-                <text class="fig-sub" x="315" y="148">utgivare-signerad</text>
-
-                <!-- Pil → soldater -->
-                <path d="M 410 110 L 460 110" class="fig-arrow"/>
-                <polygon points="460,110 452,105 452,115" class="fig-arrow-head"/>
-
-                <!-- Soldat -->
-                <rect x="465" y="60" width="120" height="100" rx="8" class="fig-box-fill"/>
-                <rect x="465" y="60" width="120" height="100" rx="8" class="fig-box-stroke"/>
-                <text class="fig-emoji" x="525" y="98">📱</text>
-                <text class="fig-label" x="525" y="125">Soldater</text>
-                <text class="fig-sub" x="525" y="142">Importerar 1 fil</text>
-            </svg>
-
-            <p>Nycklar från en roster får en blå <span class="officiell-sample">OFFICIELL: bn-stab</span> -badge. Det betyder: <em>denna nyckel är utgiven av en officiell källa och ingår i en signerad bunt</em>.</p>
-
-            <div class="note">
-                Du behöver fortfarande verifiera utgivarens fingerprint via separat kanal — men efter det litar du på alla nycklar i rostern automatiskt.
-            </div>
-        </section>
-
-        <!-- 6. Officiellt godkänd -->
-        <section class="info-card">
-            <h2><span class="num">6</span>OFFICIELLT GODKÄND vs vanligt GODKÄND</h2>
-            <p>Säkerhetsprov BAS visar två tillstånd:</p>
-
-            <ul>
-                <li><strong>GODKÄND</strong> — du har själv loggat resultatet i appen. Det räknas inom enheten men har inget kryptografiskt skydd.</li>
-                <li><strong>OFFICIELLT GODKÄND</strong> — en betrodd instruktörs signatur är fäst på provet, signaturen verifieras lokalt och nyckeln är importerad eller del av en roster.</li>
-            </ul>
-
-            <div class="note">
-                <strong>Praktisk skillnad:</strong> ett OFFICIELLT GODKÄND prov är beviset på att instruktören sett resultatet och signerat under det. Det går inte att backdata eller manipulera utan att signaturen blir röd (trasig).
-            </div>
-        </section>
-
-        <!-- Avslutning -->
-        <section class="info-card">
-            <h2>Sammanfattning</h2>
-            <ul>
-                <li>Instruktören har en privat nyckel — den lämnar aldrig enheten.</li>
-                <li>Soldaten har instruktörens publika nyckel — verifierad via fingerprint.</li>
-                <li>Pass och säkerhetsprov signeras med privata nyckeln.</li>
-                <li>Soldaten verifierar signaturen lokalt — grön = OK, gul = importera nyckeln, röd = något har manipulerats.</li>
-                <li>Roster = bunt med flera officiella nycklar i ett svep.</li>
-                <li>Cross-device: soldat → fil/QR → instruktör → fil/QR → soldat.</li>
-            </ul>
-            <p style="margin-top:14px"><a href="skyttebok.html" class="back-link" style="padding-top:0">Tillbaka till SKYTTEBOK</a></p>
-        </section>
+        <p style="margin-top:14px"><a href="skyttebok.html" class="back-link" style="padding-top:0">Tillbaka till SKYTTEBOK</a></p>
 
     </main>
 
