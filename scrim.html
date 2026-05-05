@@ -3,6 +3,8 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <!-- CSP TODO §1.2: lägg till pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev
+         i connect-src om/när strikt CSP rullas ut hit (PMTiles för Härdat läge) -->
     <meta name="referrer" content="strict-origin">
     <meta name="google" content="notranslate">
     <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
@@ -22,6 +24,8 @@
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="offline-tiles.js" defer></script>
+    <script type="module" src="pmtiles-layer.js"></script>
+    <script src="shared/map-hardat-modal.js" defer></script>
     <style>
         :root {
             --bg-primary: #0d1f0d; --bg-secondary: #152815; --bg-card: #1a321a;
@@ -223,7 +227,7 @@
                     <span class="map-modal-title">Välj plats på kartan</span>
                     <button class="map-modal-close" onclick="closeMapModal()">×</button>
                 </div>
-                <div style="background:#2a1a0a;border-bottom:1px solid #c8a24e;padding:8px 14px;font-size:0.72rem;color:#c8a24e;line-height:1.4;text-align:center">OBS: Kartbakgrunden laddas från extern server som ser IP och visat område. Undvik i skarpt läge.</div>
+                <div id="mapExtTileWarning" style="background:#2a1a0a;border-bottom:1px solid #c8a24e;padding:8px 14px;font-size:0.72rem;color:#c8a24e;line-height:1.4;text-align:center">OBS: Kartbakgrunden laddas från extern server som ser IP och visat område. Undvik i skarpt läge.</div>
                 <div id="mapContainer"><div class="map-spinner" id="mapSpinner"></div></div>
                 <div class="map-modal-footer">
                     <span class="map-mgrs-display" id="mapMgrsDisplay">Tryck på kartan</span><span class="geo-spinner hidden" id="geoSpinner"></span>
@@ -908,6 +912,14 @@ function openMapModal() {
         tileLayer.on('load', function() { if (sp) sp.classList.add('hidden'); });
         if (window.OfflineTiles && typeof window.OfflineTiles.attachCoverageControl === 'function') {
             window.OfflineTiles.attachCoverageControl(mapInstance);
+        }
+        if (window.MapHardatModal && typeof window.MapHardatModal.attach === 'function') {
+            window.MapHardatModal.attach({
+                map: mapInstance,
+                baseLayer: tileLayer,
+                headerEl: document.querySelector('#mapModal .map-modal-header'),
+                warningEl: document.getElementById('mapExtTileWarning')
+            });
         }
         mapInstance.on('click', function(e) {
             mapSelectedMgrs = MGRS.forward(e.latlng.lat, e.latlng.lng);
