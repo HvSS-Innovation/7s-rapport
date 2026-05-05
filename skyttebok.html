@@ -282,7 +282,12 @@
         /* Pass-rad signatur — Fas 2 */
         .pass-row-sig { grid-column: 1 / -1; display: flex; align-items: center; gap: 8px; padding-top: 4px; flex-wrap: wrap; }
         .sig-badge { display: inline-flex; align-items: center; gap: 6px; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); border-radius: 999px; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; line-height: 1.4; font-family: inherit; }
+        .sig-badge.sig-warn { background: rgba(251,192,45,0.12); color: #fbc02d; border-color: #c79a1a; }
+        .sig-badge.sig-broken { background: rgba(198,40,40,0.18); color: var(--danger-hover); border-color: var(--danger); }
+        .sig-badge.sig-pending { background: var(--bg-secondary); color: var(--text-muted); border-color: var(--border); font-weight: 500; }
         .sig-badge .sig-badge-fp { font-family: 'Courier New', monospace; color: var(--text-secondary); font-weight: 500; font-size: 0.65rem; letter-spacing: 0; }
+        .sig-badge.sig-warn .sig-badge-fp { color: #c79a1a; }
+        .sig-badge.sig-broken .sig-badge-fp { color: var(--danger-hover); }
         .sig-row-actions { margin-left: auto; display: flex; gap: 6px; }
         .sig-row-actions .btn { min-height: 32px; padding: 4px 10px; font-size: 0.72rem; }
 

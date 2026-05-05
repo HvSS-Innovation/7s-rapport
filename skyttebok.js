@@ -780,34 +780,175 @@
     };
 
     // ── Sig-render-state ────────────────────────────────────────────────
-    // Plockas upp vid varje renderAll() — synkron läsning från
-    // localStorage. Används av renderPassRow() för att avgöra om badge
-    // eller "Signera"-knapp ska visas.
-    var sigRenderState = { hasSelf: false, sigsByPassId: {} };
+    // Synkron cache som plockas upp vid varje render() — ger pass-rader
+    // omedelbar info om vilka signaturer som finns. `verified` fylls
+    // separat av async refreshSigVerifications() (Fas 3).
+    //
+    //   verified[passId] = {
+    //     state: 'valid'|'broken'   — hash matchar, sig matchar pubkey
+    //     trusted: bool             — bara meningsfull om state=='valid'
+    //     signerName: string
+    //     keyId: string
+    //     reason: string            — om state=='broken'
+    //   }
+    var sigRenderState = { hasSelf: false, sigsByPassId: {}, verified: {} };
 
     function refreshSigRenderState() {
         if (!window.SkyttebokSig) {
-            sigRenderState = { hasSelf: false, sigsByPassId: {} };
+            sigRenderState = { hasSelf: false, sigsByPassId: {}, verified: {} };
             return;
         }
-        sigRenderState = {
-            hasSelf: !!window.SkyttebokSig.getSelf(),
-            sigsByPassId: window.SkyttebokSig.listAllSigs()
-        };
+        sigRenderState.hasSelf = !!window.SkyttebokSig.getSelf();
+        sigRenderState.sigsByPassId = window.SkyttebokSig.listAllSigs();
+        // verified-cache lämnas orörd här — uppdateras async av
+        // refreshSigVerifications(). Stale entries städas vid den körningen.
+    }
+
+    // Reentrancy-skydd: postRenderVerify kan triggas från flera håll
+    // samtidigt (renders i KP-flöden t.ex.). Vi vill bara ha en körning
+    // i taget — vid kollision återanvänds promise.
+    var verifyInflight = null;
+
+    async function refreshSigVerifications() {
+        if (!window.SkyttebokSig) return false;
+        var sigs = sigRenderState.sigsByPassId;
+        var passIds = Object.keys(sigs);
+        var newVerified = {};
+        var changed = false;
+
+        // Ladda alla berörda pass-objekt EN gång (synkron LS-iter).
+        // Vi behöver det fullständiga pass-objektet eftersom hashPass()
+        // räknas på exakt det som ligger i localStorage just nu —
+        // tampering visar sig då som "broken".
+        var passById = {};
+        for (var i = 0; i < passIds.length; i++) {
+            var raw = localStorage.getItem('skyttebok_pass_' + passIds[i]);
+            if (raw) {
+                try { passById[passIds[i]] = JSON.parse(raw); }
+                catch (_) { /* korrupt — skippas */ }
+            }
+        }
+
+        // Verifiera alla parallellt. Web Crypto är CPU-billigt på 10-100 sigs.
+        await Promise.all(passIds.map(async function (pid) {
+            var pass = passById[pid];
+            var sig = sigs[pid];
+            if (!pass) {
+                // Pass saknas men sig finns — orphan. Markera som broken.
+                newVerified[pid] = {
+                    state: 'broken',
+                    reason: 'Tillhörande pass finns inte längre',
+                    keyId: sig.signer && sig.signer.pubKeyId,
+                    signerName: sig.signer && sig.signer.name
+                };
+                return;
+            }
+            try {
+                var res = await window.SkyttebokSig.verifySignature(sig, pass);
+                if (res.valid) {
+                    newVerified[pid] = {
+                        state: 'valid',
+                        trusted: !!res.trusted,
+                        signerName: res.signerName || '',
+                        keyId: res.keyId
+                    };
+                } else {
+                    newVerified[pid] = {
+                        state: 'broken',
+                        reason: res.reason || 'Signatur kunde inte verifieras',
+                        keyId: res.keyId,
+                        signerName: sig.signer && sig.signer.name
+                    };
+                }
+            } catch (e) {
+                newVerified[pid] = {
+                    state: 'broken',
+                    reason: e && e.message ? e.message : 'Verifierings-fel',
+                    signerName: sig.signer && sig.signer.name
+                };
+            }
+        }));
+
+        // Diff: ändrades cache:n?
+        var oldKeys = Object.keys(sigRenderState.verified);
+        var newKeys = Object.keys(newVerified);
+        if (oldKeys.length !== newKeys.length) changed = true;
+        if (!changed) {
+            for (var j = 0; j < newKeys.length; j++) {
+                var k = newKeys[j];
+                var a = sigRenderState.verified[k] || {};
+                var b = newVerified[k];
+                if (a.state !== b.state || a.trusted !== b.trusted ||
+                    a.signerName !== b.signerName || a.reason !== b.reason ||
+                    a.keyId !== b.keyId) {
+                    changed = true;
+                    break;
+                }
+            }
+        }
+        sigRenderState.verified = newVerified;
+        return changed;
+    }
+
+    // Fire-and-forget från render(). Re-render om verifiering ändrade
+    // något — annars no-op. Reentrancy-säker.
+    function postRenderVerify() {
+        if (verifyInflight) return verifyInflight;
+        verifyInflight = (async function () {
+            try {
+                var changed = await refreshSigVerifications();
+                if (changed) {
+                    // re-render utan att trigga ny verify-loop:
+                    // refreshSigVerifications körde precis och cache är
+                    // up-to-date, så nästa render's postRenderVerify ser
+                    // changed===false och avslutas.
+                    render();
+                }
+            } finally {
+                verifyInflight = null;
+            }
+        })();
+        return verifyInflight;
     }
 
     function renderPassSigBlock(p) {
         var sig = sigRenderState.sigsByPassId[p.id];
         if (sig) {
-            // Pass redan signerat — visa grön badge med namn + fp.
-            // Verifiering mot trusted-key sker i Fas 3; här litar vi bara
-            // på att signaturen finns.
             var name = (sig.signer && sig.signer.name) ? sig.signer.name : '(utan namn)';
             var fp = sig.signer && sig.signer.pubKeyId
                 ? window.SkyttebokSig.formatFingerprint(sig.signer.pubKeyId)
                 : '';
+            var ver = sigRenderState.verified[p.id];
+
+            var badgeClass = '', icon = '✓', mainText = name, tooltip = '';
+            if (!ver) {
+                // Verifiering pågår eller ännu ej kört.
+                badgeClass = 'sig-pending';
+                icon = '⋯';
+                mainText = 'Verifierar…';
+            } else if (ver.state === 'valid' && ver.trusted) {
+                // Grön — giltig signatur från känd nyckel.
+                icon = '✓';
+                mainText = name;
+            } else if (ver.state === 'valid' && !ver.trusted) {
+                // Gul — giltig signatur men nyckeln är inte i trusted-list.
+                badgeClass = 'sig-warn';
+                icon = '⚠';
+                mainText = 'Okänd signerare: ' + name;
+                tooltip = 'Nyckel ' + fp + ' finns inte i din trusted-list. ' +
+                    'Importera den om du litar på källan.';
+            } else {
+                // Röd — bruten signatur (tampering eller fel sig).
+                badgeClass = 'sig-broken';
+                icon = '✗';
+                mainText = 'Bruten signatur';
+                tooltip = ver.reason || 'Signaturen kunde inte verifieras';
+            }
+
+            var titleAttr = tooltip ? ' title="' + escapeHtml(tooltip) + '"' : '';
             return '<div class="pass-row-sig">' +
-                '<span class="sig-badge">✓ ' + escapeHtml(name) +
+                '<span class="sig-badge ' + badgeClass + '"' + titleAttr + '>' +
+                    icon + ' ' + escapeHtml(mainText) +
                     (fp ? ' <span class="sig-badge-fp">' + escapeHtml(fp) + '</span>' : '') +
                 '</span>' +
                 '<span class="sig-row-actions">' +
@@ -922,6 +1063,16 @@
             html += '</div>';
         });
         root.innerHTML = html;
+
+        // Fas 3: kicka igång async verifiering. Reentrancy-säker —
+        // om en körning redan pågår väntar vi på den. När verifiering
+        // klar och något ändrats triggar postRenderVerify() en re-render.
+        // Vi anropar bara om det FINNS signaturer att verifiera — annars
+        // är det bara onödig promise-overhead.
+        if (window.SkyttebokSig &&
+            Object.keys(sigRenderState.sigsByPassId).length > 0) {
+            postRenderVerify();
+        }
     }
 
     // ── Säkerhetsprov ───────────────────────────────────────────────────
@@ -1451,6 +1602,9 @@
                     payload, { overwrite: !!overwrite }
                 );
                 renderSigUi();
+                // Tidigare "okänd signerare"-pass kan nu bli "kända" → flippa
+                // gul → grön. Triggar render → postRenderVerify.
+                render();
                 showConfirm('Nyckel importerad',
                     'Importerade ' + (imported.name || 'utan namn') +
                     ' med fingerprint:\n\n' + imported.fingerprintFormatted +
@@ -1497,6 +1651,7 @@
                     payload, { overwrite: true }
                 );
                 renderSigUi();
+                render();
                 showConfirm('Nyckel ersatt',
                     'Den befintliga nyckeln ersattes. Ny signerare: ' +
                     (imported.name || 'utan namn') + '.',
@@ -1529,6 +1684,8 @@
             function () {
                 window.SkyttebokSig.removeTrustedKey(keyId);
                 renderSigUi();
+                // Pass som var grön (känd nyckel) blir nu gul (okänd).
+                render();
             }
         );
     };
