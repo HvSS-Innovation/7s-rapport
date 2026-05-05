@@ -962,6 +962,14 @@ function initMap() {
     function setupHardening() {
         if (window.PMTilesHardening && typeof window.PMTilesHardening.createController === 'function') {
             window.MK_HARDENING = window.PMTilesHardening.createController(map, tiles);
+            // När Härdat blir aktivt: dölj spinner. tiles.on('load') hinner
+            // inte fyra om hardLayer ersätter tiles innan tiles laddat
+            // (auto-activate vid pageload + flygplansläge → spinner fastnade).
+            window.MK_HARDENING.onChange(() => {
+                if (window.MK_HARDENING.isActive()) {
+                    spinner.classList.add('hidden');
+                }
+            });
             window.dispatchEvent(new CustomEvent('MK_HARDENING:ready'));
             return true;
         }
