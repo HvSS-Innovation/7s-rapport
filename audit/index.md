@@ -17,6 +17,8 @@ Denna mapp innehåller statisk audit, OPSEC-rapport, roadmap och löpande sessio
 | [session-4.md](session-4.md) | Pass 4 (2026-04-30): tnr-fuzz, JSON.parse-safety, SW-cache-regression-fix (403-tiles fastnade), select-stöd i opsec.js, aria-label på footer-länkar. |
 | [session-5.md](session-5.md) | Pass 5 (2026-05-05): Härdat läge porterat från minkarta.html till alla 6 rapportfiler (7S, A-H, SCRIM, WHAT, WEFT, OBSLÖSA) via ny `shared/map-hardat-modal.js`-helper. State delas mellan sidor. CSP-TODO för R2-domänen lagd in inför framtida CSP-utrullning §1.2. |
 | [roadmap-hardat-i-rapporter.md](roadmap-hardat-i-rapporter.md) | Plan-dokument för Session 5: vad som finns i minkarta.html, vad som ska portas, helper-API, acceptkriterier per fil, risker. |
+| [session-6.md](session-6.md) | Pass 6 (2026-05-05): Bakgrundsnedladdning över sid-navigering. Tile-download (`hv-offline-tiles-v1`) och PMTiles-prefetch (`hv-pmtiles-v1`) flyttade till Service Worker, så pågående jobb överlever navigering minkarta ↔ sensorskiss ↔ rapportfiler. Resume-toast om alla flikar stängs mid-download. Fallback till in-page-loop om SW saknas. |
+| [roadmap-bakgrundsnedladdning.md](roadmap-bakgrundsnedladdning.md) | Plan-dokument för Session 6: design (SW-driven jobs + dedup på URL för PMTiles), faser 1–5, hårda regler, kända edge cases. |
 
 ## Status — Sväng 1 (idag)
 

@@ -118,6 +118,18 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
+### 2026-05-05: Bakgrundsnedladdning över sid-navigering
+Tile-download (`hv-offline-tiles-v1`) och PMTiles-prefetch
+(`hv-pmtiles-v1`) flyttades från page-scope till Service Worker. En
+nedladdning som startas i `minkarta.html` fortsätter köras när
+användaren navigerar till `sensorskiss.html`, `index.html` (7S) eller
+någon av rapportfilerna — pille:n längst ner-höger följer med och visar
+levande progress på alla sidor som inkluderar `offline-tiles.js`.
+PMTiles-prefetch dedupar på URL i SW så två flikar inte dubbelfetchar
+samma 4 GB-fil. Resume-toast visas vid första pageload efter att alla
+flikar varit stängda mid-download. Fallback till in-page-loop om SW
+saknas. Detaljer: `audit/roadmap-bakgrundsnedladdning.md` + `session-6.md`.
+
 ### 2026-04-29: SENSORSKISS v1 — ny tab för sensoruppsättning
 Sju-fas-implementation (roadmap: `roadmap-sensorskiss-v1.md`). Ny tab
 `sensorskiss.html` parallellt med MINKARTA, baserad på samma Leaflet-stack

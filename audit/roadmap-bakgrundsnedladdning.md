@@ -169,7 +169,7 @@ tills sista chunk eller pausa+spara state. Vid nästa pageload visas
 
 ---
 
-### Fas 5 — Audit + README + self-test ✅
+### Fas 5 — Audit + README + self-test ✅ LEVERERAD
 
 **Mål:** Dokumentera ändringen i `audit/`, README-rad, och en
 manuell-test-checklista i `audit/roadmap-bakgrundsnedladdning.md` (denna
