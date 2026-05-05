@@ -342,6 +342,32 @@
         localStorage.removeItem(TRUSTED_PREFIX + keyId);
     }
 
+    // Exportera alla trusted-keys som en array av sb-pubkey-v1-payloads.
+    // Används av v2-export i skyttebok.js. Synkron — bygger bara plain
+    // objekt från localStorage.
+    function exportAllTrustedKeys() {
+        var out = [];
+        for (var i = 0; i < localStorage.length; i++) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf(TRUSTED_PREFIX) === 0) {
+                try {
+                    var obj = JSON.parse(localStorage.getItem(k));
+                    if (obj && obj.keyId && obj.jwkPublic) {
+                        out.push({
+                            format: PUBKEY_FORMAT,
+                            algo: obj.algo,
+                            name: obj.name || '',
+                            keyId: obj.keyId,
+                            jwkPublic: obj.jwkPublic,
+                            createdAt: obj.createdAt || null
+                        });
+                    }
+                } catch (_) { /* korrupt — ignorera */ }
+            }
+        }
+        return out;
+    }
+
     // ── Signatur (Fas 2 — färdigt API-skelett, används från Fas 2) ─────
     async function signPass(pass) {
         var s = readSelf();
@@ -477,6 +503,7 @@
         listTrusted: listTrusted,
         importTrustedKey: importTrustedKey,
         removeTrustedKey: removeTrustedKey,
+        exportAllTrustedKeys: exportAllTrustedKeys,
 
         // Signering / verifiering (Fas 2-3)
         signPass: signPass,

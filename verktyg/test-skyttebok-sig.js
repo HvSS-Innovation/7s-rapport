@@ -138,6 +138,64 @@ function assert(cond, msg) {
     assert(a === b, 'canonical-json sorterar nycklar konsekvent');
     assert(a === '{"a":1,"b":2,"c":{"a":1,"z":9}}', 'canonical-form matchar förväntat');
 
+    console.log('— Test 10: exportAllTrustedKeys returnerar serialiserbara payloads —');
+    // Använd soldat-sandboxen som har 0 keys efter Test 7-removal — importera om.
+    await SigS.importTrustedKey(exported);
+    const allKeys = SigS.exportAllTrustedKeys();
+    assert(Array.isArray(allKeys), 'exportAllTrustedKeys returnerar array');
+    assert(allKeys.length === 1, 'array har en post efter en import');
+    assert(allKeys[0].format === 'sb-pubkey-v1', 'första posten har korrekt format');
+    assert(allKeys[0].keyId === self.keyId, 'keyId matchar');
+    assert(!allKeys[0].jwkPrivate, 'privata nyckeln läcker INTE');
+
+    console.log('— Test 11: Fas 4 v2 round-trip — sig + trusted reser via export/import —');
+    // Simulera: instruktör har genererat nyckel, signerat ett pass.
+    // Soldatens enhet har importerat instruktörens publika nyckel.
+    // Soldaten exporterar v2 → importerar på en annan enhet → samma badge-status.
+    const sigPayloadFasFyra = await Sig.signPass(pass);
+    // Simulera "soldatens enhet" med pass + sig + trusted-key.
+    const enhet1 = newSandbox();
+    const Sig1 = enhet1.SkyttebokSig;
+    enhet1.localStorage.setItem('skyttebok_pass_' + pass.id, JSON.stringify(pass));
+    Sig1.writeSig(pass.id, sigPayloadFasFyra);
+    await Sig1.importTrustedKey(exported);
+
+    const sigsBefore = Sig1.listAllSigs();
+    const keysBefore = Sig1.exportAllTrustedKeys();
+    assert(Object.keys(sigsBefore).length === 1, 'enhet1 har 1 sig');
+    assert(keysBefore.length === 1, 'enhet1 har 1 trusted-key');
+
+    // Bygg en mock-export från enhet1:s storage. (skyttebok.js
+    // buildExportPayload är inte här, så vi gör det själva för test.)
+    const exportV2 = {
+        format: 'skyttebok-v2',
+        exportedAt: new Date().toISOString(),
+        displayName: null,
+        pass: [pass],
+        sakerhetsprov: null,
+        signatures: sigsBefore,
+        trustedKeys: keysBefore
+    };
+
+    // "Ny enhet" — tom soldat-sandbox.
+    const enhet2 = newSandbox();
+    const Sig2 = enhet2.SkyttebokSig;
+    assert(enhet2.localStorage.length === 0, 'enhet2 är tom innan import');
+
+    // Simulera importens kärna: pass + sig + trusted.
+    enhet2.localStorage.setItem('skyttebok_pass_' + pass.id, JSON.stringify(exportV2.pass[0]));
+    Sig2.writeSig(pass.id, exportV2.signatures[pass.id]);
+    for (const pk of exportV2.trustedKeys) {
+        await Sig2.importTrustedKey(pk, { overwrite: true });
+    }
+
+    // Verifiera på enhet2: ska bli giltig + trusted = grön badge.
+    const sigOnE2 = Sig2.readSig(pass.id);
+    const verifyE2 = await Sig2.verifySignature(sigOnE2, pass);
+    assert(verifyE2.valid === true, 'sig är giltig på enhet2 efter v2-import');
+    assert(verifyE2.trusted === true, 'trusted-key reste med — grön badge på enhet2');
+    assert(verifyE2.signerName === 'Sgt Andersson', 'signerns namn återges på enhet2');
+
     console.log('\nALLA TESTER OK');
 })().catch((e) => {
     console.error(e);

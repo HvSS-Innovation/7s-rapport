@@ -32,7 +32,14 @@
     var PASS_PREFIX = 'skyttebok_pass_';
     var SETTING_PREFIX = 'skyttebok_settings_';
     var SAKERHETSPROV_KEY = 'skyttebok_sakerhetsprov';
-    var EXPORT_FORMAT = 'skyttebok-v1';
+    // v1: pass + sakerhetsprov + displayName.
+    // v2 (Fas 4): + signatures (passId → sigPayload) + trustedKeys (array).
+    // Vi exporterar alltid till lägsta möjliga format — v1 om inga sig-data
+    // finns, annars v2. Importen tar emot båda. Det håller v1-läsare i
+    // ekosystemet vid liv så länge soldaten inte börjat signera.
+    var EXPORT_FORMAT_V1 = 'skyttebok-v1';
+    var EXPORT_FORMAT_V2 = 'skyttebok-v2';
+    var EXPORT_FORMATS_ACCEPTED = [EXPORT_FORMAT_V1, EXPORT_FORMAT_V2];
 
     // Pending-confirm callback. Sätts av showConfirm(), nollställs efter klick.
     var pendingConfirm = null;
@@ -1289,13 +1296,26 @@
     // version-stämpel. Importen kan därför migrera bakåt-kompatibelt om
     // formatet ändras senare.
     function buildExportPayload() {
-        return {
-            format: EXPORT_FORMAT,
+        var sigs = (window.SkyttebokSig && window.SkyttebokSig.listAllSigs)
+            ? window.SkyttebokSig.listAllSigs() : {};
+        var trustedKeys = (window.SkyttebokSig && window.SkyttebokSig.exportAllTrustedKeys)
+            ? window.SkyttebokSig.exportAllTrustedKeys() : [];
+        var hasSigData = Object.keys(sigs).length > 0 || trustedKeys.length > 0;
+
+        var payload = {
+            format: hasSigData ? EXPORT_FORMAT_V2 : EXPORT_FORMAT_V1,
             exportedAt: new Date().toISOString(),
             displayName: getSetting('displayname') || null,
             pass: loadAllPass(),
             sakerhetsprov: loadSakerhetsprov()
         };
+        if (hasSigData) {
+            // signatures bara på pass-id-nivå — matchar localStorage-layouten.
+            // Tomma objekt är OK om bara trustedKeys finns men inga sigs.
+            payload.signatures = sigs;
+            payload.trustedKeys = trustedKeys;
+        }
+        return payload;
     }
 
     function exportToFile() {
@@ -1316,9 +1336,9 @@
 
     function validateImportPayload(p) {
         if (!p || typeof p !== 'object') return 'Filen är inte giltig JSON-data.';
-        if (p.format !== EXPORT_FORMAT) {
-            return 'Okänt format ("' + (p.format || '?') + '"). Förväntade "' +
-                EXPORT_FORMAT + '".';
+        if (EXPORT_FORMATS_ACCEPTED.indexOf(p.format) === -1) {
+            return 'Okänt format ("' + (p.format || '?') + '"). Förväntade ' +
+                EXPORT_FORMATS_ACCEPTED.join(' eller ') + '.';
         }
         if (!Array.isArray(p.pass)) return 'Saknar pass-lista.';
         for (var i = 0; i < p.pass.length; i++) {
@@ -1327,13 +1347,26 @@
                 return 'Pass nr ' + (i + 1) + ' saknar id eller ovningNr.';
             }
         }
+        // v2-fält är frivilliga; om de finns ska de ha rätt typer.
+        if (p.signatures !== undefined && (typeof p.signatures !== 'object' || Array.isArray(p.signatures))) {
+            return 'Fältet "signatures" är inte ett objekt.';
+        }
+        if (p.trustedKeys !== undefined && !Array.isArray(p.trustedKeys)) {
+            return 'Fältet "trustedKeys" är inte en array.';
+        }
         return null;
     }
 
-    function applyImport(payload, mode) {
+    async function applyImport(payload, mode) {
         // mode: 'merge' (lägg till nya, behåll befintliga med samma id)
         //       'replace' (rensa allt befintligt först)
+        //
+        // Trusted-keys MERGAS alltid oavsett mode — de är personliga och
+        // ackumuleras från flera källor. Att 'replace' skulle rensa dem
+        // vore destruktivt och gör import till en farlig operation.
         if (mode === 'replace') {
+            // deletePass rensar både pass och tillhörande sig — bra match
+            // för v2-importens semantik.
             loadAllPass().forEach(function (p) { deletePass(p.id); });
             saveSakerhetsprov(null);
             // displayName lämnas — den ärvs nedan om export hade ett.
@@ -1343,18 +1376,68 @@
         loadAllPass().forEach(function (p) { existingIds[p.id] = true; });
 
         var added = 0, skipped = 0;
+        var addedPassIds = {};
         payload.pass.forEach(function (pp) {
             if (existingIds[pp.id]) { skipped++; return; }
             // Numeriska ovningNr i JSON återställs som number; sträng-id
             // (kp_bas) bevaras.
             savePass(pp);
+            addedPassIds[pp.id] = true;
             added++;
         });
 
         if (payload.sakerhetsprov) saveSakerhetsprov(payload.sakerhetsprov);
         if (payload.displayName) setSetting('displayname', payload.displayName);
 
-        return { added: added, skipped: skipped };
+        // ── v2: signaturer ──────────────────────────────────────────────
+        // Sigs hör till passId. Vi importerar dem för:
+        //   - pass som faktiskt importerades just nu (addedPassIds)
+        //   - pass som redan fanns på enheten (existingIds) — men skriver
+        //     bara om enheten inte redan har en signatur, eftersom existing
+        //     sig kan vara nyare (lokal signering efter senaste export).
+        var sigsAdded = 0, sigsSkipped = 0;
+        if (payload.signatures && typeof payload.signatures === 'object' &&
+            window.SkyttebokSig && window.SkyttebokSig.writeSig) {
+            var existingSigs = window.SkyttebokSig.listAllSigs();
+            Object.keys(payload.signatures).forEach(function (passId) {
+                var sig = payload.signatures[passId];
+                if (!sig || !sig.sigVer) { sigsSkipped++; return; }
+                if (addedPassIds[passId]) {
+                    window.SkyttebokSig.writeSig(passId, sig);
+                    sigsAdded++;
+                } else if (existingIds[passId] && !existingSigs[passId]) {
+                    window.SkyttebokSig.writeSig(passId, sig);
+                    sigsAdded++;
+                } else {
+                    sigsSkipped++;
+                }
+            });
+        }
+
+        // ── v2: trusted-keys ────────────────────────────────────────────
+        // Importeras alltid med overwrite=true (samma keyId = samma data
+        // efter fingerprint-validering). Felaktiga nycklar avvisas tyst —
+        // de hindrar inte resten av importen.
+        var keysAdded = 0, keysSkipped = 0;
+        if (Array.isArray(payload.trustedKeys) &&
+            window.SkyttebokSig && window.SkyttebokSig.importTrustedKey) {
+            for (var i = 0; i < payload.trustedKeys.length; i++) {
+                try {
+                    await window.SkyttebokSig.importTrustedKey(
+                        payload.trustedKeys[i], { overwrite: true }
+                    );
+                    keysAdded++;
+                } catch (_) {
+                    keysSkipped++;
+                }
+            }
+        }
+
+        return {
+            added: added, skipped: skipped,
+            sigsAdded: sigsAdded, sigsSkipped: sigsSkipped,
+            keysAdded: keysAdded, keysSkipped: keysSkipped
+        };
     }
 
     function importFromFile(file) {
@@ -1377,18 +1460,36 @@
             // Bekräftelse + val: merge (default) eller replace.
             var nNytt = payload.pass.length;
             var nFinns = loadAllPass().length;
-            var msg = 'Filen innehåller ' + nNytt + ' pass' +
+            var nSigs = payload.signatures
+                ? Object.keys(payload.signatures).length : 0;
+            var nKeys = Array.isArray(payload.trustedKeys)
+                ? payload.trustedKeys.length : 0;
+            var fmtSuffix = payload.format === EXPORT_FORMAT_V2
+                ? ' (v2 — innehåller signaturer)' : '';
+            var extraParts = [];
+            if (nSigs) extraParts.push(nSigs + ' signaturer');
+            if (nKeys) extraParts.push(nKeys + ' betrodda nycklar');
+            var msg = 'Filen' + fmtSuffix + ' innehåller ' + nNytt + ' pass' +
                 (payload.sakerhetsprov ? ' + säkerhetsprov-logg' : '') +
+                (extraParts.length ? ' + ' + extraParts.join(' + ') : '') +
                 (payload.displayName ? ' (visningsnamn: ' + payload.displayName + ')' : '') +
                 '. Du har ' + nFinns + ' pass på enheten.\n\n' +
-                'Välj sammanslagning eller ersätt.';
+                'Trusted-nycklar slås alltid samman (aldrig ersatta). ' +
+                'Pass: välj sammanslagning eller ersätt.';
             showImportChoice(msg, function (mode) {
-                var res = applyImport(payload, mode);
-                renderAll();
-                showConfirm('Klart',
-                    'Importerade ' + res.added + ' pass' +
-                    (res.skipped ? ' (' + res.skipped + ' redan befintliga ignorerade)' : '') + '.',
-                    function () { /* no-op */ });
+                applyImport(payload, mode).then(function (res) {
+                    renderAll();
+                    var summary = 'Importerade ' + res.added + ' pass';
+                    if (res.skipped) summary += ' (' + res.skipped + ' redan befintliga ignorerade)';
+                    if (res.sigsAdded) summary += ', ' + res.sigsAdded + ' signaturer';
+                    if (res.keysAdded) summary += ', ' + res.keysAdded + ' betrodda nycklar';
+                    summary += '.';
+                    showConfirm('Klart', summary, function () { /* no-op */ });
+                }).catch(function (e) {
+                    showConfirm('Importfel',
+                        'Importen misslyckades: ' + (e && e.message ? e.message : '?'),
+                        function () {});
+                });
             });
         };
         reader.onerror = function () {
