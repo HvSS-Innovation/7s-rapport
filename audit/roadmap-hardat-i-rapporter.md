@@ -210,8 +210,11 @@ Ordning (kortast / minst risk först):
 
 ## Filer som INTE rörs
 
-- `service-worker.js` — CI sköter `CACHE`-stämpeln. Ny fil
-  `shared/map-hardat-modal.js` läggs i `FILES`-arrayen manuellt.
+- `service-worker.js` — CI sköter `CACHE`-stämpeln, denna körning rör
+  inte filen alls. **TODO för ägaren:** lägg in
+  `'./shared/map-hardat-modal.js'` i `FILES`-arrayen manuellt om/när
+  precaching av helpern önskas. Filen cachas on-demand vid första visit
+  via SW:s standard fetch-fallback om den utelämnas.
 - `version.js` — CI sköter den.
 - `audit/cot-fuzz.html`, `audit/tnr-fuzz.html` — regression-tester.
 - `vader.html`, `fors.html`, `pedars.html`, `postschema.html`,
