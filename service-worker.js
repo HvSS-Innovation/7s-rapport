@@ -377,3 +377,140 @@ self.addEventListener('message', (e) => {
     }
   }
 });
+
+// ─────────────────────────────────────────────────────────────────────────
+//  PMTiles-prefetch i bakgrunden (Fas 3, audit/roadmap-bakgrundsnedladdning.md)
+//
+//  Större filer (Sverige.pmtiles ~ 4 GB) får nu överleva sid-navigering.
+//  Dedup nyckel = URL — om en flik redan startat prefetch för en URL
+//  attaches efterföljande sidor till den existerande job-strömmen istället
+//  för att starta en parallell (vilket annars skulle dubbelladda 4 GB).
+//
+//  Skillnad mot in-page-versionen i pmtiles-layer.js:
+//    - SHA-256-verifiering hoppas över helt här. Web Crypto subtle.digest
+//      kräver hela filen i ArrayBuffer i RAM, vilket sprängde mobil-RAM
+//      vid 2+ GB. In-page-koden hade samma threshold (256 MB). Lita på
+//      TLS + R2 ETag för integritet.
+// ─────────────────────────────────────────────────────────────────────────
+const _pmJobs = Object.create(null);
+
+function pmSnapshot(j) {
+  return {
+    url: j.url, expectedBytes: j.expectedBytes,
+    loaded: j.loaded, total: j.total, percent: j.percent,
+    status: j.status,
+    error: j.error ? String((j.error && j.error.message) || j.error) : null
+  };
+}
+
+function pmBroadcast(message) {
+  return self.clients.matchAll({ type: 'window', includeUncontrolled: true })
+    .then(clients => {
+      clients.forEach(c => { try { c.postMessage(message); } catch (_) {} });
+    });
+}
+
+function pmEmit(job) {
+  return pmBroadcast({ type: 'PM_PROGRESS', url: job.url, job: pmSnapshot(job) });
+}
+
+async function runPmtilesJob(spec) {
+  const url = spec.url;
+  if (!url) return;
+  if (_pmJobs[url]) {
+    // Dedup: jobbet löper redan från en tidigare flik. Emit nuläget så
+    // den nya flikens UI hänger på, sen returnera utan att starta om.
+    pmEmit(_pmJobs[url]);
+    return;
+  }
+  const job = {
+    url: url,
+    expectedBytes: spec.expectedBytes || 0,
+    loaded: 0,
+    total: 0,
+    percent: 0,
+    status: 'running',
+    error: null,
+    controller: new AbortController()
+  };
+  _pmJobs[url] = job;
+  pmEmit(job);
+
+  let lastEmit = 0;
+  function flush(force) {
+    const now = Date.now();
+    if (force || now - lastEmit > 250) {
+      lastEmit = now;
+      pmEmit(job);
+    }
+  }
+
+  try {
+    const resp = await fetch(url, { signal: job.controller.signal, mode: 'cors' });
+    if (!resp.ok) throw new Error('HTTP ' + resp.status);
+    const total = parseInt(resp.headers.get('content-length') || '0', 10);
+    job.total = total;
+
+    const reader = resp.body.getReader();
+    const blobChunks = [];
+    while (true) {
+      if (job.controller.signal.aborted) {
+        throw Object.assign(new Error('Avbruten'), { name: 'AbortError' });
+      }
+      const { done, value } = await reader.read();
+      if (done) break;
+      blobChunks.push(new Blob([value]));
+      job.loaded += value.length;
+      job.percent = total ? Math.round(job.loaded / total * 100) : 0;
+      flush(false);
+    }
+
+    const fullBlob = new Blob(blobChunks, { type: 'application/octet-stream' });
+    blobChunks.length = 0;
+
+    const cache = await caches.open(PMTILES_CACHE);
+    const cacheResp = new Response(fullBlob, {
+      status: 200,
+      statusText: 'OK',
+      headers: {
+        'Content-Type': 'application/octet-stream',
+        'Content-Length': String(job.loaded),
+        'Accept-Ranges': 'bytes'
+      }
+    });
+    await cache.put(url, cacheResp);
+
+    job.status = 'done';
+    job.percent = 100;
+  } catch (err) {
+    job.error = err;
+    job.status = (err && err.name === 'AbortError') ? 'aborted' : 'error';
+  }
+  flush(true);
+  setTimeout(() => {
+    delete _pmJobs[url];
+    pmBroadcast({ type: 'PM_PROGRESS', url: url, job: null });
+  }, 8000);
+}
+
+self.addEventListener('message', (e) => {
+  const data = e.data || {};
+  if (data.type === 'PM_START_JOB') {
+    const spec = data.spec || {};
+    if (!spec.url) return;
+    e.waitUntil(runPmtilesJob(spec).catch(err => {
+      console.error('[SW] runPmtilesJob fel', err);
+    }));
+  } else if (data.type === 'PM_CANCEL') {
+    const j = _pmJobs[data.url];
+    if (j && j.controller) j.controller.abort();
+  } else if (data.type === 'PM_LIST_JOBS') {
+    const list = Object.values(_pmJobs).map(pmSnapshot);
+    const target = e.source;
+    if (target) {
+      try { target.postMessage({ type: 'PM_JOBS_LIST', jobs: list }); } catch (_) {}
+    } else {
+      pmBroadcast({ type: 'PM_JOBS_LIST', jobs: list });
+    }
+  }
+});

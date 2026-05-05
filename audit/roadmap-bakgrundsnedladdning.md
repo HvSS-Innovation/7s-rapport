@@ -118,7 +118,7 @@ på en annan sida. Statusen är levande, inte fryst.
 
 ---
 
-### Fas 3 — PMTiles-prefetch i SW ✅
+### Fas 3 — PMTiles-prefetch i SW ✅ LEVERERAD
 
 **Mål:** PMTiles-pre-download (4,1 GB Sverige-fil) överlever sid-navigering
 på samma sätt som tile-jobb.

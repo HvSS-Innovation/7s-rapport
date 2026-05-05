@@ -279,6 +279,55 @@ async function prefetchPMTiles(url, opts) {
     }
 }
 
+// SW-driven prefetch (Fas 3, audit/roadmap-bakgrundsnedladdning.md). Skickar
+// PM_START_JOB till active SW och resolverar samma form som prefetchPMTiles
+// returnerar — så caller-koden i createController() kan vara oförändrad.
+// Dedup på URL i SW: om en annan flik redan startat samma URL attaches vi
+// till den strömmen istället för att dubbelfetcha 4 GB.
+function swPrefetchPMTiles(url, opts) {
+    opts = opts || {};
+    const onProgress = opts.onProgress || function () {};
+    return new Promise((resolve) => {
+        function handler(ev) {
+            const data = ev.data || {};
+            if (data.type !== 'PM_PROGRESS' || data.url !== url) return;
+            const j = data.job;
+            if (j === null) {
+                navigator.serviceWorker.removeEventListener('message', handler);
+                return;
+            }
+            if (j.status === 'running') {
+                onProgress({ loaded: j.loaded, total: j.total, percent: j.percent });
+            } else if (j.status === 'done') {
+                navigator.serviceWorker.removeEventListener('message', handler);
+                resolve({ ok: true, bytes: j.loaded, hex: null, hashSkipped: true });
+            } else if (j.status === 'aborted') {
+                navigator.serviceWorker.removeEventListener('message', handler);
+                resolve({ ok: false, error: 'Avbruten' });
+            } else {
+                navigator.serviceWorker.removeEventListener('message', handler);
+                resolve({ ok: false, error: j.error || 'okänt fel' });
+            }
+        }
+        navigator.serviceWorker.addEventListener('message', handler);
+        try {
+            navigator.serviceWorker.controller.postMessage({
+                type: 'PM_START_JOB',
+                spec: { url: url, expectedBytes: opts.expectedBytes || 0 }
+            });
+        } catch (err) {
+            navigator.serviceWorker.removeEventListener('message', handler);
+            resolve({ ok: false, error: (err && err.message) || 'postMessage misslyckades' });
+        }
+    });
+}
+
+function canDelegateToSW() {
+    return typeof navigator !== 'undefined'
+        && 'serviceWorker' in navigator
+        && !!navigator.serviceWorker.controller;
+}
+
 async function isPrefetched(url, expectedBytes) {
     try {
         const cache = await caches.open(PMTILES_CACHE);
@@ -462,13 +511,29 @@ function createController(map, normalLayer, opts) {
 
     // Pre-download-wrapper bunden till nuvarande URL + signal.
     let activeAbortController = null;
+    let activeSWPrefetch = false; // Fas 3: när SW-jobbet löper sätts denna
     async function prefetch(prefetchOpts) {
         prefetchOpts = prefetchOpts || {};
         if (!url) {
             return { ok: false, error: 'Ingen URL satt — aktivera Härdat läge först.' };
         }
-        if (activeAbortController) {
+        if (activeAbortController || activeSWPrefetch) {
             return { ok: false, error: 'Pre-download pågår redan.' };
+        }
+        // Fas 3: SW-läge — fetch-loopen lever i SW och överlever sid-navigering.
+        // SHA-256 hoppas över oavsett filstorlek (Web Crypto subtle.digest
+        // kräver hela filen i RAM). Fallback till in-page-loop om SW saknas.
+        if (canDelegateToSW()) {
+            activeSWPrefetch = true;
+            try {
+                const expectedBytes = (url === SVERIGE_PMTILES_URL) ? SVERIGE_PMTILES_BYTES : 0;
+                return await swPrefetchPMTiles(url, {
+                    expectedBytes: expectedBytes,
+                    onProgress: prefetchOpts.onProgress
+                });
+            } finally {
+                activeSWPrefetch = false;
+            }
         }
         activeAbortController = new AbortController();
         try {
@@ -483,6 +548,13 @@ function createController(map, normalLayer, opts) {
     }
     function cancelPrefetch() {
         if (activeAbortController) activeAbortController.abort();
+        if (activeSWPrefetch && navigator.serviceWorker.controller) {
+            try {
+                navigator.serviceWorker.controller.postMessage({
+                    type: 'PM_CANCEL', url: url
+                });
+            } catch (_) {}
+        }
     }
     // Vid checkPrefetched: skicka med expected bytes om URL ar Sverige-
     // filen. Det invaliderar automatiskt gamla cachade versioner efter
