@@ -35,13 +35,55 @@
     var THROTTLE_MS = 100;
     var STORAGE_KEY = 'offlineTiles.areas';
 
-    // Speglar HybridTileLayer.getTileUrl i minkarta.html: OTM z≤17, OSM z 18–19.
-    function tileUrl(z, x, y) {
-        if (z <= 17) {
-            var s = TILE_SUBDOMAINS[(x + y) % TILE_SUBDOMAINS.length];
-            return 'https://' + s + '.tile.opentopomap.org/' + z + '/' + x + '/' + y + '.png';
+    // ── Tile-källor (utbytbara per land via countries.js) ────────────────────
+    // Speglar topo-overlay.js SOURCES-mönstret. Varje source-id används av
+    // tileUrl() och kan refereras från countries.js per land. Default-källan
+    // 'otm-osm-hybrid' speglar HybridTileLayer.getTileUrl i minkarta.html /
+    // sensorskiss.html (OTM z ≤ 17, OSM Standard z 18–19) — alltså exakt
+    // samma mönster som svensk cache redan använder. Nya nationella källor
+    // (t.ex. Kartverket) kan läggas till här utan att resten av modulen
+    // behöver ändras — countries.js pekar bara på sourceId.
+    var SOURCES = {
+        'otm-osm-hybrid': {
+            label: 'OpenTopoMap + OSM',
+            attribution: '© OpenTopoMap (z ≤ 17, CC-BY-SA) / © OpenStreetMap (z ≥ 18, ODbL)',
+            // (z, x, y) → URL. Returns null för out-of-range zoom.
+            buildUrl: function (z, x, y) {
+                if (z <= 17) {
+                    var s = TILE_SUBDOMAINS[(x + y) % TILE_SUBDOMAINS.length];
+                    return 'https://' + s + '.tile.opentopomap.org/' + z + '/' + x + '/' + y + '.png';
+                }
+                return 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png';
+            },
+            minZoom: 0,
+            maxZoom: 19,
+            // Hosts som SW:s isTileHost() måste känna igen för cache-routing.
+            // Dokumentation — modulen själv konsumerar inte fältet.
+            hosts: ['tile.opentopomap.org', 'tile.openstreetmap.org']
         }
-        return 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png';
+        // Framtida exempel (Fas 2):
+        // 'kartverket-no-topo': {
+        //     label: 'Kartverket Topo (NO)',
+        //     attribution: '© <a href="https://kartverket.no">Kartverket</a> (CC-BY 4.0)',
+        //     buildUrl: function (z, x, y) {
+        //         return 'https://cache.kartverket.no/v1/wmts/1.0.0/topo/default/webmercator/' +
+        //                z + '/' + y + '/' + x + '.png'; // OBS y/x byter ordning
+        //     },
+        //     minZoom: 0, maxZoom: 20,
+        //     hosts: ['cache.kartverket.no']
+        // }
+    };
+    var DEFAULT_SOURCE_ID = 'otm-osm-hybrid';
+
+    function getSource(sourceId) {
+        return SOURCES[sourceId] || SOURCES[DEFAULT_SOURCE_ID];
+    }
+
+    // Backward-kompatibel: tileUrl(z,x,y) använder default-källan.
+    // Ny signatur: tileUrl(z,x,y,sourceId) plockar valbar källa.
+    function tileUrl(z, x, y, sourceId) {
+        var src = getSource(sourceId);
+        return src.buildUrl(z, x, y);
     }
 
     // Standard Web Mercator-projektion: lat/lon → tile-koord.
@@ -55,8 +97,9 @@
         );
     }
 
-    function tilesForBbox(bbox, minZoom, maxZoom) {
+    function tilesForBbox(bbox, minZoom, maxZoom, sourceId) {
         // bbox = { south, west, north, east } i grader.
+        // sourceId = optional, default DEFAULT_SOURCE_ID (backward-kompat).
         var out = [];
         for (var z = minZoom; z <= maxZoom; z++) {
             var xMin = lon2tile(bbox.west, z);
@@ -70,7 +113,7 @@
             yMin = Math.max(0, yMin); yMax = Math.min(nMax, yMax);
             for (var x = xMin; x <= xMax; x++) {
                 for (var y = yMin; y <= yMax; y++) {
-                    out.push({ z: z, x: x, y: y, url: tileUrl(z, x, y) });
+                    out.push({ z: z, x: x, y: y, url: tileUrl(z, x, y, sourceId) });
                 }
             }
         }
@@ -540,7 +583,15 @@
             : (area.kind === 'kamuflage-pruned'
                 ? ' <span style="color:#8aaa8a;background:#0f240f;border:1px solid #2d4a2d;border-radius:3px;padding:0 6px;font-size:0.66rem;letter-spacing:0.06em;text-transform:uppercase">Beskuren</span>'
                 : '');
+        var labelLine = (area.label && typeof area.label === 'string')
+            ? '<div style="color:#c8e6c9;font-weight:600;margin-bottom:2px;font-size:0.85rem">' +
+                  area.label.replace(/[<>&]/g, function (c) {
+                      return c === '<' ? '&lt;' : c === '>' ? '&gt;' : '&amp;';
+                  }) +
+              '</div>'
+            : '';
         info.innerHTML =
+            labelLine +
             '<div style="font-weight:600;margin-bottom:2px">' + savedDate + kindBadge + ' ' + status + ageBadge + '</div>' +
             '<div style="color:var(--text-secondary);font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.7rem">' +
                 bboxLine +
@@ -917,6 +968,7 @@
                 saveAreaMeta({
                     id: merged.areaId,
                     kind: merged.kind || 'area',
+                    label: merged.label || '',
                     bbox: merged.bbox,
                     minZoom: merged.minZoom,
                     maxZoom: merged.maxZoom,
@@ -1285,6 +1337,7 @@
                             saveAreaMeta({
                                 id: areaId,
                                 kind: kind,
+                                label: spec.label || '',
                                 bbox: spec.bbox,
                                 minZoom: spec.minZoom,
                                 maxZoom: spec.maxZoom,
@@ -1496,7 +1549,9 @@
     function openModal(map, opts) {
         opts = opts || {};
         var refreshArea = opts.area || null;
+        var preset = opts.preset || null;
         var isRefresh = !!refreshArea;
+        var isPreset = !!preset;
 
         if (!map || typeof map.getBounds !== 'function') {
             console.warn('[offline-tiles] openModal: map saknas eller saknar getBounds');
@@ -1510,6 +1565,13 @@
             initMin = refreshArea.minZoom;
             initMax = refreshArea.maxZoom;
             bboxLabelTxt = 'Bounding box (sparat område)';
+        } else if (isPreset) {
+            // Land-preset från countries.js — anvand presetens bbox och
+            // default-zoom-range. Anvandaren kan justera i sliders innan start.
+            bbox = preset.bbox;
+            initMin = preset.defaultMinZoom;
+            initMax = preset.defaultMaxZoom;
+            bboxLabelTxt = 'Bounding box (' + preset.label + ')';
         } else {
             var bounds = map.getBounds();
             bbox = {
@@ -1525,7 +1587,9 @@
             bboxLabelTxt = 'Bounding box (nuvarande vy)';
         }
 
-        var titleTxt = isRefresh ? 'UPPDATERA OFFLINE-OMRÅDE' : 'SPARA OMRÅDE OFFLINE';
+        var titleTxt = isRefresh ? 'UPPDATERA OFFLINE-OMRÅDE'
+                     : isPreset ? 'SPARA ' + (preset.flag || '') + ' ' + preset.label.toUpperCase() + ' OFFLINE'
+                     : 'SPARA OMRÅDE OFFLINE';
         var startTxt = isRefresh ? 'Uppdatera' : 'Spara';
         var startTxtRunning = isRefresh ? 'Uppdaterar…' : 'Laddar…';
 
@@ -1540,11 +1604,11 @@
                 '<div class="ot-row" style="margin-top:12px">' +
                     '<div>' +
                         '<label>Min zoom: <span id="otMinLbl"></span></label>' +
-                        '<input type="range" id="otMin" min="6" max="17" step="1">' +
+                        '<input type="range" id="otMin" min="4" max="19" step="1">' +
                     '</div>' +
                     '<div>' +
                         '<label>Max zoom: <span id="otMaxLbl"></span></label>' +
-                        '<input type="range" id="otMax" min="6" max="17" step="1">' +
+                        '<input type="range" id="otMax" min="4" max="19" step="1">' +
                     '</div>' +
                 '</div>' +
                 '<div class="ot-stat"><span>Tiles att ladda ner</span><b id="otCount">—</b></div>' +
@@ -1727,7 +1791,13 @@
                 minZoom: mn,
                 maxZoom: mx,
                 areaId: isRefresh ? refreshArea.id : null,
-                mode: isRefresh ? 'refresh' : 'new'
+                mode: isRefresh ? 'refresh' : 'new',
+                // Land-presets bär ett label så jobs-bar / area-listan visar
+                // "Norge" i stället för bara koordinater. Refresh-fallet
+                // hämtar label från det gamla områdets metadata om det finns.
+                label: isPreset ? preset.label
+                     : (isRefresh && refreshArea.label) ? refreshArea.label
+                     : ''
             });
         });
     }
@@ -1741,11 +1811,136 @@
         openModal(map, { area: area });
     }
 
+    // ── Country-picker ─────────────────────────────────────────────────────
+    // Öppnar standard-modalen pre-fylld med ett lands bbox och zoom-defaults
+    // från countries.js. Kallas från landknapparna i minkarta.html.
+    //
+    // Flöde:
+    //   1. UI-knapp klick → openCountryPicker(map, 'NO')
+    //   2. 3-vals-dialog: Lägg till / Ersätt allt / Avbryt
+    //   3. Vid Ersätt: removeAllAreas(), sedan öppna modal
+    //   4. Modal pre-fylld med country.bbox + defaultMinZoom/MaxZoom
+    //   5. Användaren startar nedladdning som vanligt
+    //
+    // Pre-fyllning sker via opts.preset i openModal — modalen behandlar det
+    // som ett "nytt" område (mode 'new'), inte refresh.
+    function openCountryPicker(map, code, opts) {
+        opts = opts || {};
+        if (!global.HVCountries) {
+            console.warn('[offline-tiles] HVCountries saknas — countries.js inte laddad?');
+            return;
+        }
+        var preset = global.HVCountries.getPreset(code);
+        if (!preset) {
+            console.warn('[offline-tiles] Okand landskod:', code);
+            return;
+        }
+        if (!map) return;
+        injectModalStyles();
+
+        // Förhandsräkna tile-count + storlek så dialog visar uppskattning innan
+        // användaren bekräftar.
+        var n = countTiles(preset.bbox, preset.defaultMinZoom, preset.defaultMaxZoom);
+        var bytes = estimateBytes(n);
+        var bboxLine =
+            'NV: ' + fmtCoord(preset.bbox.north, true) + ', ' + fmtCoord(preset.bbox.west, false) + '\n' +
+            'SE: ' + fmtCoord(preset.bbox.south, true) + ', ' + fmtCoord(preset.bbox.east, false);
+
+        var existing = getStoredAreas().length;
+
+        var overlay = document.createElement('div');
+        overlay.className = 'ot-overlay';
+        var existingTxt = existing > 0
+            ? ('<div class="ot-warn">Du har redan <b>' + existing + '</b> sparade ' +
+               (existing === 1 ? 'område' : 'områden') + '. Välj nedan om det/de ska behållas.</div>')
+            : '';
+        overlay.innerHTML =
+            '<div class="ot-modal" role="dialog" aria-label="Ladda ner ' + preset.label + '">' +
+                '<h3>LADDA NER ' + (preset.flag || '') + ' ' + preset.label.toUpperCase() + '</h3>' +
+                existingTxt +
+                '<label>Område (default-bbox)</label>' +
+                '<div class="ot-bbox">' + bboxLine + '</div>' +
+                '<div class="ot-stat"><span>Default zoom</span><b>z ' + preset.defaultMinZoom + '–' + preset.defaultMaxZoom + '</b></div>' +
+                '<div class="ot-stat"><span>Tiles att ladda ner</span><b>' + n.toLocaleString('sv-SE') + '</b></div>' +
+                '<div class="ot-stat"><span>Uppskattad storlek</span><b>~' + formatBytes(bytes) + '</b></div>' +
+                '<p style="font-size:0.78rem;color:#8aaa8a;margin:12px 0 4px;line-height:1.5">' +
+                    'I nästa steg kan du justera zoom-spannet innan nedladdningen startar.' +
+                '</p>' +
+                '<div class="ot-actions" style="flex-wrap:wrap;gap:6px">' +
+                    '<button type="button" class="ot-btn" data-action="cancel">Avbryt</button>' +
+                    (existing > 0
+                        ? '<button type="button" class="ot-btn" data-action="replace" title="Radera alla nuvarande sparade omraden och ladda bara detta land">Ersätt allt</button>'
+                        : '') +
+                    '<button type="button" class="ot-btn ot-btn-primary" data-action="add">' +
+                        (existing > 0 ? 'Lägg till' : 'Fortsätt') +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+        document.body.appendChild(overlay);
+
+        function close() {
+            document.removeEventListener('keydown', onEsc);
+            overlay.remove();
+        }
+        function onEsc(e) { if (e.key === 'Escape') close(); }
+        document.addEventListener('keydown', onEsc);
+
+        overlay.addEventListener('click', async function (e) {
+            var t = e.target;
+            if (!t || !t.getAttribute) return;
+            var action = t.getAttribute('data-action');
+            if (!action) return;
+            if (action === 'cancel') {
+                close();
+                return;
+            }
+            if (action === 'replace') {
+                if (!global.confirm('Radera alla ' + existing + ' sparade ' +
+                        (existing === 1 ? 'området' : 'områdena') +
+                        ' och ladda bara ' + preset.label + '?\n\n' +
+                        'Tiles tas bort ur offline-cachen. Detta kan inte ångras.')) {
+                    return;
+                }
+                try {
+                    t.disabled = true;
+                    t.textContent = 'Raderar…';
+                    await removeAllAreas();
+                } catch (err) {
+                    console.error('[offline-tiles] removeAllAreas misslyckades:', err);
+                }
+                close();
+                openModal(map, { preset: preset });
+                return;
+            }
+            if (action === 'add') {
+                close();
+                openModal(map, { preset: preset });
+                return;
+            }
+        });
+    }
+
+    // Raderar ALLA sparade områden + deras tiles ur offline-cachen.
+    // Används av "Ersätt allt"-knappen i country-picker. Returnerar Promise.
+    async function removeAllAreas() {
+        var list = getStoredAreas();
+        for (var i = 0; i < list.length; i++) {
+            try {
+                await removeArea(list[i].id);
+            } catch (err) {
+                console.warn('[offline-tiles] removeArea fel for', list[i].id, err);
+            }
+        }
+        notifyChange();
+    }
+
 
     global.OfflineTiles = {
         OFFLINE_CACHE: OFFLINE_CACHE,
         STALE_DAYS: STALE_DAYS,
         MAX_TILES: MAX_TILES,
+        SOURCES: SOURCES,
+        DEFAULT_SOURCE_ID: DEFAULT_SOURCE_ID,
         tileUrl: tileUrl,
         tilesForBbox: tilesForBbox,
         countTiles: countTiles,
@@ -1755,11 +1950,13 @@
         getStoredAreas: getStoredAreas,
         saveAreaMeta: saveAreaMeta,
         removeArea: removeArea,
+        removeAllAreas: removeAllAreas,
         coverageFor: coverageFor,
         attachCoverageIndicator: attachCoverageIndicator,
         attachCoverageControl: attachCoverageControl,
         renderAreasPanel: renderAreasPanel,
         openModal: openModal,
+        openCountryPicker: openCountryPicker,
         refreshArea: refreshAreaWithModal,
         startJob: startJob,
         cancelJob: cancelJob,

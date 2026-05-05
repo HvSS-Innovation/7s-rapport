@@ -24,6 +24,7 @@
     <script src="minkarta-symbols.js" defer></script>
     <script src="minkarta-export.js" defer></script>
     <script src="minkarta-tutorial.js" defer></script>
+    <script src="countries.js" defer></script>
     <script src="offline-tiles.js" defer></script>
     <script type="module" src="pmtiles-layer.js"></script>
     <script type="module" src="topo-overlay.js"></script>
@@ -1353,15 +1354,19 @@ function renderMapControls() {
     if (!host) return;
     host.innerHTML = '';
 
-    // Tva rader: vy/interaktion ovan, offline/hardat under. Layout-uppdelning
-    // gor det tydligt vilka kontroller som hor ihop. Befintliga knappar
-    // appendas till respektive row-container istallet for direkt till host.
+    // Tre rader: vy/interaktion ovan, offline/hardat i mitten, lander-presets
+    // (DK/NO/FI/EE/LV/LT + "Andra lander") underst. Layout-uppdelning gor det
+    // tydligt vilka kontroller som hor ihop. Befintliga knappar appendas till
+    // respektive row-container istallet for direkt till host.
     const row1 = document.createElement('div');
     row1.className = 'mk-controls-row';
     const row2 = document.createElement('div');
     row2.className = 'mk-controls-row';
+    const row3 = document.createElement('div');
+    row3.className = 'mk-controls-row';
     host.appendChild(row1);
     host.appendChild(row2);
+    host.appendChild(row3);
 
     // Helper: skapar en .btn-toggle-knapp. aria-pressed speglar getState();
     // klick anropar onToggle(nyttVarde) som ansvarar for att uppdatera
@@ -1658,6 +1663,119 @@ function renderMapControls() {
     }
     refreshTopoBtn();
     row2.appendChild(topoBtn);
+
+    // ─── ROW 3: Lander-presets (DK/NO/FI/EE/LV/LT) + "Andra lander" ──────
+    // Snabbknappar som oppnar OfflineTiles.openCountryPicker() med en
+    // pre-fylld bbox och zoom-range fran countries.js. Gomda om antingen
+    // OfflineTiles eller HVCountries inte hann ladda — UI:n kraschar inte.
+    if (window.OfflineTiles
+            && typeof window.OfflineTiles.openCountryPicker === 'function'
+            && window.HVCountries) {
+        const codes = window.HVCountries.neighbors || [];
+        codes.forEach(code => {
+            const preset = window.HVCountries.getPreset(code);
+            if (!preset) return;
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'btn btn-sm btn-default';
+            // Flagga + landkod hall knappen kompakt på mobil. Title visar
+            // fullt namn for accessibility / desktop-tooltip.
+            btn.textContent = (preset.flag ? preset.flag + ' ' : '') + preset.code;
+            btn.title = 'Ladda ner kart-tiles för ' + preset.label +
+                ' (z ' + preset.defaultMinZoom + '–' + preset.defaultMaxZoom + ', justerbart)';
+            btn.addEventListener('click', () => {
+                if (!map) return;
+                window.OfflineTiles.openCountryPicker(map, code);
+            });
+            row3.appendChild(btn);
+        });
+
+        // "Andra länder ▾" — oppnar en sokbar lista med extras (~40 lander).
+        const moreBtn = document.createElement('button');
+        moreBtn.type = 'button';
+        moreBtn.className = 'btn btn-sm btn-ghost';
+        moreBtn.textContent = 'Andra länder ▾';
+        moreBtn.title = 'Välj annat land för offline-cache';
+        moreBtn.addEventListener('click', () => {
+            if (!map) return;
+            openCountryExtrasPicker(map);
+        });
+        row3.appendChild(moreBtn);
+    }
+}
+
+// "Andra länder"-lista — enkel sokbar overlay over kartan.
+// Anvander samma .ot-overlay/.ot-modal-stilar som offline-tiles.js injicerar
+// (de finns alltid i DOM efter forsta openModal-anrop, och vi triggar
+// injection genom att anropa OfflineTiles.openCountryPicker dar nere).
+function openCountryExtrasPicker(map) {
+    if (!window.HVCountries || !window.OfflineTiles) return;
+    const extras = window.HVCountries.extras || [];
+
+    const overlay = document.createElement('div');
+    overlay.className = 'ot-overlay';
+    overlay.innerHTML =
+        '<div class="ot-modal" role="dialog" aria-label="Andra lander">' +
+            '<h3>ANDRA LÄNDER</h3>' +
+            '<label>Sök eller välj ett land</label>' +
+            '<input type="text" id="extrasSearch" placeholder="Sök land…" autocomplete="off" ' +
+                'style="width:100%;padding:8px 10px;background:#0f240f;color:#e8f0e8;' +
+                'border:1px solid #2d4a2d;border-radius:4px;font-family:inherit;font-size:0.86rem">' +
+            '<div id="extrasList" style="max-height:50vh;overflow:auto;margin-top:10px;' +
+                'display:flex;flex-direction:column;gap:4px"></div>' +
+            '<div class="ot-actions">' +
+                '<button type="button" class="ot-btn" id="extrasClose">Stäng</button>' +
+            '</div>' +
+        '</div>';
+    document.body.appendChild(overlay);
+
+    const search = overlay.querySelector('#extrasSearch');
+    const list = overlay.querySelector('#extrasList');
+    const closeBtn = overlay.querySelector('#extrasClose');
+
+    function close() {
+        document.removeEventListener('keydown', onEsc);
+        overlay.remove();
+    }
+    function onEsc(e) { if (e.key === 'Escape') close(); }
+    document.addEventListener('keydown', onEsc);
+    closeBtn.addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    function render(filter) {
+        const f = (filter || '').toLowerCase().trim();
+        list.innerHTML = '';
+        const matches = extras.filter(p => {
+            if (!f) return true;
+            return p.label.toLowerCase().includes(f) || p.code.toLowerCase().includes(f);
+        });
+        if (!matches.length) {
+            const hint = document.createElement('div');
+            hint.style.cssText = 'color:#8aaa8a;font-size:0.78rem;padding:8px';
+            hint.textContent = 'Inga träffar.';
+            list.appendChild(hint);
+            return;
+        }
+        matches.forEach(preset => {
+            const row = document.createElement('button');
+            row.type = 'button';
+            row.className = 'btn btn-sm btn-default';
+            row.style.cssText = 'justify-content:flex-start;text-align:left;width:100%';
+            row.innerHTML =
+                '<span style="font-size:1.1em;margin-right:6px">' + (preset.flag || '🌍') + '</span>' +
+                '<span style="font-weight:600">' + preset.code + '</span>' +
+                '<span style="margin-left:10px;color:#8aaa8a;font-size:0.82rem">' + preset.label + '</span>' +
+                '<span style="margin-left:auto;color:#5a7a5a;font-size:0.72rem">z ' + preset.defaultMinZoom + '–' + preset.defaultMaxZoom + '</span>';
+            row.addEventListener('click', () => {
+                close();
+                window.OfflineTiles.openCountryPicker(map, preset.code);
+            });
+            list.appendChild(row);
+        });
+    }
+    search.addEventListener('input', () => render(search.value));
+    render('');
+    setTimeout(() => search.focus(), 50);
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()
