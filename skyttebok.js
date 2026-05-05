@@ -1687,6 +1687,75 @@
         renderSigSelf();
         renderSigTrusted();
         renderSigRosters();
+        renderSigCrossDevice();
+    }
+
+    function renderSigCrossDevice() {
+        var area = document.getElementById('sigCrossDeviceArea');
+        if (!area) return;
+        var hasSelf = !!window.SkyttebokSig.getSelf();
+        // Räkna osignerade pass + säkerhetsprov för soldat-knappens label.
+        var unsignedPass = countUnsignedItems();
+        var html = '<label>Cross-device signering</label>';
+        // Soldat-sidan: alltid synlig.
+        html += '<div class="settings-actions" style="margin-top:0">' +
+            '<button class="btn btn-sm btn-secondary" type="button" ' +
+                (unsignedPass === 0 ? 'disabled style="opacity:0.55;cursor:not-allowed"' : '') +
+                ' onclick="skyttebokSigExportRequest()">' +
+                'Begär signatur' +
+                (unsignedPass > 0 ? ' (' + unsignedPass + ')' : '') +
+            '</button>' +
+            '<button class="btn btn-sm btn-secondary" type="button" ' +
+                'onclick="skyttebokSigImportResponseClick()">' +
+                'Importera svar' +
+            '</button>' +
+        '</div>';
+        // Instruktör-sidan: bara synlig om eget nyckelpar finns.
+        if (hasSelf) {
+            html += '<button class="btn btn-sm btn-secondary" type="button" ' +
+                'onclick="skyttebokSigOpenRequestClick()" style="width:100%;margin-top:6px">' +
+                'Signera mottagen begäran (instruktör)' +
+            '</button>';
+        }
+        html += '<div class="field-hint" style="margin-top:6px">' +
+            'Soldat: exportera en begäran-fil och dela med instruktören. ' +
+            'När du får svaret, importera det.' +
+            (hasSelf
+                ? ' Instruktör: öppna en mottagen begäran för att signera ' +
+                  'och exportera svaret tillbaka.'
+                : '') +
+        '</div>';
+        area.innerHTML = html;
+    }
+
+    // Räknar pass + säkerhetsprov utan befintlig sig — används för att
+    // visa antal i "Begär signatur (n)"-knappen.
+    function countUnsignedItems() {
+        if (!window.SkyttebokSig) return 0;
+        var existingSigs = window.SkyttebokSig.listAllSigs();
+        var n = 0;
+        loadAllPass().forEach(function (p) {
+            if (!existingSigs[p.id]) n++;
+        });
+        var sp = loadSakerhetsprov();
+        if (sp && !existingSigs[SP_SIG_ID]) n++;
+        return n;
+    }
+
+    // Bygger en lista av signable-objekt från lokala osignerade pass +
+    // ev. säkerhetsprov. Säkerhetsprovet får sitt SP_SIG_ID som id.
+    function buildUnsignedItems() {
+        var existingSigs = window.SkyttebokSig
+            ? window.SkyttebokSig.listAllSigs() : {};
+        var out = [];
+        loadAllPass().forEach(function (p) {
+            if (!existingSigs[p.id]) out.push(p);
+        });
+        var sp = loadSakerhetsprov();
+        if (sp && !existingSigs[SP_SIG_ID]) {
+            out.push(buildSpSignable(sp));
+        }
+        return out;
     }
 
     function renderSigSelf() {
@@ -2059,10 +2128,183 @@
 
     function initSigImportFile() {
         var input = document.getElementById('sigImportFile');
-        if (!input) return;
-        input.addEventListener('change', function () {
-            if (input.files && input.files[0]) importSigFile(input.files[0], false);
+        if (input) {
+            input.addEventListener('change', function () {
+                if (input.files && input.files[0]) importSigFile(input.files[0], false);
+            });
+        }
+        var reqInput = document.getElementById('sigReqFile');
+        if (reqInput) {
+            reqInput.addEventListener('change', function () {
+                if (reqInput.files && reqInput.files[0]) signIncomingRequest(reqInput.files[0]);
+            });
+        }
+        var respInput = document.getElementById('sigRespFile');
+        if (respInput) {
+            respInput.addEventListener('change', function () {
+                if (respInput.files && respInput.files[0]) importSigResponse(respInput.files[0]);
+            });
+        }
+    }
+
+    // ── Cross-device signering (Fas 5b) ─────────────────────────────────
+    // Tre knappar: soldat exporterar begäran, instruktör signerar
+    // mottagen begäran, soldat importerar svaret. Allt-eller-inget i
+    // varje steg — inga partial-sigs vid fel.
+
+    window.skyttebokSigExportRequest = function () {
+        if (!window.SkyttebokSig) return;
+        var items = buildUnsignedItems();
+        if (items.length === 0) {
+            showConfirm('Inget att signera',
+                'Alla pass och prov har redan en signatur eller så finns inget loggat än.',
+                function () {});
+            return;
+        }
+        var payload = window.SkyttebokSig.buildSignRequest(items, {
+            soldatNamn: getSetting('displayname') || ''
         });
+        var json = JSON.stringify(payload, null, 2);
+        var blob = new Blob([json], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = 'signreq-' + todayIso() + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+    };
+
+    window.skyttebokSigOpenRequestClick = function () {
+        var f = document.getElementById('sigReqFile');
+        if (!f) return;
+        f.value = '';
+        f.click();
+    };
+
+    function signIncomingRequest(file) {
+        var reader = new FileReader();
+        reader.onload = async function () {
+            var payload;
+            try { payload = JSON.parse(reader.result); }
+            catch (_) {
+                showConfirm('Importfel', 'Kunde inte tolka filen som JSON.', function () {});
+                return;
+            }
+            try {
+                window.SkyttebokSig.validateSignRequest(payload);
+            } catch (e) {
+                showConfirm('Importfel', escSigErr(e), function () {});
+                return;
+            }
+            var soldat = payload.soldatNamn || '(okänd soldat)';
+            var n = payload.passes.length;
+            // Bekräftelse innan signering — instruktören ska se vad de skriver under.
+            showConfirm(
+                'Signera begäran',
+                'Begäran från: ' + soldat + '\nAntal pass att signera: ' + n + '\n\n' +
+                'Du signerar med ditt nyckelpar. Signaturer exporteras som ' +
+                'svar-fil att skicka tillbaka. Privata nyckeln lämnar inte ' +
+                'enheten. Fortsätt?',
+                async function () {
+                    try {
+                        var response = await window.SkyttebokSig.signSignRequest(payload);
+                        var json = JSON.stringify(response, null, 2);
+                        var blob = new Blob([json], { type: 'application/json' });
+                        var url = URL.createObjectURL(blob);
+                        var a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'sigs-' + todayIso() + '.json';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+                        showConfirm('Signerat',
+                            'Signerade ' + n + ' pass och exporterade svaret. ' +
+                            'Skicka filen tillbaka till ' + soldat + '.',
+                            function () {});
+                    } catch (e) {
+                        showConfirm('Signering misslyckades', escSigErr(e), function () {});
+                    }
+                }
+            );
+        };
+        reader.onerror = function () {
+            showConfirm('Importfel', 'Kunde inte läsa filen.', function () {});
+        };
+        reader.readAsText(file);
+    }
+
+    window.skyttebokSigImportResponseClick = function () {
+        var f = document.getElementById('sigRespFile');
+        if (!f) return;
+        f.value = '';
+        f.click();
+    };
+
+    async function importSigResponse(file) {
+        if (!window.SkyttebokSig) return;
+        var reader = new FileReader();
+        reader.onload = async function () {
+            var payload;
+            try { payload = JSON.parse(reader.result); }
+            catch (_) {
+                showConfirm('Importfel', 'Kunde inte tolka filen som JSON.', function () {});
+                return;
+            }
+            try {
+                window.SkyttebokSig.validateSigsResponse(payload);
+            } catch (e) {
+                showConfirm('Importfel', escSigErr(e), function () {});
+                return;
+            }
+            var existingSigs = window.SkyttebokSig.listAllSigs();
+            var passIds = Object.keys(payload.signatures);
+            var imported = 0, skippedExisting = 0, skippedOrphan = 0,
+                skippedTampered = 0;
+            for (var i = 0; i < passIds.length; i++) {
+                var pid = passIds[i];
+                var sig = payload.signatures[pid];
+                if (existingSigs[pid]) { skippedExisting++; continue; }
+                // Hämta lokala objektet (vanligt pass eller säkerhetsprov)
+                // för hash-validering. Om det inte finns lokalt → orphan,
+                // skip (sigen är meningslös utan tillhörande pass).
+                var localObj = null;
+                if (pid === SP_SIG_ID) {
+                    var sp = loadSakerhetsprov();
+                    if (sp) localObj = buildSpSignable(sp);
+                } else {
+                    var raw = localStorage.getItem(PASS_PREFIX + pid);
+                    if (raw) {
+                        try { localObj = JSON.parse(raw); }
+                        catch (_) { /* korrupt — skips som orphan */ }
+                    }
+                }
+                if (!localObj) { skippedOrphan++; continue; }
+                // Verifiera att sig matchar lokala objektet — annars har
+                // soldaten editerat passet mellan begäran och svar och
+                // sigen är död.
+                var ver = await window.SkyttebokSig.verifySignature(sig, localObj);
+                if (!ver.valid) { skippedTampered++; continue; }
+                window.SkyttebokSig.writeSig(pid, sig);
+                imported++;
+            }
+            renderAll();
+            // Sammanfattning. Om allt gick bra: bara antal. Om saker
+            // skipades: separat lista så användaren förstår varför.
+            var msg = 'Importerade ' + imported + ' signaturer.';
+            var details = [];
+            if (skippedExisting) details.push(skippedExisting + ' redan signerade');
+            if (skippedOrphan) details.push(skippedOrphan + ' utan matchande pass');
+            if (skippedTampered) details.push(skippedTampered + ' ogiltiga (pass har ändrats sedan begäran)');
+            if (details.length) msg += '\n\nHoppade över: ' + details.join(', ') + '.';
+            showConfirm('Klart', msg, function () {});
+        };
+        reader.onerror = function () {
+            showConfirm('Importfel', 'Kunde inte läsa filen.', function () {});
+        };
+        reader.readAsText(file);
     }
 
     // ── Pass-signering (Fas 2) ──────────────────────────────────────────

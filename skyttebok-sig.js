@@ -31,6 +31,10 @@
     var PUBKEY_FORMAT = 'sb-pubkey-v1';
     var ROSTER_FORMAT = 'sb-roster-v1';
     var SIG_FORMAT = 'sb-sig-v1';
+    // Cross-device signering (Fas 5b) — soldaten exporterar en begäran
+    // och instruktören sänder tillbaka ett svar med signaturer.
+    var SIGNREQ_FORMAT = 'sb-signreq-v1';
+    var SIGS_RESPONSE_FORMAT = 'sb-sigs-v1';
 
     // ── Algoritm-parametrar ─────────────────────────────────────────────
     // sign-anropet behöver olika params per algoritm. Ed25519 är enkelt
@@ -699,6 +703,82 @@
         return out;
     }
 
+    // ── Cross-device signering (Fas 5b) ─────────────────────────────────
+    // Soldat → fil → instruktör → fil → soldat. Privata nyckeln lämnar
+    // aldrig instruktörens enhet. Begäran innehåller pass-data, svaret
+    // innehåller sig-payloads. Båda är vanliga JSON-objekt — inga
+    // vendor-lib krävs för transport (Signal/AirDrop/e-post räcker).
+
+    function buildSignRequest(passes, opts) {
+        opts = opts || {};
+        if (!Array.isArray(passes)) {
+            throw new Error('passes måste vara en array.');
+        }
+        return {
+            format: SIGNREQ_FORMAT,
+            createdAt: new Date().toISOString(),
+            soldatNamn: (opts.soldatNamn || '').toString(),
+            passes: passes.map(function (p) {
+                // Strikt klon så caller inte kan smyga in extra fält som
+                // sedan signeras utan att vara synliga i UI.
+                return JSON.parse(JSON.stringify(p));
+            })
+        };
+    }
+
+    function validateSignRequest(payload) {
+        if (!payload || typeof payload !== 'object') {
+            throw new Error('Filen är inte ett giltigt request-objekt.');
+        }
+        if (payload.format !== SIGNREQ_FORMAT) {
+            throw new Error('Okänt format ("' + (payload.format || '?') + '"). ' +
+                'Förväntade "' + SIGNREQ_FORMAT + '".');
+        }
+        if (!Array.isArray(payload.passes) || payload.passes.length === 0) {
+            throw new Error('Begäran saknar pass att signera.');
+        }
+        for (var i = 0; i < payload.passes.length; i++) {
+            var p = payload.passes[i];
+            if (!p || !p.id) {
+                throw new Error('Pass nr ' + (i + 1) + ' saknar id.');
+            }
+        }
+    }
+
+    // Signerar varje pass i begäran med eget nyckelpar. Atomic — om
+    // signeringen för någon pass misslyckas kastas felet och inget
+    // partial-resultat returneras.
+    async function signSignRequest(payload) {
+        validateSignRequest(payload);
+        if (!readSelf()) {
+            throw new Error('Inget eget nyckelpar — generera ett först.');
+        }
+        var sigs = {};
+        for (var i = 0; i < payload.passes.length; i++) {
+            var p = payload.passes[i];
+            sigs[p.id] = await signPass(p);
+        }
+        return {
+            format: SIGS_RESPONSE_FORMAT,
+            createdAt: new Date().toISOString(),
+            signatures: sigs
+        };
+    }
+
+    function validateSigsResponse(payload) {
+        if (!payload || typeof payload !== 'object') {
+            throw new Error('Filen är inte ett giltigt svar-objekt.');
+        }
+        if (payload.format !== SIGS_RESPONSE_FORMAT) {
+            throw new Error('Okänt format ("' + (payload.format || '?') + '"). ' +
+                'Förväntade "' + SIGS_RESPONSE_FORMAT + '".');
+        }
+        if (!payload.signatures || typeof payload.signatures !== 'object' ||
+            Array.isArray(payload.signatures)) {
+            throw new Error('Svaret saknar signatures-objekt.');
+        }
+    }
+
     // ── Public API ──────────────────────────────────────────────────────
     window.SkyttebokSig = {
         // Konstanter
@@ -726,6 +806,12 @@
         importRosterFile: importRosterFile,
         listRosters: listRosters,
         removeRoster: removeRoster,
+
+        // Cross-device begäran/svar (Fas 5b)
+        buildSignRequest: buildSignRequest,
+        signSignRequest: signSignRequest,
+        validateSignRequest: validateSignRequest,
+        validateSigsResponse: validateSigsResponse,
 
         // Signering / verifiering (Fas 2-3)
         signPass: signPass,

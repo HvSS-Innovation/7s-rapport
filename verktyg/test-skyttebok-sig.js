@@ -307,6 +307,105 @@ function assert(cond, msg) {
         'rosterName rensad efter removeRoster');
     assert(SS.listRosters().length === 0, 'rostrar är tomma');
 
+    console.log('— Test 17: Fas 5b — cross-device begäran/svar round-trip —');
+    // Soldat A bygger en begäran med 2 pass + 1 säkerhetsprov.
+    const passToSign1 = {
+        id: 'pass-uuid-aaa', ovningNr: 5, datum: '2026-05-04',
+        skott: 6, traff: 5, godkand: true, anteckning: ''
+    };
+    const passToSign2 = {
+        id: 'pass-uuid-bbb', ovningNr: 12, datum: '2026-05-05',
+        skott: 10, traff: 8, godkand: true, anteckning: ''
+    };
+    const spToSign = {
+        id: 'sp_bas', datum: '2026-05-05', godkand: true,
+        instruktor: 'Lt Bergström', anteckning: 'OK'
+    };
+
+    // Soldat har INGET nyckelpar (de är inte instruktör).
+    const soldatA = newSandbox();
+    const SoldA = soldatA.SkyttebokSig;
+    const req = SoldA.buildSignRequest([passToSign1, passToSign2, spToSign], {
+        soldatNamn: 'Sgt Test'
+    });
+    assert(req.format === 'sb-signreq-v1', 'request har korrekt format');
+    assert(req.passes.length === 3, 'request innehåller 3 items');
+    assert(req.soldatNamn === 'Sgt Test', 'soldatNamn bevaras');
+
+    // Begäran är JSON-serialiserbar (round-trip-test).
+    const reqJson = JSON.stringify(req);
+    const reqParsed = JSON.parse(reqJson);
+
+    // Instruktör B öppnar begäran på sin enhet (har eget nyckelpar).
+    const instrukB = newSandbox();
+    const InstB = instrukB.SkyttebokSig;
+    await InstB.generateSelfKey('Sgt Andersson');
+    const instBPub = await InstB.exportSelfPublicKeyPayload();
+    const response = await InstB.signSignRequest(reqParsed);
+    assert(response.format === 'sb-sigs-v1', 'response har korrekt format');
+    assert(Object.keys(response.signatures).length === 3,
+        'response innehåller 3 signaturer');
+    assert(response.signatures['pass-uuid-aaa'].sigVer === 'sb-sig-v1',
+        'sig-payloads har korrekt sigVer');
+
+    // Privata nyckeln läcker INTE i response.
+    assert(!JSON.stringify(response).includes('jwkPrivate'),
+        'response innehåller INTE privata nyckeln');
+    // Soldat A importerar instruktörens publika nyckel + svaret.
+    await SoldA.importTrustedKey(instBPub);
+    soldatA.localStorage.setItem('skyttebok_pass_pass-uuid-aaa', JSON.stringify(passToSign1));
+    soldatA.localStorage.setItem('skyttebok_pass_pass-uuid-bbb', JSON.stringify(passToSign2));
+    soldatA.localStorage.setItem('skyttebok_sakerhetsprov', JSON.stringify({
+        datum: spToSign.datum, godkand: true,
+        instruktor: spToSign.instruktor, anteckning: spToSign.anteckning,
+        sparad: 1715000000000
+    }));
+    // Spara sigs (mock — det vanliga UI-flödet skulle göra detta efter
+    // hash-validering, men sig-modulens API exponerar inte den hela
+    // logiken; den bor i skyttebok.js. Här testar vi att verify funkar.)
+    const verifyAaa = await SoldA.verifySignature(
+        response.signatures['pass-uuid-aaa'], passToSign1
+    );
+    assert(verifyAaa.valid && verifyAaa.trusted,
+        'aaa: giltig grön badge efter import');
+    const verifySp = await SoldA.verifySignature(
+        response.signatures['sp_bas'], spToSign
+    );
+    assert(verifySp.valid && verifySp.trusted,
+        'sp_bas: giltig grön badge efter import');
+
+    console.log('— Test 18: Fas 5b — tampered pass i begäran efter signering avvisas —');
+    // Soldaten editerar pass aaa mellan begäran och svar.
+    const passEdited = Object.assign({}, passToSign1, { traff: 6 }); // 5 → 6
+    const verifyEdited = await SoldA.verifySignature(
+        response.signatures['pass-uuid-aaa'], passEdited
+    );
+    assert(verifyEdited.valid === false,
+        'editerat pass kan inte verifieras med gammal sig');
+    assert(/ändrats/.test(verifyEdited.reason), 'rätt felmeddelande');
+
+    console.log('— Test 19: Fas 5b — instruktör utan nyckelpar avvisar signSignRequest —');
+    const instrukUtanNyckel = newSandbox();
+    let signReqErr = null;
+    try {
+        await instrukUtanNyckel.SkyttebokSig.signSignRequest(reqParsed);
+    } catch (e) { signReqErr = e; }
+    assert(signReqErr, 'utan nyckelpar kastas fel');
+    assert(/nyckelpar/i.test(signReqErr.message),
+        'rätt felmeddelande om saknat nyckelpar');
+
+    console.log('— Test 20: Fas 5b — atomic: validateSignRequest avvisar tomma och felaktiga —');
+    let validateErr = null;
+    try { InstB.validateSignRequest({ format: 'sb-signreq-v1', passes: [] }); }
+    catch (e) { validateErr = e; }
+    assert(validateErr && /saknar pass/i.test(validateErr.message),
+        'tom passes-array avvisas');
+    let validateErr2 = null;
+    try { InstB.validateSignRequest({ format: 'sb-signreq-v1', passes: [{datum: 'x'}] }); }
+    catch (e) { validateErr2 = e; }
+    assert(validateErr2 && /saknar id/i.test(validateErr2.message),
+        'pass utan id avvisas');
+
     console.log('\nALLA TESTER OK');
 })().catch((e) => {
     console.error(e);
