@@ -20,6 +20,11 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 - **Tid:** 30 min (centraliserat genom en sed-aktig multi-fil-redigering).
 - **Risk:** Om något inline-script försöker fetch:a en odeklarerad domän slutar det fungera tyst. Mitigation: testa varje sida efter deploy och justera.
 - **Mätbart:** `securityheaders.com`-betyg för 7srapport.com går från D till B (full A+ kräver server-headers, Sväng 3).
+- **TODO vid utrullning (2026-05-05):** `connect-src` MÅSTE inkludera
+  `pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev` så Härdat läge fortsätter
+  fungera i de 6 rapportfilerna + minkarta.html + sensorskiss.html.
+  HTML-kommentar lagd in i HEAD på alla 6 rapportfiler som påminnelse
+  (`<!-- CSP TODO §1.2: ... -->`).
 
 ### 1.3 Lägg till Referrer-Policy och no-translate — ✅ KLAR (referrer-policy → strict-origin via `c6f79fc`; no-translate och övriga meta lagda i samma sweep)
 - **Problem:** Default referrer-policy läcker `https://7srapport.com` till varje extern domän. Google Translate föreslår automatöversätta sidan.
@@ -132,8 +137,8 @@ Tre svängar. Varje punkt: **problem → lösning → tid → risk → mätbar e
 
 ## Sväng 3 — vision
 
-### 3.1 PMTiles offline-bundles — ✅ KLAR Fas 1+2 (2026-05-03/04). Detaljerad roadmap i [`roadmap-pmtiles.md`](roadmap-pmtiles.md)
-> Fas 1 `7f30a13`: PMTiles-klient + UI-toggle "Härdat läge". Fas 2: Sverige z 0-15 (~4 GB) hostad på Cloudflare R2, streaming-nedladdning + SHA-256-verifiering, auto-cache-invalidering vid storleks-mismatch, Protomaps Basemap-schema (gator visas), stil-dropdown. Fas 3 (vector tiles via MapLibre GL) återstår som "kanske aldrig" / overstretch.
+### 3.1 PMTiles offline-bundles — ✅ KLAR Fas 1+2+3 (2026-05-03/04/05). Detaljerad roadmap i [`roadmap-pmtiles.md`](roadmap-pmtiles.md), portering till rapportfiler i [`roadmap-hardat-i-rapporter.md`](roadmap-hardat-i-rapporter.md)
+> Fas 1 `7f30a13`: PMTiles-klient + UI-toggle "Härdat läge" i minkarta.html + sensorskiss.html. Fas 2: Sverige z 0-15 (~4 GB) hostad på Cloudflare R2, streaming-nedladdning + SHA-256-verifiering, auto-cache-invalidering vid storleks-mismatch, Protomaps Basemap-schema (gator visas), stil-dropdown. **Fas 3 (2026-05-05):** Härdat-toggle porterad till alla 6 rapportfiler (7S, A-H, SCRIM, WHAT, WEFT, OBSLÖSA) via shared/map-hardat-modal.js — state delas mellan sidor via samma localStorage-key. Vector-tiles via MapLibre GL återstår som "kanske aldrig" / overstretch.
 - **Problem:** Karta loggar position till tile-server vid varje fält-användning. Den enda fix:en är offline.
 - **Lösning:** Bygg fyra-fem `.pmtiles`-bundles via `tippecanoe` från Lantmäteriets terränGData (eller OSM som fallback): Sverige-low-zoom (z 5–10), och fyra hi-zoom-regioner (z 11–17). Hosta som statisk fil på 7srapport.com. Ny "Härdat läge"-toggle som låser kartan till offline. Storlek: ~50 MB Sverige-low + ~200 MB per hi-zoom-region.
 - **Tid:** 2–3 dagar för pipeline + UI.

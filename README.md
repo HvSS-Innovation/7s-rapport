@@ -54,8 +54,8 @@ För dig som vill förstå exakt vad appen gör med data, var den ligger och vil
 
 | Tab / funktion | Externt anrop | Vad skickas | Mottagaren ser |
 |---|---|---|---|
-| MINKARTA, SENSORSKISS — vanlig karta | OpenTopoMap / OpenStreetMap tile-servers | z/x/y per kart-tile | IP + ungefärligt visat område |
-| MINKARTA, SENSORSKISS — *Härdat läge* | Cloudflare R2 (engångs-nedladdning) | range-requests mot `sverige.pmtiles` | IP + att du laddar ner Sverige-paketet en gång |
+| MINKARTA, SENSORSKISS, 7S, A-H, SCRIM, WHAT, WEFT, OBSLÖSA — vanlig karta | OpenTopoMap / OpenStreetMap tile-servers | z/x/y per kart-tile | IP + ungefärligt visat område |
+| MINKARTA, SENSORSKISS, 7S, A-H, SCRIM, WHAT, WEFT, OBSLÖSA — *Härdat läge* | Cloudflare R2 (engångs-nedladdning, sker via Min Karta) | range-requests mot `sverige.pmtiles` | IP + att du laddar ner Sverige-paketet en gång |
 | Adress-/UPK-uppslag (kartmodal i 7S/SCRIM/WEFT/A-H/OBSLÖSA + UPK i MINKARTA) | Nominatim (OSM) | klickad lat/lon | IP + koordinat |
 | VÄDER | Nominatim, Open-Meteo, SMHI autocomplete | ortnamn → koordinat → prognosanrop | IP + ort/position |
 | Övriga formulär (7S, WHAT, SCRIM, WEFT, A-H, OBSLÖSA, FORS, PEDARS, SCHEMA, EOBUSARE, OBO, RASSOIKA) | inga | — | — |
@@ -76,6 +76,8 @@ Allt rensas av "Glöm enheten" på [opsec.html](https://7srapport.com/opsec.html
 ### Härdat läge
 
 Härdat läge byter ut OSM/OpenTopoMap mot ett lokalt PMTiles-paket av Sverige (~4 GB, z 0–15). När det är på görs **noll utgående tile-requests** under kart-användning. Pre-download via streaming så mobil-RAM räcker, cache invalideras automatiskt om paketet byts.
+
+Toggle finns i kart-modalen på **alla rapportfiler med karta** (7S, A-H, SCRIM, WHAT, WEFT, OBSLÖSA) plus MINKARTA och SENSORSKISS. State delas mellan sidor — slå på i en, är redan på i nästa. Nedladdning sker bara via Min Karta-sidan; rapportsidor varnar om läget aktiveras utan pre-cachad fil (då hämtas tiles on-demand från R2 och första requesten syns där).
 
 **Kvarvarande risker:**
 - Första nedladdningen sker från Cloudflare R2 — hostingen ser din IP och att du laddar ner Sverige-paketet en gång
