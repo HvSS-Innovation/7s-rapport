@@ -328,6 +328,24 @@ function canDelegateToSW() {
         && !!navigator.serviceWorker.controller;
 }
 
+// Slår upp expected bytes för en pmtiles-URL: Sverige-filen är hardcodad,
+// grannländer slås upp via window.HVCountries.pmtilesPresets om countries.js
+// är inläst. Returnerar 0 om okänd URL → då hoppas storlekskontrollen över.
+function getExpectedBytesForUrl(url) {
+    if (url === SVERIGE_PMTILES_URL) return SVERIGE_PMTILES_BYTES;
+    if (typeof window !== 'undefined' && window.HVCountries
+            && window.HVCountries.pmtilesPresets) {
+        const presets = window.HVCountries.pmtilesPresets;
+        for (const code in presets) {
+            const p = presets[code];
+            if (p && p.pmtiles && p.pmtiles.url && p.pmtiles.url === url) {
+                return p.pmtiles.bytes || 0;
+            }
+        }
+    }
+    return 0;
+}
+
 async function isPrefetched(url, expectedBytes) {
     try {
         const cache = await caches.open(PMTILES_CACHE);
@@ -526,9 +544,8 @@ function createController(map, normalLayer, opts) {
         if (canDelegateToSW()) {
             activeSWPrefetch = true;
             try {
-                const expectedBytes = (url === SVERIGE_PMTILES_URL) ? SVERIGE_PMTILES_BYTES : 0;
                 return await swPrefetchPMTiles(url, {
-                    expectedBytes: expectedBytes,
+                    expectedBytes: getExpectedBytesForUrl(url),
                     onProgress: prefetchOpts.onProgress
                 });
             } finally {
@@ -556,12 +573,12 @@ function createController(map, normalLayer, opts) {
             } catch (_) {}
         }
     }
-    // Vid checkPrefetched: skicka med expected bytes om URL ar Sverige-
-    // filen. Det invaliderar automatiskt gamla cachade versioner efter
-    // pmtiles-rebuild (t.ex. bytt maxzoom).
+    // Vid checkPrefetched: slå upp förväntad storlek per URL via
+    // getExpectedBytesForUrl (Sverige + grannländer från HVCountries).
+    // Det invaliderar automatiskt gamla cachade versioner efter pmtiles-
+    // rebuild (t.ex. bytt maxzoom).
     function checkPrefetched() {
-        const expectedBytes = (url === SVERIGE_PMTILES_URL) ? SVERIGE_PMTILES_BYTES : 0;
-        return isPrefetched(url, expectedBytes);
+        return isPrefetched(url, getExpectedBytesForUrl(url));
     }
     function clearPrefetched() { return removePrefetched(url); }
 

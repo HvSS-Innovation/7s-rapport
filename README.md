@@ -119,40 +119,37 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
-### 2026-05-05: Kart-cache för Sveriges grannländer (DK/NO/FI/EE/LV/LT)
-Nya snabbknappar i `minkarta.html` som låter operatören med ett klick
-ladda ner kart-tiles offline för Danmark, Norge, Finland, Estland,
-Lettland och Litauen — samt en "Andra länder ▾"-expander med ~40
-ytterligare länder (Centraleuropa, Storbritannien, Ukraina, USA, Japan,
-Australien…).
+### 2026-05-05: Härdat läge per grannland (DK/NO/FI/EE/LV/LT)
+Nya snabbknappar i `minkarta.html` som aktiverar **Härdat läge** för
+respektive grannland — exakt samma flöde som existerande
+`sverige.pmtiles`, bara med en pmtiles-fil per land.
 
-* **Datakälla:** Samma OpenTopoMap + OSM-hybrid som svensk cache
-  använder. Beslut motiverat i [roadmap.md](roadmap.md#-kart-cache-sveriges-grannländer-dknofieelvlt) —
-  beslutsmatris jämförde nationella tjänster (Kartverket NO,
-  Dataforsyningen DK, MML FI, Maa-amet EE, LĢIA LV, Geoportal LT) mot
-  internationella alternativ. OTM/OSM vinner på enhetlig stil över
-  gränser, ingen API-nyckel-läcka i klient-JS, CC BY-SA / ODbL
-  kompatibelt med projektets CC BY-NC-SA, en pipeline = ett underhåll.
-* **3-vals-dialog:** Klick på en landknapp → "Lägg till" (default,
-  bevara befintliga sparade områden) / "Ersätt allt" (radera tidigare
-  cache och börja om) / "Avbryt".
-* **Pre-fyllda zoom-defaults** kalibrerade så varje land håller sig
-  under MAX_TILES (5 000): DK/EE/LV/LT z 7–11, NO z 5–9, FI z 6–10.
-  Användaren justerar i sliders innan nedladdning startar.
-* **Ny modul** [countries.js](countries.js) med bbox + flagga + zoom
-  per land. **Lätt utbyggnad** av [offline-tiles.js](offline-tiles.js)
-  med `SOURCES`-tabell (förberedelse för Fas 2 Kartverket NO),
-  `openCountryPicker(map, code)` och `removeAllAreas()`. Ingen brytande
-  refaktor — `tileUrl(z,x,y)` utan source-id fungerar oförändrat.
-* **MGRS-overlay verifierad** på alla 4 hörn av varje preset över
-  UTM-zon 31–36 och band U/V/W. Befintlig `MGRS.forward(lat,lon)`
-  kräver ingen modifikation.
-* **Service Worker:** `CACHE` bumpad till
-  `hv-20260505_grannlander_kartcache_1`, `countries.js` tillagd i
-  FILES. Tile-routing oförändrad (samma OTM/OSM-domäner).
-* **Möjlig Fas 2 (icke-mål för v1):** Kartverket som high-detail-källa
-  specifikt för Norge (z upp till 20 i fjäll). Implementeras genom
-  att `SOURCES` utökas — UI behöver inga ändringar.
+* **Initialt försök** (samma dag, commit `f2b623c`) byggde en
+  tile-cache-modal med zoom-sliders och "Andra länder ▾"-expander.
+  **Ändrades efter feedback** till PMTiles-flödet — operatören vill
+  inte välja zoom-nivåer, hen vill ladda ner hela landet som med
+  Sverige. "Andra länder"-funktionen togs bort helt.
+* **Klick på landknapp** → byter Härdat läge till det landets
+  pmtiles-fil + pannar kartan till landets center + erbjuder befintlig
+  "Ladda ner offline"-knapp (samma som för Sverige). Klick på samma
+  land igen stänger av Härdat läge.
+* **Ny modul** [countries.js](countries.js) med pmtiles-presets per
+  land: bbox (för bygg-pipelinen) + center+zoom (för pan) + url/bytes/
+  sha256 (placeholders tills filerna byggts).
+* **Bygg-doc** [verktyg/build-grannlander-pmtiles.md](verktyg/build-grannlander-pmtiles.md)
+  med `pmtiles extract --bbox=…` per land mot Protomaps daily build —
+  samma pipeline som [audit/pmtiles-build.md](audit/pmtiles-build.md).
+  Filerna laddas upp till samma R2-bucket som `sverige.pmtiles`.
+* **`pmtiles-layer.js`** uppdaterad med
+  `getExpectedBytesForUrl(url)` som slår upp content-length per land
+  via `HVCountries.pmtilesPresets`. Storlekskontrollen som invaliderar
+  gamla cachade versioner fungerar nu för alla länder, inte bara Sverige.
+* **`offline-tiles.js`** — tile-cache-modalen är **oförändrad** för
+  "Spara område offline" (svensk flöde). Bara `openCountryPicker` +
+  `removeAllAreas` borttagna eftersom fel design för grannländer.
+* **Återstår (manuellt):** Bygga + ladda upp 6 pmtiles-filer (DK ~200 MB,
+  NO ~800 MB, FI ~600 MB, EE/LV/LT ~300 MB var). Knapparna är disabled
+  med tooltip mot build-doc tills `url + bytes` fyllts i per land.
 
 ### 2026-05-05: Topografi-overlay (Fas 1)
 Ny knapp **Topografi** i `minkarta.html` + `sensorskiss.html` som lägger

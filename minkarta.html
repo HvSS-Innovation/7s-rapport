@@ -1664,118 +1664,124 @@ function renderMapControls() {
     refreshTopoBtn();
     row2.appendChild(topoBtn);
 
-    // ─── ROW 3: Lander-presets (DK/NO/FI/EE/LV/LT) + "Andra lander" ──────
-    // Snabbknappar som oppnar OfflineTiles.openCountryPicker() med en
-    // pre-fylld bbox och zoom-range fran countries.js. Gomda om antingen
-    // OfflineTiles eller HVCountries inte hann ladda — UI:n kraschar inte.
-    if (window.OfflineTiles
-            && typeof window.OfflineTiles.openCountryPicker === 'function'
-            && window.HVCountries) {
-        const codes = window.HVCountries.neighbors || [];
-        codes.forEach(code => {
-            const preset = window.HVCountries.getPreset(code);
-            if (!preset) return;
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'btn btn-sm btn-default';
-            // Flagga + landkod hall knappen kompakt på mobil. Title visar
-            // fullt namn for accessibility / desktop-tooltip.
-            btn.textContent = (preset.flag ? preset.flag + ' ' : '') + preset.code;
-            btn.title = 'Ladda ner kart-tiles för ' + preset.label +
-                ' (z ' + preset.defaultMinZoom + '–' + preset.defaultMaxZoom + ', justerbart)';
-            btn.addEventListener('click', () => {
-                if (!map) return;
-                window.OfflineTiles.openCountryPicker(map, code);
-            });
-            row3.appendChild(btn);
-        });
-
-        // "Andra länder ▾" — oppnar en sokbar lista med extras (~40 lander).
-        const moreBtn = document.createElement('button');
-        moreBtn.type = 'button';
-        moreBtn.className = 'btn btn-sm btn-ghost';
-        moreBtn.textContent = 'Andra länder ▾';
-        moreBtn.title = 'Välj annat land för offline-cache';
-        moreBtn.addEventListener('click', () => {
-            if (!map) return;
-            openCountryExtrasPicker(map);
-        });
-        row3.appendChild(moreBtn);
+    // ─── ROW 3: Härdat läge per grannland (DK/NO/FI/EE/LV/LT) ────────────
+    // Knapparna byter Härdat läge till respektive lands pmtiles-fil + erbjuder
+    // pre-download — exakt samma flöde som "Härdat läge"-knappen redan har för
+    // Sverige, bara med en URL per land. När knappen klickas:
+    //   1. setUrl(land.pmtiles.url) — byter aktiv fil
+    //   2. activate() — slår på härdat läge om av
+    //   3. erbjuder prefetch (samma "Ladda ner offline"-flöde)
+    //   4. pannar kartan till landets center+zoom så vyn inte stannar i Sverige
+    //
+    // Disabled tills landets pmtiles-fil är byggd + uppladdad — se
+    // verktyg/build-grannlander-pmtiles.md. countries.js exponerar isReady(code).
+    if (window.HVCountries && window.MK_HARDENING) {
+        renderCountryPmtilesButtons(row3);
+    } else {
+        // Vänta in både countries.js (laddas defer) och MK_HARDENING (ESM).
+        const tryRender = () => {
+            if (window.HVCountries && window.MK_HARDENING) {
+                renderCountryPmtilesButtons(row3);
+            }
+        };
+        window.addEventListener('MK_HARDENING:ready', tryRender, { once: true });
+        // countries.js är vanlig defer-script så den ska vara klar vid renderMapControls.
+        if (!window.HVCountries) document.addEventListener('DOMContentLoaded', tryRender, { once: true });
     }
 }
 
-// "Andra länder"-lista — enkel sokbar overlay over kartan.
-// Anvander samma .ot-overlay/.ot-modal-stilar som offline-tiles.js injicerar
-// (de finns alltid i DOM efter forsta openModal-anrop, och vi triggar
-// injection genom att anropa OfflineTiles.openCountryPicker dar nere).
-function openCountryExtrasPicker(map) {
-    if (!window.HVCountries || !window.OfflineTiles) return;
-    const extras = window.HVCountries.extras || [];
+// Renderar 6 grannlands-knappar i ett rad-element. Varje knapp byter Härdat
+// läge till det landets pmtiles-fil. Aria-pressed reflekterar vilket land
+// som är aktivt just nu. Disabled (med tooltip) om pmtiles-filen ej finns.
+function renderCountryPmtilesButtons(row) {
+    if (!window.HVCountries || !window.MK_HARDENING) return;
+    row.innerHTML = ''; // idempotent vid re-render
 
-    const overlay = document.createElement('div');
-    overlay.className = 'ot-overlay';
-    overlay.innerHTML =
-        '<div class="ot-modal" role="dialog" aria-label="Andra lander">' +
-            '<h3>ANDRA LÄNDER</h3>' +
-            '<label>Sök eller välj ett land</label>' +
-            '<input type="text" id="extrasSearch" placeholder="Sök land…" autocomplete="off" ' +
-                'style="width:100%;padding:8px 10px;background:#0f240f;color:#e8f0e8;' +
-                'border:1px solid #2d4a2d;border-radius:4px;font-family:inherit;font-size:0.86rem">' +
-            '<div id="extrasList" style="max-height:50vh;overflow:auto;margin-top:10px;' +
-                'display:flex;flex-direction:column;gap:4px"></div>' +
-            '<div class="ot-actions">' +
-                '<button type="button" class="ot-btn" id="extrasClose">Stäng</button>' +
-            '</div>' +
-        '</div>';
-    document.body.appendChild(overlay);
+    const codes = window.HVCountries.neighbors || [];
+    const buttons = [];
 
-    const search = overlay.querySelector('#extrasSearch');
-    const list = overlay.querySelector('#extrasList');
-    const closeBtn = overlay.querySelector('#extrasClose');
-
-    function close() {
-        document.removeEventListener('keydown', onEsc);
-        overlay.remove();
-    }
-    function onEsc(e) { if (e.key === 'Escape') close(); }
-    document.addEventListener('keydown', onEsc);
-    closeBtn.addEventListener('click', close);
-    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
-
-    function render(filter) {
-        const f = (filter || '').toLowerCase().trim();
-        list.innerHTML = '';
-        const matches = extras.filter(p => {
-            if (!f) return true;
-            return p.label.toLowerCase().includes(f) || p.code.toLowerCase().includes(f);
-        });
-        if (!matches.length) {
-            const hint = document.createElement('div');
-            hint.style.cssText = 'color:#8aaa8a;font-size:0.78rem;padding:8px';
-            hint.textContent = 'Inga träffar.';
-            list.appendChild(hint);
-            return;
+    function activeCountry() {
+        const url = window.MK_HARDENING.getUrl ? window.MK_HARDENING.getUrl() : '';
+        if (!url || !window.MK_HARDENING.isActive()) return null;
+        for (const c of codes) {
+            const p = window.HVCountries.getPreset(c);
+            if (p && p.pmtiles && p.pmtiles.url === url) return c;
         }
-        matches.forEach(preset => {
-            const row = document.createElement('button');
-            row.type = 'button';
-            row.className = 'btn btn-sm btn-default';
-            row.style.cssText = 'justify-content:flex-start;text-align:left;width:100%';
-            row.innerHTML =
-                '<span style="font-size:1.1em;margin-right:6px">' + (preset.flag || '🌍') + '</span>' +
-                '<span style="font-weight:600">' + preset.code + '</span>' +
-                '<span style="margin-left:10px;color:#8aaa8a;font-size:0.82rem">' + preset.label + '</span>' +
-                '<span style="margin-left:auto;color:#5a7a5a;font-size:0.72rem">z ' + preset.defaultMinZoom + '–' + preset.defaultMaxZoom + '</span>';
-            row.addEventListener('click', () => {
-                close();
-                window.OfflineTiles.openCountryPicker(map, preset.code);
-            });
-            list.appendChild(row);
+        return null;
+    }
+
+    function refresh() {
+        const active = activeCountry();
+        buttons.forEach(({ btn, code }) => {
+            btn.setAttribute('aria-pressed', code === active ? 'true' : 'false');
         });
     }
-    search.addEventListener('input', () => render(search.value));
-    render('');
-    setTimeout(() => search.focus(), 50);
+
+    codes.forEach(code => {
+        const preset = window.HVCountries.getPreset(code);
+        if (!preset) return;
+        const ready = window.HVCountries.isReady(code);
+
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'btn btn-sm btn-toggle';
+        btn.textContent = (preset.flag ? preset.flag + ' ' : '') + preset.code;
+        if (ready) {
+            const mb = (preset.pmtiles.bytes / (1024 * 1024)).toFixed(0);
+            btn.title = 'Härdat läge för ' + preset.label + ' (PMTiles ~' + mb + ' MB). ' +
+                'Klick aktiverar och pannar till landet.';
+        } else {
+            btn.disabled = true;
+            btn.title = preset.label + ' — pmtiles-fil ej byggd än. Se verktyg/build-grannlander-pmtiles.md.';
+        }
+        btn.setAttribute('aria-pressed', 'false');
+        btn.addEventListener('click', () => {
+            // Klick på samma land som redan är aktivt = stäng av härdat läge.
+            // Annars: byt till det landet (eller aktivera om av).
+            if (activeCountry() === code) {
+                window.MK_HARDENING.deactivate();
+            } else {
+                activateCountryPmtiles(code);
+            }
+        });
+        row.appendChild(btn);
+        buttons.push({ btn, code });
+    });
+
+    // Lyssna på state-byten (aktivering/inaktivering/byte mellan länder)
+    // så aria-pressed alltid speglar aktuellt läge.
+    if (window.MK_HARDENING.onChange) {
+        window.MK_HARDENING.onChange(refresh);
+    }
+    refresh();
+}
+
+// Aktivera Härdat läge för ett land. Byter pmtiles-URL, aktiverar om av,
+// pannar kartan dit, och visar "Ladda ner offline"-knappens tillstånd
+// så användaren ser om filen redan är cachad eller behöver laddas.
+async function activateCountryPmtiles(code) {
+    if (!window.HVCountries || !window.MK_HARDENING) return;
+    const preset = window.HVCountries.getPreset(code);
+    if (!preset || !preset.pmtiles || !preset.pmtiles.url) {
+        window.alert('PMTiles-fil för ' + (preset ? preset.label : code) +
+            ' är inte byggd och uppladdad än.\n\n' +
+            'Se verktyg/build-grannlander-pmtiles.md för bygginstruktioner.');
+        return;
+    }
+    try {
+        await window.MK_HARDENING.setUrl(preset.pmtiles.url);
+        if (!window.MK_HARDENING.isActive()) {
+            await window.MK_HARDENING.activate();
+        }
+        // Pannar till landets center om vyn ligger utanfor bbox.
+        if (window.MK_MAP && preset.center) {
+            try { window.MK_MAP.setView(preset.center, preset.zoom || 6); } catch (_) {}
+        }
+    } catch (err) {
+        console.error('[grannlander] activateCountryPmtiles fel:', err);
+        window.alert('Kunde inte aktivera Härdat läge för ' + preset.label + ': ' +
+            (err && err.message || 'okänt fel'));
+    }
 }
 
 // Toggle fullskärmsläge. opts.native=true → även äkta requestFullscreen()

@@ -616,42 +616,55 @@ Utbildningen är upplagd som ett *fältpass med stegrande uppdrag*, ej som flash
 
 ---
 
-### 🌍 Kart-cache: Sveriges grannländer (DK/NO/FI/EE/LV/LT)
+### 🌍 Härdat läge per grannland (DK/NO/FI/EE/LV/LT)
 
-**Status (2026-05-05):** Inventering klar, beslut fattat — implementation pågår.
+**Status (2026-05-05, omtänkt):** Klient-UI och bygg-pipeline klar.
+**Återstår:** Bygga + ladda upp 6 pmtiles-filer till R2 (Joel kör).
 
-**Bakgrund:** Befintlig svensk kart-cache (`offline-tiles.js` +
-`hv-offline-tiles-v1` Cache API) har en generisk bbox/zoom-pipeline men
-hard-codad URL-mall för OpenTopoMap (z ≤ 17) + OSM Standard (z 18–19).
-Saknar preset-bboxar för grannländer och UI-knappar för snabb nedladdning.
+**Bakgrund:** Första försök (commit `f2b623c`) byggde en **tile-cache-modal**
+för grannländer ovanpå befintliga `offline-tiles.js` (per-bbox-cache av
+OTM/OSM-tiles via Cache API). Operatören skulle välja zoom-spann i sliders.
 
-**Beslut:** Använd **OpenTopoMap + OSM-hybrid** (samma källa som svensk cache)
-för alla 6 grannländer. Beslutsmatris jämförde nationella tjänster
-(Kartverket NO, Dataforsyningen DK, MML FI, Maa-amet EE, LĢIA LV,
-Geoportal LT) och internationella alternativ (ESRI, Stadia, Thunderforest).
-Motivering:
-- Enhetlig stil över gränser (operatören får ingen visuell brytning vid t.ex. Torneälv).
-- En pipeline = ett underhåll. Throttling-policy redan accepterad av leverantörerna.
-- CC BY-SA 3.0 / ODbL kompatibelt med projektets CC BY-NC-SA-paraply.
-- Ingen API-nyckel som kan läcka i klient-JS.
-- Befintlig MGRS-overlay (`MGRS.forward(lat, lon)`) fungerar globalt — inga
-  gränsöverlagring i UTM-zonerna 32V/33V/34V/35V påverkar tile-rendering.
+**Användarens feedback:** Det är fel flöde — vi vill ha **Härdat läge per
+land**, exakt samma flöde som existerande svensk `sverige.pmtiles` (en
+pmtiles-fil per land som laddas ner i sin helhet, inga zoom-val).
+Tile-cache-modalen är bra för "spara nuvarande viewport", inte för "ladda
+ner hela landet".
 
-**Implementation (pågår):**
-- `countries.js` — bbox/zoom-presets per ISO-kod (SE, DK, NO, FI, EE, LV, LT
-  + ~40 övriga länder för "Andra länder"-listan).
-- Lätt utbyggnad av `offline-tiles.js` — ingen brytande refaktor:
-  - `SOURCES`-tabell (utbytbar URL-mall) med default = nuvarande hybrid.
-  - `openCountryPicker(map, code, mode)` pre-fyller modal med country-bbox.
-  - `removeAllAreas()` för "Ersätt allt"-flödet.
-- Nya knappar i minkarta.html (rad 3 i map-controls):
-  `[ 🇸🇪 SE ] [ 🇩🇰 DK ] [ 🇳🇴 NO ] [ 🇫🇮 FI ] [ 🇪🇪 EE ] [ 🇱🇻 LV ] [ 🇱🇹 LT ]  [ Andra länder ▾ ]`
-- Tre-vals-dialog vid klick: **Lägg till** (default) / **Ersätt allt** / **Avbryt**.
-- Service-worker: `countries.js` läggs i `FILES`. Cachenamespace oförändrat
-  eftersom samma OTM/OSM-domäner används.
+**Nytt beslut:** En `<land>.pmtiles`-fil per grannland, hostad på samma R2-
+bucket som `sverige.pmtiles` (`hv-pmtiles`). Bygd från Protomaps daily
+build via `pmtiles extract --bbox=...` — samma pipeline som Sverige (se
+[audit/pmtiles-build.md](audit/pmtiles-build.md)). 6 lands-knappar i
+minkarta växlar Härdat läge mellan filerna.
 
-**Möjlig Fas 2 (icke-mål för v1):** Kartverket som high-detail-källa specifikt
-för Norge (z upp till 20 i fjäll). Kräver per-source URL-byggare (y/x-ordning
-skiljer). Implementeras genom att SOURCES utökas — UI behöver inga ändringar.
+**Implementation (klar i kod, väntar på pmtiles-filer):**
+- `countries.js` — refaktorerad till `pmtilesPresets[code] = { bbox,
+  center, zoom, pmtiles: { url, bytes, sha256 } }`. Url/bytes/sha är
+  placeholders eftersom filerna ännu inte byggts. `HVCountries.isReady(code)`
+  returnerar true först när url + bytes är ifyllda.
+- `pmtiles-layer.js` — `getExpectedBytesForUrl(url)` slår upp content-length
+  per land via `HVCountries`, så storlekskontrollen i `checkPrefetched()`
+  fungerar för alla länder, inte bara Sverige.
+- `minkarta.html` — rad 3 har 6 lands-knappar (DK/NO/FI/EE/LV/LT). Klick:
+  - Om landet redan är aktivt → `MK_HARDENING.deactivate()`
+  - Annars → `setUrl(land.pmtiles.url)` + `activate()` + pannar kartan
+    till landets center+zoom. "Ladda ner offline"-knappen (befintlig)
+    visas automatiskt med rätt URL/bytes.
+  - Disabled (med tooltip) om `pmtiles.url` är tom — pekar på build-doc.
+- `offline-tiles.js` — `openCountryPicker` + `removeAllAreas` borttagna.
+  Tile-cache-modalen är kvar oförändrad för "Spara område offline" (svensk
+  flöde).
+- "Andra länder ▾" + extras-list borttagna helt.
+- **Bygg-doc:** [verktyg/build-grannlander-pmtiles.md](verktyg/build-grannlander-pmtiles.md)
+  med pmtiles-extract per land + R2-upload + countries.js-uppdatering.
 
-**Detaljerad lokal arbetsanteckning:** se `roadmap-grannlander.md` (gitignored).
+**Nästa steg (manuellt av Joel):**
+1. Kör pmtiles extract för alla 6 länder mot Protomaps daily build.
+2. `wrangler r2 object put hv-pmtiles/<land>.pmtiles` för varje fil.
+3. Fyll i url + bytes + sha256 i `countries.js`.
+4. Commit + push → lands-knapparna aktiveras automatiskt.
+
+**Möjlig Fas 2:** Kartverket som high-detail-källa specifikt för Norge
+(z upp till 20 i fjäll). Inte längre relevant för PMTiles-flödet —
+Protomaps daily build täcker hela Norge upp till z 15 vilket räcker för
+operativ kart-läsning. Lägg till som separat overlay-fil om det blir behov.
