@@ -119,6 +119,41 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
+### 2026-05-05: Kart-cache för Sveriges grannländer (DK/NO/FI/EE/LV/LT)
+Nya snabbknappar i `minkarta.html` som låter operatören med ett klick
+ladda ner kart-tiles offline för Danmark, Norge, Finland, Estland,
+Lettland och Litauen — samt en "Andra länder ▾"-expander med ~40
+ytterligare länder (Centraleuropa, Storbritannien, Ukraina, USA, Japan,
+Australien…).
+
+* **Datakälla:** Samma OpenTopoMap + OSM-hybrid som svensk cache
+  använder. Beslut motiverat i [roadmap.md](roadmap.md#-kart-cache-sveriges-grannländer-dknofieelvlt) —
+  beslutsmatris jämförde nationella tjänster (Kartverket NO,
+  Dataforsyningen DK, MML FI, Maa-amet EE, LĢIA LV, Geoportal LT) mot
+  internationella alternativ. OTM/OSM vinner på enhetlig stil över
+  gränser, ingen API-nyckel-läcka i klient-JS, CC BY-SA / ODbL
+  kompatibelt med projektets CC BY-NC-SA, en pipeline = ett underhåll.
+* **3-vals-dialog:** Klick på en landknapp → "Lägg till" (default,
+  bevara befintliga sparade områden) / "Ersätt allt" (radera tidigare
+  cache och börja om) / "Avbryt".
+* **Pre-fyllda zoom-defaults** kalibrerade så varje land håller sig
+  under MAX_TILES (5 000): DK/EE/LV/LT z 7–11, NO z 5–9, FI z 6–10.
+  Användaren justerar i sliders innan nedladdning startar.
+* **Ny modul** [countries.js](countries.js) med bbox + flagga + zoom
+  per land. **Lätt utbyggnad** av [offline-tiles.js](offline-tiles.js)
+  med `SOURCES`-tabell (förberedelse för Fas 2 Kartverket NO),
+  `openCountryPicker(map, code)` och `removeAllAreas()`. Ingen brytande
+  refaktor — `tileUrl(z,x,y)` utan source-id fungerar oförändrat.
+* **MGRS-overlay verifierad** på alla 4 hörn av varje preset över
+  UTM-zon 31–36 och band U/V/W. Befintlig `MGRS.forward(lat,lon)`
+  kräver ingen modifikation.
+* **Service Worker:** `CACHE` bumpad till
+  `hv-20260505_grannlander_kartcache_1`, `countries.js` tillagd i
+  FILES. Tile-routing oförändrad (samma OTM/OSM-domäner).
+* **Möjlig Fas 2 (icke-mål för v1):** Kartverket som high-detail-källa
+  specifikt för Norge (z upp till 20 i fjäll). Implementeras genom
+  att `SOURCES` utökas — UI behöver inga ändringar.
+
 ### 2026-05-05: Topografi-overlay (Fas 1)
 Ny knapp **Topografi** i `minkarta.html` + `sensorskiss.html` som lägger
 en separat tile-/raster-layer ovanpå basemap för höjdkurvor / hillshade.
