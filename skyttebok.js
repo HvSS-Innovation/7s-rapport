@@ -2485,17 +2485,49 @@
         );
     };
 
-    // ── Rollvals-UI (Skiva B) ──────────────────────────────────────────
+    // ── Rollvals-UI (Skiva B/F) ────────────────────────────────────────
     // Renderar antingen:
     //   • ett chip-kort "Du är: 🎯 Soldat / 💻 Instruktör" + "Byt roll"-länk
     //     (när skyttebok_role är satt), ELLER
+    //   • en bakåtkompat-banner med gissning + Bekräfta/Byt (när rollen
+    //     ej är satt MEN användaren har befintlig data → Skiva F), ELLER
     //   • en prompt med två stora knappar (när rollen ej är vald än, och
     //     namnet är ifyllt så vi inte trycker två val på en helt ny
     //     användare på samma gång), ELLER
-    //   • tomt block (när rollen ej är vald OCH namnet är tomt — vi väntar
-    //     på att användaren ska ange namnet först).
-    //
-    // Skiva B: filtrerar INTE resten av kortet — den biten kommer i C/D/E.
+    //   • en mjuk hint (när rollen ej är vald OCH namnet är tomt).
+
+    // Skiva F — engångs-flagga som permanent gömmer bakåtkompat-bannern
+    // efter att användaren bekräftat/bytt en gång. Lagras separat från
+    // skyttebok_role så att framtida null-state (om någon någonsin går
+    // tillbaka till null via dev-tools) inte triggar bannern på nytt.
+    var ROLE_BANNER_DISMISSED_KEY = 'skyttebok_role_banner_dismissed';
+
+    function isRoleBannerDismissed() {
+        return localStorage.getItem(ROLE_BANNER_DISMISSED_KEY) === '1';
+    }
+
+    function dismissRoleBanner() {
+        localStorage.setItem(ROLE_BANNER_DISMISSED_KEY, '1');
+    }
+
+    // Användaren har "befintlig data" om något av följande finns:
+    //   • Eget nyckelpar (skyttebok_keys_self)  → hint: instruktör
+    //   • Loggade pass eller säkerhetsprov      → hint: soldat
+    // Detta används för Skiva F:s gissningsbanner.
+    function hasAnyExistingData() {
+        if (localStorage.getItem('skyttebok_keys_self')) return true;
+        try {
+            if (typeof loadAllPass === 'function' && loadAllPass().length > 0) return true;
+            if (typeof loadSakerhetsprov === 'function' && loadSakerhetsprov()) return true;
+        } catch (_) { /* defensivt — faller bara tillbaka till false */ }
+        return false;
+    }
+
+    function guessRole() {
+        if (localStorage.getItem('skyttebok_keys_self')) return 'instruktor';
+        return 'soldat';
+    }
+
     function renderRoleStep() {
         var area = document.getElementById('roleStepArea');
         if (!area) return;
@@ -2517,8 +2549,44 @@
             return;
         }
 
-        // Roll ej vald: visa prompten bara om namnet är ifyllt. Annars
-        // visa en mjuk hint (steg-rubriken finns redan i HTML).
+        // Skiva F — Bakåtkompat-banner: användaren har data men ingen
+        // roll satt OCH har inte avfärdat bannern tidigare. Gissar
+        // baserat på om eget nyckelpar finns. Bannern försvinner i samma
+        // sekund som hen klickar Bekräfta eller Byt — och kommer aldrig
+        // tillbaka eftersom bannern dismissas permanent.
+        if (!getRole() && !isRoleBannerDismissed() && hasAnyExistingData()) {
+            var guess = guessRole();
+            var guessLabel = guess === 'instruktor' ? '💻 Instruktör' : '🎯 Soldat';
+            var altRole = guess === 'instruktor' ? 'soldat' : 'instruktor';
+            var altLabel = altRole === 'instruktor' ? '💻 Instruktör' : '🎯 Soldat';
+            var basis = guess === 'instruktor'
+                ? 'eftersom du redan har ett genererat nyckelpar'
+                : 'eftersom du har loggade pass men inget eget nyckelpar';
+            area.innerHTML =
+                '<div class="role-guess-banner" role="status" aria-live="polite">' +
+                    '<div class="role-guess-text">' +
+                        'Vi gissade på <strong>' + guessLabel + '</strong> ' +
+                        '<span style="color:var(--text-muted)">(' + escapeHtml(basis) + ')</span>. ' +
+                        'Stämmer det?' +
+                    '</div>' +
+                    '<div class="role-guess-actions">' +
+                        '<button type="button" class="btn btn-sm btn-primary" ' +
+                            'style="margin-top:0" ' +
+                            'onclick="skyttebokSetRole(\'' + guess + '\')">' +
+                            'Ja, jag är ' + escapeHtml(guessLabel) +
+                        '</button>' +
+                        '<button type="button" class="btn btn-sm btn-secondary" ' +
+                            'onclick="skyttebokSetRole(\'' + altRole + '\')">' +
+                            'Nej, ' + escapeHtml(altLabel) +
+                        '</button>' +
+                    '</div>' +
+                '</div>';
+            return;
+        }
+
+        // Roll ej vald, ingen data heller: visa prompten bara om namnet
+        // är ifyllt. Annars en mjuk hint (steg-rubriken finns redan i
+        // HTML).
         if (!name) {
             area.innerHTML =
                 '<div class="field-hint">Ange visningsnamn ovan så ' +
@@ -2551,6 +2619,11 @@
 
     window.skyttebokSetRole = function (role) {
         setRole(role);
+        // När användaren själv väljer en roll (oavsett om bannern var
+        // den utlösande faktorn eller inte) räknas det som dismiss av
+        // bakåtkompat-bannern. Efter detta visas vanlig prompt-knappar
+        // i null-läge istället för banner.
+        dismissRoleBanner();
         applyRoleAttr();
         renderRoleStep();
         // Sig-blocket har rollberoende knappuppsättningar, måste re-renderas

@@ -187,6 +187,16 @@
         .role-btn-title { font-size: 0.95rem; font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
         .role-btn-hint { font-size: 0.74rem; font-weight: 500; color: var(--text-muted); line-height: 1.4; text-transform: none; letter-spacing: 0; }
 
+        /* Bakåtkompat-banner (Skiva F) — visas för användare som hade
+           data innan rollvalet fanns. Förslår en gissning baserat på
+           skyttebok_keys_self. Försvinner när användaren bekräftar
+           eller byter roll. */
+        .role-guess-banner { background: var(--accent-dim); border: 1px solid var(--accent); border-radius: var(--radius); padding: 12px 14px; margin-bottom: 12px; }
+        .role-guess-text { color: var(--text-primary); font-size: 0.86rem; line-height: 1.45; margin-bottom: 10px; }
+        .role-guess-text strong { color: var(--accent); }
+        .role-guess-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+        .role-guess-actions .btn { flex: 1; min-width: 120px; }
+
         /* Steg-numrering (Skiva C) — varje data-step-section får en
            liten cirkel med stegnumret till vänster om rubriken.
            Använder befintliga --accent / --border / --bg-secondary, så
