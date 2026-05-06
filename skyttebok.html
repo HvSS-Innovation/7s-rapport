@@ -200,6 +200,24 @@
            top-margin på första hr så avsnittet inte får dubbel separator. */
         .settings-step > hr:first-child { display: none; }
 
+        /* Skiva D — Sig-blocket: flex-container för att kunna ordna om
+           Self/Trusted/Roster/CrossDevice via CSS `order` per roll utan
+           att flytta DOM-noder. Default-DOM-ordning matchar instruktör-
+           vyn (Self → Trusted → Roster → CrossDevice) men den används
+           bara när ingen roll är vald (då vi visar hint istället). */
+        .sig-step-inner { display: flex; flex-direction: column; gap: 14px; }
+
+        /* Soldat-spår — visa: Trusted → CrossDevice → Roster.
+           Dölj: Self (eget nyckelpar är instruktör-only). */
+        html[data-role="soldat"] #sigSelfArea { display: none; }
+        html[data-role="soldat"] #sigTrustedArea { order: 1; }
+        html[data-role="soldat"] #sigCrossDeviceArea { order: 2; }
+        html[data-role="soldat"] #sigRosterArea { order: 3; }
+
+        /* Roll ej vald — dölj hela sig-griden och visa hint i steg 3. */
+        html:not([data-role="soldat"]):not([data-role="instruktor"]) #sigStepInner { display: none; }
+        html:not([data-role="soldat"]):not([data-role="instruktor"]) #sigStepNoRoleHint { display: block !important; }
+
         /* Delmoment-grupper */
         .delmoment-group { margin-bottom: 16px; }
         .delmoment-header { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 6px; display: flex; align-items: baseline; gap: 8px; }
@@ -537,17 +555,25 @@
                     <div id="roleStepArea"></div>
                 </section>
 
-                <!-- Steg 3 — Instruktörssignatur (rollfiltreras i Skiva D/E) -->
+                <!-- Steg 3 — Instruktörssignatur (rollfiltreras i Skiva D/E).
+                     De fyra inner-divsen ligger i en flex-container så att
+                     CSS kan ordna dem per roll via "order" + dölja oönskade
+                     med "display:none". -->
                 <section class="settings-step" data-step="3" id="sigStepSection">
                     <div class="settings-step-head">
                         <span class="settings-step-num" aria-hidden="true">3</span>
                         <span class="settings-step-title">Instruktörssignatur</span>
                         <a href="skyttebok-info.html" class="sig-info-link" style="margin-left:auto;font-weight:500;text-transform:none;letter-spacing:0">Hur fungerar signaturer?</a>
                     </div>
-                    <div id="sigSelfArea"></div>
-                    <div id="sigTrustedArea" style="margin-top:14px"></div>
-                    <div id="sigRosterArea"></div>
-                    <div id="sigCrossDeviceArea" style="margin-top:14px"></div>
+                    <div id="sigStepNoRoleHint" class="field-hint" style="display:none">
+                        Välj roll i steg 2 så visas signatur-alternativen här.
+                    </div>
+                    <div id="sigStepInner" class="sig-step-inner">
+                        <div id="sigSelfArea"></div>
+                        <div id="sigTrustedArea"></div>
+                        <div id="sigRosterArea"></div>
+                        <div id="sigCrossDeviceArea"></div>
+                    </div>
                     <input type="file" id="sigImportFile" accept="application/json,.json" style="display:none">
                     <input type="file" id="sigReqFile" accept="application/json,.json" style="display:none">
                     <input type="file" id="sigRespFile" accept="application/json,.json" style="display:none">

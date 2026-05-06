@@ -148,6 +148,14 @@
         }
     }
 
+    // Speglar rollen som data-attribut på <html> så CSS-reglerna i
+    // skyttebok.html kan filtrera/ordna sig-blocken (Skiva D/E).
+    function applyRoleAttr() {
+        var role = getRole();
+        if (role) document.documentElement.setAttribute('data-role', role);
+        else document.documentElement.removeAttribute('data-role');
+    }
+
     // Filter (BAS / TILLÄGG / Båda) — persistent val via settings.
     function getFilter() {
         var v = getSetting('visa');
@@ -1713,41 +1721,69 @@
         var area = document.getElementById('sigCrossDeviceArea');
         if (!area) return;
         var hasSelf = !!window.SkyttebokSig.getSelf();
+        var role = getRole();
         // Räkna osignerade pass + säkerhetsprov för soldat-knappens label.
         var unsignedPass = countUnsignedItems();
         var html = '<label>Cross-device signering</label>';
-        // Soldat-sidan: alltid synlig.
-        html += '<div class="settings-actions" style="margin-top:0">' +
+
+        // Soldat-knappar visas i:
+        //   • soldat-läge (Skiva D)
+        //   • ingen roll vald (legacy/fallback — innan Skiva D fanns
+        //     visades de alltid).
+        // Doldas i:
+        //   • instruktör-läge (kommer i Skiva E).
+        var showSoldat = (role !== 'instruktor');
+
+        // Instruktör-knappen visas i:
+        //   • instruktör-läge (om eget nyckelpar finns).
+        //   • ingen roll vald + eget nyckelpar finns (legacy fallback).
+        // Dolas i:
+        //   • soldat-läge (Skiva D).
+        var showInstruktor = (role !== 'soldat') && hasSelf;
+
+        if (showSoldat) {
+            html += '<div class="settings-actions" style="margin-top:0">' +
+                '<button class="btn btn-sm btn-secondary" type="button" ' +
+                    (unsignedPass === 0 ? 'disabled style="opacity:0.55;cursor:not-allowed"' : '') +
+                    ' onclick="skyttebokSigExportRequest()">' +
+                    'Begär signatur' +
+                    (unsignedPass > 0 ? ' (' + unsignedPass + ')' : '') +
+                '</button>' +
+                '<button class="btn btn-sm btn-secondary" type="button" ' +
+                    'onclick="skyttebokSigImportResponseClick()">' +
+                    'Importera svar (fil)' +
+                '</button>' +
+            '</div>' +
             '<button class="btn btn-sm btn-secondary" type="button" ' +
-                (unsignedPass === 0 ? 'disabled style="opacity:0.55;cursor:not-allowed"' : '') +
-                ' onclick="skyttebokSigExportRequest()">' +
-                'Begär signatur' +
-                (unsignedPass > 0 ? ' (' + unsignedPass + ')' : '') +
-            '</button>' +
-            '<button class="btn btn-sm btn-secondary" type="button" ' +
-                'onclick="skyttebokSigImportResponseClick()">' +
-                'Importera svar (fil)' +
-            '</button>' +
-        '</div>' +
-        '<button class="btn btn-sm btn-secondary" type="button" ' +
-            'onclick="skyttebokSigImportResponseQr()" style="width:100%;margin-top:6px">' +
-            'Scanna svar (QR)' +
-        '</button>';
-        // Instruktör-sidan: bara synlig om eget nyckelpar finns.
-        if (hasSelf) {
+                'onclick="skyttebokSigImportResponseQr()" style="width:100%;margin-top:6px">' +
+                'Scanna svar (QR)' +
+            '</button>';
+        }
+
+        if (showInstruktor) {
             html += '<button class="btn btn-sm btn-secondary" type="button" ' +
                 'onclick="skyttebokSigOpenRequestClick()" style="width:100%;margin-top:6px">' +
                 'Signera mottagen begäran (instruktör)' +
             '</button>';
         }
-        html += '<div class="field-hint" style="margin-top:6px">' +
-            'Soldat: exportera en begäran-fil och dela med instruktören. ' +
-            'När du får svaret, importera det.' +
-            (hasSelf
-                ? ' Instruktör: öppna en mottagen begäran för att signera ' +
-                  'och exportera svaret tillbaka.'
-                : '') +
-        '</div>';
+
+        // Hint-texten anpassas efter vad som faktiskt syns.
+        var hint = '';
+        if (showSoldat && showInstruktor) {
+            hint = 'Soldat: exportera en begäran-fil och dela med ' +
+                'instruktören. När du får svaret, importera det. ' +
+                'Instruktör: öppna en mottagen begäran för att signera ' +
+                'och exportera svaret tillbaka.';
+        } else if (showSoldat) {
+            hint = 'Exportera en begäran-fil och dela med instruktören. ' +
+                'När du får svaret, importera det.';
+        } else if (showInstruktor) {
+            hint = 'Öppna en mottagen begäran för att signera och ' +
+                'exportera svaret tillbaka.';
+        }
+        if (hint) {
+            html += '<div class="field-hint" style="margin-top:6px">' + hint + '</div>';
+        }
         area.innerHTML = html;
     }
 
@@ -2515,12 +2551,19 @@
 
     window.skyttebokSetRole = function (role) {
         setRole(role);
+        applyRoleAttr();
         renderRoleStep();
+        // Sig-blocket har rollberoende knappuppsättningar, måste re-renderas
+        // direkt efter rollbyte. Det visuella ordningsbytet är CSS-driven
+        // och behöver inget extra här.
+        renderSigUi();
     };
 
     window.skyttebokClearRole = function () {
         setRole(null);
+        applyRoleAttr();
         renderRoleStep();
+        renderSigUi();
         // Scrolla tillbaka till rollvals-blocket så användaren ser att
         // hen är tillbaka i val-läge. Inget abrupt scroll-hopp om kortet
         // redan är synligt.
@@ -2845,6 +2888,7 @@
 
     // ── Init ────────────────────────────────────────────────────────────
     document.addEventListener('DOMContentLoaded', function () {
+        applyRoleAttr();
         initSettings();
         initSigImportFile();
         initQrInputs();
