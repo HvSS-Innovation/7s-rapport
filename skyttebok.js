@@ -2482,16 +2482,16 @@
         }
 
         // Roll ej vald: visa prompten bara om namnet är ifyllt. Annars
-        // tom — vi vill inte överbelasta första-besök-användaren med två
-        // beslut samtidigt.
+        // visa en mjuk hint (steg-rubriken finns redan i HTML).
         if (!name) {
-            area.innerHTML = '';
+            area.innerHTML =
+                '<div class="field-hint">Ange visningsnamn ovan så ' +
+                'visas rollvalet här.</div>';
             return;
         }
 
         area.innerHTML =
             '<div class="role-prompt">' +
-                '<div class="role-prompt-title">Är du soldat eller instruktör?</div>' +
                 '<div class="role-prompt-hint">Valet styr vilka signatur-' +
                     'alternativ som visas. Du kan byta när som helst.</div>' +
                 '<div class="role-buttons">' +

@@ -187,6 +187,19 @@
         .role-btn-title { font-size: 0.95rem; font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
         .role-btn-hint { font-size: 0.74rem; font-weight: 500; color: var(--text-muted); line-height: 1.4; text-transform: none; letter-spacing: 0; }
 
+        /* Steg-numrering (Skiva C) — varje data-step-section får en
+           liten cirkel med stegnumret till vänster om rubriken.
+           Använder befintliga --accent / --border / --bg-secondary, så
+           ljust/mörkt läge fungerar utan extra regler. */
+        .settings-step { padding-top: 4px; }
+        .settings-step + .settings-step { margin-top: 18px; padding-top: 18px; border-top: 1px solid var(--border); }
+        .settings-step-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .settings-step-num { display: inline-flex; align-items: center; justify-content: center; width: 24px; height: 24px; border-radius: 999px; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); font-size: 0.72rem; font-weight: 700; flex-shrink: 0; font-family: 'Courier New', monospace; }
+        .settings-step-title { font-size: 0.82rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; }
+        /* Inom en step rör vi inte interna labels — men vi tar bort dubbel
+           top-margin på första hr så avsnittet inte får dubbel separator. */
+        .settings-step > hr:first-child { display: none; }
+
         /* Delmoment-grupper */
         .delmoment-group { margin-bottom: 16px; }
         .delmoment-header { background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 6px; display: flex; align-items: baseline; gap: 8px; }
@@ -496,58 +509,91 @@
             </div>
         </div>
 
-        <!-- Inställningar -->
+        <!-- Inställningar — Skiva C: steg-numrerad struktur.
+             Stegen är: 1) namn, 2) rollval, 3) signaturer, 4) backup,
+             5) PDF, 6) rensa. Inga rollberoende skillnader på steg 1, 2,
+             4, 5, 6 — hela rollfiltreringen sker bara i steg 3 (Skiva D/E). -->
         <details class="settings-card">
             <summary>Inställningar</summary>
             <div class="settings-body">
-                <label for="displayName">Visningsnamn (frivilligt)</label>
-                <input type="text" id="displayName" autocomplete="off" placeholder="T.ex. AQ eller initialer" maxlength="40">
-                <div class="field-hint">Används bara i export och PDF. Lämna tomt om du inte vill spara namn lokalt.</div>
 
-                <!-- Rollval (Skiva B) — renderas av JS via skyttebokRenderRoleStep().
-                     Visar antingen chippet "Du är: …" eller två stora knappar. -->
-                <div id="roleStepArea" data-step="2" style="margin-top:14px"></div>
+                <!-- Steg 1 — Ditt namn -->
+                <section class="settings-step" data-step="1">
+                    <div class="settings-step-head">
+                        <span class="settings-step-num" aria-hidden="true">1</span>
+                        <span class="settings-step-title">Ditt namn</span>
+                    </div>
+                    <label for="displayName">Visningsnamn (frivilligt)</label>
+                    <input type="text" id="displayName" autocomplete="off" placeholder="T.ex. AQ eller initialer" maxlength="40">
+                    <div class="field-hint">Används bara i export och PDF. Lämna tomt om du inte vill spara namn lokalt.</div>
+                </section>
 
-                <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+                <!-- Steg 2 — Roll (renderas av JS i skyttebokRenderRoleStep) -->
+                <section class="settings-step" data-step="2">
+                    <div class="settings-step-head">
+                        <span class="settings-step-num" aria-hidden="true">2</span>
+                        <span class="settings-step-title">Är du soldat eller instruktör?</span>
+                    </div>
+                    <div id="roleStepArea"></div>
+                </section>
 
-                <label>Säkerhetskopiera & flytta</label>
-                <div class="settings-actions">
-                    <button class="btn btn-sm btn-secondary" id="btnExport">Exportera (JSON)</button>
-                    <button class="btn btn-sm btn-secondary" id="btnImport">Importera…</button>
-                    <input type="file" id="importFile" accept="application/json,.json" style="display:none">
-                </div>
-                <div class="field-hint" style="margin-top:6px">Exporten innehåller alla pass + säkerhetsprov + visningsnamn. Inga personnummer.</div>
+                <!-- Steg 3 — Instruktörssignatur (rollfiltreras i Skiva D/E) -->
+                <section class="settings-step" data-step="3" id="sigStepSection">
+                    <div class="settings-step-head">
+                        <span class="settings-step-num" aria-hidden="true">3</span>
+                        <span class="settings-step-title">Instruktörssignatur</span>
+                        <a href="skyttebok-info.html" class="sig-info-link" style="margin-left:auto;font-weight:500;text-transform:none;letter-spacing:0">Hur fungerar signaturer?</a>
+                    </div>
+                    <div id="sigSelfArea"></div>
+                    <div id="sigTrustedArea" style="margin-top:14px"></div>
+                    <div id="sigRosterArea"></div>
+                    <div id="sigCrossDeviceArea" style="margin-top:14px"></div>
+                    <input type="file" id="sigImportFile" accept="application/json,.json" style="display:none">
+                    <input type="file" id="sigReqFile" accept="application/json,.json" style="display:none">
+                    <input type="file" id="sigRespFile" accept="application/json,.json" style="display:none">
+                    <!-- QR-scan via kamera/galleri (file capture + jsQR). Spår C2. -->
+                    <input type="file" id="sigQrPubFile" accept="image/*" capture="environment" style="display:none">
+                    <input type="file" id="sigQrRespFile" accept="image/*" capture="environment" style="display:none">
+                    <div class="field-hint" style="margin-top:6px">
+                        Kryptografiska signaturer för provresultat (se roadmap-instruktorssignatur.md).
+                        Allt sker lokalt — privata nyckeln lämnar aldrig enheten via app-flödet.
+                    </div>
+                </section>
 
-                <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+                <!-- Steg 4 — Säkerhetskopiera & flytta -->
+                <section class="settings-step" data-step="4">
+                    <div class="settings-step-head">
+                        <span class="settings-step-num" aria-hidden="true">4</span>
+                        <span class="settings-step-title">Säkerhetskopiera & flytta</span>
+                    </div>
+                    <div class="settings-actions">
+                        <button class="btn btn-sm btn-secondary" id="btnExport">Exportera (JSON)</button>
+                        <button class="btn btn-sm btn-secondary" id="btnImport">Importera…</button>
+                        <input type="file" id="importFile" accept="application/json,.json" style="display:none">
+                    </div>
+                    <div class="field-hint" style="margin-top:6px">Exporten innehåller alla pass + säkerhetsprov + visningsnamn. Inga personnummer.</div>
+                </section>
 
-                <label>Skriv ut / PDF</label>
-                <button class="btn btn-sm btn-secondary" id="btnSkrivUt" style="width:100%">Skriv ut hela skjutboken</button>
-                <div class="field-hint" style="margin-top:6px">Använder webbläsarens skriv ut-funktion. Välj "Spara som PDF" för en digital kopia.</div>
+                <!-- Steg 5 — Skriv ut / PDF -->
+                <section class="settings-step" data-step="5">
+                    <div class="settings-step-head">
+                        <span class="settings-step-num" aria-hidden="true">5</span>
+                        <span class="settings-step-title">Skriv ut / PDF</span>
+                    </div>
+                    <button class="btn btn-sm btn-secondary" id="btnSkrivUt" style="width:100%">Skriv ut hela skjutboken</button>
+                    <div class="field-hint" style="margin-top:6px">Använder webbläsarens skriv ut-funktion. Välj "Spara som PDF" för en digital kopia.</div>
+                </section>
 
-                <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
+                <!-- Steg 6 — Rensa hela skjutboken -->
+                <section class="settings-step" data-step="6">
+                    <div class="settings-step-head">
+                        <span class="settings-step-num" aria-hidden="true">6</span>
+                        <span class="settings-step-title">Rensa hela skjutboken</span>
+                    </div>
+                    <button class="btn btn-sm btn-danger" id="btnRensaAlla" style="width:100%">Rensa hela skjutboken…</button>
+                    <div class="field-hint" style="margin-top:6px">Tar bort alla pass på den här enheten. Bekräftas innan radering.</div>
+                </section>
 
-                <label>Instruktörssignatur
-                    <a href="skyttebok-info.html" class="sig-info-link" style="float:right;font-weight:500;text-transform:none;letter-spacing:0">Hur fungerar signaturer?</a>
-                </label>
-                <div id="sigSelfArea"></div>
-                <div id="sigTrustedArea" style="margin-top:14px"></div>
-                <div id="sigRosterArea"></div>
-                <div id="sigCrossDeviceArea" style="margin-top:14px"></div>
-                <input type="file" id="sigImportFile" accept="application/json,.json" style="display:none">
-                <input type="file" id="sigReqFile" accept="application/json,.json" style="display:none">
-                <input type="file" id="sigRespFile" accept="application/json,.json" style="display:none">
-                <!-- QR-scan via kamera/galleri (file capture + jsQR). Spår C2. -->
-                <input type="file" id="sigQrPubFile" accept="image/*" capture="environment" style="display:none">
-                <input type="file" id="sigQrRespFile" accept="image/*" capture="environment" style="display:none">
-                <div class="field-hint" style="margin-top:6px">
-                    Kryptografiska signaturer för provresultat (se roadmap-instruktorssignatur.md).
-                    Allt sker lokalt — privata nyckeln lämnar aldrig enheten via app-flödet.
-                </div>
-
-                <hr style="border:none;border-top:1px solid var(--border);margin:14px 0">
-
-                <button class="btn btn-sm btn-danger" id="btnRensaAlla" style="width:100%">Rensa hela skjutboken…</button>
-                <div class="field-hint" style="margin-top:6px">Tar bort alla pass på den här enheten. Bekräftas innan radering.</div>
             </div>
         </details>
 
