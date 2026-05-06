@@ -129,6 +129,25 @@
         else localStorage.removeItem(SETTING_PREFIX + name);
     }
 
+    // ── Rollval (Skiva B) ───────────────────────────────────────────────
+    // Topp-nivå nyckel (inte under SETTING_PREFIX) eftersom valet styr
+    // hela inställningskortets utseende, inte bara en option.
+    // Värden: 'soldat' | 'instruktor' | null (= ej valt än).
+    var ROLE_KEY = 'skyttebok_role';
+
+    function getRole() {
+        var v = localStorage.getItem(ROLE_KEY);
+        return (v === 'soldat' || v === 'instruktor') ? v : null;
+    }
+
+    function setRole(role) {
+        if (role === 'soldat' || role === 'instruktor') {
+            localStorage.setItem(ROLE_KEY, role);
+        } else {
+            localStorage.removeItem(ROLE_KEY);
+        }
+    }
+
     // Filter (BAS / TILLÄGG / Båda) — persistent val via settings.
     function getFilter() {
         var v = getSetting('visa');
@@ -2430,15 +2449,103 @@
         );
     };
 
+    // ── Rollvals-UI (Skiva B) ──────────────────────────────────────────
+    // Renderar antingen:
+    //   • ett chip-kort "Du är: 🎯 Soldat / 💻 Instruktör" + "Byt roll"-länk
+    //     (när skyttebok_role är satt), ELLER
+    //   • en prompt med två stora knappar (när rollen ej är vald än, och
+    //     namnet är ifyllt så vi inte trycker två val på en helt ny
+    //     användare på samma gång), ELLER
+    //   • tomt block (när rollen ej är vald OCH namnet är tomt — vi väntar
+    //     på att användaren ska ange namnet först).
+    //
+    // Skiva B: filtrerar INTE resten av kortet — den biten kommer i C/D/E.
+    function renderRoleStep() {
+        var area = document.getElementById('roleStepArea');
+        if (!area) return;
+        var role = getRole();
+        var name = (getSetting('displayname') || '').trim();
+
+        if (role) {
+            var emoji = role === 'instruktor' ? '💻' : '🎯';
+            var label = role === 'instruktor' ? 'Instruktör' : 'Soldat';
+            area.innerHTML =
+                '<div class="role-chip-row" role="status" aria-live="polite">' +
+                    '<span class="role-chip-label">' +
+                        '<span class="role-chip-emoji" aria-hidden="true">' + emoji + '</span>' +
+                        'Du är: ' + escapeHtml(label) +
+                    '</span>' +
+                    '<button type="button" class="role-chip-change" ' +
+                        'onclick="skyttebokClearRole()">Byt roll</button>' +
+                '</div>';
+            return;
+        }
+
+        // Roll ej vald: visa prompten bara om namnet är ifyllt. Annars
+        // tom — vi vill inte överbelasta första-besök-användaren med två
+        // beslut samtidigt.
+        if (!name) {
+            area.innerHTML = '';
+            return;
+        }
+
+        area.innerHTML =
+            '<div class="role-prompt">' +
+                '<div class="role-prompt-title">Är du soldat eller instruktör?</div>' +
+                '<div class="role-prompt-hint">Valet styr vilka signatur-' +
+                    'alternativ som visas. Du kan byta när som helst.</div>' +
+                '<div class="role-buttons">' +
+                    '<button type="button" class="role-btn" ' +
+                        'aria-label="Välj roll: soldat" ' +
+                        'onclick="skyttebokSetRole(\'soldat\')">' +
+                        '<span class="role-btn-emoji" aria-hidden="true">🎯</span>' +
+                        '<span class="role-btn-title">Soldat</span>' +
+                        '<span class="role-btn-hint">Jag skjuter pass och vill få dem signerade.</span>' +
+                    '</button>' +
+                    '<button type="button" class="role-btn" ' +
+                        'aria-label="Välj roll: instruktör" ' +
+                        'onclick="skyttebokSetRole(\'instruktor\')">' +
+                        '<span class="role-btn-emoji" aria-hidden="true">💻</span>' +
+                        '<span class="role-btn-title">Instruktör</span>' +
+                        '<span class="role-btn-hint">Jag signerar andras pass.</span>' +
+                    '</button>' +
+                '</div>' +
+            '</div>';
+    }
+
+    window.skyttebokSetRole = function (role) {
+        setRole(role);
+        renderRoleStep();
+    };
+
+    window.skyttebokClearRole = function () {
+        setRole(null);
+        renderRoleStep();
+        // Scrolla tillbaka till rollvals-blocket så användaren ser att
+        // hen är tillbaka i val-läge. Inget abrupt scroll-hopp om kortet
+        // redan är synligt.
+        var area = document.getElementById('roleStepArea');
+        if (area && typeof area.scrollIntoView === 'function') {
+            area.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+    };
+
     // ── Settings ────────────────────────────────────────────────────────
     function initSettings() {
         var input = document.getElementById('displayName');
         input.value = getSetting('displayname');
         input.addEventListener('change', function () {
             setSetting('displayname', input.value.trim());
+            renderRoleStep();
         });
         input.addEventListener('blur', function () {
             setSetting('displayname', input.value.trim());
+            renderRoleStep();
+        });
+        input.addEventListener('input', function () {
+            // Lättviktig re-render — visa rollvalet så fort namnet finns,
+            // utan att vänta på blur.
+            renderRoleStep();
         });
 
         document.getElementById('btnExport').addEventListener('click', function () {
@@ -2741,6 +2848,7 @@
         initSettings();
         initSigImportFile();
         initQrInputs();
+        renderRoleStep();
         renderSigUi();
         renderAll();
     });
