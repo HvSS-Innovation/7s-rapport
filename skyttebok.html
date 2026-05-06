@@ -20,6 +20,18 @@
                 if (useLight) document.documentElement.setAttribute('data-theme', 'light');
             } catch (_) { /* localStorage kan vara avstängd — ignorera */ }
         })();
+        // Sätt rollen FÖRE body renderas — undviker FOUC av sig-blocket
+        // (Skiva D/E använder html[data-role="..."] för att ordna och dölja
+        // sig-sektionerna). Utan denna inline-init skulle steg 3 blinka
+        // sin default-vy under en frame innan rollen appliceras.
+        (function(){
+            try {
+                var r = localStorage.getItem('skyttebok_role');
+                if (r === 'soldat' || r === 'instruktor') {
+                    document.documentElement.setAttribute('data-role', r);
+                }
+            } catch (_) { /* localStorage kan vara avstängd — ignorera */ }
+        })();
     </script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="theme-color" content="#0d1f0d">

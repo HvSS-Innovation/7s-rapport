@@ -2595,12 +2595,13 @@
         }
 
         area.innerHTML =
-            '<div class="role-prompt">' +
+            '<div class="role-prompt" role="group" aria-label="Välj din roll">' +
                 '<div class="role-prompt-hint">Valet styr vilka signatur-' +
                     'alternativ som visas. Du kan byta när som helst.</div>' +
                 '<div class="role-buttons">' +
                     '<button type="button" class="role-btn" ' +
                         'aria-label="Välj roll: soldat" ' +
+                        'aria-pressed="false" ' +
                         'onclick="skyttebokSetRole(\'soldat\')">' +
                         '<span class="role-btn-emoji" aria-hidden="true">🎯</span>' +
                         '<span class="role-btn-title">Soldat</span>' +
@@ -2608,6 +2609,7 @@
                     '</button>' +
                     '<button type="button" class="role-btn" ' +
                         'aria-label="Välj roll: instruktör" ' +
+                        'aria-pressed="false" ' +
                         'onclick="skyttebokSetRole(\'instruktor\')">' +
                         '<span class="role-btn-emoji" aria-hidden="true">💻</span>' +
                         '<span class="role-btn-title">Instruktör</span>' +
@@ -2630,6 +2632,33 @@
         // direkt efter rollbyte. Det visuella ordningsbytet är CSS-driven
         // och behöver inget extra här.
         renderSigUi();
+        // Skiva G — efter rollvalet, scrolla mjukt ner till steg 3 så att
+        // användaren ser sina nya alternativ. Sätt också tangentbordsfokus
+        // på första interaktiva element i sig-grid:en. requestAnimationFrame
+        // ger renderern en frame att layouta nya knapparna först.
+        if (typeof requestAnimationFrame === 'function') {
+            requestAnimationFrame(function () {
+                var sigStep = document.getElementById('sigStepSection');
+                if (sigStep && typeof sigStep.scrollIntoView === 'function') {
+                    sigStep.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+                // Hitta första synliga knappen i sig-grid:en. CSS sätter
+                // visibility/order, så querySelector + offsetParent-koll
+                // räcker för att hitta vad användaren faktiskt ser först.
+                var inner = document.getElementById('sigStepInner');
+                if (!inner) return;
+                var candidates = inner.querySelectorAll('button, [tabindex]');
+                for (var i = 0; i < candidates.length; i++) {
+                    var c = candidates[i];
+                    // offsetParent === null betyder att elementet (eller
+                    // dess förälder) är display:none. Hoppa över sådana.
+                    if (c.offsetParent !== null && !c.disabled) {
+                        try { c.focus({ preventScroll: true }); } catch (_) { /* ignorera */ }
+                        break;
+                    }
+                }
+            });
+        }
     };
 
     window.skyttebokClearRole = function () {
