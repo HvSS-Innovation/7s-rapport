@@ -214,6 +214,16 @@
         html[data-role="soldat"] #sigCrossDeviceArea { order: 2; }
         html[data-role="soldat"] #sigRosterArea { order: 3; }
 
+        /* Instruktör-spår — visa: Self → CrossDevice → Roster.
+           Dölj: Trusted (betrodda andras nycklar är soldat-funktion).
+           Cross-device-knapparna 'Begär signatur' / 'Importera svar' /
+           'Scanna svar (QR)' renderas inte alls i JS — endast
+           'Signera mottagen begäran' visas. */
+        html[data-role="instruktor"] #sigTrustedArea { display: none; }
+        html[data-role="instruktor"] #sigSelfArea { order: 1; }
+        html[data-role="instruktor"] #sigCrossDeviceArea { order: 2; }
+        html[data-role="instruktor"] #sigRosterArea { order: 3; }
+
         /* Roll ej vald — dölj hela sig-griden och visa hint i steg 3. */
         html:not([data-role="soldat"]):not([data-role="instruktor"]) #sigStepInner { display: none; }
         html:not([data-role="soldat"]):not([data-role="instruktor"]) #sigStepNoRoleHint { display: block !important; }
