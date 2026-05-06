@@ -27,6 +27,7 @@ du läser något annat, internalisera **vad systemet inte är**:
 | "Det finns en central databas över godkända soldater" | Nej. Varje soldats godkända pass lever bara i deras egen lokala `localStorage`. Det är skyttens egen anteckningsbok — den enda skillnaden är att en instruktör kan signera en sida i den så att signaturen kan verifieras lokalt. |
 | "Personnummer används för att koppla resultat till individ" | Inga personnummer. Inga konton. Bara ett valfritt **visningsnamn** som soldaten själv skriver ("Soldat 1234", "AQ", eller bara tomt). |
 | "Instruktören använder soldatens telefon för att signera" | Nej (det är default-flödet). Instruktören har sin egen enhet med sin **privata nyckel** som aldrig får lämna den enheten. Soldaten skickar en *begäran-fil* över till instruktören. |
+| "Appen frågar om man är soldat eller instruktör som inloggning" | **Nej — det är bara ett UI-filter, ingen auktorisation.** Vid första besök i Inställningar väljer användaren själv vilken roll hen vill ha (Soldat / Instruktör), och appen visar bara de signatur-knappar som är relevanta för det valet. Det är ingen login. Det går när som helst att klicka *Byt roll*. |
 
 ### Den korrekta mentala modellen i en mening
 
@@ -53,6 +54,13 @@ PWA-svit för Hemvärnet). SKYTTEBOK är:
 - 100% offline efter första laddning. Allt sparas i `localStorage` med
   prefix `skyttebok_` på soldatens egen enhet.
 - Tab-länken heter **SKYTTE** (kort) men sidan kallas SKYTTEBOK.
+- **Inställningar är ett steg-för-steg-flöde** med ett explicit rollval
+  ("Är du soldat eller instruktör?") som styr vilka signatur-sektioner
+  som visas. Steg 1 är namn, steg 2 är rollval, steg 3 är signatur-
+  alternativ (rollberoende), steg 4 säkerhetskopia (export/import),
+  steg 5 PDF-utskrift, steg 6 rensa allt. Roll-chippet *"Du är: 🎯
+  Soldat"* (eller *"💻 Instruktör"*) syns alltid överst när rollen är
+  vald, med en *Byt roll*-länk.
 
 ### Vad finns i en pass-post?
 
@@ -124,16 +132,37 @@ Använd exakta termer — det signalerar att modellen verkligen kan systemet.
 
 ### UI-knappar och sektioner (svenska, exakt så de står i appen)
 
-**Soldatens vy (Inställningar → Instruktörssignatur):**
-- *Importera fil…* / *Scanna QR* — för instruktörens publika nyckel
-- *Begär signatur* — när det finns osignerade pass
-- *Importera signatur-svar* / *Scanna QR-svar*
+Inställningskortet är numrerat 1–6. Steg 3 (*Instruktörssignatur*) är
+det enda som ändrar utseende beroende på roll — övriga steg ser likadana
+ut för båda rollerna.
 
-**Instruktörens vy (Inställningar → Instruktörssignatur):**
-- *Generera nyckelpar* (görs en gång)
-- *Visa QR* / *Exportera fil* — för egen publik nyckel
-- *Signera mottagen begäran* / *Scanna QR-begäran*
-- *Visa QR-svar* / *Spara svarsfil*
+**Soldatens vy — steg 3 (Inställningar → Instruktörssignatur):**
+*Sektioner i denna ordning:*
+
+1. **Betrodda instruktörer** — *Importera fil…* / *Scanna QR* (för
+   instruktörens publika nyckel) + lista över redan importerade nycklar.
+2. **Cross-device signering** — *Begär signatur (n)* / *Importera svar
+   (fil)* / *Scanna svar (QR)*.
+3. **Importerade rostrar** — visar bunt-filer som ger blå *OFFICIELL*-
+   badges på nycklarna i bunten.
+
+Dolt i soldat-vyn (eftersom det är instruktör-only): *Generera
+nyckelpar*, *Visa egen QR / Exportera publik nyckel*, *Signera mottagen
+begäran*.
+
+**Instruktörens vy — steg 3 (Inställningar → Instruktörssignatur):**
+*Sektioner i denna ordning:*
+
+1. **Mitt nyckelpar** — *Generera nyckelpar* (görs en gång), sedan
+   *Exportera fil* / *Visa som QR* + *Visningsnamn* + *Ta bort eget
+   nyckelpar…*.
+2. **Cross-device signering** — *Signera mottagen begäran (instruktör)*.
+3. **Importerade rostrar** — listan över bunt-filer instruktören själv
+   litar på (samma sektion som soldaten har).
+
+Dolt i instruktör-vyn (eftersom det är soldat-only): *Importera fil…*
+/ *Scanna QR* (för andras nycklar — *Betrodda instruktörer*-blocket),
+*Begär signatur*, *Importera svar (fil)*, *Scanna svar (QR)*.
 
 ### Pass-statusar
 
@@ -190,6 +219,16 @@ På pass-raden i listan:
 
 ## 4. Soldatens flöde — exakta steg
 
+### 4.0 Sätt namn + välj roll "Soldat" (görs en gång, första gången du öppnar Inställningar)
+
+0. **Inställningar → steg 1 (Ditt namn):** skriv visningsnamnet (frivilligt).
+1. **Inställningar → steg 2 (Är du soldat eller instruktör?):** klicka
+   **🎯 Soldat**. Chippet *"Du är: 🎯 Soldat"* dyker upp överst i
+   inställningskortet, och steg 3 visar nu bara soldat-relevanta
+   sektioner. Valet sparas i `localStorage` under nyckeln
+   `skyttebok_role` och kvarstår över sidladdningar. Det går när som
+   helst att klicka *Byt roll* för att gå tillbaka.
+
 ### 4.1 Engångs-setup (gör en gång)
 
 1. **Öppna appen** i mobilen, gå till SKYTTE-fliken (sub-nav).
@@ -235,6 +274,18 @@ På pass-raden i listan:
 ---
 
 ## 5. Instruktörens flöde — exakta steg
+
+### 5.0 Sätt namn + välj roll "Instruktör" (görs en gång, första gången du öppnar Inställningar)
+
+0. **Inställningar → steg 1 (Ditt namn):** skriv ditt instruktörsnamn,
+   t.ex. *"Furir Andersson"* eller *"Insp 4"*.
+1. **Inställningar → steg 2 (Är du soldat eller instruktör?):** klicka
+   **💻 Instruktör**. Chippet *"Du är: 💻 Instruktör"* dyker upp
+   överst, och steg 3 visar nu *Mitt nyckelpar*-blocket istället för
+   *Betrodda instruktörer*. Soldat-knapparna *Begär signatur* /
+   *Importera svar* försvinner. Valet sparas i `skyttebok_role` och
+   kvarstår över sidladdningar. *Byt roll*-länken kan användas om hen
+   senare ska agera soldat på samma enhet.
 
 ### 5.1 Engångs-setup
 
@@ -542,23 +593,25 @@ inte *"shooting log"*. Svenska, militärt-korrekt vokabulär.
 2. **Begäran/Svar är filer/QR.** Inget sker automatiskt.
 3. **Privat nyckel lämnar aldrig instruktörens enhet.**
 
-### De fyra knapparna en soldat behöver
+### De fyra knapparna en soldat behöver (i den ordning de ligger i steg 3)
 
-| Knapp | Var | När |
-|---|---|---|
-| Importera fil… / Scanna QR | Inställningar → Instruktörssignatur | Engångs — för instruktörens nyckel |
-| Lägg till pass | På varje övningskort | Efter varje pass |
-| Begär signatur | Inställningar → Instruktörssignatur | När du har osignerade pass |
-| Importera signatur-svar | Inställningar → Instruktörssignatur | När instruktören skickat tillbaka |
+| # | Knapp | Var | När |
+|---|---|---|---|
+| 0 | 🎯 Soldat | Inställningar → steg 2 | Engångs (rollval) |
+| 1 | Importera fil… / Scanna QR | Inställningar → steg 3 → Betrodda instruktörer | Engångs — för instruktörens nyckel |
+| 2 | Lägg till pass | På varje övningskort | Efter varje pass |
+| 3 | Begär signatur | Inställningar → steg 3 → Cross-device | När du har osignerade pass |
+| 4 | Importera svar (fil) / Scanna svar (QR) | Inställningar → steg 3 → Cross-device | När instruktören skickat tillbaka |
 
-### De fyra knapparna en instruktör behöver
+### De fyra knapparna en instruktör behöver (i den ordning de ligger i steg 3)
 
-| Knapp | Var | När |
-|---|---|---|
-| Generera nyckelpar | Inställningar → Instruktörssignatur | Engångs |
-| Visa QR / Exportera fil | Min publika nyckel-kort | Per soldat |
-| Signera mottagen begäran / Scanna QR-begäran | Inställningar → Instruktörssignatur | Vid varje begäran |
-| Visa QR-svar / Spara svarsfil | Efter signering | Vid varje begäran |
+| # | Knapp | Var | När |
+|---|---|---|---|
+| 0 | 💻 Instruktör | Inställningar → steg 2 | Engångs (rollval) |
+| 1 | Generera nyckelpar | Inställningar → steg 3 → Mitt nyckelpar | Engångs |
+| 2 | Exportera fil / Visa som QR | Mitt nyckelpar-kortet | Per soldat |
+| 3 | Signera mottagen begäran (instruktör) | Inställningar → steg 3 → Cross-device | Vid varje begäran |
+| 4 | Visa QR-svar / Spara svarsfil | Efter signering (samma område) | Vid varje begäran |
 
 ### Tre badge-färger
 
