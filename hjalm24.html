@@ -1,0 +1,1128 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="HJÄLM 24">
+<title>HJÄLM 24 – Storleksguide & utprovning</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828; --danger-hover:#e53935;
+    --warn-bg:#3e2a00; --warn-border:#c8a24e; --warn-text:#e8c068;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; }
+  .container { max-width:560px; margin:0 auto; }
+
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; transition:background 0.15s,color 0.15s; -webkit-tap-highlight-color:transparent; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; letter-spacing:0.05em; }
+
+  /* Wizard-progress */
+  .wiz-progress { display:flex; gap:6px; margin-bottom:14px; align-items:center; font-size:0.72rem; color:var(--text-muted); letter-spacing:0.05em; text-transform:uppercase; }
+  .wiz-progress .wiz-bar { flex:1; height:6px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:999px; overflow:hidden; }
+  .wiz-progress .wiz-bar-fill { display:block; height:100%; background:var(--accent); width:0%; transition:width 0.25s ease; }
+
+  /* Card för wizard-steget */
+  .wiz-card { background:var(--bg-card); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:var(--radius); padding:18px 18px 22px; margin-bottom:14px; }
+  .wiz-card h2 { color:var(--accent); font-size:1.05rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:10px; }
+  .wiz-card p { color:var(--text-secondary); font-size:0.92rem; line-height:1.55; margin-bottom:10px; }
+  .wiz-card p strong { color:var(--text-primary); }
+  .wiz-card .lede { color:var(--text-primary); font-size:1rem; line-height:1.5; }
+  .wiz-card .hint { font-size:0.78rem; color:var(--text-muted); line-height:1.5; margin-top:8px; }
+
+  .wiz-step { display:none; }
+  .wiz-step.active { display:block; }
+
+  /* Inputs */
+  label { font-weight:600; font-size:0.82rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:6px; }
+  input[type="number"], input[type="text"] {
+    width:100%; background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); color:var(--text-primary);
+    font-family:inherit; font-size:1.1rem; padding:14px 16px;
+    outline:none; transition:border-color 0.15s; -webkit-appearance:none; appearance:none;
+    min-height:56px;
+  }
+  input[type="number"]:focus, input[type="text"]:focus { border-color:var(--accent); }
+  .input-suffix { position:relative; }
+  .input-suffix .suffix-cm { position:absolute; right:16px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:0.95rem; pointer-events:none; }
+  .input-suffix input { padding-right:42px; }
+
+  /* Radio / val-grupper (stora knappar) */
+  .opt-list { display:flex; flex-direction:column; gap:8px; margin-top:6px; }
+  .opt {
+    display:flex; align-items:center; gap:12px;
+    background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:14px 16px;
+    cursor:pointer; min-height:56px; -webkit-tap-highlight-color:transparent;
+    transition:background 0.12s, border-color 0.12s;
+  }
+  .opt:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .opt input[type="radio"] { width:20px; height:20px; accent-color:var(--accent); margin:0; flex-shrink:0; cursor:pointer; }
+  .opt .opt-label { color:var(--text-primary); font-size:0.95rem; line-height:1.4; flex:1; }
+  .opt .opt-sub { color:var(--text-muted); font-size:0.78rem; line-height:1.4; margin-top:2px; display:block; }
+  .opt.selected { background:var(--accent-dim); border-color:var(--accent); }
+
+  /* Knappar */
+  .btn-row { display:flex; gap:10px; margin-top:18px; }
+  .btn {
+    flex:1; min-height:56px; padding:14px 18px;
+    border:none; border-radius:var(--radius-sm);
+    font-family:inherit; font-size:1rem; font-weight:700;
+    letter-spacing:0.04em; cursor:pointer;
+    transition:background 0.12s, transform 0.06s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-primary { background:var(--accent); color:#0c1a0c; }
+  .btn-primary:hover:not(:disabled) { background:var(--accent-hover); }
+  .btn-primary:disabled { background:var(--accent-dim); color:var(--text-muted); cursor:not-allowed; }
+  .btn-primary:active:not(:disabled) { transform:translateY(1px); }
+  .btn-secondary { background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border); }
+  .btn-secondary:hover { color:var(--text-primary); border-color:var(--border-focus); }
+  .btn-link { background:none; color:var(--text-muted); border:none; font-size:0.85rem; padding:10px 14px; cursor:pointer; font-family:inherit; min-height:44px; }
+  .btn-link:hover { color:var(--accent); }
+
+  .err { color:#ff9080; font-size:0.85rem; margin-top:8px; min-height:1.2em; }
+
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  /* Resultatkort */
+  .result-hero {
+    background:linear-gradient(180deg, var(--accent-dim) 0%, var(--bg-card) 100%);
+    border:1px solid var(--accent); border-radius:var(--radius);
+    padding:22px 18px 24px; text-align:center; margin-bottom:14px;
+  }
+  .result-hero .result-label { font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:6px; }
+  .result-hero .result-size { font-size:3.2rem; font-weight:800; color:var(--accent); letter-spacing:0.04em; line-height:1; }
+  .result-hero .result-meta { color:var(--text-secondary); font-size:0.9rem; margin-top:10px; line-height:1.5; }
+  .result-hero .result-meta strong { color:var(--text-primary); }
+
+  .result-warn {
+    background:var(--warn-bg); border:1px solid var(--warn-border);
+    color:var(--warn-text); border-radius:var(--radius);
+    padding:14px 16px; margin-bottom:14px; font-size:0.9rem; line-height:1.55;
+  }
+  .result-alt {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px 16px; margin-bottom:14px;
+    font-size:0.88rem; line-height:1.55; color:var(--text-secondary);
+  }
+  .result-alt strong { color:var(--text-primary); }
+
+  /* Tabell — referensvy */
+  .ref-table {
+    width:100%; border-collapse:collapse; margin-top:8px;
+    font-size:0.85rem; color:var(--text-secondary);
+  }
+  .ref-table th, .ref-table td { text-align:left; padding:8px 10px; border-bottom:1px solid var(--border); }
+  .ref-table th { color:var(--text-muted); font-weight:600; text-transform:uppercase; font-size:0.72rem; letter-spacing:0.05em; }
+  .ref-table tr.match td { background:var(--accent-dim); color:var(--text-primary); font-weight:700; }
+  .ref-table tr.match td:first-child { color:var(--accent); }
+
+  /* Checklista */
+  .checklist { list-style:none; padding:0; margin:0; }
+  .checklist li {
+    display:flex; gap:12px; align-items:flex-start;
+    background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:12px 14px;
+    margin-bottom:8px; line-height:1.5;
+    cursor:pointer; min-height:48px;
+    transition:background 0.12s, border-color 0.12s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .checklist li:hover { border-color:var(--border-focus); }
+  .checklist li input[type="checkbox"] { width:22px; height:22px; accent-color:var(--accent); margin-top:1px; flex-shrink:0; cursor:pointer; }
+  .checklist li .cl-text { color:var(--text-primary); font-size:0.92rem; }
+  .checklist li.done { background:var(--accent-dim); border-color:var(--accent); }
+  .checklist li.done .cl-text { color:var(--text-secondary); text-decoration:line-through; }
+
+  .section-title { font-size:0.78rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-secondary); margin:18px 0 8px; }
+
+  /* ═══ FAS 2 — Klickbar progress (step-pills) ═══ */
+  .wiz-pills { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .wiz-pill {
+    flex:1; min-width:0;
+    background:var(--bg-secondary); border:1px solid var(--border);
+    border-radius:999px; padding:6px 4px; min-height:34px;
+    font-size:0.68rem; letter-spacing:0.05em; text-transform:uppercase;
+    color:var(--text-muted); text-align:center; cursor:default;
+    font-family:inherit; -webkit-tap-highlight-color:transparent;
+    display:flex; align-items:center; justify-content:center; gap:4px;
+    transition:background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .wiz-pill .pill-num { font-family:'Courier New',monospace; font-weight:700; opacity:0.9; }
+  .wiz-pill .pill-label { display:none; }
+  @media (min-width:520px) { .wiz-pill .pill-label { display:inline; } }
+  .wiz-pill.is-current { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .wiz-pill.is-done { color:var(--text-secondary); border-color:var(--border-focus); cursor:pointer; }
+  .wiz-pill.is-done:hover { background:var(--bg-card); color:var(--accent); border-color:var(--accent); }
+  .wiz-pill.is-locked { opacity:0.55; }
+
+  /* ═══ FAS 2 — Slide-animation mellan steg ═══ */
+  .wiz-step.active { animation:wiz-slide-in 0.22s ease-out; }
+  @keyframes wiz-slide-in {
+    from { opacity:0; transform:translateX(8px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wiz-step.active { animation:none; }
+    .wiz-bar-fill { transition:none; }
+    .wiz-pill { transition:none; }
+  }
+
+  /* ═══ FAS 2 — Inline SVG-figurer ═══ */
+  .fig {
+    display:block; width:100%; max-width:100%; height:auto;
+    margin:14px auto; background:var(--bg-input);
+    border:1px solid var(--border); border-radius:var(--radius-sm);
+  }
+  .fig text { font-family:'Inter',system-ui,sans-serif; fill:var(--text-primary); }
+  .fig .fig-stroke { stroke:var(--text-secondary); fill:none; stroke-width:1.6; }
+  .fig .fig-stroke-soft { stroke:var(--border-focus); fill:none; stroke-width:1.2; stroke-dasharray:3 3; }
+  .fig .fig-fill { fill:var(--bg-secondary); }
+  .fig .fig-tape { stroke:var(--accent); fill:none; stroke-width:2.4; }
+  .fig .fig-tape-fill { fill:var(--accent); }
+  .fig .fig-arrow { stroke:var(--accent); fill:none; stroke-width:1.8; }
+  .fig .fig-arrow-head { fill:var(--accent); }
+  .fig .fig-label { font-size:11px; font-weight:600; fill:var(--text-primary); }
+  .fig .fig-sub { font-size:9.5px; fill:var(--text-muted); }
+  .fig .fig-num { font-size:11px; font-weight:700; fill:var(--accent); font-family:'Courier New',monospace; }
+  .fig .fig-num-bg { fill:var(--bg-primary); stroke:var(--accent); stroke-width:1.4; }
+  .fig .fig-helmet-skal { fill:var(--bg-secondary); stroke:var(--text-secondary); stroke-width:1.6; }
+  .fig .fig-helmet-pad { fill:var(--accent-dim); stroke:var(--accent); stroke-width:1.2; }
+  .fig .fig-helmet-strap { stroke:var(--text-muted); fill:none; stroke-width:1.4; }
+
+  /* "Hur mäter jag?"-detaljer */
+  details.howto { margin-top:10px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:0; }
+  details.howto > summary {
+    cursor:pointer; padding:12px 14px; min-height:44px;
+    color:var(--accent); font-weight:600; font-size:0.88rem;
+    list-style:none; -webkit-tap-highlight-color:transparent;
+    display:flex; align-items:center; gap:8px;
+  }
+  details.howto > summary::-webkit-details-marker { display:none; }
+  details.howto > summary::before { content:'+'; display:inline-block; width:18px; text-align:center; font-family:'Courier New',monospace; font-weight:700; }
+  details.howto[open] > summary::before { content:'−'; }
+  details.howto > div { padding:0 14px 14px; color:var(--text-secondary); font-size:0.88rem; line-height:1.55; }
+  details.howto ol { margin:6px 0 6px 22px; padding:0; }
+  details.howto ol li { margin-bottom:6px; color:var(--text-primary); }
+
+  /* ═══ FAS 3 — Toast / kopiera-feedback ═══ */
+  .toast {
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--bg-card); color:var(--text-primary);
+    border:1px solid var(--accent); border-radius:var(--radius);
+    padding:12px 18px; font-size:0.88rem; font-weight:600;
+    box-shadow:0 4px 18px rgba(0,0,0,0.45);
+    opacity:0; pointer-events:none;
+    transition:opacity 0.2s, transform 0.2s;
+    z-index:9999;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) { .toast { transition:none; } }
+
+  /* ═══ FAS 3 — Print-CSS ═══ */
+  @media print {
+    body { background:#fff; color:#000; padding:0; }
+    .container { max-width:none; padding:0 14mm; }
+    .tab-nav, .tab-nav-sub, .back-link, .wiz-pills, .btn-row, .btn,
+    footer a, .toast, header p { display:none !important; }
+    .wiz-step { display:none !important; }
+    .wiz-step#step6 { display:block !important; }
+    header { padding:0 0 8px; text-align:left; border-bottom:1px solid #444; }
+    header h1 { color:#000; font-size:14pt; }
+    .result-hero { background:none; border:1px solid #000; color:#000; padding:14px; }
+    .result-hero .result-label { color:#444; }
+    .result-hero .result-size { color:#000; font-size:36pt; }
+    .result-hero .result-meta { color:#000; }
+    .result-hero .result-meta strong { color:#000; }
+    .result-warn { background:#fff8e1; border:1px solid #c8a24e; color:#000; }
+    .result-alt { background:#fff; border:1px solid #000; color:#000; }
+    .result-alt strong { color:#000; }
+    .ref-table { color:#000; }
+    .ref-table th { color:#444; }
+    .ref-table tr.match td { background:#e8f5e9; color:#000; }
+    .ref-table tr.match td:first-child { color:#000; }
+    .ref-table th, .ref-table td { border-bottom:1px solid #888; }
+    .wiz-card { background:#fff; border:1px solid #000; color:#000; page-break-inside:avoid; }
+    .wiz-card h2 { color:#000; }
+    .checklist li { background:#fff; border:1px solid #000; color:#000; page-break-inside:avoid; }
+    .checklist li .cl-text { color:#000; }
+    .checklist li.done { background:#fff; }
+    .checklist li.done .cl-text { color:#000; text-decoration:none; }
+    .checklist li input[type="checkbox"] { width:14px; height:14px; }
+    .section-title { color:#000; }
+    footer { color:#000; border-top:1px solid #888; padding-top:8px; }
+  }
+
+  footer { text-align:center; padding:24px 0 12px; color:var(--text-muted); font-size:0.72rem; line-height:1.6; }
+  footer a { color:var(--accent); text-decoration:none; }
+  footer a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Storleksguiden kräver JavaScript. Aktivera och ladda om sidan.</div></noscript>
+<div class="container">
+
+  <header>
+    <h1>HJÄLM 24</h1>
+    <p>Storleksguide &amp; utprovning · Stridshjälm 24 (Galvion Batlskin Caiman)</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+    <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+    <a href="fors.html" class="tab-link">FORS</a>
+    <a href="pedars.html" class="tab-link">PEDARS</a>
+    <a href="postschema.html" class="tab-link">SCHEMA</a>
+    <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+    <a href="obo.html" class="tab-link">OBO</a>
+    <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+    <a href="vader.html" class="tab-link">VÄDER</a>
+    <a href="minkarta.html" class="tab-link">MINKARTA</a>
+    <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+    <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+    <a href="hjalm24.html" class="tab-link active">HJÄLM 24</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <div class="wiz-pills" id="wizPills" role="tablist" aria-label="Wizard-steg">
+    <button type="button" class="wiz-pill" data-go="1"><span class="pill-num">1</span><span class="pill-label">Intro</span></button>
+    <button type="button" class="wiz-pill" data-go="2"><span class="pill-num">2</span><span class="pill-label">Mät</span></button>
+    <button type="button" class="wiz-pill" data-go="3"><span class="pill-num">3</span><span class="pill-label">Mössa</span></button>
+    <button type="button" class="wiz-pill" data-go="4"><span class="pill-num">4</span><span class="pill-label">Hörsel</span></button>
+    <button type="button" class="wiz-pill" data-go="5"><span class="pill-num">5</span><span class="pill-label">Glasögon</span></button>
+    <button type="button" class="wiz-pill" data-go="6"><span class="pill-num">6</span><span class="pill-label">Resultat</span></button>
+  </div>
+
+  <main>
+
+    <!-- STEG 1 — INTRO -->
+    <section class="wiz-card wiz-step active" id="step1" data-step="1" aria-labelledby="step1-title">
+      <h2 id="step1-title">Välkommen</h2>
+      <p class="lede">Den här guiden hjälper dig att <strong>uppskatta sannolik storlek</strong> på Stridshjälm 24 innan du går till utprovning, samt att veta <strong>vad du ska kontrollera</strong> när du provar hjälmen fysiskt.</p>
+      <p>Du behöver:</p>
+      <p>• Ett <strong>måttband</strong> (eller en bit snöre + linjal).<br>
+         • Ca <strong>2 minuter</strong>.<br>
+         • Inget annat — alla svar lagras bara på den här enheten.</p>
+      <p class="hint">Ingen storleksrekommendation från en webbsida ersätter en fysisk utprovning. Den här guiden ger dig ett utgångsläge — passformen avgörs alltid på plats.</p>
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="btnIntroNext">Starta</button>
+      </div>
+    </section>
+
+    <!-- STEG 2 — MÄT -->
+    <section class="wiz-card wiz-step" id="step2" data-step="2" aria-labelledby="step2-title">
+      <h2 id="step2-title">Mät huvudomfånget</h2>
+
+      <!-- Måttbands-figur: huvudprofil från sidan med band ca 1 cm ovan ögonbryn,
+           över örat, runt bakhuvudet. Numrerade steg-prickar matchar listan nedan. -->
+      <svg class="fig" viewBox="0 0 360 220" role="img" aria-labelledby="figMeasureTitle figMeasureDesc">
+        <title id="figMeasureTitle">Hur måttbandet placeras</title>
+        <desc id="figMeasureDesc">Profilskiss av huvud sett från sidan. Ett måttband markeras runt skallen ca 1 cm ovanför ögonbrynet, rakt över örat och runt största delen av bakhuvudet.</desc>
+
+        <!-- Hals -->
+        <path class="fig-fill fig-stroke" d="M148,200 L148,170 Q148,164 158,162 L186,162 Q196,164 196,170 L196,200 Z"/>
+        <!-- Skalle (profil mot vänster) -->
+        <path class="fig-fill fig-stroke" d="M196,162 Q188,150 200,138 Q252,128 268,98 Q272,80 264,60 Q244,30 200,30 Q144,30 116,68 Q102,90 110,118 Q116,138 132,150 Q142,156 148,162 Z"/>
+        <!-- Öra -->
+        <path class="fig-fill fig-stroke" d="M168,118 Q156,124 158,138 Q162,148 172,148 Q174,138 174,128 Q172,120 168,118 Z"/>
+        <!-- Ögonbryn-streck (referens) -->
+        <line class="fig-stroke-soft" x1="118" y1="98" x2="166" y2="98"/>
+        <text class="fig-sub" x="118" y="92">ögonbryn</text>
+
+        <!-- Måttband: hela skallen runt, ca 1 cm ovanför ögonbryn, över örat, runt bak. -->
+        <path class="fig-tape" d="M118,86 Q120,80 130,72 Q170,42 220,46 Q258,52 268,76 Q272,90 268,104 Q260,128 230,138 Q200,144 168,140 Q140,136 124,118 Q116,106 118,86 Z"/>
+        <!-- Pilmarkering -->
+        <line class="fig-arrow" x1="296" y1="60" x2="266" y2="78"/>
+        <polygon class="fig-arrow-head" points="266,78 274,72 272,82"/>
+        <text class="fig-label" x="300" y="56">Måttband</text>
+        <text class="fig-sub" x="300" y="68">runt hela skallen</text>
+
+        <!-- Numrerade markeringar -->
+        <!-- 1: framtill, ca 1 cm ovan ögonbryn -->
+        <circle class="fig-num-bg" cx="124" cy="92" r="11"/>
+        <text class="fig-num" x="124" y="96" text-anchor="middle">1</text>
+        <!-- 2: över öra -->
+        <circle class="fig-num-bg" cx="172" cy="118" r="11"/>
+        <text class="fig-num" x="172" y="122" text-anchor="middle">2</text>
+        <!-- 3: bakhuvudets bredaste -->
+        <circle class="fig-num-bg" cx="266" cy="92" r="11"/>
+        <text class="fig-num" x="266" y="96" text-anchor="middle">3</text>
+      </svg>
+
+      <p>Lägg måttbandet runt huvudet — passera de tre markerade punkterna:</p>
+      <p><strong>1.</strong> Framtill: <strong>ca 1 cm ovanför ögonbrynen</strong>.<br>
+         <strong>2.</strong> På sidorna: <strong>rakt över öronen</strong> (inte under).<br>
+         <strong>3.</strong> Baktill: <strong>runt största delen av bakhuvudet</strong>.</p>
+      <p class="hint">Bandet ska ligga an mot huden eller tunt hår — inte hård dragning, men inget glapp.</p>
+
+      <details class="howto">
+        <summary>Inget måttband? Så använder du ett snöre</summary>
+        <div>
+          <ol>
+            <li>Ta en bit snöre eller paketsnodd, runt 1 m.</li>
+            <li>Lägg det runt huvudet på samma sätt som ovan, markera med tumnageln eller en tuschpenna där snöret möter sig självt.</li>
+            <li>Lägg snöret rakt mot en linjal eller tumstock.</li>
+            <li>Läs av i centimeter — det är ditt huvudomfång.</li>
+          </ol>
+          <p>En kompis som mäter ger oftast jämnare resultat än att mäta sig själv framför spegel.</p>
+        </div>
+      </details>
+
+      <label for="headCm" style="margin-top:14px;">Huvudomfång</label>
+      <div class="input-suffix">
+        <input type="number" id="headCm" inputmode="decimal" step="0.5" min="40" max="80" placeholder="t.ex. 57" autocomplete="off">
+        <span class="suffix-cm">cm</span>
+      </div>
+      <div class="err" id="headErr" aria-live="polite"></div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" id="btnMeasureNext">Nästa</button>
+      </div>
+    </section>
+
+    <!-- STEG 3 — MÖSSA -->
+    <section class="wiz-card wiz-step" id="step3" data-step="3" aria-labelledby="step3-title">
+      <h2 id="step3-title">Mössa under hjälmen?</h2>
+      <p>Bär du oftast en tunn finullsmössa (eller liknande) under hjälmen i tjänst?</p>
+      <p class="hint">En tunn mössa ändrar passformen marginellt. På gränsfall (mätning nära intervallets övre kant) kan vi rekommendera en storlek upp om svaret är ja.</p>
+
+      <div class="opt-list" role="radiogroup" aria-labelledby="step3-title">
+        <label class="opt"><input type="radio" name="hat" value="ja"><span class="opt-label">Ja, oftast<span class="opt-sub">Vinter, kyla, vakttjänst</span></span></label>
+        <label class="opt"><input type="radio" name="hat" value="nej"><span class="opt-label">Nej, sällan<span class="opt-sub">Direkt mot håret eller bara svettband</span></span></label>
+        <label class="opt"><input type="radio" name="hat" value="vetej"><span class="opt-label">Vet ej / växlar<span class="opt-sub">Säkrast — påverkar bara hint på gränsfall</span></span></label>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" id="btnHatNext">Nästa</button>
+      </div>
+    </section>
+
+    <!-- STEG 4 — HÖRSELSKYDD -->
+    <section class="wiz-card wiz-step" id="step4" data-step="4" aria-labelledby="step4-title">
+      <h2 id="step4-title">Hörselskydd?</h2>
+      <p>Vilket hörselskydd kommer du oftast använda <em>tillsammans med hjälmen</em>?</p>
+      <p class="hint">Detta påverkar inte storleksvalet — men det är en viktig <strong>kontrollpunkt vid utprovning</strong>. Stora aktiva kåpor ska få plats utan att tippa skalet.</p>
+
+      <div class="opt-list" role="radiogroup" aria-labelledby="step4-title">
+        <label class="opt"><input type="radio" name="hearing" value="inga"><span class="opt-label">Inga<span class="opt-sub">Eller bara enstaka skytteövningar</span></span></label>
+        <label class="opt"><input type="radio" name="hearing" value="lattvikt"><span class="opt-label">Lättviktiga / in-ear<span class="opt-sub">T.ex. propp i örat, inte kåpor</span></span></label>
+        <label class="opt"><input type="radio" name="hearing" value="kapor"><span class="opt-label">Stora kåpor (Peltor o.l.)<span class="opt-sub">Aktivt hörselskydd över örat</span></span></label>
+        <label class="opt"><input type="radio" name="hearing" value="vetej"><span class="opt-label">Vet ej</span></label>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" id="btnHearingNext">Nästa</button>
+      </div>
+    </section>
+
+    <!-- STEG 5 — GLASÖGON -->
+    <section class="wiz-card wiz-step" id="step5" data-step="5" aria-labelledby="step5-title">
+      <h2 id="step5-title">Glasögon eller skyddsglas?</h2>
+      <p>Använder du <strong>vanliga glasögon</strong> i tjänst, eller bär du <strong>skyddsglas/ballistiska glas</strong> regelbundet?</p>
+      <p class="hint">Också en utprovnings-fråga, inte en storleksfråga. Vi lägger det i checklistan så du kommer ihåg att testa med dina glasögon på plats.</p>
+
+      <div class="opt-list" role="radiogroup" aria-labelledby="step5-title">
+        <label class="opt"><input type="radio" name="glasses" value="ja"><span class="opt-label">Ja<span class="opt-sub">Vanliga, skyddsglas eller båda</span></span></label>
+        <label class="opt"><input type="radio" name="glasses" value="nej"><span class="opt-label">Nej</span></label>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" id="btnGlassesNext">Visa rekommendation</button>
+      </div>
+    </section>
+
+    <!-- STEG 6 — RESULTAT -->
+    <section class="wiz-step" id="step6" data-step="6" aria-labelledby="step6-title" aria-live="polite">
+      <h2 id="step6-title" style="position:absolute;left:-9999px;">Resultat</h2>
+
+      <div class="result-hero">
+        <div class="result-label">Sannolik storlek</div>
+        <div class="result-size" id="resSize">–</div>
+        <div class="result-meta" id="resMeta">—</div>
+      </div>
+
+      <div class="result-warn" id="resWarn" style="display:none;"></div>
+      <div class="result-alt" id="resAlt" style="display:none;"></div>
+
+      <!-- Hjälm-anatomi: callouts med termer som checklistan refererar till. -->
+      <div class="wiz-card" style="border-left-color:var(--accent);">
+        <h2>Lär dig terminologin</h2>
+        <p style="margin-bottom:0;">Termer i checklistan nedan refererar till delar på hjälmen. Snabbreferens:</p>
+        <svg class="fig" viewBox="0 0 360 240" role="img" aria-labelledby="figHelmetTitle figHelmetDesc">
+          <title id="figHelmetTitle">Stridshjälm 24 — delar</title>
+          <desc id="figHelmetDesc">Skiss av Stridshjälm 24 från sidan med utpekade delar: skal, APEX-liner-kuddar, NVG-shroud framtill, rails på sidan, boa-ratt baktill och hakrem under.</desc>
+
+          <!-- Skalet (helmet shell) -->
+          <path class="fig-helmet-skal" d="M82,140 Q70,90 130,60 Q200,38 270,72 Q302,98 296,140 Q294,156 286,160 L92,160 Q84,156 82,140 Z"/>
+          <!-- Underkant-band -->
+          <line class="fig-stroke" x1="92" y1="160" x2="286" y2="160"/>
+          <!-- APEX-pads (synliga inifrån via öppning) -->
+          <ellipse class="fig-helmet-pad" cx="160" cy="118" rx="18" ry="10"/>
+          <ellipse class="fig-helmet-pad" cx="220" cy="110" rx="18" ry="10"/>
+          <!-- NVG-shroud framtill -->
+          <rect class="fig-helmet-pad" x="120" y="92" width="32" height="14" rx="3"/>
+          <!-- Rails -->
+          <rect class="fig-helmet-pad" x="92" y="138" width="36" height="6" rx="2"/>
+          <rect class="fig-helmet-pad" x="252" y="138" width="36" height="6" rx="2"/>
+          <!-- Boa-ratt i nacken -->
+          <circle class="fig-helmet-pad" cx="294" cy="148" r="10"/>
+          <text class="fig-num" x="294" y="151" text-anchor="middle" style="font-size:10px;">B</text>
+          <!-- Hakrem -->
+          <path class="fig-helmet-strap" d="M118,160 Q132,196 188,200 Q246,196 264,160"/>
+
+          <!-- Callouts -->
+          <!-- Skal -->
+          <line class="fig-arrow" x1="200" y1="70" x2="200" y2="20"/>
+          <polygon class="fig-arrow-head" points="200,70 196,62 204,62"/>
+          <text class="fig-label" x="200" y="14" text-anchor="middle">Skal</text>
+
+          <!-- NVG-shroud -->
+          <line class="fig-arrow" x1="136" y1="100" x2="60" y2="60"/>
+          <polygon class="fig-arrow-head" points="136,100 130,94 132,104"/>
+          <text class="fig-label" x="56" y="54" text-anchor="end">NVG-shroud</text>
+
+          <!-- APEX-liner -->
+          <line class="fig-arrow" x1="190" y1="118" x2="200" y2="200"/>
+          <polygon class="fig-arrow-head" points="190,118 194,126 186,124"/>
+          <text class="fig-label" x="200" y="216" text-anchor="middle">APEX-liner (kuddar)</text>
+
+          <!-- Rails -->
+          <line class="fig-arrow" x1="100" y1="142" x2="40" y2="160"/>
+          <polygon class="fig-arrow-head" points="100,142 92,140 96,148"/>
+          <text class="fig-label" x="40" y="174" text-anchor="start">Rails</text>
+
+          <!-- Boa-ratt -->
+          <line class="fig-arrow" x1="304" y1="148" x2="350" y2="120"/>
+          <polygon class="fig-arrow-head" points="304,148 308,140 312,148"/>
+          <text class="fig-label" x="356" y="116" text-anchor="end">Boa-ratt</text>
+          <text class="fig-sub" x="356" y="128" text-anchor="end">(nackjustering)</text>
+
+          <!-- Hakrem -->
+          <line class="fig-arrow" x1="240" y1="190" x2="320" y2="216"/>
+          <polygon class="fig-arrow-head" points="240,190 246,194 240,200"/>
+          <text class="fig-label" x="324" y="218" text-anchor="start">Hakrem</text>
+        </svg>
+      </div>
+
+      <div class="wiz-card" style="border-left-color:var(--accent);">
+        <h2>Storlekstabell — Stridshjälm 24</h2>
+        <table class="ref-table" id="refTable" aria-label="Storlekstabell">
+          <thead>
+            <tr><th>Storlek</th><th>Huvudomfång</th><th>Skalvikt</th></tr>
+          </thead>
+          <tbody>
+            <tr data-size="S"><td>S</td><td>52–55 cm</td><td>~ 655 g</td></tr>
+            <tr data-size="M"><td>M</td><td>55–58 cm</td><td>~ 695 g</td></tr>
+            <tr data-size="L"><td>L</td><td>58–61 cm</td><td>~ 745 g</td></tr>
+            <tr data-size="XL"><td>XL</td><td>61–64 cm</td><td>~ 815 g</td></tr>
+            <tr data-size="XXL"><td>XXL</td><td>64–67 cm</td><td>~ 910 g</td></tr>
+          </tbody>
+        </table>
+        <p class="hint" style="margin-top:10px;">Komplett systemvikt (Large): ca 1095 g (skal + rails + shroud + APEX-liner).</p>
+      </div>
+
+      <div class="section-title">Checklista vid fysisk utprovning</div>
+      <ul class="checklist" id="checklist"></ul>
+
+      <div class="btn-row" style="margin-top:18px; flex-wrap:wrap;">
+        <button class="btn btn-secondary" type="button" id="btnCopy">Kopiera resultat</button>
+        <button class="btn btn-secondary" type="button" id="btnPrint">Skriv ut</button>
+      </div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-secondary" type="button" id="btnRestart">Börja om</button>
+        <button class="btn btn-primary" type="button" id="btnEdit">Ändra svar</button>
+      </div>
+    </section>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  </main>
+
+  <footer>
+    <p>Stridshjälm 24 · Galvion Batlskin Caiman</p>
+    <p>Endast hjälpverktyg — ersätter inte fysisk utprovning. Källa: <a href="https://www.soldf.com/personlig-utrustning/stridshjalm-24-galvion-batlskin-caiman/" target="_blank" rel="noopener noreferrer">soldf.com</a>.</p>
+  </footer>
+
+</div>
+
+<script src="opsec.js"></script>
+<script src="pwa.js"></script>
+<script src="footer.js"></script>
+<script src="version.js"></script>
+
+<script>
+'use strict';
+(function () {
+
+  // ── Konstanter ────────────────────────────────────────────────────────────
+  var STORAGE_KEY = 'hjalm24_state_v1';
+  var TOTAL_STEPS = 6;
+
+  // Storlekstabell — överlapp i datakällan löses så att hela cm-tal hör till
+  // den övre storleken (52–<55 = S, 55–<58 = M, ...). Sista intervall inkl. 67.
+  var SIZES = [
+    { code: 'S',   min: 52, max: 55, weight: 655 },
+    { code: 'M',   min: 55, max: 58, weight: 695 },
+    { code: 'L',   min: 58, max: 61, weight: 745 },
+    { code: 'XL',  min: 61, max: 64, weight: 815 },
+    { code: 'XXL', min: 64, max: 67, weight: 910 }
+  ];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  var state = {
+    step: 1,
+    headCm: null,  // number | null
+    hat: null,     // 'ja' | 'nej' | 'vetej' | null
+    hearing: null, // 'inga' | 'lattvikt' | 'kapor' | 'vetej' | null
+    glasses: null  // 'ja' | 'nej' | null
+  };
+
+  function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        if (typeof parsed.step === 'number' && parsed.step >= 1 && parsed.step <= TOTAL_STEPS) state.step = parsed.step;
+        if (typeof parsed.headCm === 'number' && parsed.headCm >= 30 && parsed.headCm <= 90) state.headCm = parsed.headCm;
+        if (parsed.hat === 'ja' || parsed.hat === 'nej' || parsed.hat === 'vetej') state.hat = parsed.hat;
+        if (parsed.hearing === 'inga' || parsed.hearing === 'lattvikt' || parsed.hearing === 'kapor' || parsed.hearing === 'vetej') state.hearing = parsed.hearing;
+        if (parsed.glasses === 'ja' || parsed.glasses === 'nej') state.glasses = parsed.glasses;
+      }
+    } catch (_) {}
+  }
+  function clearState() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+    state.step = 1; state.headCm = null; state.hat = null; state.hearing = null; state.glasses = null;
+  }
+
+  // ── Wizard-navigation ─────────────────────────────────────────────────────
+  // Steg är "tillåtet att hoppa till" om svaret för det steget redan finns —
+  // dvs alla föregående steg har data. Pillar för senare steg är låsta.
+  function highestReachable() {
+    // Steg 1 alltid nåbart. Steg 2 kräver inget. Steg 3 kräver headCm. Osv.
+    if (state.headCm == null) return 2;
+    if (state.hat == null) return 3;
+    if (state.hearing == null) return 4;
+    if (state.glasses == null) return 5;
+    return 6;
+  }
+
+  function renderPills() {
+    var max = Math.max(state.step, highestReachable());
+    var pills = document.querySelectorAll('.wiz-pill');
+    for (var i = 0; i < pills.length; i++) {
+      var p = pills[i];
+      var n = parseInt(p.getAttribute('data-go'), 10);
+      p.classList.remove('is-current', 'is-done', 'is-locked');
+      if (n === state.step) p.classList.add('is-current');
+      else if (n <= max) p.classList.add('is-done');
+      else p.classList.add('is-locked');
+      p.setAttribute('aria-current', n === state.step ? 'step' : 'false');
+      p.disabled = (n > max);
+    }
+  }
+
+  function showStep(n) {
+    if (n < 1) n = 1;
+    if (n > TOTAL_STEPS) n = TOTAL_STEPS;
+    state.step = n;
+    saveState();
+
+    var sections = document.querySelectorAll('.wiz-step');
+    for (var i = 0; i < sections.length; i++) {
+      var sec = sections[i];
+      var s = parseInt(sec.getAttribute('data-step'), 10);
+      sec.classList.toggle('active', s === n);
+    }
+    renderPills();
+
+    if (n === TOTAL_STEPS) {
+      renderResult();
+    }
+    // Skrolla upp så soldaten ser nya steget — utan smooth om reduced-motion.
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top: 0, behavior: reduce ? 'auto' : 'smooth' });
+  }
+
+  function goNext() { showStep(state.step + 1); }
+  function goBack() { showStep(state.step - 1); }
+
+  // ── Validering / steg-handlers ────────────────────────────────────────────
+  // Parse-strategin tar emot lite slarvigt input: "57", "57,5", "57.5", "575 mm",
+  // "22 in", "22 tum", "0,57 m" — och kommenterar tillbaka om enheten tolkades
+  // om så soldaten ser att det blev rätt.
+  function parseHeadInput() {
+    var el = document.getElementById('headCm');
+    var raw = (el.value || '').toString().trim().toLowerCase();
+    if (raw === '') return { ok:false, msg:'Fyll i ett mått i centimeter (t.ex. 57).' };
+
+    // Hitta första nummret (med ev. decimal: punkt eller komma)
+    var m = raw.match(/(-?\d+(?:[.,]\d+)?)/);
+    if (!m) return { ok:false, msg:'Det där förstod jag inte — försök igen, t.ex. 57 eller 57.5.' };
+    var n = parseFloat(m[1].replace(',', '.'));
+    if (isNaN(n) || !isFinite(n)) return { ok:false, msg:'Det där förstod jag inte — försök igen, t.ex. 57 eller 57.5.' };
+
+    var unit = null;
+    if (/\bin\b|\binch\b|tum|"/.test(raw)) {
+      n = n * 2.54; unit = 'tum → cm';
+    } else if (/\bmm\b/.test(raw)) {
+      n = n / 10; unit = 'mm → cm';
+    } else if (/\bm\b(?!m)/.test(raw)) {
+      // "m" som hel meter: 0,57 m → 57 cm
+      n = n * 100; unit = 'm → cm';
+    } else {
+      // Heuristik på rena tal utan enhet:
+      // > 200 → mm, 18–30 → tum, 0,4–0,9 → meter
+      if (n > 200) { n = n / 10; unit = '(tolkades som mm)'; }
+      else if (n >= 18 && n <= 30) { n = n * 2.54; unit = '(tolkades som tum)'; }
+      else if (n >= 0.4 && n <= 0.9) { n = n * 100; unit = '(tolkades som meter)'; }
+    }
+
+    if (n < 40 || n > 80) return { ok:false, msg:'Ett vanligt vuxet huvud ligger mellan 50 och 65 cm. Kontrollera mätningen.' };
+    n = Math.round(n * 10) / 10;
+    return { ok:true, value:n, note: unit };
+  }
+
+  function selectedRadio(name) {
+    var els = document.querySelectorAll('input[type="radio"][name="' + name + '"]');
+    for (var i = 0; i < els.length; i++) {
+      if (els[i].checked) return els[i].value;
+    }
+    return null;
+  }
+
+  // ── Storleks-logik ────────────────────────────────────────────────────────
+  function pickSize(cm) {
+    // cm < S.min → undersize, cm > XXL.max → oversize, annars hitta intervall
+    if (cm < SIZES[0].min) {
+      return { primary: null, reason: 'under', meta: 'Mindre än S i tabellen.' };
+    }
+    if (cm > SIZES[SIZES.length - 1].max) {
+      return { primary: null, reason: 'over', meta: 'Större än XXL i tabellen.' };
+    }
+    var pick = null;
+    for (var i = 0; i < SIZES.length; i++) {
+      var s = SIZES[i];
+      // Sista intervallet inkluderar övre gränsen.
+      var upperInclusive = (i === SIZES.length - 1);
+      if (cm >= s.min && (upperInclusive ? cm <= s.max : cm < s.max)) {
+        pick = s; break;
+      }
+    }
+    if (!pick) {
+      // Borde inte hända (intervallen täcker 52–67), men säkerhet.
+      return { primary: null, reason: 'unknown', meta: 'Kunde inte mappa måttet till en storlek.' };
+    }
+    return { primary: pick, reason: 'ok' };
+  }
+
+  function buildRecommendation() {
+    var cm = state.headCm;
+    var picked = pickSize(cm);
+    var primary = picked.primary;
+    var alt = null;
+    var notes = [];
+
+    if (primary) {
+      // Gränsfall — om mått ligger inom 0,5 cm under intervallets övre gräns
+      // OCH soldaten bär mössa, bumpa upp.
+      var distToTop = primary.max - cm;
+      var nextIdx = SIZES.indexOf(primary) + 1;
+      var nextSize = (nextIdx < SIZES.length) ? SIZES[nextIdx] : null;
+
+      if (state.hat === 'ja' && distToTop <= 0.5 && nextSize) {
+        alt = primary;
+        primary = nextSize;
+        notes.push('Du bär oftast mössa under hjälmen, och ditt mått ligger nära toppen av ' + alt.code + '-intervallet — vi rekommenderar därför ' + primary.code + ' som primär. Pröva båda om möjligt.');
+      } else if (cm === primary.min && SIZES.indexOf(primary) > 0) {
+        // Exakt på undre gränsen → båda värda att testa
+        alt = SIZES[SIZES.indexOf(primary) - 1];
+        notes.push('Måttet ligger exakt på gränsen mellan ' + alt.code + ' och ' + primary.code + '. Testa båda vid utprovning.');
+      } else if (distToTop === 0 && nextSize) {
+        // Exakt på övre gränsen → testa även större
+        alt = nextSize;
+        notes.push('Måttet ligger exakt på gränsen — testa även ' + alt.code + ' vid utprovning.');
+      }
+    }
+
+    return { primary: primary, alt: alt, notes: notes, picked: picked, cm: cm };
+  }
+
+  // ── Checklista ────────────────────────────────────────────────────────────
+  function buildChecklist() {
+    var items = [
+      'Skalet sitter rakt: framkanten ca 1 cm ovanför ögonbrynen, hjälmen inte tippad bakåt.',
+      'Hjälmen sitter still vid hopp och kraftig huvudskakning <em>innan</em> du dragit hakremmen.',
+      'APEX-linerns kuddar har plats att flyttas eller bytas vid eventuella tryckpunkter.',
+      'Boa-ratten i nacken kan dras med en hand och håller inställningen.',
+      'Inga punktvisa tryckpunkter efter 10 minuters bärande — ingen domnad panna eller pulserande tinning.',
+      'Hakremmen ligger an utan att klämma — testa att nicka, tala och tugga.',
+      'Total vikt med tillbehör känns balanserad — inte framtungt eller baktungt.'
+    ];
+
+    if (state.hearing === 'kapor') {
+      items.push('Stora hörselskyddskåpor (Peltor o.l.) ryms under skalet utan att tippa hjälmen eller pressas mot örat.');
+    } else if (state.hearing === 'lattvikt') {
+      items.push('Lättviktigt hörselskydd (in-ear/proppar) sitter kvar utan att hjälmens kant trycker proppen ur läge.');
+    } else {
+      items.push('Hörselskydds-clearance: testa med det skydd du faktiskt kommer använda.');
+    }
+
+    if (state.glasses === 'ja') {
+      items.push('Glasögon/skyddsglas: skalmar trycker inte mot tinningen, brillorna pressas inte ner i kinden.');
+    }
+
+    items.push('NVG-shroud (om aktuellt): centrerad på pannan, skruvar åtdragna utan att dras igenom skalet.');
+    items.push('Rails sitter fast utan att gnissla — testa lampa/IR-fäste sitter stadigt.');
+
+    if (state.hat === 'ja') {
+      items.push('Provning <em>med</em> mössa under: passformen kvarstår, inget extra glapp.');
+    }
+
+    return items;
+  }
+
+  // ── Render resultat ───────────────────────────────────────────────────────
+  function renderResult() {
+    var rec = buildRecommendation();
+    var sizeEl = document.getElementById('resSize');
+    var metaEl = document.getElementById('resMeta');
+    var warnEl = document.getElementById('resWarn');
+    var altEl = document.getElementById('resAlt');
+
+    // Rensa tabell-highlights
+    var rows = document.querySelectorAll('#refTable tbody tr');
+    for (var i = 0; i < rows.length; i++) rows[i].classList.remove('match');
+
+    if (rec.primary) {
+      sizeEl.textContent = rec.primary.code;
+      var metaParts = [];
+      metaParts.push('Ditt mått <strong>' + rec.cm.toFixed(1).replace('.0','') + ' cm</strong> faller i ' + rec.primary.code + '-intervallet ' + rec.primary.min + '–' + rec.primary.max + ' cm.');
+      metaParts.push('Skalvikt ca <strong>' + rec.primary.weight + ' g</strong>.');
+      metaEl.innerHTML = metaParts.join(' ');
+
+      // Highlighta rätt rad
+      var match = document.querySelector('#refTable tbody tr[data-size="' + rec.primary.code + '"]');
+      if (match) match.classList.add('match');
+
+      if (rec.alt) {
+        altEl.style.display = 'block';
+        altEl.innerHTML = '<strong>Alternativ att testa också:</strong> ' + rec.alt.code +
+          ' (' + rec.alt.min + '–' + rec.alt.max + ' cm). ' +
+          (rec.notes.length ? rec.notes.join(' ') : '');
+      } else {
+        altEl.style.display = 'none';
+      }
+      warnEl.style.display = 'none';
+    } else {
+      // Utanför tabellen
+      sizeEl.textContent = '?';
+      if (rec.picked.reason === 'under') {
+        metaEl.innerHTML = 'Ditt mått <strong>' + rec.cm.toFixed(1).replace('.0','') + ' cm</strong> är mindre än S (52 cm). Det är ovanligt — be om utprovning.';
+        warnEl.style.display = 'block';
+        warnEl.innerHTML = 'Mindre än S i den officiella tabellen. Många unga eller smalbyggda soldater hamnar här. <strong>Vid utprovning:</strong> testa S, fyll vid behov ut med tjockare APEX-pads eller en finullsmössa under. Kan kräva specialstorlek från materialtjänst.';
+      } else if (rec.picked.reason === 'over') {
+        metaEl.innerHTML = 'Ditt mått <strong>' + rec.cm.toFixed(1).replace('.0','') + ' cm</strong> är större än XXL (67 cm). <strong>Be om utprovning</strong> — kan kräva specialskal.';
+        warnEl.style.display = 'block';
+        warnEl.innerHTML = 'Större än XXL i den officiella tabellen. <strong>Vid utprovning:</strong> testa XXL — sitter den tajt: kontakta materialtjänst för custom/specialstorlek.';
+      } else {
+        metaEl.innerHTML = 'Kunde inte avgöra storlek på <strong>' + rec.cm + ' cm</strong>. Be om fysisk utprovning.';
+        warnEl.style.display = 'block';
+        warnEl.textContent = 'Oväntat värde — använd den fysiska utprovningen som facit.';
+      }
+      altEl.style.display = 'none';
+    }
+
+    // Bygg checklistan
+    var ul = document.getElementById('checklist');
+    ul.innerHTML = '';
+    var items = buildChecklist();
+    for (var k = 0; k < items.length; k++) {
+      var li = document.createElement('li');
+      var cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.id = 'cl' + k;
+      var span = document.createElement('span');
+      span.className = 'cl-text';
+      span.innerHTML = items[k];
+      li.appendChild(cb);
+      li.appendChild(span);
+      // Klick var som helst på <li> togglar checkbox
+      (function (liEl, cbEl) {
+        liEl.addEventListener('click', function (e) {
+          if (e.target !== cbEl) {
+            cbEl.checked = !cbEl.checked;
+          }
+          liEl.classList.toggle('done', cbEl.checked);
+        });
+      })(li, cb);
+      ul.appendChild(li);
+    }
+  }
+
+  // ── Initiera UI utifrån state ─────────────────────────────────────────────
+  function hydrateInputs() {
+    if (state.headCm != null) {
+      document.getElementById('headCm').value = state.headCm;
+    }
+    if (state.hat) {
+      var hatEl = document.querySelector('input[name="hat"][value="' + state.hat + '"]');
+      if (hatEl) { hatEl.checked = true; hatEl.closest('.opt').classList.add('selected'); }
+    }
+    if (state.hearing) {
+      var hEl = document.querySelector('input[name="hearing"][value="' + state.hearing + '"]');
+      if (hEl) { hEl.checked = true; hEl.closest('.opt').classList.add('selected'); }
+    }
+    if (state.glasses) {
+      var gEl = document.querySelector('input[name="glasses"][value="' + state.glasses + '"]');
+      if (gEl) { gEl.checked = true; gEl.closest('.opt').classList.add('selected'); }
+    }
+  }
+
+  function wireRadioVisuals() {
+    // Markera valt .opt-kort visuellt
+    var radios = document.querySelectorAll('.opt input[type="radio"]');
+    for (var i = 0; i < radios.length; i++) {
+      radios[i].addEventListener('change', function (e) {
+        var name = e.target.name;
+        var all = document.querySelectorAll('input[type="radio"][name="' + name + '"]');
+        for (var j = 0; j < all.length; j++) {
+          var optEl = all[j].closest('.opt');
+          if (optEl) optEl.classList.toggle('selected', all[j].checked);
+        }
+      });
+    }
+  }
+
+  // ── Eventbindningar ───────────────────────────────────────────────────────
+  function wireEvents() {
+    document.getElementById('btnIntroNext').addEventListener('click', function () {
+      goNext();
+    });
+
+    document.getElementById('btnMeasureNext').addEventListener('click', function () {
+      var p = parseHeadInput();
+      var errEl = document.getElementById('headErr');
+      if (!p.ok) { errEl.textContent = p.msg; errEl.style.color = '#ff9080'; return; }
+      errEl.textContent = '';
+      state.headCm = p.value;
+      saveState();
+      // Om vi tolkade om enhet — visa en kort toast så soldaten vet att vi förstod.
+      if (p.note) {
+        toast('Mått tolkat ' + p.note + ': ' + p.value + ' cm');
+      }
+      goNext();
+    });
+
+    document.getElementById('btnHatNext').addEventListener('click', function () {
+      var v = selectedRadio('hat');
+      if (!v) { state.hat = 'vetej'; } // Default vid hopp
+      else { state.hat = v; }
+      saveState();
+      goNext();
+    });
+
+    document.getElementById('btnHearingNext').addEventListener('click', function () {
+      var v = selectedRadio('hearing');
+      state.hearing = v || 'vetej';
+      saveState();
+      goNext();
+    });
+
+    document.getElementById('btnGlassesNext').addEventListener('click', function () {
+      var v = selectedRadio('glasses');
+      state.glasses = v || 'nej';
+      saveState();
+      goNext();
+    });
+
+    // Tillbaka-knappar
+    var backs = document.querySelectorAll('[data-back]');
+    for (var i = 0; i < backs.length; i++) {
+      backs[i].addEventListener('click', goBack);
+    }
+
+    // Resultat-knappar
+    document.getElementById('btnRestart').addEventListener('click', function () {
+      if (confirm('Börja om från början? Tidigare svar tas bort från den här enheten.')) {
+        clearState();
+        document.getElementById('headCm').value = '';
+        var radios = document.querySelectorAll('input[type="radio"]');
+        for (var i = 0; i < radios.length; i++) {
+          radios[i].checked = false;
+          var optEl = radios[i].closest('.opt');
+          if (optEl) optEl.classList.remove('selected');
+        }
+        showStep(1);
+      }
+    });
+
+    document.getElementById('btnEdit').addEventListener('click', function () {
+      showStep(2);
+    });
+
+    // Enter på MÄT-input → nästa
+    document.getElementById('headCm').addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        document.getElementById('btnMeasureNext').click();
+      }
+    });
+
+    // Klickbara progress-pills
+    var pills = document.querySelectorAll('.wiz-pill');
+    for (var pi = 0; pi < pills.length; pi++) {
+      pills[pi].addEventListener('click', function () {
+        if (this.disabled) return;
+        var go = parseInt(this.getAttribute('data-go'), 10);
+        if (!isNaN(go)) showStep(go);
+      });
+    }
+
+    // Skriv ut
+    document.getElementById('btnPrint').addEventListener('click', function () {
+      window.print();
+    });
+
+    // Kopiera resultat som ren text
+    document.getElementById('btnCopy').addEventListener('click', function () {
+      var text = buildResultText();
+      copyText(text);
+    });
+  }
+
+  // ── Toast / clipboard / textsumering (Fas 3) ──────────────────────────────
+  var _toastTimer = null;
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2400);
+  }
+
+  function copyText(text) {
+    function fallback() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('Kopierat');
+      } catch (e) {
+        toast('Kunde inte kopiera — markera och kopiera manuellt');
+      }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(
+        function () { toast('Kopierat'); },
+        function () { fallback(); }
+      );
+    } else {
+      fallback();
+    }
+  }
+
+  function buildResultText() {
+    var rec = buildRecommendation();
+    var lines = [];
+    lines.push('Stridshjälm 24 — storleksuppskattning');
+    if (rec.primary) {
+      lines.push('Rekommenderad storlek: ' + rec.primary.code +
+        ' (intervall ' + rec.primary.min + '–' + rec.primary.max + ' cm, skalvikt ca ' + rec.primary.weight + ' g)');
+    } else if (rec.picked.reason === 'under') {
+      lines.push('Mindre än S — be om utprovning av specialstorlek');
+    } else if (rec.picked.reason === 'over') {
+      lines.push('Större än XXL — be om utprovning av specialstorlek');
+    } else {
+      lines.push('Ingen storleksrekommendation');
+    }
+    lines.push('Huvudomfång: ' + rec.cm + ' cm');
+    if (rec.alt) {
+      lines.push('Testa även: ' + rec.alt.code + ' (' + rec.alt.min + '–' + rec.alt.max + ' cm)');
+    }
+    if (rec.notes && rec.notes.length) {
+      lines.push('');
+      lines.push('Not: ' + rec.notes.join(' '));
+    }
+    lines.push('');
+    lines.push('Mössa under: ' + (state.hat || '—'));
+    lines.push('Hörselskydd: ' + (state.hearing || '—'));
+    lines.push('Glasögon: ' + (state.glasses || '—'));
+    lines.push('');
+    lines.push('Detta är ett hjälpverktyg — verifiera passform vid fysisk utprovning.');
+    return lines.join('\n');
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  function init() {
+    loadState();
+    hydrateInputs();
+    wireRadioVisuals();
+    wireEvents();
+    // Säkerhet: om sparad step pekar förbi den högsta data-stödda — backa.
+    var maxOk = highestReachable();
+    if (state.step > maxOk) state.step = maxOk;
+    showStep(state.step);
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
