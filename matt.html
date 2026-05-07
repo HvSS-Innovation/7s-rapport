@@ -1,0 +1,1356 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="MÅTT">
+<title>MÅTT — Ange dina mått (uniformutlämning) · 19-måttsformulär</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828; --danger-hover:#e53935;
+    --warn-bg:#3e2a00; --warn-border:#c8a24e; --warn-text:#e8c068;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; }
+  .container { max-width:680px; margin:0 auto; }
+
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; transition:background 0.15s,color 0.15s; -webkit-tap-highlight-color:transparent; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; letter-spacing:0.05em; }
+
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  /* ═══ HUB-HERO (toppen av sidan, alltid synlig) ═══ */
+  .hub-hero {
+    background:var(--accent-dim); border:1px solid var(--accent);
+    border-radius:var(--radius); padding:16px 18px 18px;
+    margin-bottom:14px;
+  }
+  .hub-hero h2 {
+    color:var(--accent); font-size:1rem; font-weight:700;
+    letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px;
+  }
+  .hub-hero p { color:var(--text-secondary); font-size:0.9rem; line-height:1.55; margin-top:4px; }
+  .hub-hero p strong { color:var(--text-primary); }
+
+  .track-cards { display:grid; grid-template-columns:1fr; gap:10px; margin-top:14px; }
+  @media (min-width:520px) { .track-cards { grid-template-columns:1fr 1fr; } }
+  .track-card {
+    display:flex; flex-direction:column; gap:4px;
+    background:var(--bg-card); border:1px solid var(--accent);
+    color:var(--text-primary); text-decoration:none;
+    border-radius:var(--radius-sm); padding:14px 16px;
+    min-height:88px; cursor:pointer; font-family:inherit;
+    transition:background 0.12s, transform 0.06s;
+    -webkit-tap-highlight-color:transparent;
+    text-align:left;
+  }
+  .track-card:hover { background:var(--accent-dim); }
+  .track-card:active { transform:translateY(1px); }
+  .track-card .tc-title { color:var(--accent); font-weight:700; font-size:0.95rem; letter-spacing:0.04em; text-transform:uppercase; }
+  .track-card .tc-sub { color:var(--text-secondary); font-size:0.84rem; line-height:1.45; }
+  .track-card .tc-arrow { align-self:flex-end; color:var(--accent); font-size:1.05rem; font-weight:700; }
+
+  /* ═══ Wizard-progress (kopierat från hjalm24) ═══ */
+  .wiz-pills { display:flex; gap:6px; margin-bottom:14px; flex-wrap:wrap; }
+  .wiz-pill {
+    flex:1; min-width:60px;
+    background:var(--bg-secondary); border:1px solid var(--border);
+    border-radius:999px; padding:6px 4px; min-height:34px;
+    font-size:0.68rem; letter-spacing:0.05em; text-transform:uppercase;
+    color:var(--text-muted); text-align:center; cursor:default;
+    font-family:inherit; -webkit-tap-highlight-color:transparent;
+    display:flex; align-items:center; justify-content:center; gap:4px;
+    transition:background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .wiz-pill .pill-num { font-family:'Courier New',monospace; font-weight:700; opacity:0.9; }
+  .wiz-pill .pill-label { display:none; }
+  @media (min-width:600px) { .wiz-pill .pill-label { display:inline; } }
+  .wiz-pill.is-current { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); font-weight:700; }
+  .wiz-pill.is-done { color:var(--text-secondary); border-color:var(--border-focus); cursor:pointer; }
+  .wiz-pill.is-done:hover { background:var(--bg-card); color:var(--accent); border-color:var(--accent); }
+  .wiz-pill.is-locked { opacity:0.55; }
+
+  /* ═══ Slide-anim mellan steg ═══ */
+  .wiz-step.active { animation:wiz-slide-in 0.22s ease-out; }
+  @keyframes wiz-slide-in {
+    from { opacity:0; transform:translateX(8px); }
+    to   { opacity:1; transform:translateX(0); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .wiz-step.active { animation:none; }
+    .wiz-pill { transition:none; }
+  }
+
+  /* ═══ Steg-kort ═══ */
+  .wiz-card { background:var(--bg-card); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:var(--radius); padding:18px 18px 22px; margin-bottom:14px; }
+  .wiz-card h2 { color:var(--accent); font-size:1.05rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:10px; }
+  .wiz-card p { color:var(--text-secondary); font-size:0.92rem; line-height:1.55; margin-bottom:10px; }
+  .wiz-card p strong { color:var(--text-primary); }
+  .wiz-card .lede { color:var(--text-primary); font-size:1rem; line-height:1.5; }
+  .wiz-card .hint { font-size:0.78rem; color:var(--text-muted); line-height:1.5; margin-top:8px; }
+  .wiz-step { display:none; }
+  .wiz-step.active { display:block; }
+
+  /* ═══ Inputs ═══ */
+  label { font-weight:600; font-size:0.82rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:6px; }
+  input[type="number"], input[type="text"] {
+    width:100%; background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); color:var(--text-primary);
+    font-family:inherit; font-size:1.05rem; padding:14px 16px;
+    outline:none; transition:border-color 0.15s; -webkit-appearance:none; appearance:none;
+    min-height:56px;
+  }
+  input[type="number"]:focus, input[type="text"]:focus { border-color:var(--accent); }
+  input.has-value { border-color:var(--border-focus); }
+
+  .input-suffix { position:relative; }
+  .input-suffix .suffix { position:absolute; right:16px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:0.95rem; pointer-events:none; }
+  .input-suffix input { padding-right:50px; }
+
+  /* Fältlistor — flera mått per steg */
+  .field-list { display:flex; flex-direction:column; gap:14px; margin-top:6px; }
+  .field-block {
+    background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:14px;
+  }
+  .field-block .field-explainer { font-size:0.85rem; color:var(--text-secondary); line-height:1.5; margin-bottom:10px; }
+  .field-block .field-explainer strong { color:var(--text-primary); }
+  .field-live-hint { font-size:0.85rem; color:var(--accent); margin-top:8px; }
+  .field-live-hint a { color:var(--accent-hover); font-weight:700; text-decoration:none; }
+  .field-live-hint a:hover { text-decoration:underline; }
+
+  /* Förbered-checkbox */
+  .prep-confirm {
+    display:flex; align-items:center; gap:12px;
+    background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:14px 16px;
+    cursor:pointer; min-height:56px; -webkit-tap-highlight-color:transparent;
+    transition:background 0.12s, border-color 0.12s;
+    margin-top:14px;
+  }
+  .prep-confirm:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .prep-confirm input[type="checkbox"] { width:22px; height:22px; accent-color:var(--accent); flex-shrink:0; }
+  .prep-confirm .pc-label { color:var(--text-primary); font-size:0.92rem; line-height:1.4; }
+  .prep-confirm.checked { background:var(--accent-dim); border-color:var(--accent); }
+
+  /* ═══ Knappar (samma som hjalm24) ═══ */
+  .btn-row { display:flex; gap:10px; margin-top:18px; flex-wrap:wrap; }
+  .btn {
+    flex:1; min-height:56px; padding:14px 18px;
+    border:none; border-radius:var(--radius-sm);
+    font-family:inherit; font-size:1rem; font-weight:700;
+    letter-spacing:0.04em; cursor:pointer;
+    transition:background 0.12s, transform 0.06s;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .btn-primary { background:var(--accent); color:#0c1a0c; }
+  .btn-primary:hover:not(:disabled) { background:var(--accent-hover); }
+  .btn-primary:active:not(:disabled) { transform:translateY(1px); }
+  .btn-secondary { background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border); }
+  .btn-secondary:hover { color:var(--text-primary); border-color:var(--border-focus); }
+
+  /* ═══ Inline SVG-figurer ═══ */
+  .fig {
+    display:block; width:100%; max-width:100%; height:auto;
+    margin:14px auto; background:var(--bg-input);
+    border:1px solid var(--border); border-radius:var(--radius-sm);
+  }
+  .fig text { font-family:'Inter',system-ui,sans-serif; fill:var(--text-primary); }
+  .fig .fig-stroke { stroke:var(--text-secondary); fill:none; stroke-width:1.6; }
+  .fig .fig-stroke-soft { stroke:var(--border-focus); fill:none; stroke-width:1.2; stroke-dasharray:3 3; }
+  .fig .fig-fill { fill:var(--bg-secondary); }
+  .fig .fig-tape { stroke:var(--accent); fill:none; stroke-width:2.4; }
+  .fig .fig-tape-fill { fill:var(--accent); }
+  .fig .fig-arrow { stroke:var(--accent); fill:none; stroke-width:1.8; }
+  .fig .fig-arrow-head { fill:var(--accent); }
+  .fig .fig-label { font-size:11px; font-weight:600; fill:var(--text-primary); }
+  .fig .fig-sub { font-size:9.5px; fill:var(--text-muted); }
+  .fig .fig-num { font-size:11px; font-weight:700; fill:var(--accent); font-family:'Courier New',monospace; }
+  .fig .fig-num-bg { fill:var(--bg-primary); stroke:var(--accent); stroke-width:1.4; }
+  .fig .fig-bone { fill:var(--bg-primary); stroke:var(--text-muted); stroke-width:1; stroke-dasharray:2 2; }
+  .fig .fig-pencil { fill:var(--warn-text); stroke:var(--warn-border); stroke-width:0.8; }
+  .fig .fig-ruler { fill:var(--bg-card); stroke:var(--accent); stroke-width:1.2; }
+
+  /* ═══ Resultat ═══ */
+  .result-summary {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:16px 18px 18px; margin-bottom:14px;
+  }
+  .result-summary h2 { color:var(--accent); font-size:1.05rem; font-weight:700; letter-spacing:0.05em; text-transform:uppercase; margin-bottom:10px; }
+
+  /* PII-block — extra varning */
+  .pii-block {
+    background:var(--bg-input); border:1px dashed var(--warn-border);
+    border-radius:var(--radius-sm); padding:14px 16px;
+    margin-bottom:14px;
+  }
+  .pii-block .pii-warn {
+    font-size:0.78rem; color:var(--warn-text); line-height:1.5;
+    margin-bottom:12px; padding-bottom:10px; border-bottom:1px solid var(--border);
+  }
+  .pii-block .pii-warn strong { color:var(--warn-text); }
+  .pii-fields { display:grid; grid-template-columns:1fr; gap:10px; }
+  @media (min-width:520px) { .pii-fields { grid-template-columns:1fr 1fr; } }
+
+  /* Resultattabell — A4-blankett-likt */
+  .blank-table {
+    width:100%; border-collapse:collapse; margin-top:6px;
+    font-size:0.88rem; color:var(--text-primary);
+  }
+  .blank-table td {
+    border:1px solid var(--border); padding:8px 10px; vertical-align:top;
+  }
+  .blank-table .b-label { color:var(--text-secondary); width:42%; font-weight:600; }
+  .blank-table .b-val { color:var(--text-primary); font-family:'Courier New',monospace; }
+  .blank-table .b-val.empty { color:var(--text-muted); font-style:italic; }
+
+  .completion-bar {
+    display:flex; align-items:center; gap:10px;
+    background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:12px;
+    font-size:0.85rem; color:var(--text-secondary);
+  }
+  .completion-bar .cb-num { color:var(--accent); font-weight:700; font-family:'Courier New',monospace; }
+  .completion-bar-fill {
+    flex:1; height:6px; background:var(--bg-secondary); border-radius:999px; overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .completion-bar-fill > span { display:block; height:100%; background:var(--accent); width:0%; transition:width 0.25s ease; }
+
+  .err { color:#ff9080; font-size:0.85rem; margin-top:8px; min-height:1.2em; }
+
+  /* ═══ Toast ═══ */
+  .toast {
+    position:fixed; left:50%; bottom:24px; transform:translateX(-50%) translateY(20px);
+    background:var(--bg-card); color:var(--text-primary);
+    border:1px solid var(--accent); border-radius:var(--radius);
+    padding:12px 18px; font-size:0.88rem; font-weight:600;
+    box-shadow:0 4px 18px rgba(0,0,0,0.45);
+    opacity:0; pointer-events:none;
+    transition:opacity 0.2s, transform 0.2s;
+    z-index:9999; max-width:90vw; text-align:center;
+  }
+  .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) { .toast { transition:none; } }
+
+  .section-title { font-size:0.78rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-secondary); margin:18px 0 8px; }
+  details.howto { margin-top:10px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:0; }
+  details.howto > summary {
+    cursor:pointer; padding:12px 14px; min-height:44px;
+    color:var(--accent); font-weight:600; font-size:0.88rem;
+    list-style:none; -webkit-tap-highlight-color:transparent;
+    display:flex; align-items:center; gap:8px;
+  }
+  details.howto > summary::-webkit-details-marker { display:none; }
+  details.howto > summary::before { content:'+'; display:inline-block; width:18px; text-align:center; font-family:'Courier New',monospace; font-weight:700; }
+  details.howto[open] > summary::before { content:'−'; }
+  details.howto > div { padding:0 14px 14px; color:var(--text-secondary); font-size:0.88rem; line-height:1.55; }
+  details.howto ol { margin:6px 0 6px 22px; padding:0; }
+  details.howto ol li { margin-bottom:6px; color:var(--text-primary); }
+
+  /* ═══ Print-CSS — A4-blankett-layout ═══ */
+  @media print {
+    body { background:#fff; color:#000; padding:0; font-family:'Inter',sans-serif; }
+    .container { max-width:none; padding:0 14mm; }
+    .tab-nav, .tab-nav-sub, .back-link, .wiz-pills, .btn-row, .btn,
+    .toast, header p, .hub-hero, footer a { display:none !important; }
+    .wiz-step { display:none !important; }
+    .wiz-step#step9 { display:block !important; }
+    .pii-block .pii-warn { display:none; }
+    .pii-block { background:#fff; border:none; padding:0 0 8px; }
+    .pii-block input { border:none; border-bottom:1px solid #000; padding:4px 0; font-size:11pt; background:#fff; color:#000; min-height:auto; }
+    .completion-bar { display:none; }
+    header { padding:0 0 6px; text-align:left; }
+    header h1 { color:#000; font-size:14pt; letter-spacing:0; text-transform:none; font-weight:700; }
+    header h1::before { content:"FÖRSVARSMAKTEN — "; }
+    .result-summary { background:#fff; border:none; padding:0; }
+    .result-summary h2 { color:#000; font-size:11pt; margin-bottom:6px; border-bottom:1px solid #000; padding-bottom:3px; }
+    .blank-table { color:#000; font-size:10pt; page-break-inside:avoid; }
+    .blank-table td { border:1px solid #000; }
+    .blank-table .b-label { color:#000; }
+    .blank-table .b-val { color:#000; font-weight:700; }
+    .blank-table .b-val.empty { color:#000; font-style:normal; }
+    .blank-table .b-val.empty::before { content:"___________"; }
+    .print-disclaimer {
+      display:block !important; font-size:7.5pt; color:#444;
+      margin-top:8px; padding-top:6px; border-top:1px dotted #888; line-height:1.4;
+    }
+    .print-only { display:block !important; }
+    footer { color:#000; padding-top:8px; font-size:8pt; }
+    @page { size:A4; margin:14mm; }
+  }
+  .print-only, .print-disclaimer { display:none; }
+
+  footer { text-align:center; padding:24px 0 12px; color:var(--text-muted); font-size:0.72rem; line-height:1.6; }
+  footer a { color:var(--accent); text-decoration:none; }
+  footer a:hover { text-decoration:underline; }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Måttformuläret kräver JavaScript. Aktivera och ladda om sidan.</div></noscript>
+<div class="container">
+
+  <header>
+    <h1>MÅTT</h1>
+    <p>Storleksguide &amp; måttformulär · Försvarsmakten · Västra militärregionen</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+    <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+    <a href="fors.html" class="tab-link">FORS</a>
+    <a href="pedars.html" class="tab-link">PEDARS</a>
+    <a href="postschema.html" class="tab-link">SCHEMA</a>
+    <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+    <a href="obo.html" class="tab-link">OBO</a>
+    <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+    <a href="vader.html" class="tab-link">VÄDER</a>
+    <a href="minkarta.html" class="tab-link">MINKARTA</a>
+    <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+    <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+    <a href="matt.html" class="tab-link active">MÅTT</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <!-- HUB-HERO: två spår-kort -->
+  <div class="hub-hero" id="hubHero">
+    <h2>Vad behöver du?</h2>
+    <p>Två verktyg under MÅTT. <strong>Hjälmstorlek</strong> ger dig snabbt rekommenderad storlek S–XXL för Stridshjälm 24. <strong>Ange dina mått</strong> samlar alla 19 mått som behövs vid utrustnings­utlämning.</p>
+    <div class="track-cards">
+      <a href="hjalm24.html" class="track-card" aria-label="Gå till hjälmstorlek-rekommendation">
+        <span class="tc-title">🪖 Hjälmstorlek</span>
+        <span class="tc-sub">Wizard: mät huvudet → få S/M/L/XL/XXL för Stridshjälm 24.</span>
+        <span class="tc-arrow">→</span>
+      </a>
+      <button type="button" class="track-card" id="trackUni" aria-label="Starta 19-måttsformuläret nedan">
+        <span class="tc-title">🎽 Ange dina mått</span>
+        <span class="tc-sub">19 mått för uniform/utrustning enligt FM-blanketten. Skriv ut + skicka in.</span>
+        <span class="tc-arrow">↓</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="wiz-pills" id="wizPills" role="tablist" aria-label="Wizard-steg">
+    <button type="button" class="wiz-pill" data-go="1"><span class="pill-num">1</span><span class="pill-label">Intro</span></button>
+    <button type="button" class="wiz-pill" data-go="2"><span class="pill-num">2</span><span class="pill-label">Förbered</span></button>
+    <button type="button" class="wiz-pill" data-go="3"><span class="pill-num">3</span><span class="pill-label">Längd/vikt</span></button>
+    <button type="button" class="wiz-pill" data-go="4"><span class="pill-num">4</span><span class="pill-label">Huvud</span></button>
+    <button type="button" class="wiz-pill" data-go="5"><span class="pill-num">5</span><span class="pill-label">Bål</span></button>
+    <button type="button" class="wiz-pill" data-go="6"><span class="pill-num">6</span><span class="pill-label">Armar</span></button>
+    <button type="button" class="wiz-pill" data-go="7"><span class="pill-num">7</span><span class="pill-label">Ben</span></button>
+    <button type="button" class="wiz-pill" data-go="8"><span class="pill-num">8</span><span class="pill-label">Hand/fot</span></button>
+    <button type="button" class="wiz-pill" data-go="9"><span class="pill-num">9</span><span class="pill-label">Resultat</span></button>
+  </div>
+
+  <main id="wizard">
+
+    <!-- STEG 1 — INTRO -->
+    <section class="wiz-card wiz-step active" id="step1" data-step="1" aria-labelledby="step1-title">
+      <h2 id="step1-title">Innan vi börjar</h2>
+      <p class="lede">Det här formuläret samlar de <strong>19 mått</strong> Försvarsmakten behöver för att leverera uniform, hjälm, fältmössa, skjorta, BH, vantar, kängor och skyddsglasögon i rätt storlek.</p>
+
+      <p>Ha till hands:</p>
+      <p>• <strong>Måttband</strong> (eller snöre + linjal).<br>
+         • <strong>Midjeband</strong> (bomullssnöre att knyta runt midjan).<br>
+         • <strong>Linjal eller tumstock</strong>.<br>
+         • <strong>Kroppsnära plagg</strong> (ej tjocka tröjor).</p>
+
+      <p class="hint">Värdena sparas lokalt på den här enheten så du kan stänga och fortsätta. <strong>Personuppgifter (namn, personnummer, förband) sparas aldrig</strong> — de fylls i precis innan utskrift.</p>
+
+      <div class="btn-row">
+        <button class="btn btn-primary" type="button" id="btnIntroNext">Starta</button>
+      </div>
+    </section>
+
+    <!-- STEG 2 — FÖRBERED (midjeband-placering + checkbox) -->
+    <section class="wiz-card wiz-step" id="step2" data-step="2" aria-labelledby="step2-title">
+      <h2 id="step2-title">Förbered: knyt midjebandet</h2>
+
+      <svg class="fig" viewBox="0 0 360 240" role="img" aria-labelledby="figPrepTitle figPrepDesc">
+        <title id="figPrepTitle">Midjebandets placering</title>
+        <desc id="figPrepDesc">Sidvy av kropp där midjebandet visas knutet mitt mellan revbensbåge och höftben.</desc>
+        <!-- Torso sidvy -->
+        <path class="fig-fill fig-stroke" d="M138,30 Q176,28 196,46 L210,90 Q220,120 218,160 Q214,196 196,210 L160,210 Q138,206 130,180 Q124,150 122,118 Q124,80 138,30 Z"/>
+        <!-- Revbensbåge (gränslinje, streckad) -->
+        <path class="fig-bone" d="M132,118 Q170,128 214,118"/>
+        <text class="fig-sub" x="232" y="122">Revbensbåge</text>
+        <line class="fig-arrow" x1="220" y1="118" x2="226" y2="120"/>
+        <!-- Höftben (gränslinje, streckad) -->
+        <path class="fig-bone" d="M126,176 Q170,182 220,176"/>
+        <text class="fig-sub" x="232" y="180">Höftben</text>
+        <line class="fig-arrow" x1="220" y1="176" x2="226" y2="178"/>
+        <!-- Midjebandet — mittpunkt -->
+        <path class="fig-tape" d="M124,148 Q170,152 220,148"/>
+        <circle class="fig-tape-fill" cx="222" cy="148" r="4"/>
+        <text class="fig-label" x="232" y="146">Midjeband</text>
+        <text class="fig-sub" x="232" y="158">mitt emellan</text>
+        <!-- Pillinje -->
+        <line class="fig-arrow" x1="100" y1="148" x2="118" y2="148"/>
+        <polygon class="fig-arrow-head" points="118,148 112,144 112,152"/>
+        <text class="fig-num" x="80" y="152">M</text>
+      </svg>
+
+      <p>Knyt midjebandet runt midjan i läget <strong>mitt emellan höftbenets ovansida och revbensbågens nedersta punkt</strong>. Bandet ska ligga an mot huden eller tunt plagg.</p>
+      <p class="hint">Flera av de 19 måtten (midjemått, ytterbenlängd, grenmått) räknas <em>från</em> midjebandet. Om bandet sitter fel blir måtten fel.</p>
+
+      <details class="howto">
+        <summary>Inget midjeband? Improvisera</summary>
+        <div>
+          <ol>
+            <li>Ta en bit bomullssnöre (paketsnöre, jutgarn) eller skoband, ca 1 m.</li>
+            <li>Knyt löst runt midjan, justera höjd så det sitter mitt mellan höftben och revben.</li>
+            <li>Spänn till "ligger an utan att klämma".</li>
+          </ol>
+        </div>
+      </details>
+
+      <label class="prep-confirm" id="prepConfirm">
+        <input type="checkbox" id="cbPrep">
+        <span class="pc-label">Midjebandet är knutet i rätt läge.</span>
+      </label>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" data-next>Nästa</button>
+      </div>
+    </section>
+
+    <!-- STEG 3 — LÄNGD & VIKT -->
+    <section class="wiz-card wiz-step" id="step3" data-step="3" aria-labelledby="step3-title">
+      <h2 id="step3-title">Längd &amp; vikt</h2>
+      <p>Två grundvärden för uniformsjacka och byxor.</p>
+
+      <div class="field-list">
+        <div class="field-block">
+          <label for="f_kroppslangd">Kroppslängd</label>
+          <p class="field-explainer">Mät vertikalt från <strong>hjässa till fotsula</strong> (golv) utan skor.</p>
+          <div class="input-suffix">
+            <input type="number" id="f_kroppslangd" data-field="kroppslangd" inputmode="decimal" step="0.5" min="100" max="230" placeholder="t.ex. 178" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+        <div class="field-block">
+          <label for="f_kroppsvikt">Kroppsvikt</label>
+          <p class="field-explainer">Ange din vikt i <strong>kilo</strong>.</p>
+          <div class="input-suffix">
+            <input type="number" id="f_kroppsvikt" data-field="kroppsvikt" inputmode="decimal" step="0.5" min="20" max="200" placeholder="t.ex. 78" autocomplete="off">
+            <span class="suffix">kg</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" data-next>Nästa</button>
+      </div>
+    </section>
+
+    <!-- STEG 4 — HUVUD -->
+    <section class="wiz-card wiz-step" id="step4" data-step="4" aria-labelledby="step4-title">
+      <h2 id="step4-title">Huvud</h2>
+      <p>Tre mått för hjälm, fältmössa, skyddsglasögon och skjorta.</p>
+
+      <div class="field-list">
+
+        <!-- Huvudomkrets -->
+        <div class="field-block">
+          <label for="f_huvudomkrets">Huvudomkrets</label>
+          <p class="field-explainer">Mät <strong>största horisontella omfång</strong>: ca 1 cm ovanför ögonbryn, rakt över öronen, runt största delen av bakhuvudet.</p>
+
+          <svg class="fig" viewBox="0 0 360 220" role="img" aria-label="Huvudomkrets — måttband ovan ögonbryn, över öron, runt bakhuvud">
+            <path class="fig-fill fig-stroke" d="M148,200 L148,170 Q148,164 158,162 L186,162 Q196,164 196,170 L196,200 Z"/>
+            <path class="fig-fill fig-stroke" d="M196,162 Q188,150 200,138 Q252,128 268,98 Q272,80 264,60 Q244,30 200,30 Q144,30 116,68 Q102,90 110,118 Q116,138 132,150 Q142,156 148,162 Z"/>
+            <path class="fig-fill fig-stroke" d="M168,118 Q156,124 158,138 Q162,148 172,148 Q174,138 174,128 Q172,120 168,118 Z"/>
+            <line class="fig-stroke-soft" x1="118" y1="98" x2="166" y2="98"/>
+            <text class="fig-sub" x="118" y="92">ögonbryn</text>
+            <path class="fig-tape" d="M118,86 Q120,80 130,72 Q170,42 220,46 Q258,52 268,76 Q272,90 268,104 Q260,128 230,138 Q200,144 168,140 Q140,136 124,118 Q116,106 118,86 Z"/>
+            <circle class="fig-num-bg" cx="124" cy="92" r="11"/>
+            <text class="fig-num" x="124" y="96" text-anchor="middle">1</text>
+            <circle class="fig-num-bg" cx="172" cy="118" r="11"/>
+            <text class="fig-num" x="172" y="122" text-anchor="middle">2</text>
+            <circle class="fig-num-bg" cx="266" cy="92" r="11"/>
+            <text class="fig-num" x="266" y="96" text-anchor="middle">3</text>
+          </svg>
+
+          <div class="input-suffix">
+            <input type="number" id="f_huvudomkrets" data-field="huvudomkrets" inputmode="decimal" step="0.5" min="40" max="80" placeholder="t.ex. 57" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+          <div class="field-live-hint" id="helmHint" style="display:none;"></div>
+        </div>
+
+        <!-- Huvudbredd -->
+        <div class="field-block">
+          <label for="f_huvudbredd">Huvudbredd (tinningbredd)</label>
+          <p class="field-explainer">Håll <strong>en penna platt mot vardera tinningen</strong> precis ovanför öronen. Mät avståndet mellan pennorna med linjal. Anges i <strong>millimeter</strong>.</p>
+
+          <svg class="fig" viewBox="0 0 360 200" role="img" aria-label="Huvudbredd — pennor vid tinningar, linjal mellan">
+            <ellipse class="fig-fill fig-stroke" cx="180" cy="110" rx="56" ry="64"/>
+            <path class="fig-stroke" d="M158,120 Q156,128 162,134 Q170,136 168,124"/>
+            <path class="fig-stroke" d="M202,120 Q204,128 198,134 Q190,136 192,124"/>
+            <line class="fig-stroke" x1="170" y1="100" x2="172" y2="106"/>
+            <line class="fig-stroke" x1="190" y1="100" x2="188" y2="106"/>
+            <ellipse class="fig-stroke" cx="180" cy="138" rx="6" ry="3"/>
+            <path class="fig-stroke" d="M168,148 Q180,158 192,148"/>
+            <rect class="fig-pencil" x="40" y="104" width="84" height="10" rx="1"/>
+            <polygon class="fig-pencil" points="124,104 134,109 124,114"/>
+            <rect class="fig-pencil" x="236" y="104" width="84" height="10" rx="1"/>
+            <polygon class="fig-pencil" points="236,104 226,109 236,114"/>
+            <rect class="fig-ruler" x="60" y="60" width="240" height="14" rx="1"/>
+            <g class="fig-stroke-soft">
+              <line x1="80" y1="60" x2="80" y2="74"/>
+              <line x1="120" y1="60" x2="120" y2="74"/>
+              <line x1="160" y1="60" x2="160" y2="74"/>
+              <line x1="200" y1="60" x2="200" y2="74"/>
+              <line x1="240" y1="60" x2="240" y2="74"/>
+              <line x1="280" y1="60" x2="280" y2="74"/>
+            </g>
+            <line class="fig-arrow" x1="124" y1="86" x2="236" y2="86"/>
+            <polygon class="fig-arrow-head" points="124,86 132,82 132,90"/>
+            <polygon class="fig-arrow-head" points="236,86 228,82 228,90"/>
+            <text class="fig-label" x="180" y="98" text-anchor="middle">tinningbredd (mm)</text>
+          </svg>
+
+          <div class="input-suffix">
+            <input type="number" id="f_huvudbredd" data-field="huvudbredd" inputmode="decimal" step="1" min="100" max="220" placeholder="t.ex. 155" autocomplete="off">
+            <span class="suffix">mm</span>
+          </div>
+        </div>
+
+        <!-- Halsmått -->
+        <div class="field-block">
+          <label for="f_halsmatt">Halsmått</label>
+          <p class="field-explainer">Mät <strong>omkretsen runt halsens bas över halsgropen</strong> — där en skjortkrage skulle sitta.</p>
+          <div class="input-suffix">
+            <input type="number" id="f_halsmatt" data-field="halsmatt" inputmode="decimal" step="0.5" min="25" max="60" placeholder="t.ex. 39" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" data-next>Nästa</button>
+      </div>
+    </section>
+
+    <!-- STEG 5 — BÅL -->
+    <section class="wiz-card wiz-step" id="step5" data-step="5" aria-labelledby="step5-title">
+      <h2 id="step5-title">Bål</h2>
+      <p>Fem mått för uniformsjacka, skjorta och BH. Stå avslappnat, andas normalt.</p>
+
+      <div class="field-list">
+        <div class="field-block">
+          <label for="f_brostvidd">Bröstvidd</label>
+          <p class="field-explainer">Mät <strong>största omfång runtom över bysten</strong>. Måttband horisontellt.</p>
+          <div class="input-suffix">
+            <input type="number" id="f_brostvidd" data-field="brostvidd" inputmode="decimal" step="0.5" min="60" max="160" placeholder="t.ex. 100" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+
+        <!-- Bröstkorg — SVG (viktigt: skiljer från bröstvidd) -->
+        <div class="field-block">
+          <label for="f_brostkorg">Bröstkorg</label>
+          <p class="field-explainer">Mät omfång <strong>horisontellt under bysten</strong> (precis under bröstet) — <strong>inte</strong> samma som bröstvidd.</p>
+
+          <svg class="fig" viewBox="0 0 360 220" role="img" aria-label="Bröstkorg — måttband under bysten">
+            <!-- Torso frontvy -->
+            <path class="fig-fill fig-stroke" d="M120,40 Q132,30 148,28 L212,28 Q228,30 240,40 L246,80 Q248,100 244,124 L240,176 Q236,200 220,206 L140,206 Q124,200 120,176 L116,124 Q112,100 114,80 Z"/>
+            <!-- Bröst (referens — streckad) -->
+            <path class="fig-bone" d="M148,82 Q160,108 156,116 Q150,118 144,108 Z"/>
+            <path class="fig-bone" d="M212,82 Q200,108 204,116 Q210,118 216,108 Z"/>
+            <text class="fig-sub" x="180" y="74" text-anchor="middle">byst (referens)</text>
+            <!-- Måttband UNDER bysten -->
+            <path class="fig-tape" d="M118,124 Q180,134 242,124"/>
+            <path class="fig-tape" stroke-dasharray="3 3" d="M118,124 Q180,114 242,124" />
+            <text class="fig-label" x="180" y="148" text-anchor="middle">UNDER bysten</text>
+            <text class="fig-sub" x="180" y="160" text-anchor="middle">(bröstkorg, ej bröstvidd)</text>
+          </svg>
+
+          <div class="input-suffix">
+            <input type="number" id="f_brostkorg" data-field="brostkorg" inputmode="decimal" step="0.5" min="50" max="150" placeholder="t.ex. 86" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+
+        <div class="field-block">
+          <label for="f_midjematt">Midjemått</label>
+          <p class="field-explainer">Mät <strong>runtom midjan vid midjebandet</strong>. Gravida måttas över magens högsta punkt.</p>
+          <div class="input-suffix">
+            <input type="number" id="f_midjematt" data-field="midjematt" inputmode="decimal" step="0.5" min="50" max="160" placeholder="t.ex. 86" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+
+        <div class="field-block">
+          <label for="f_stussvidd">Stussvidd</label>
+          <p class="field-explainer">Mät <strong>runtom bredaste delen av stussen</strong> — inte för stramt.</p>
+          <div class="input-suffix">
+            <input type="number" id="f_stussvidd" data-field="stussvidd" inputmode="decimal" step="0.5" min="60" max="160" placeholder="t.ex. 100" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+
+        <!-- Bållängd — SVG -->
+        <div class="field-block">
+          <label for="f_ballangd">Bållängd</label>
+          <p class="field-explainer">Placera en linjal i grenen. Mät <strong>från nackkotan till linjalens övre kant</strong> längs ryggen.</p>
+
+          <svg class="fig" viewBox="0 0 360 260" role="img" aria-label="Bållängd — nackkota till linjal i grenen">
+            <!-- Bakvy av kropp -->
+            <path class="fig-fill fig-stroke" d="M150,30 L210,30 Q224,32 226,46 L228,80 L250,90 L262,140 L240,144 L232,200 Q230,224 218,232 L142,232 Q130,224 128,200 L120,144 L98,140 L110,90 L132,80 L134,46 Q136,32 150,30 Z"/>
+            <!-- Nackkota markering -->
+            <circle class="fig-num-bg" cx="180" cy="50" r="9"/>
+            <text class="fig-num" x="180" y="54" text-anchor="middle">N</text>
+            <text class="fig-sub" x="200" y="54">nackkota</text>
+            <!-- Streckad linje från nackkota till grenlinjen längs mitten -->
+            <line class="fig-stroke-soft" x1="180" y1="56" x2="180" y2="220"/>
+            <!-- Linjal i grenen (horisontell) -->
+            <rect class="fig-ruler" x="148" y="216" width="64" height="8" rx="1"/>
+            <text class="fig-sub" x="216" y="222">linjal i grenen</text>
+            <!-- Pil "läs av övre kant" -->
+            <line class="fig-arrow" x1="146" y1="216" x2="120" y2="200"/>
+            <polygon class="fig-arrow-head" points="146,216 142,210 138,218"/>
+            <text class="fig-label" x="116" y="194" text-anchor="end">läs övre kant</text>
+            <!-- Mätningspil längs ryggen -->
+            <line class="fig-arrow" x1="200" y1="56" x2="200" y2="216"/>
+            <polygon class="fig-arrow-head" points="200,56 196,64 204,64"/>
+            <polygon class="fig-arrow-head" points="200,216 196,208 204,208"/>
+            <text class="fig-label" x="220" y="140">bållängd</text>
+          </svg>
+
+          <div class="input-suffix">
+            <input type="number" id="f_ballangd" data-field="ballangd" inputmode="decimal" step="0.5" min="40" max="100" placeholder="t.ex. 64" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" data-next>Nästa</button>
+      </div>
+    </section>
+
+    <!-- STEG 6 — ARMAR -->
+    <section class="wiz-card wiz-step" id="step6" data-step="6" aria-labelledby="step6-title">
+      <h2 id="step6-title">Armar</h2>
+      <p>Två mått för uniformsjacka.</p>
+
+      <div class="field-list">
+
+        <!-- Armlängd — SVG -->
+        <div class="field-block">
+          <label for="f_armlangd">Armlängd</label>
+          <p class="field-explainer">Mät med <strong>lätt böjd arm</strong>: från <strong>yttre axelspets</strong> (den hårda knölen ytterst på axeln), över armbågens utsida, till handleden.</p>
+
+          <svg class="fig" viewBox="0 0 360 240" role="img" aria-label="Armlängd — yttre axelspets över armbåge till handled">
+            <!-- Bål -->
+            <path class="fig-fill fig-stroke" d="M140,50 Q140,38 158,36 L210,36 Q230,38 230,50 L240,160 Q236,200 220,210 L160,210 Q142,200 138,160 Z"/>
+            <!-- Axel -->
+            <circle class="fig-fill fig-stroke" cx="240" cy="62" r="14"/>
+            <!-- Yttre axelspets markering -->
+            <circle class="fig-num-bg" cx="252" cy="58" r="10"/>
+            <text class="fig-num" x="252" y="62" text-anchor="middle">1</text>
+            <!-- Överarm (lätt böjd) -->
+            <path class="fig-fill fig-stroke" d="M252,68 Q280,80 290,116 Q288,124 280,124 Q256,114 244,76 Q244,70 252,68 Z"/>
+            <!-- Armbåge -->
+            <circle class="fig-fill fig-stroke" cx="288" cy="118" r="11"/>
+            <circle class="fig-num-bg" cx="306" cy="118" r="10"/>
+            <text class="fig-num" x="306" y="122" text-anchor="middle">2</text>
+            <!-- Underarm (böjd inåt) -->
+            <path class="fig-fill fig-stroke" d="M286,128 Q272,160 252,190 Q244,196 236,192 Q230,184 240,176 Q258,150 274,124 Q280,124 286,128 Z"/>
+            <!-- Handled -->
+            <ellipse class="fig-fill fig-stroke" cx="246" cy="194" rx="10" ry="5"/>
+            <circle class="fig-num-bg" cx="226" cy="200" r="10"/>
+            <text class="fig-num" x="226" y="204" text-anchor="middle">3</text>
+            <!-- Streckad mätlinje -->
+            <path class="fig-stroke-soft" d="M252,58 Q272,90 288,118 Q272,160 246,194"/>
+            <text class="fig-label" x="320" y="64">yttre axelspets</text>
+            <text class="fig-label" x="324" y="120">armbåge</text>
+            <text class="fig-label" x="218" y="220" text-anchor="end">handled</text>
+          </svg>
+
+          <div class="input-suffix">
+            <input type="number" id="f_armlangd" data-field="armlangd" inputmode="decimal" step="0.5" min="40" max="90" placeholder="t.ex. 62" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+
+        <div class="field-block">
+          <label for="f_overarmsvidd">Överarmsvidd</label>
+          <p class="field-explainer">Mät <strong>runtom bredaste delen av överarmen</strong> (mellan axel och armbåge), arm avslappnad.</p>
+          <div class="input-suffix">
+            <input type="number" id="f_overarmsvidd" data-field="overarmsvidd" inputmode="decimal" step="0.5" min="15" max="60" placeholder="t.ex. 32" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" data-next>Nästa</button>
+      </div>
+    </section>
+
+    <!-- STEG 7 — BEN -->
+    <section class="wiz-card wiz-step" id="step7" data-step="7" aria-labelledby="step7-title">
+      <h2 id="step7-title">Ben</h2>
+      <p>Fyra mått för byxor.</p>
+
+      <div class="field-list">
+
+        <!-- Innerbenlängd — SVG -->
+        <div class="field-block">
+          <label for="f_innerben">Innerbenlängd</label>
+          <p class="field-explainer">Placera en linjal i <strong>högsta läget i grenen</strong>. Mät <strong>från linjalens övre kant till golv</strong> utan skor.</p>
+
+          <svg class="fig" viewBox="0 0 360 260" role="img" aria-label="Innerbenlängd — linjal i grenen, från linjalens övre kant till golv">
+            <!-- Höft + ben (sidvy) -->
+            <path class="fig-fill fig-stroke" d="M150,30 L208,30 Q220,30 222,42 L228,76 Q230,90 220,96 L226,160 Q222,200 218,232 L194,232 L186,164 L174,164 L166,232 L142,232 Q138,200 140,160 L146,96 Q136,90 138,76 L144,42 Q146,30 150,30 Z"/>
+            <!-- Linjal i grenen -->
+            <rect class="fig-ruler" x="158" y="100" width="44" height="8" rx="1"/>
+            <text class="fig-sub" x="216" y="106">linjal</text>
+            <!-- Pil från linjalens övre kant ner till golv -->
+            <line class="fig-arrow" x1="150" y1="100" x2="150" y2="232"/>
+            <polygon class="fig-arrow-head" points="150,100 146,108 154,108"/>
+            <polygon class="fig-arrow-head" points="150,232 146,224 154,224"/>
+            <text class="fig-label" x="124" y="170" text-anchor="end">innerben­längd</text>
+            <!-- Golv -->
+            <line class="fig-stroke" x1="100" y1="234" x2="260" y2="234"/>
+            <text class="fig-sub" x="260" y="246" text-anchor="end">golv</text>
+          </svg>
+
+          <div class="input-suffix">
+            <input type="number" id="f_innerben" data-field="innerben" inputmode="decimal" step="0.5" min="40" max="110" placeholder="t.ex. 82" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+
+        <div class="field-block">
+          <label for="f_ytterben">Ytterbenlängd</label>
+          <p class="field-explainer">Mät <strong>från midjebandet till golv</strong> utan skor, längs benets utsida.</p>
+          <div class="input-suffix">
+            <input type="number" id="f_ytterben" data-field="ytterben" inputmode="decimal" step="0.5" min="60" max="130" placeholder="t.ex. 108" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+
+        <div class="field-block">
+          <label for="f_larvidd">Lårvidd</label>
+          <p class="field-explainer">Mät <strong>runtom bredaste delen av låret</strong>, ben avslappnat.</p>
+          <div class="input-suffix">
+            <input type="number" id="f_larvidd" data-field="larvidd" inputmode="decimal" step="0.5" min="30" max="90" placeholder="t.ex. 56" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+
+        <!-- Grenmått — SVG -->
+        <div class="field-block">
+          <label for="f_grenmatt">Grenmått</label>
+          <p class="field-explainer">Mät <strong>från midjebandet fram, ner under grenen, upp till midjebandet bak</strong>. Lättast med en kompis.</p>
+
+          <svg class="fig" viewBox="0 0 360 260" role="img" aria-label="Grenmått — från midjeband fram, under grenen, till midjeband bak">
+            <!-- Sidvy av nedre kropp -->
+            <path class="fig-fill fig-stroke" d="M132,40 L226,40 Q238,42 240,56 L244,108 Q246,128 240,144 L246,200 Q244,228 232,232 L210,232 L200,168 L186,168 L188,148 L172,148 L174,168 L160,168 L150,232 L128,232 Q116,228 114,200 L120,144 Q114,128 116,108 L120,56 Q122,42 132,40 Z"/>
+            <!-- Midjebandet (synligt fram + bak som streckad) -->
+            <line class="fig-tape" x1="116" y1="86" x2="244" y2="86"/>
+            <text class="fig-sub" x="180" y="78" text-anchor="middle">midjeband</text>
+            <!-- Vägen som måttbandet följer (orange/accent streckad) -->
+            <path class="fig-tape" stroke-dasharray="4 3" d="M120,86 Q108,140 168,158 Q200,162 240,140 Q252,116 244,86"/>
+            <text class="fig-label" x="180" y="190" text-anchor="middle">grenmått (väg)</text>
+            <!-- Grenpunkt -->
+            <circle class="fig-num-bg" cx="180" cy="158" r="8"/>
+            <text class="fig-num" x="180" y="162" text-anchor="middle">G</text>
+          </svg>
+
+          <div class="input-suffix">
+            <input type="number" id="f_grenmatt" data-field="grenmatt" inputmode="decimal" step="0.5" min="40" max="100" placeholder="t.ex. 70" autocomplete="off">
+            <span class="suffix">cm</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" data-next>Nästa</button>
+      </div>
+    </section>
+
+    <!-- STEG 8 — HAND & FOT (alla mm) -->
+    <section class="wiz-card wiz-step" id="step8" data-step="8" aria-labelledby="step8-title">
+      <h2 id="step8-title">Hand &amp; fot</h2>
+      <p>Tre mått för vantar och kängor — alla i <strong>millimeter</strong>.</p>
+
+      <div class="field-list">
+        <div class="field-block">
+          <label for="f_handomkrets">Handomkrets</label>
+          <p class="field-explainer">Mät <strong>handens omfång 2 cm från tumvecket</strong> (där tummen ansluter till handflatan), runt knogarna utan tummen. <strong>I mm.</strong></p>
+          <div class="input-suffix">
+            <input type="number" id="f_handomkrets" data-field="handomkrets" inputmode="decimal" step="1" min="120" max="280" placeholder="t.ex. 210" autocomplete="off">
+            <span class="suffix">mm</span>
+          </div>
+        </div>
+        <div class="field-block">
+          <label for="f_handlangd">Handlängd</label>
+          <p class="field-explainer">Mät <strong>från längsta fingrets spets ner till handleden</strong>. <strong>I mm.</strong></p>
+          <div class="input-suffix">
+            <input type="number" id="f_handlangd" data-field="handlangd" inputmode="decimal" step="1" min="120" max="240" placeholder="t.ex. 190" autocomplete="off">
+            <span class="suffix">mm</span>
+          </div>
+        </div>
+        <div class="field-block">
+          <label for="f_fotlangd">Fotlängd</label>
+          <p class="field-explainer">Mät <strong>från hälens bakre punkt till längsta tåns spets</strong>, fot på golv, vikten på foten. <strong>I mm.</strong></p>
+          <div class="input-suffix">
+            <input type="number" id="f_fotlangd" data-field="fotlangd" inputmode="decimal" step="1" min="200" max="340" placeholder="t.ex. 275" autocomplete="off">
+            <span class="suffix">mm</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" data-back>Tillbaka</button>
+        <button class="btn btn-primary" type="button" data-next>Visa resultat</button>
+      </div>
+    </section>
+
+    <!-- STEG 9 — RESULTAT -->
+    <section class="wiz-step" id="step9" data-step="9" aria-labelledby="step9-title" aria-live="polite">
+      <h2 id="step9-title" style="position:absolute;left:-9999px;">Resultat</h2>
+
+      <div class="completion-bar" id="completionBar">
+        <span><span class="cb-num" id="cbNum">0</span> av 19 mått ifyllda</span>
+        <span class="completion-bar-fill"><span id="cbFill"></span></span>
+      </div>
+
+      <div class="pii-block">
+        <div class="pii-warn"><strong>Personuppgifter</strong> — fylls i precis innan utskrift. <strong>Sparas aldrig på enheten.</strong> Försvinner när du stänger fliken eller trycker "Börja om".</div>
+        <div class="pii-fields">
+          <div>
+            <label for="pii_namn">Namn</label>
+            <input type="text" id="pii_namn" autocomplete="off" placeholder="För- och efternamn">
+          </div>
+          <div>
+            <label for="pii_persnr">Personnummer</label>
+            <input type="text" id="pii_persnr" autocomplete="off" placeholder="ÅÅÅÅMMDD-NNNN">
+          </div>
+          <div style="grid-column:1/-1;">
+            <label for="pii_forband">Förband</label>
+            <input type="text" id="pii_forband" autocomplete="off" placeholder="T.ex. 47:e Hemvärnsbat">
+          </div>
+        </div>
+      </div>
+
+      <div class="result-summary">
+        <h2>Sammanfattning — 19 mått</h2>
+        <table class="blank-table" id="resultTable">
+          <tbody>
+            <!-- Renderas dynamiskt av renderResult() -->
+          </tbody>
+        </table>
+
+        <p class="print-disclaimer print-only">Detta utdrag är från ett tredjeparts-hjälpverktyg. Verifiera värdena mot officiell FM-blankett innan inlämning.</p>
+      </div>
+
+      <div class="btn-row">
+        <button class="btn btn-secondary" type="button" id="btnCopy">Kopiera resultat</button>
+        <button class="btn btn-secondary" type="button" id="btnPrint">Skriv ut</button>
+      </div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn btn-secondary" type="button" id="btnRestart">Börja om</button>
+        <button class="btn btn-primary" type="button" id="btnEdit">Ändra svar</button>
+      </div>
+    </section>
+
+  </main>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <footer>
+    <p>FM-blankett "Ange Dina mått" · Försvarsmakten · Västra militärregionen</p>
+    <p>Endast hjälpverktyg — verifiera mot officiell blankett. <a href="Ange dina mått.pdf" target="_blank" rel="noopener noreferrer">Öppna blanketten</a>.</p>
+  </footer>
+
+</div>
+
+<script src="opsec.js"></script>
+<script src="pwa.js"></script>
+<script src="footer.js"></script>
+<script src="version.js"></script>
+
+<script>
+'use strict';
+(function () {
+
+  // ── Konstanter ────────────────────────────────────────────────────────────
+  var STORAGE_KEY = 'matt_state_v1';
+  var TOTAL_STEPS = 9;
+
+  // De 19 mått-fälten + förbered-checkbox.
+  // Personuppgifter är inte med här — de hanteras separat i RAM.
+  var FIELDS = [
+    { key:'kroppslangd',  step:3, label:'Kroppslängd',     unit:'cm', range:[100,230] },
+    { key:'kroppsvikt',   step:3, label:'Kroppsvikt',      unit:'kg', range:[20,200] },
+    { key:'huvudomkrets', step:4, label:'Huvudomkrets',    unit:'cm', range:[40,80] },
+    { key:'huvudbredd',   step:4, label:'Huvudbredd',      unit:'mm', range:[100,220] },
+    { key:'halsmatt',     step:4, label:'Halsmått',        unit:'cm', range:[25,60] },
+    { key:'brostvidd',    step:5, label:'Bröstvidd',       unit:'cm', range:[60,160] },
+    { key:'brostkorg',    step:5, label:'Bröstkorg',       unit:'cm', range:[50,150] },
+    { key:'midjematt',    step:5, label:'Midjemått',       unit:'cm', range:[50,160] },
+    { key:'stussvidd',    step:5, label:'Stussvidd',       unit:'cm', range:[60,160] },
+    { key:'ballangd',     step:5, label:'Bållängd',        unit:'cm', range:[40,100] },
+    { key:'armlangd',     step:6, label:'Armlängd',        unit:'cm', range:[40,90] },
+    { key:'overarmsvidd', step:6, label:'Överarmsvidd',    unit:'cm', range:[15,60] },
+    { key:'innerben',     step:7, label:'Innerbenlängd',   unit:'cm', range:[40,110] },
+    { key:'ytterben',     step:7, label:'Ytterbenlängd',   unit:'cm', range:[60,130] },
+    { key:'larvidd',      step:7, label:'Lårvidd',         unit:'cm', range:[30,90] },
+    { key:'grenmatt',     step:7, label:'Grenmått',        unit:'cm', range:[40,100] },
+    { key:'handomkrets',  step:8, label:'Handomkrets',     unit:'mm', range:[120,280] },
+    { key:'handlangd',    step:8, label:'Handlängd',       unit:'mm', range:[120,240] },
+    { key:'fotlangd',     step:8, label:'Fotlängd',        unit:'mm', range:[200,340] }
+  ];
+
+  var FIELD_BY_KEY = {};
+  for (var i = 0; i < FIELDS.length; i++) FIELD_BY_KEY[FIELDS[i].key] = FIELDS[i];
+
+  // Storlekstabell för Stridshjälm 24 — för live-hint på huvudomkrets.
+  var HELM_SIZES = [
+    { code:'S',  min:52, max:55 },
+    { code:'M',  min:55, max:58 },
+    { code:'L',  min:58, max:61 },
+    { code:'XL', min:61, max:64 },
+    { code:'XXL',min:64, max:67 }
+  ];
+
+  // ── State ─────────────────────────────────────────────────────────────────
+  // values: { kroppslangd:178, ... } — bara 19 mått + prep-flagga.
+  // viewed: ['1','2','3'] — vilka pills som besökts.
+  // step:   1..9
+  var state = {
+    step: 1,
+    values: {},
+    prep: false,
+    viewed: { '1': true }
+  };
+
+  // PII finns endast i RAM — försvinner när fliken stängs.
+  var pii = { namn:'', persnr:'', forband:'' };
+
+  function saveState() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
+  }
+  function loadState() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      var parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        if (typeof parsed.step === 'number' && parsed.step >= 1 && parsed.step <= TOTAL_STEPS) state.step = parsed.step;
+        if (parsed.values && typeof parsed.values === 'object') {
+          for (var k in parsed.values) {
+            if (FIELD_BY_KEY[k] && typeof parsed.values[k] === 'number' && isFinite(parsed.values[k])) {
+              state.values[k] = parsed.values[k];
+            }
+          }
+        }
+        if (parsed.prep === true) state.prep = true;
+        if (parsed.viewed && typeof parsed.viewed === 'object') {
+          for (var v in parsed.viewed) if (parsed.viewed[v] === true) state.viewed[v] = true;
+        }
+      }
+    } catch (_) {}
+  }
+  function clearState() {
+    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+    state.step = 1; state.values = {}; state.prep = false; state.viewed = { '1':true };
+    pii.namn = ''; pii.persnr = ''; pii.forband = '';
+  }
+
+  // ── Wizard-navigation ─────────────────────────────────────────────────────
+  function highestReachable() {
+    // Soldat som besökt steg N kan alltid hoppa tillbaka till N. Låsta steg
+    // är de hen aldrig nått. Pill-9 kräver att hen åtminstone besökt 8.
+    var max = 1;
+    for (var n = 1; n <= TOTAL_STEPS; n++) {
+      if (state.viewed[String(n)]) max = n;
+    }
+    // Tillåt nästa-steg framåt: om current är N och hen kommit hit, så är N+1
+    // tillgängligt via Nästa-knappen — men inte via pill-klick förrän besökt.
+    return Math.max(max, state.step);
+  }
+
+  function renderPills() {
+    var max = highestReachable();
+    var pills = document.querySelectorAll('.wiz-pill');
+    for (var i = 0; i < pills.length; i++) {
+      var p = pills[i];
+      var n = parseInt(p.getAttribute('data-go'), 10);
+      p.classList.remove('is-current', 'is-done', 'is-locked');
+      if (n === state.step) p.classList.add('is-current');
+      else if (n <= max) p.classList.add('is-done');
+      else p.classList.add('is-locked');
+      p.setAttribute('aria-current', n === state.step ? 'step' : 'false');
+      p.disabled = (n > max);
+    }
+  }
+
+  function showStep(n) {
+    if (n < 1) n = 1;
+    if (n > TOTAL_STEPS) n = TOTAL_STEPS;
+    state.step = n;
+    state.viewed[String(n)] = true;
+    saveState();
+
+    var sections = document.querySelectorAll('.wiz-step');
+    for (var i = 0; i < sections.length; i++) {
+      var sec = sections[i];
+      var s = parseInt(sec.getAttribute('data-step'), 10);
+      sec.classList.toggle('active', s === n);
+    }
+    renderPills();
+
+    if (n === TOTAL_STEPS) {
+      renderResult();
+    }
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    window.scrollTo({ top:0, behavior: reduce ? 'auto' : 'smooth' });
+  }
+
+  function goNext() { showStep(state.step + 1); }
+  function goBack() { showStep(state.step - 1); }
+
+  // ── Field-helpers ─────────────────────────────────────────────────────────
+  // parseValue: tolerant — accepterar komma, mm/cm/m/in/tum-suffix, returnerar
+  // tal i fältets *eget* målsystem (cm eller mm beroende på FIELDS[].unit).
+  // Steg: 1) plocka ut tal, 2) bestäm input-enhet (explicit suffix eller
+  // antagen från target + heuristik), 3) konvertera till targetUnit.
+  function parseValue(raw, targetUnit) {
+    if (raw == null) return null;
+    raw = String(raw).trim().toLowerCase();
+    if (raw === '') return null;
+    var m = raw.match(/(-?\d+(?:[.,]\d+)?)/);
+    if (!m) return null;
+    var n = parseFloat(m[1].replace(',', '.'));
+    if (isNaN(n) || !isFinite(n)) return null;
+
+    var hasMm = /\bmm\b/.test(raw);
+    var hasCm = /\bcm\b/.test(raw);
+    var hasIn = /\bin\b|\binch\b|tum|"/.test(raw);
+    var hasM  = /\bm\b(?!m)/.test(raw);
+
+    // 1) Bestäm input-enhet
+    var inputUnit;
+    if (hasMm)      inputUnit = 'mm';
+    else if (hasIn) inputUnit = 'in';
+    else if (hasM)  inputUnit = 'm';
+    else if (hasCm) inputUnit = 'cm';
+    else {
+      // Ingen explicit enhet — anta samma enhet som target.
+      inputUnit = targetUnit;
+      // Heuristik: vanlig förväxling.
+      if (targetUnit === 'cm' && n > 250) inputUnit = 'mm'; // 275 i cm-fält → är troligen mm
+      if (targetUnit === 'mm' && n < 30)  inputUnit = 'cm'; // 15 i mm-fält → är troligen cm
+    }
+
+    // 2) Konvertera till targetUnit
+    var result;
+    if (inputUnit === targetUnit) result = n;
+    else if (inputUnit === 'mm' && targetUnit === 'cm') result = n / 10;
+    else if (inputUnit === 'cm' && targetUnit === 'mm') result = n * 10;
+    else if (inputUnit === 'in' && targetUnit === 'cm') result = n * 2.54;
+    else if (inputUnit === 'in' && targetUnit === 'mm') result = n * 25.4;
+    else if (inputUnit === 'm'  && targetUnit === 'cm') result = n * 100;
+    else if (inputUnit === 'm'  && targetUnit === 'mm') result = n * 1000;
+    else result = n;
+
+    return targetUnit === 'mm' ? Math.round(result) : Math.round(result * 10) / 10;
+  }
+
+  function formatValue(v, unit) {
+    if (v == null) return '';
+    if (unit === 'mm') return String(Math.round(v));
+    return (Math.round(v * 10) / 10).toString().replace(/\.0$/, '');
+  }
+
+  function readFieldFromInput(key) {
+    var f = FIELD_BY_KEY[key];
+    if (!f) return;
+    var el = document.querySelector('[data-field="' + key + '"]');
+    if (!el) return;
+    var v = parseValue(el.value, f.unit);
+    if (v == null) {
+      delete state.values[key];
+    } else {
+      state.values[key] = v;
+    }
+    el.classList.toggle('has-value', state.values[key] != null);
+  }
+
+  function syncAllInputs() {
+    // Skriv state-värden tillbaka in i input-fälten (vid hydration).
+    for (var i = 0; i < FIELDS.length; i++) {
+      var f = FIELDS[i];
+      var el = document.querySelector('[data-field="' + f.key + '"]');
+      if (!el) continue;
+      if (state.values[f.key] != null) {
+        el.value = formatValue(state.values[f.key], f.unit);
+        el.classList.add('has-value');
+      }
+    }
+    // Förbered-checkbox
+    document.getElementById('cbPrep').checked = !!state.prep;
+    document.getElementById('prepConfirm').classList.toggle('checked', !!state.prep);
+  }
+
+  // ── Live-hint på huvudomkrets ─────────────────────────────────────────────
+  function pickHelmSize(cm) {
+    if (cm == null || isNaN(cm)) return null;
+    if (cm < HELM_SIZES[0].min || cm > HELM_SIZES[HELM_SIZES.length - 1].max) return null;
+    for (var i = 0; i < HELM_SIZES.length; i++) {
+      var s = HELM_SIZES[i];
+      var lastBucket = (i === HELM_SIZES.length - 1);
+      if (cm >= s.min && (lastBucket ? cm <= s.max : cm < s.max)) return s.code;
+    }
+    return null;
+  }
+  function refreshHelmHint() {
+    var hint = document.getElementById('helmHint');
+    var v = state.values.huvudomkrets;
+    var size = pickHelmSize(v);
+    if (size) {
+      hint.style.display = 'block';
+      hint.innerHTML = 'Motsvarar hjälmstorlek <strong>' + size + '</strong> för Stridshjälm 24. <a href="hjalm24.html">Fullständig hjälm-wizard →</a>';
+    } else {
+      hint.style.display = 'none';
+    }
+  }
+
+  // ── Render resultat (Pill 9) ──────────────────────────────────────────────
+  function renderResult() {
+    // Bygg tabell-raderna i samma 2-kolumns-layout som FM-blanketten:
+    // vänster kolumn = primära mått, höger kolumn = övriga.
+    // Vi följer PDF-blankettens egen ordning på sida 1.
+    var leftKeys  = ['kroppslangd','kroppsvikt','huvudomkrets','halsmatt','brostvidd','brostkorg','midjematt','stussvidd','handomkrets','handlangd'];
+    var rightKeys = ['fotlangd','innerben','armlangd','overarmsvidd','huvudbredd','larvidd','ytterben','grenmatt','ballangd'];
+
+    var rows = Math.max(leftKeys.length, rightKeys.length);
+    var html = '';
+    for (var r = 0; r < rows; r++) {
+      var lk = leftKeys[r], rk = rightKeys[r];
+      var lf = lk ? FIELD_BY_KEY[lk] : null;
+      var rf = rk ? FIELD_BY_KEY[rk] : null;
+      var lv = lf ? state.values[lf.key] : null;
+      var rv = rf ? state.values[rf.key] : null;
+
+      html += '<tr>';
+      html += '<td class="b-label">' + (lf ? (lf.label + ' (' + lf.unit + ')') : '') + '</td>';
+      html += '<td class="b-val ' + (lv == null ? 'empty' : '') + '">' + (lv == null ? '' : formatValue(lv, lf.unit) + ' ' + lf.unit) + '</td>';
+      if (rf) {
+        html += '<td class="b-label">' + rf.label + ' (' + rf.unit + ')</td>';
+        html += '<td class="b-val ' + (rv == null ? 'empty' : '') + '">' + (rv == null ? '' : formatValue(rv, rf.unit) + ' ' + rf.unit) + '</td>';
+      } else {
+        html += '<td></td><td></td>';
+      }
+      html += '</tr>';
+    }
+    document.querySelector('#resultTable tbody').innerHTML = html;
+
+    // Completion-bar
+    var filled = 0;
+    for (var i = 0; i < FIELDS.length; i++) if (state.values[FIELDS[i].key] != null) filled++;
+    document.getElementById('cbNum').textContent = filled;
+    document.getElementById('cbFill').style.width = (filled / FIELDS.length * 100).toFixed(0) + '%';
+  }
+
+  // ── Toast / clipboard ─────────────────────────────────────────────────────
+  var _toastTimer = null;
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    if (!t) return;
+    t.textContent = msg;
+    t.classList.add('show');
+    if (_toastTimer) clearTimeout(_toastTimer);
+    _toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2400);
+  }
+  function copyText(text) {
+    function fallback() {
+      try {
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta); ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+        toast('Kopierat');
+      } catch (e) { toast('Kunde inte kopiera — markera och kopiera manuellt'); }
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () { toast('Kopierat'); }, fallback);
+    } else {
+      fallback();
+    }
+  }
+  function buildResultText() {
+    var lines = [];
+    lines.push('FÖRSVARSMAKTEN — Ange dina mått');
+    lines.push('=================================');
+    if (pii.namn)    lines.push('Namn:           ' + pii.namn);
+    if (pii.persnr)  lines.push('Personnummer:   ' + pii.persnr);
+    if (pii.forband) lines.push('Förband:        ' + pii.forband);
+    lines.push('');
+    for (var i = 0; i < FIELDS.length; i++) {
+      var f = FIELDS[i];
+      var v = state.values[f.key];
+      var val = (v == null) ? '___' : (formatValue(v, f.unit) + ' ' + f.unit);
+      lines.push((f.label + ' (' + f.unit + '):').padEnd(28, ' ') + val);
+    }
+    lines.push('');
+    lines.push('Detta är ett utdrag från ett tredjeparts-hjälpverktyg. Verifiera mot officiell blankett.');
+    return lines.join('\n');
+  }
+
+  // ── Eventbindningar ───────────────────────────────────────────────────────
+  function wireEvents() {
+    // Hub-kort: scroll till wizard
+    document.getElementById('trackUni').addEventListener('click', function () {
+      var w = document.getElementById('wizard');
+      if (w) w.scrollIntoView({ behavior:'smooth', block:'start' });
+    });
+
+    // Pills (klickbara för besökta steg)
+    var pills = document.querySelectorAll('.wiz-pill');
+    for (var pi = 0; pi < pills.length; pi++) {
+      pills[pi].addEventListener('click', function () {
+        if (this.disabled) return;
+        var go = parseInt(this.getAttribute('data-go'), 10);
+        if (!isNaN(go)) showStep(go);
+      });
+    }
+
+    // Intro Nästa-knapp
+    document.getElementById('btnIntroNext').addEventListener('click', goNext);
+
+    // Generiska Nästa/Tillbaka-knappar
+    var nexts = document.querySelectorAll('[data-next]');
+    for (var ni = 0; ni < nexts.length; ni++) nexts[ni].addEventListener('click', goNext);
+    var backs = document.querySelectorAll('[data-back]');
+    for (var bi = 0; bi < backs.length; bi++) backs[bi].addEventListener('click', goBack);
+
+    // Förbered-checkbox
+    var cb = document.getElementById('cbPrep');
+    cb.addEventListener('change', function () {
+      state.prep = cb.checked;
+      document.getElementById('prepConfirm').classList.toggle('checked', cb.checked);
+      saveState();
+    });
+
+    // Alla mått-input — uppdatera state on input + on blur
+    for (var i = 0; i < FIELDS.length; i++) {
+      var f = FIELDS[i];
+      var el = document.querySelector('[data-field="' + f.key + '"]');
+      if (!el) continue;
+      (function (key, el) {
+        el.addEventListener('input', function () {
+          readFieldFromInput(key);
+          saveState();
+          if (key === 'huvudomkrets') refreshHelmHint();
+        });
+        el.addEventListener('blur', function () {
+          readFieldFromInput(key);
+          // Re-formatera till kanonisk form
+          var f2 = FIELD_BY_KEY[key];
+          if (state.values[key] != null) {
+            el.value = formatValue(state.values[key], f2.unit);
+          }
+          saveState();
+        });
+      })(f.key, el);
+    }
+
+    // PII-fält — endast i RAM
+    document.getElementById('pii_namn').addEventListener('input', function (e) { pii.namn = e.target.value; });
+    document.getElementById('pii_persnr').addEventListener('input', function (e) { pii.persnr = e.target.value; });
+    document.getElementById('pii_forband').addEventListener('input', function (e) { pii.forband = e.target.value; });
+
+    // Resultat-knappar
+    document.getElementById('btnPrint').addEventListener('click', function () { window.print(); });
+    document.getElementById('btnCopy').addEventListener('click', function () { copyText(buildResultText()); });
+    document.getElementById('btnEdit').addEventListener('click', function () { showStep(3); });
+    document.getElementById('btnRestart').addEventListener('click', function () {
+      if (confirm('Börja om från början?\n\n• Alla 19 mått raderas från enheten.\n• Personuppgifter (namn/persnr/förband) i minnet rensas.\n• Förberedelsen markeras som ogjord.')) {
+        clearState();
+        // Rensa input-fält
+        for (var i = 0; i < FIELDS.length; i++) {
+          var el = document.querySelector('[data-field="' + FIELDS[i].key + '"]');
+          if (el) { el.value = ''; el.classList.remove('has-value'); }
+        }
+        document.getElementById('cbPrep').checked = false;
+        document.getElementById('prepConfirm').classList.remove('checked');
+        document.getElementById('pii_namn').value = '';
+        document.getElementById('pii_persnr').value = '';
+        document.getElementById('pii_forband').value = '';
+        document.getElementById('helmHint').style.display = 'none';
+        showStep(1);
+      }
+    });
+  }
+
+  // ── Boot ──────────────────────────────────────────────────────────────────
+  function init() {
+    loadState();
+    syncAllInputs();
+    wireEvents();
+    var maxOk = highestReachable();
+    if (state.step > maxOk) state.step = maxOk;
+    showStep(state.step);
+    refreshHelmHint();
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', init);
+  } else {
+    init();
+  }
+})();
+</script>
+
+</body>
+</html>
