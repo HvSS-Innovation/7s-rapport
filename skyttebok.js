@@ -593,10 +593,13 @@
         var rows = marks.map(function (mk, i) {
             var p = ZON_POANG[mk.zon] !== undefined ? ZON_POANG[mk.zon] : 0;
             var inTop = !!top9[i];
-            return '<li class="mark-row' + (inTop ? ' mark-top9' : '') + '" data-mark-idx="' + i + '" ' +
+            var topTitle = inTop ? ' title="Räknas i poängkvoten (topp 9)"' : '';
+            return '<li class="mark-row' + (inTop ? ' mark-top9' : '') + '"' + topTitle +
+                    ' data-mark-idx="' + i + '" ' +
                     'onmouseenter="skyttebokHighlightMark(\'' + ovningNr + '\',' + i + ')" ' +
                     'onmouseleave="skyttebokHighlightMark(\'' + ovningNr + '\',null)">' +
-                '<span class="mark-num">' + (inTop ? '★ ' : '') + (i + 1) + '.</span>' +
+                '<span class="mark-num"' + (inTop ? ' aria-label="Träff ' + (i + 1) + ', räknas i topp 9"' : '') + '>' +
+                    (inTop ? '★ ' : '') + (i + 1) + '.</span>' +
                 '<span class="mark-zon mark-zon-' + escapeHtml(mk.zon) + '">' + escapeHtml(mk.zon) + '</span>' +
                 '<span class="mark-coord">(' + mk.x.toFixed(1) + ', ' + mk.y.toFixed(1) + ')</span>' +
                 '<span class="mark-poang">' + p + ' p</span>' +
@@ -607,9 +610,12 @@
                     'onclick="skyttebokRemoveMark(\'' + ovningNr + '\',' + i + ')">×</button>' +
             '</li>';
         }).join('');
-        return '<ol class="mark-list-rows">' + rows + '</ol>' +
+        return '<ol class="mark-list-rows" aria-label="Markerade träffar i lägg-ordning">' +
+                rows +
+            '</ol>' +
             '<div class="mark-list-footer">' +
                 '<button class="btn btn-sm btn-secondary mark-list-clear" type="button" ' +
+                    'aria-label="Rensa alla träffmarkeringar för denna övning" ' +
                     'onclick="skyttebokRensaMarks(\'' + escapeHtml(String(ovningNr)) + '\')">' +
                     'Rensa markeringar' +
                 '</button>' +
@@ -817,7 +823,8 @@
                     buildMarkList('kp_bas') +
                 '</div>' +
 
-                '<div class="kp-result' + (godkand ? ' godkand' : (marks.length || elapsed ? ' ovissa' : '')) + '" id="kp-result">' +
+                '<div class="kp-result' + (godkand ? ' godkand' : (marks.length || elapsed ? ' ovissa' : '')) + '" id="kp-result" ' +
+                    'role="status" aria-live="polite">' +
                     '<div class="kp-result-row">' +
                         '<span class="kp-result-label">Träff</span>' +
                         '<span class="kp-result-value">' + marks.length + ' (' +
