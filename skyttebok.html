@@ -364,6 +364,57 @@
         .figure-actions { display: flex; gap: 6px; }
         .figure-hint { font-size: 0.7rem; color: var(--text-muted); text-align: center; line-height: 1.4; }
 
+        /* Träfflista under figuren — primär entry-point för borttagning */
+        .mark-list { width: 100%; max-width: 320px; margin-top: 8px; }
+        .mark-list-empty { font-size: 0.75rem; color: var(--text-muted); text-align: center; padding: 8px 0; font-style: italic; }
+        .mark-list-rows { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 4px; max-height: 260px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+        .mark-row { display: grid; grid-template-columns: 28px 28px 1fr auto 44px; align-items: center; gap: 6px; padding: 4px 6px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); font-size: 0.78rem; font-family: 'Courier New', monospace; color: var(--text-secondary); transition: background 0.12s; }
+        .mark-row:hover { background: var(--bg-card); }
+        .mark-row.mark-top9 { border-color: var(--accent); }
+        .mark-row.mark-top9 .mark-num { color: var(--accent); font-weight: 700; }
+        .mark-num { text-align: right; font-weight: 600; }
+        .mark-zon { text-align: center; font-weight: 700; padding: 1px 4px; border-radius: 3px; background: var(--bg-input); color: var(--text-primary); }
+        .mark-zon.mark-zon-utanför { color: var(--text-muted); }
+        .mark-coord { color: var(--text-muted); font-size: 0.72rem; }
+        .mark-poang { color: var(--accent); font-weight: 600; min-width: 32px; text-align: right; }
+        .mark-row:not(.mark-top9) .mark-poang { color: var(--text-muted); }
+        .mark-remove { width: 44px; height: 44px; min-height: 44px; padding: 0; background: var(--bg-input); border: 1px solid var(--border); color: var(--text-muted); font-size: 1.1rem; line-height: 1; border-radius: var(--radius-sm); cursor: pointer; -webkit-tap-highlight-color: transparent; transition: all 0.12s; font-family: inherit; }
+        .mark-remove:hover, .mark-remove:focus { background: var(--danger); color: #fff; border-color: var(--danger); outline: none; }
+        .mark-list-footer { display: flex; justify-content: center; margin-top: 8px; }
+        .mark-list-clear { width: auto; min-height: 36px; }
+
+        /* Highlight motsvarande mark i SVG när lista-rad är hoverad/fokuserad.
+           data-active-mark sätts av skyttebokHighlightMark(). Använder
+           transform via CSS — fungerar på SVG-element i moderna browsers. */
+        .figure-svg .mark { transition: fill 0.12s; transform-origin: center; transform-box: fill-box; }
+        .figure-svg[data-active-mark] .mark { opacity: 0.4; }
+        .figure-svg[data-active-mark="0"] .mark[data-mark-idx="0"],
+        .figure-svg[data-active-mark="1"] .mark[data-mark-idx="1"],
+        .figure-svg[data-active-mark="2"] .mark[data-mark-idx="2"],
+        .figure-svg[data-active-mark="3"] .mark[data-mark-idx="3"],
+        .figure-svg[data-active-mark="4"] .mark[data-mark-idx="4"],
+        .figure-svg[data-active-mark="5"] .mark[data-mark-idx="5"],
+        .figure-svg[data-active-mark="6"] .mark[data-mark-idx="6"],
+        .figure-svg[data-active-mark="7"] .mark[data-mark-idx="7"],
+        .figure-svg[data-active-mark="8"] .mark[data-mark-idx="8"],
+        .figure-svg[data-active-mark="9"] .mark[data-mark-idx="9"],
+        .figure-svg[data-active-mark="10"] .mark[data-mark-idx="10"],
+        .figure-svg[data-active-mark="11"] .mark[data-mark-idx="11"],
+        .figure-svg[data-active-mark="12"] .mark[data-mark-idx="12"],
+        .figure-svg[data-active-mark="13"] .mark[data-mark-idx="13"],
+        .figure-svg[data-active-mark="14"] .mark[data-mark-idx="14"],
+        .figure-svg[data-active-mark="15"] .mark[data-mark-idx="15"],
+        .figure-svg[data-active-mark="16"] .mark[data-mark-idx="16"],
+        .figure-svg[data-active-mark="17"] .mark[data-mark-idx="17"],
+        .figure-svg[data-active-mark="18"] .mark[data-mark-idx="18"],
+        .figure-svg[data-active-mark="19"] .mark[data-mark-idx="19"] { fill: #ff5252; opacity: 1; transform: scale(1.6); }
+
+        /* Print: dölj knappar och lista — figuren behålls. */
+        @media print {
+            .mark-remove, .mark-list-footer { display: none !important; }
+            .mark-list-rows { max-height: none; overflow: visible; }
+        }
+
         /* Mini-figur i pass-rad */
         .pass-row-figure { grid-column: 1 / -1; display: flex; align-items: center; gap: 10px; padding-top: 6px; }
         .pass-row-figure .figure-svg { width: 70px; }

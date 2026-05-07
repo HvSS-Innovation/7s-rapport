@@ -554,7 +554,86 @@
             meta.innerHTML = '<strong>' + marks.length + '</strong> markerade' +
                 (byZon ? ' — ' + byZon : '');
         }
+        var listWrap = document.getElementById('mark-list-' + ovningNr);
+        if (listWrap) listWrap.innerHTML = buildMarkListInner(ovningNr, marks);
     }
+
+    // Beräknar vilka mark-index som hör till topp-9 (de som räknas vid
+    // poängkvots-beräkning). Returnerar en Set av index. Stabil sortering
+    // — ties bryts på lägst index så att "tidiga skott vinner" om poängen
+    // är lika.
+    function topNineIndices(marks) {
+        var indexed = (marks || []).map(function (mk, i) {
+            return { i: i, p: ZON_POANG[mk.zon] !== undefined ? ZON_POANG[mk.zon] : 0 };
+        });
+        indexed.sort(function (a, b) {
+            if (b.p !== a.p) return b.p - a.p;
+            return a.i - b.i;
+        });
+        var set = {};
+        indexed.slice(0, 9).forEach(function (entry) {
+            set[entry.i] = true;
+        });
+        return set;
+    }
+
+    // Lista över träffar under figuren.
+    //   - Visar varje träff i lägg-ordning: nr, zon, koord, poäng.
+    //   - Topp-9 (de som räknas) markeras med ★ och accent-färg.
+    //   - 44×44 px tap-target på "Ta bort"-knappen (mobil).
+    //   - Hover/focus highlight:ar motsvarande mark i SVG via
+    //     data-active-mark-attribut på SVG:n.
+    //   - "Rensa markeringar" finns på botten — primär entry-point
+    //     för att nollställa.
+    function buildMarkListInner(ovningNr, marks) {
+        if (!marks || marks.length === 0) {
+            return '<div class="mark-list-empty">Inga träffar markerade än.</div>';
+        }
+        var top9 = topNineIndices(marks);
+        var rows = marks.map(function (mk, i) {
+            var p = ZON_POANG[mk.zon] !== undefined ? ZON_POANG[mk.zon] : 0;
+            var inTop = !!top9[i];
+            return '<li class="mark-row' + (inTop ? ' mark-top9' : '') + '" data-mark-idx="' + i + '" ' +
+                    'onmouseenter="skyttebokHighlightMark(\'' + ovningNr + '\',' + i + ')" ' +
+                    'onmouseleave="skyttebokHighlightMark(\'' + ovningNr + '\',null)">' +
+                '<span class="mark-num">' + (inTop ? '★ ' : '') + (i + 1) + '.</span>' +
+                '<span class="mark-zon mark-zon-' + escapeHtml(mk.zon) + '">' + escapeHtml(mk.zon) + '</span>' +
+                '<span class="mark-coord">(' + mk.x.toFixed(1) + ', ' + mk.y.toFixed(1) + ')</span>' +
+                '<span class="mark-poang">' + p + ' p</span>' +
+                '<button type="button" class="mark-remove" ' +
+                    'aria-label="Ta bort träff ' + (i + 1) + '" ' +
+                    'onfocus="skyttebokHighlightMark(\'' + ovningNr + '\',' + i + ')" ' +
+                    'onblur="skyttebokHighlightMark(\'' + ovningNr + '\',null)" ' +
+                    'onclick="skyttebokRemoveMark(\'' + ovningNr + '\',' + i + ')">×</button>' +
+            '</li>';
+        }).join('');
+        return '<ol class="mark-list-rows">' + rows + '</ol>' +
+            '<div class="mark-list-footer">' +
+                '<button class="btn btn-sm btn-secondary mark-list-clear" type="button" ' +
+                    'onclick="skyttebokRensaMarks(\'' + escapeHtml(String(ovningNr)) + '\')">' +
+                    'Rensa markeringar' +
+                '</button>' +
+            '</div>';
+    }
+
+    function buildMarkList(ovningNr) {
+        var marks = formMarks[ovningNr] || [];
+        return '<div class="mark-list" id="mark-list-' + ovningNr + '">' +
+            buildMarkListInner(ovningNr, marks) +
+        '</div>';
+    }
+
+    // Sätter / nollar data-active-mark på SVG:n så CSS kan highlighta
+    // motsvarande <circle class="mark">.
+    window.skyttebokHighlightMark = function (ovningNr, idx) {
+        var svg = document.getElementById('fig-svg-' + ovningNr);
+        if (!svg) return;
+        if (idx === null || idx === undefined) {
+            svg.removeAttribute('data-active-mark');
+        } else {
+            svg.setAttribute('data-active-mark', String(idx));
+        }
+    };
 
     function buildFigureSection(ovningNr) {
         // ovningNr kan vara number eller 'kp_bas'. För DOM-id används det
@@ -570,13 +649,10 @@
                         '</div>' +
                         '<div class="figure-meta" id="fig-meta-' + ovningNr + '"><strong>' +
                             marks.length + '</strong> markerade</div>' +
-                        '<div class="figure-actions">' +
-                            '<button class="btn btn-sm btn-secondary" type="button" ' +
-                                'onclick="skyttebokRensaMarks(\'' + ovningNr + '\')">Rensa markeringar</button>' +
-                        '</div>' +
                         '<div class="figure-hint">Tryck på figuren för att lägga till en träff. ' +
-                            'Använd <strong>Rensa markeringar</strong> för att börja om.<br>' +
+                            'Borttagning sker via listan nedan.<br>' +
                             'Markeringar är ett komplement till siffran ovan, inte krav.</div>' +
+                        buildMarkList(ovningNr) +
                     '</div>' +
                 '</div>' +
             '</details>';
@@ -737,9 +813,8 @@
                     '<div class="figure-meta" id="fig-meta-kp_bas"><strong>' +
                         marks.length + '</strong> markerade</div>' +
                     '<div class="figure-hint">Tryck på figuren för varje träff. ' +
-                        'De 9 bästa räknas vid bättringar.</div>' +
-                    '<button class="btn btn-sm btn-secondary" type="button" ' +
-                        'onclick="skyttebokRensaMarks(\'kp_bas\')" style="width:auto">Rensa markeringar</button>' +
+                        'De 9 bästa räknas (★ i listan).</div>' +
+                    buildMarkList('kp_bas') +
                 '</div>' +
 
                 '<div class="kp-result' + (godkand ? ' godkand' : (marks.length || elapsed ? ' ovissa' : '')) + '" id="kp-result">' +
