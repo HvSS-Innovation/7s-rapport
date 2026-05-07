@@ -69,6 +69,35 @@
         intervalId: null    // setInterval-handle för live-display
     };
 
+    // Avstånds-variant för Kompetensprov BAS.
+    //   '50m' → poängkvot ≥ 1,0 (H SKJUTB AK 2021 kap 1.3.1, ref-flöde).
+    //   '30m' → poängkvot ≥ 1,3 (Hemvärnschefens variant för Hv-soldater
+    //          med begränsad övningstid).
+    // Persistas så att en användare som alltid skjuter 30 m inte behöver
+    // välja om varje gång. Pass sparas dock alltid med explicit `avstand`
+    // + `pkKrav` så historiken är otvetydig även om defaulten ändras.
+    var KP_AVSTAND_KEY = 'skyttebok_settings_kp_avstand';
+    var KP_PK_KRAV = { '50m': 1.0, '30m': 1.3 };
+
+    function getKpAvstand() {
+        var v = localStorage.getItem(KP_AVSTAND_KEY);
+        return (v === '30m') ? '30m' : '50m';
+    }
+
+    function setKpAvstand(v) {
+        if (v === '50m' || v === '30m') {
+            localStorage.setItem(KP_AVSTAND_KEY, v);
+        }
+    }
+
+    function kpPkKravFor(avstand) {
+        return KP_PK_KRAV[avstand] || 1.0;
+    }
+
+    function kpAvstandLabel(avstand) {
+        return avstand === '30m' ? '30 m' : '50 m';
+    }
+
     // Säkerhetsprov BAS — hand-curerad referens från H SKJUTB AK 2021,
     // Bilaga 1 (sid 121–122). Skytten loggar EN status (godkänd/ej godk.)
     // för hela provet. Momenttexterna visas som info så soldaten ser vad
@@ -611,9 +640,12 @@
         var running = !!kpTimerState.startedAt && !kpTimerState.finishedAt;
         var done = !!kpTimerState.finishedAt;
 
+        var avstand = getKpAvstand();
+        var pkKrav = kpPkKravFor(avstand);
+
         var score = topNineScore(marks);
         var pk = elapsed > 0 ? (score.sum / elapsed) : 0;
-        var godkand = (marks.length >= 9 && pk >= 1.0 && elapsed > 0);
+        var godkand = (marks.length >= 9 && pk >= pkKrav && elapsed > 0);
 
         // Timer-knappar
         var timerControls;
@@ -633,11 +665,40 @@
 
         var datumDefault = todayIso();
 
+        // Avstånd-toggle: byte är säkert mid-test eftersom det bara
+        // ändrar pkKrav-tröskeln och visnings-text. Marks/timer rörs inte.
+        // pillra-disable när timer pågår eller test är klar — bytet skulle
+        // göra det otydligt vilket krav som var aktivt vid skotten.
+        var avstandLocked = running || done;
+        var avstandHint = avstandLocked
+            ? 'Avstånd låst tills timer återställs.'
+            : 'Välj före START.';
+        var avstandToggle =
+            '<div class="kp-avstand-toggle" role="radiogroup" aria-label="Avstånd för Kompetensprov BAS">' +
+                ['50m', '30m'].map(function (val) {
+                    var lbl = kpAvstandLabel(val);
+                    var krav = (KP_PK_KRAV[val] || 1.0).toFixed(1).replace('.', ',');
+                    var active = (val === avstand);
+                    return '<button type="button" ' +
+                        'class="kp-avstand-btn' + (active ? ' is-active' : '') + '" ' +
+                        'data-value="' + val + '" ' +
+                        'role="radio" aria-checked="' + (active ? 'true' : 'false') + '" ' +
+                        (avstandLocked ? 'disabled aria-disabled="true" ' : '') +
+                        'onclick="skyttebokKpSetAvstand(\'' + val + '\')">' +
+                        '<span class="kp-avstand-lbl">' + lbl + '</span>' +
+                        '<span class="kp-avstand-krav">krav ' + krav + '</span>' +
+                    '</button>';
+                }).join('') +
+            '</div>' +
+            '<div class="kp-avstand-hint">' + escapeHtml(avstandHint) + '</div>';
+
         return '' +
             '<div class="kp-form">' +
                 '<div class="kp-meta' + forsokClass + '">' + forsokText +
                     (forsok >= 3 ? ' — fler tillåts men dokumenteras enligt regelverk' : '') +
                 '</div>' +
+
+                avstandToggle +
 
                 '<div class="pass-form-row" style="margin-top:10px">' +
                     '<div>' +
@@ -682,7 +743,8 @@
                         '<span class="kp-result-label">Poängkvot</span>' +
                         '<span class="kp-result-value">' +
                             (elapsed > 0 ? pk.toFixed(2) : '—') +
-                            ' <small>(krav ≥ 1,00)</small></span>' +
+                            ' <small>(krav ≥ ' + pkKrav.toFixed(2).replace('.', ',') +
+                            ' · ' + kpAvstandLabel(avstand) + ')</small></span>' +
                     '</div>' +
                     '<div class="kp-result-row">' +
                         '<span class="kp-result-label">Status</span>' +
@@ -707,6 +769,25 @@
                 '</button>' +
             '</div>';
     }
+
+    window.skyttebokKpSetAvstand = function (val) {
+        if (val !== '50m' && val !== '30m') return;
+        // Lås under pågående/klart test så soldaten inte byter krav
+        // efter att skotten redan är räknade.
+        if (kpTimerState.startedAt) return;
+        if (getKpAvstand() === val) return;
+        setKpAvstand(val);
+        // Re-render — endast UI-byte, ingen state-rensning. Marks ligger
+        // kvar (de är ändå alltid 0 innan timern startat eftersom START
+        // tömmer dem).
+        var card = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+        var wasOpen = card && card.classList.contains('open');
+        render();
+        if (wasOpen) {
+            var c = document.querySelector('.ovning-card[data-ovning="kp_bas"]');
+            if (c) c.classList.add('open');
+        }
+    };
 
     window.skyttebokKpStart = function () {
         kpTimerState.startedAt = Date.now();
@@ -781,7 +862,9 @@
         }
         var score = topNineScore(marks);
         var pk = elapsed > 0 ? Math.round((score.sum / elapsed) * 100) / 100 : 0;
-        var godkand = (marks.length >= 9 && pk >= 1.0);
+        var avstand = getKpAvstand();
+        var pkKrav = kpPkKravFor(avstand);
+        var godkand = (marks.length >= 9 && pk >= pkKrav);
 
         var pass = {
             id: uuid(),
@@ -793,6 +876,8 @@
             poangKvot: pk,
             godkand: godkand,
             anteckning: anteckning,
+            avstand: avstand,    // '50m' | '30m'  (tillagd 2026-05-07)
+            pkKrav: pkKrav,      // 1.0 | 1.3
             // Bevarar bakåtkompat med pass-listan: skott=traffar.length som
             // ett rimligt approxvärde, träff=räknade.
             skott: marks.length,
@@ -1040,9 +1125,13 @@
         // använder skott/träff/%.
         var resultatText;
         if (p.ovningNr === 'kp_bas' && p.tid !== undefined) {
+            // avstand sparas från 2026-05-07 — äldre pass antas vara 50 m
+            // (det enda alternativet som fanns innan 30m-flödet).
+            var passAvstand = (p.avstand === '30m') ? '30 m' : '50 m';
             resultatText = (p.traffar ? p.traffar.length : 0) + ' träff · ' +
                 p.tid.toFixed(1) + ' s · PK ' +
-                (p.poangKvot !== undefined ? p.poangKvot.toFixed(2) : '?');
+                (p.poangKvot !== undefined ? p.poangKvot.toFixed(2) : '?') +
+                ' · ' + passAvstand;
         } else {
             var pct = p.skott > 0 ? Math.round(100 * p.traff / p.skott) : 0;
             resultatText = (p.traff || 0) + '/' + (p.skott || 0) +

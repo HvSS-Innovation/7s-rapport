@@ -414,6 +414,18 @@
         .kp-meta { font-size: 0.78rem; color: var(--text-secondary); padding: 8px 10px; background: var(--bg-secondary); border-radius: var(--radius-sm); border-left: 3px solid var(--accent); }
         .kp-meta.kp-forsok-warn { border-left-color: var(--danger); color: var(--danger-hover); }
 
+        /* Avstånds-toggle (50 m / 30 m) — Hv-variant av Kompetensprov BAS */
+        .kp-avstand-toggle { display: flex; gap: 6px; margin-top: 10px; }
+        .kp-avstand-btn { flex: 1; min-height: 48px; padding: 6px 8px; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); border-radius: var(--radius-sm); cursor: pointer; font-family: inherit; font-weight: 600; transition: all 0.15s; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; -webkit-tap-highlight-color: transparent; }
+        .kp-avstand-btn:active { transform: scale(0.97); }
+        .kp-avstand-btn[disabled] { opacity: 0.55; cursor: not-allowed; }
+        .kp-avstand-btn.is-active { background: var(--accent-dim); color: var(--accent); border-color: var(--accent); }
+        .kp-avstand-lbl { font-size: 0.95rem; letter-spacing: 0.04em; }
+        .kp-avstand-krav { font-size: 0.7rem; color: var(--text-muted); font-family: 'Courier New', monospace; }
+        .kp-avstand-btn.is-active .kp-avstand-krav { color: var(--accent); }
+        .kp-avstand-hint { font-size: 0.7rem; color: var(--text-muted); margin-top: 4px; padding: 0 2px; }
+        html[data-theme="light"] .kp-avstand-btn.is-active { background: rgba(0,77,38,0.10); color: var(--accent); }
+
         .kp-timer { display: flex; align-items: center; gap: 8px; margin-top: 4px; }
         .kp-timer .kp-timer-display { font-family: 'Courier New', monospace; font-size: 1.4rem; font-weight: 700; color: var(--accent); min-width: 80px; padding: 8px 10px; background: var(--bg-secondary); border-radius: var(--radius-sm); border: 1px solid var(--border); text-align: center; }
         .kp-timer .btn { flex: 1; min-height: 44px; margin-top: 0; }
