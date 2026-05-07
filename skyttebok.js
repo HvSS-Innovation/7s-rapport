@@ -463,6 +463,14 @@
     }
 
     // Inline onclick-handler från SVG:n. Hittar ovningNr från SVG-id.
+    //
+    // Klick lägger ALLTID till en ny mark — även om event.target råkar
+    // vara en befintlig <circle class="mark">. Tidigare versioner
+    // raderade marken vid klick på den, men på mobil med fettfingrar
+    // gjorde det att man tappade träffar man försökte lägga bredvid en
+    // existerande. Borttagning sker nu via numrerad lista under figuren
+    // (Spår C2). CSS sätter `pointer-events: none` på `.mark` så target
+    // i praktiken är zon-elementet under marken.
     window.skyttebokFigureClick = function (svgEl, event) {
         // svg-id: "fig-svg-<ovningNr>"
         var m = svgEl.id.match(/^fig-svg-(.+)$/);
@@ -471,17 +479,9 @@
 
         var target = event.target;
 
-        // Klick på existerande mark → ta bort.
-        if (target && target.classList && target.classList.contains('mark')) {
-            var idx = parseInt(target.getAttribute('data-mark-idx'), 10);
-            if (!isNaN(idx) && formMarks[ovningNr]) {
-                formMarks[ovningNr].splice(idx, 1);
-                refreshAfterFigureChange(ovningNr);
-            }
-            return;
-        }
-
-        // Annars — lägg ny mark vid klickposition.
+        // Lägg ny mark vid klickposition. Zonen läses från target's
+        // data-zon om det finns (snabbare än geometriberäkning), annars
+        // härleds via zoneAt().
         var pt = svgEl.createSVGPoint();
         pt.x = event.clientX;
         pt.y = event.clientY;
@@ -490,7 +490,10 @@
         var loc = pt.matrixTransform(ctm.inverse());
         var x = Math.max(0, Math.min(100, loc.x));
         var y = Math.max(0, Math.min(200, loc.y));
-        var zon = (target && target.getAttribute && target.getAttribute('data-zon')) || zoneAt(x, y);
+        var targetZon = target && target.getAttribute && target.getAttribute('data-zon');
+        // Fallback om target är t.ex. <text class="z-label"> som saknar data-zon —
+        // eller en `.mark` (skulle kunna hända om CSS inte hunnit appliceras).
+        var zon = targetZon || zoneAt(x, y);
 
         if (!formMarks[ovningNr]) formMarks[ovningNr] = [];
         formMarks[ovningNr].push({
@@ -498,6 +501,17 @@
             y: Math.round(y * 10) / 10,
             zon: zon
         });
+        refreshAfterFigureChange(ovningNr);
+    };
+
+    // Borttagning av en specifik mark — anropas från träfflistan
+    // (Spår C2). Idx motsvarar markens index i ordningen den lades.
+    window.skyttebokRemoveMark = function (ovningNr, idx) {
+        var arr = formMarks[ovningNr];
+        if (!arr) return;
+        var i = parseInt(idx, 10);
+        if (isNaN(i) || i < 0 || i >= arr.length) return;
+        arr.splice(i, 1);
         refreshAfterFigureChange(ovningNr);
     };
 
@@ -561,7 +575,7 @@
                                 'onclick="skyttebokRensaMarks(\'' + ovningNr + '\')">Rensa markeringar</button>' +
                         '</div>' +
                         '<div class="figure-hint">Tryck på figuren för att lägga till en träff. ' +
-                            'Tryck på en befintlig mark för att ta bort den.<br>' +
+                            'Använd <strong>Rensa markeringar</strong> för att börja om.<br>' +
                             'Markeringar är ett komplement till siffran ovan, inte krav.</div>' +
                     '</div>' +
                 '</div>' +

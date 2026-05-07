@@ -354,8 +354,10 @@
         .figure-svg .z-a { fill: #7ab87a; stroke: #1a321a; stroke-width: 0.3; }
         .figure-svg .z-h { fill: #5a8c5a; stroke: #1a321a; stroke-width: 0.3; }
         .figure-svg .z-label { fill: #0d1f0d; font-size: 9px; font-weight: 700; text-anchor: middle; dominant-baseline: central; pointer-events: none; font-family: monospace; }
-        .figure-svg .mark { fill: #ffe066; stroke: #1a321a; stroke-width: 0.6; pointer-events: all; }
-        .figure-svg .mark:hover { fill: #ff5252; }
+        /* .mark är pointer-events:none så klick på markeringen ändå
+           registreras på zon-elementet under — borttagning sker via
+           träfflistan, inte via klick på marken. */
+        .figure-svg .mark { fill: #ffe066; stroke: #1a321a; stroke-width: 0.6; pointer-events: none; }
 
         .figure-meta { font-size: 0.78rem; color: var(--text-secondary); font-family: 'Courier New', monospace; letter-spacing: 0.04em; }
         .figure-meta strong { color: var(--accent); }
