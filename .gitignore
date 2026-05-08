@@ -3,7 +3,6 @@ verktyg/m_blankett/
 verktyg/parmrobot/
 stab/*
 !stab/Ny mapp/
-NAV mått
 
 # Lokala screenshots och tmp-bilder i repo-roten — hör inte till prod
 /Screenshot_*.png
