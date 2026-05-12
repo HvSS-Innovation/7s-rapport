@@ -167,22 +167,12 @@ window.RAMSOR_DATA = {
       usage: 'Mycket förenklad påminnelse. Detaljerade handhavande-instruktioner och felsökning kommer i en senare version — hör av dig om du har konkreta önskemål.',
       tags: ['Signalist', 'Materiel'],
       roles: ['sig']
-    },
-
-    {
-      id: '1227',
-      name: '1227-tabell',
-      short: 'Bokstaverings­tabell för att stava ord tydligt över radio.',
-      lines: [
-        { letter: '·', text: 'Används för att eliminera missförstånd vid stavning av namn, koordinater, anropssignaler.' },
-        { letter: '·', text: 'En bokstav i taget — uttala hela kodordet tydligt.' },
-        { letter: '·', text: 'Detaljerad tabell (A=Adam, B=Bertil osv.) kommer som referenskort i en senare version.' }
-      ],
-      usage: 'Den fullständiga 1227-tabellen läggs in som referensblock när nästa innehållsuppdatering rullar. Tills dess: använd tabellen som finns i lokala signalsystem-instruktioner.',
-      tags: ['Signalist', 'Referens'],
-      roles: ['sig']
     }
 
+    // 1227-tabellen är borttagen som egen ramsa här — det fanns inget riktigt
+    // innehåll än, bara en intro-platshållare. Full 1227-tabell ligger i
+    // roadmap-data.js under "Kommer snart" och läggs in när den är komplett.
+    //
     // GrpC, PlutC, Förare: se placeholders ovan. Innehåll läggs in i v0.2.x
     // när research mot säkra källor kunnat verifieras — inte uppfunnet.
 

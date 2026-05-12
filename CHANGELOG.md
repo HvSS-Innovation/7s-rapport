@@ -20,6 +20,9 @@ Detaljerade beskrivningar finns i README-dagboken.
 
 **Avvikelse från roadmap:** GrpC + PlutC levereras som placeholders i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI och utan säker FM-publikation att luta sig på är felaktighetsrisken större än värdet av snabb leverans. Innehåll fylls på i v0.2.x när säkra referenser verifierats. TOS lämnad helt tills användaren preciserar.
 
+## v0.3.1 — 2026-05-12 — Mindre städning
+- Tagit bort 1227-tabell-rutan i RAMSOR-fliken. Den var bara en intro-platshållare utan riktigt innehåll. Full 1227-tabell ligger kvar i roadmap-data.js under "Kommer snart" och läggs in när tabellen är komplett.
+
 ## v0.3 — 2026-05-12 — In-app roadmap (Paket C)
 - Ny sida `roadmap.html` länkad från footer-Om ("ROADMAP & ÖNSKEMÅL")
 - 4 kolumner (Önskat / Kommer snart / Pågår / Klart), responsiv 4→2→1 kolumns
