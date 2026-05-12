@@ -267,6 +267,21 @@
     return label;
   }
 
+  // Robust källa för dragget item: använd global draggedItem om den fortfarande
+  // är satt, annars fall tillbaka på dataTransfer (som sätts i dragstart).
+  // Detta skyddar mot timing-bug där dragend råkar nolla draggedItem före drop.
+  function resolveDragSource(e) {
+    if (draggedItem) return draggedItem;
+    try {
+      const data = e.dataTransfer && e.dataTransfer.getData('text/plain');
+      if (data) {
+        const num = parseInt(data, 10);
+        if (Number.isInteger(num)) return allItems.find(x => x.number === num);
+      }
+    } catch (_) {}
+    return null;
+  }
+
   let draggedItem = null;
 
   function itemEl(item) {
@@ -310,13 +325,13 @@
       div.classList.remove('drop-before', 'drop-after');
     });
     div.addEventListener('drop', async (e) => {
-      if (!draggedItem) return;
-      if (draggedItem.number === item.number) return;
+      const src = resolveDragSource(e);
+      if (!src) return;
+      if (src.number === item.number) return;
       e.preventDefault();
       e.stopPropagation(); // hindra att col-body drop också triggas
       const before = div.classList.contains('drop-before');
       div.classList.remove('drop-before', 'drop-after');
-      const src = draggedItem;
       draggedItem = null;
       await dropOnItem(src, item, before);
     });
@@ -670,11 +685,11 @@
       body.addEventListener('drop', async (e) => {
         e.preventDefault();
         body.classList.remove('drag-over');
-        if (!draggedItem) return;
         // Items egna drop-handlers har stopPropagation och hanterar
         // before/after-positioning. Här hamnar vi bara om drop skedde
         // på tom yta i col-body (utanför något item) — placera sist.
-        const src = draggedItem;
+        const src = resolveDragSource(e);
+        if (!src) return;
         draggedItem = null;
         await dropAtEnd(src, col.id);
       });

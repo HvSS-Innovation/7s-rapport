@@ -20,6 +20,11 @@ Detaljerade beskrivningar finns i README-dagboken.
 
 **Avvikelse från roadmap:** GrpC + PlutC levereras som placeholders i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI och utan säker FM-publikation att luta sig på är felaktighetsrisken större än värdet av snabb leverans. Innehåll fylls på i v0.2.x när säkra referenser verifierats. TOS lämnad helt tills användaren preciserar.
 
+## v0.8.2 — 2026-05-12 — Fix: drop på tom yta misslyckades ibland
+- Bug: drop-handlern returnerade tidigt om `dragend` råkade köras före `drop` och nollade `draggedItem`. Symptom: drop på tom yta gjorde ingenting (kortet gled tillbaka).
+- Fix: ny `resolveDragSource()` använder global `draggedItem` med fallback till `dataTransfer.getData('text/plain')` som sätts robust i dragstart. Drop-handler hittar nu source-itemet oavsett event-ordning.
+- Påverkar både item-drop (reorder mellan items) och col-body-drop (placera sist).
+
 ## v0.8.1 — 2026-05-12 — Drop var som helst i kolumnen
 - Drop på tom yta i en kolumn (under sista item) placerar nu kortet sist
 - Refaktor: ny `commitReorder()` delas mellan `dropOnItem` och `dropAtEnd`
