@@ -55,6 +55,7 @@ const FILES = [
   './vendor/protomaps/protomaps-leaflet.esm.js',
   './footer.js',
   './opsec.html',
+  './data.html',
   './ortnamn.json',
   './fonts/inter.css',
   './fonts/inter-400.woff2',

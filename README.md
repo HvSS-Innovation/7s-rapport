@@ -1,6 +1,8 @@
 # 7S Rapport & Fältrapportverktyg
 
-Webbaserade rapportverktyg för Hemvärnet. Samtliga formulär är paketerade som en PWA (Progressive Web App) och fungerar offline direkt i mobilen.
+**Privatutvecklat utbildnings- och minneshjälpverktyg riktat till hemvärnssoldater. Inte kopplat till eller fastställt av Försvarsmakten.**
+
+Webbaserade rapportverktyg paketerade som en PWA (Progressive Web App) som fungerar offline direkt i mobilen.
 
 **Live-version:** [7srapport.com](https://7srapport.com)
 
@@ -118,6 +120,30 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 ---
 
 ## Dagbok: Utvecklingslogg
+
+### 2026-05-12: Positionering & Mina data (v0.1)
+Två fundament-paket levererade tillsammans inför kommande ramsor-flik och
+in-app roadmap (se `roadmap-positionering-ramsor.md` lokalt).
+
+*   **Positionering (Paket D):** Tydlig disclaimer i `footer.js` (sprids till
+    alla 14+ formulär via existerande mönster), synlig disclaimer-rad under
+    rubriken på `index.html`, README-rubriken kompletterad med samma text.
+    Allt språk som kan antyda FM-fastställd status mjukas — "för Hemvärnet"
+    → "riktat till hemvärnssoldater" i README och i Om-sektionens
+    OM 7S RAPPORT-stycke. Innehåll och funktioner förblir intakta.
+*   **Mina data (Paket B):** Ny sida `data.html` länkad från Om-sektionen
+    (rubriken MINA DATA & SÄKERHETSKOPIA). Fyra sektioner:
+    *Var ligger mina data?* (klargör att inget skickas någonstans, inkl.
+    GitHub), *Plattformsmatris* (iPhone/Android/Mac/PC + ITP-caveat),
+    *Säkerhetskopia (export & import)* med JSON-fil som dumpar både
+    localStorage och de två kända IndexedDB:erna (`minkarta` + `sensorskiss`,
+    båda `state`-store), samt *Källkod (för utvecklare)* explicit separerad
+    från användardatat.
+*   **iOS-ITP-notis:** Engångsbanner i `footer.js` som visas för iOS-
+    användare som varit borta >5 dagar — länkar till `data.html` för
+    säkerhetskopia. Dismissbar per session.
+*   `service-worker.js` `CACHE` bumpat till `hv-20260512_v01_disclaimer`,
+    `data.html` tillagd i FILES.
 
 ### 2026-05-05: Härdat läge per grannland (DK/NO/FI/EE/LV/LT)
 Nya snabbknappar i `minkarta.html` som aktiverar **Härdat läge** för

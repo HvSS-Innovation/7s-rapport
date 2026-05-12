@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<title>Mina data & säkerhetskopia</title>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root { --bg:#0d1f0d; --fg:#c8e6c9; --muted:#a0c4a0; --line:#2d4a2d; --accent:#4caf50; --accent-dim:#1e3d1e; --warn:#e05050; --warn-bg:#3a1818; --info:#1565c0; --info-hover:#1976d2; --card:#152815; }
+  * { box-sizing:border-box; }
+  body { background:var(--bg); color:var(--fg); font-family:'Inter',ui-sans-serif,system-ui,sans-serif; margin:0; padding:24px 16px; line-height:1.55; -webkit-font-smoothing:antialiased; }
+  .container { max-width:680px; margin:0 auto; }
+  h1 { color:var(--accent); font-size:1.4rem; font-weight:600; margin:0 0 8px; letter-spacing:-0.01em; }
+  h2 { color:var(--muted); font-size:0.95rem; font-weight:500; margin:28px 0 8px; text-transform:uppercase; letter-spacing:0.04em; }
+  p { margin:8px 0; color:var(--fg); }
+  small { color:var(--muted); font-size:0.82rem; }
+  a { color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:16px; margin:16px 0; }
+  .nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .nav a { padding:6px 12px; background:var(--card); border:1px solid var(--line); border-radius:6px; text-decoration:none; font-size:0.82rem; color:var(--fg); }
+  .nav a:hover { border-color:var(--accent); }
+  .disclaimer-card { background:#1a1208; border:1px solid #6a5a30; color:#d4c090; padding:12px 14px; margin:8px 0 18px; border-radius:8px; font-size:0.84rem; line-height:1.55; }
+  ul { margin:6px 0 6px 20px; padding:0; }
+  li { margin:3px 0; }
+  table { width:100%; border-collapse:collapse; font-size:0.85rem; margin:8px 0; }
+  th, td { padding:8px 10px; text-align:left; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--muted); font-weight:600; background:#0f240f; text-transform:uppercase; letter-spacing:0.04em; font-size:0.78rem; }
+  td.caveat { color:#d4c090; }
+  .btn-primary, .btn-secondary, .btn-danger {
+    display:inline-flex; align-items:center; justify-content:center;
+    min-height:44px; padding:10px 18px; border:none; border-radius:6px;
+    font-family:inherit; font-size:0.9rem; font-weight:600; letter-spacing:0.03em;
+    cursor:pointer; transition:background 0.15s, transform 0.1s;
+    -webkit-tap-highlight-color:transparent; text-decoration:none;
+  }
+  .btn-primary { background:var(--accent); color:#fff; }
+  .btn-primary:hover { background:#66bb6a; }
+  .btn-secondary { background:var(--card); color:var(--muted); border:1px solid var(--line); }
+  .btn-secondary:hover { border-color:var(--accent); color:var(--fg); }
+  .btn-danger { background:var(--warn-bg); color:#ffd1d1; border:1px solid var(--warn); }
+  .btn-danger:hover { background:#4a1a1a; }
+  .btn-row { display:flex; gap:10px; flex-wrap:wrap; margin-top:10px; }
+  .status { font-family:ui-monospace,monospace; font-size:0.82rem; min-height:24px; margin-top:10px; padding:6px 10px; border-radius:6px; background:#000; border:1px solid var(--line); white-space:pre-wrap; }
+  .status.ok { color:var(--accent); border-color:var(--accent-dim); }
+  .status.warn { color:#e0c060; border-color:#6a5a30; }
+  .status.err { color:var(--warn); border-color:var(--warn); }
+  .status.hidden { display:none; }
+  .ios-note { background:#0a1a2a; border:1px solid #1f4566; color:#a8d0ff; padding:12px 14px; margin:14px 0; border-radius:8px; font-size:0.85rem; line-height:1.55; }
+  .confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:100; align-items:center; justify-content:center; padding:16px; }
+  .confirm-overlay.open { display:flex; }
+  .confirm-dialog { width:100%; max-width:420px; background:var(--bg); border:2px solid var(--warn); border-radius:10px; padding:20px; }
+  .confirm-dialog h3 { color:var(--warn); margin:0 0 12px; font-size:1rem; }
+  .confirm-dialog p { font-size:0.88rem; margin:0 0 14px; }
+  .confirm-btns { display:flex; gap:10px; }
+  .confirm-btns button { flex:1; }
+  input[type="file"] { display:none; }
+  .src-link { font-size:0.78rem; color:var(--muted); }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Export/import kräver JavaScript. Aktivera och ladda om sidan.</div></noscript>
+
+<div class="container">
+
+<nav class="nav">
+  <a href="./">← Tillbaka</a>
+  <a href="index.html">7S</a>
+  <a href="opsec.html">OPSEC</a>
+</nav>
+
+<h1>Mina data &amp; säkerhetskopia</h1>
+
+<div class="disclaimer-card">
+  <strong>Privatutvecklat utbildnings- och minneshjälpverktyg.</strong> Inte kopplat till eller fastställt av Försvarsmakten.
+</div>
+
+<h2>Var ligger mina data?</h2>
+<div class="card">
+  <p><strong>På din enhet. Aldrig hos oss eller på GitHub.</strong></p>
+  <p>Allt du skriver, ritar, sparar och konfigurerar i 7srapport.com stannar lokalt i webbläsarens lagring på just den enhet du använder. Det finns ingen backend, ingen molnsynk och ingen användarkonto-databas. Vi har bokstavligen inget sätt att se vad du fyllt i — det är aldrig skickat någonstans.</p>
+  <p>Tre olika lager används:</p>
+  <ul>
+    <li><strong>localStorage</strong> — formulär-utkast, sparade platser, sagesmän, TNR-format, slider-state, autocomplete-listor</li>
+    <li><strong>IndexedDB</strong> — ritningar i MINKARTA och SENSORSKISS</li>
+    <li><strong>Cache API</strong> — appens egna offline-bundle (HTML/JS/CSS/fonter) och ev. nedladdade kart-tiles</li>
+  </ul>
+  <p><small>Vill du rensa allt? Se <a href="opsec.html">OPSEC — Glöm allt på den här enheten</a>.</small></p>
+</div>
+
+<h2>Hur fungerar det på olika plattformar?</h2>
+<div class="card" style="overflow-x:auto;">
+  <table>
+    <thead>
+      <tr><th>Enhet / läge</th><th>Persistens</th><th>Caveat att känna till</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>iPhone — Safari, hemskärm-installerad</strong></td>
+        <td>Persistent vid daglig användning</td>
+        <td class="caveat">Apples ITP kan rensa data efter ~7 dagars inaktivitet. Öppna appen då och då för att vara säker. Gör en export-säkerhetskopia regelbundet.</td>
+      </tr>
+      <tr>
+        <td><strong>Android — Chrome, PWA-installerad</strong></td>
+        <td>Persistent tills du själv rensar</td>
+        <td>Rensas av "Rensa appdata" i Android-inställningarna eller via webbläsarens egen rensning.</td>
+      </tr>
+      <tr>
+        <td><strong>Mac / PC — webbläsare utan installation</strong></td>
+        <td>Beror på cache-policy</td>
+        <td class="caveat">Räknas inte som "appdata" — kan rensas när du tömmer browser-historik eller cookies.</td>
+      </tr>
+      <tr>
+        <td><strong>Mac / PC — Chrome/Edge med PWA installerad</strong></td>
+        <td>Persistent, egen profil</td>
+        <td>Stabil för stationärt bruk. Rensas bara om du avinstallerar appen eller manuellt rensar webbläsardatan.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<div class="ios-note">
+  <strong>iPhone-användare:</strong> Apples ITP-mekanism (Intelligent Tracking Prevention) kan radera lokal data efter ~7 dagars inaktivitet — även för installerade PWA-appar. Öppna appen åtminstone en gång i veckan, och ladda ner en säkerhetskopia (nedan) inför längre uppehåll eller övning.
+</div>
+
+<h2>Säkerhetskopia (export &amp; import)</h2>
+<div class="card">
+  <p>Ladda ner alla dina utkast, sparade objekt och ritningar som en enda JSON-fil. Du kan importera samma fil senare för att återställa allt — på samma enhet eller på en ny.</p>
+
+  <div class="btn-row">
+    <button class="btn-primary" id="exportBtn">Exportera säkerhetskopia</button>
+    <button class="btn-secondary" id="importBtn">Importera säkerhetskopia…</button>
+    <input type="file" id="importFile" accept=".json,application/json">
+  </div>
+
+  <div class="status hidden" id="status"></div>
+
+  <p style="margin-top:14px;"><small>Säkerhetskopian innehåller all data från <code>localStorage</code> och från databaserna <code>minkarta</code> och <code>sensorskiss</code>. Cache API (offline-bundle och kart-tiles) ingår inte — den återställs automatiskt vid nästa besök med internetuppkoppling.</small></p>
+</div>
+
+<h2>Källkod (för utvecklare)</h2>
+<div class="card">
+  <p>Detta är en <strong>helt separat sak</strong> från dina data ovan. Källkoden ligger på GitHub bara för insyn och för den som vill köra en egen kopia eller granska koden — den har inget att göra med var dina ifyllda fält hamnar.</p>
+  <p class="src-link"><a href="https://github.com/gitjoda71/7s-rapport" target="_blank" rel="noopener noreferrer">Källkod på GitHub →</a> &nbsp;·&nbsp; <a href="index.html#egenKopia">Hur kör jag en egen kopia? →</a></p>
+</div>
+
+</div>
+
+<!-- Bekräftelsedialog för import -->
+<div class="confirm-overlay" id="confirmOverlay">
+  <div class="confirm-dialog">
+    <h3>Importera säkerhetskopia?</h3>
+    <p id="confirmText">Detta skriver över all data som ligger lokalt på enheten just nu.</p>
+    <div class="confirm-btns">
+      <button class="btn-secondary" id="confirmCancel">Avbryt</button>
+      <button class="btn-danger" id="confirmOK">Skriv över &amp; importera</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  const EXPORT_VERSION = 1;
+  const KNOWN_IDB = [
+    { name: 'minkarta', store: 'state' },
+    { name: 'sensorskiss', store: 'state' }
+  ];
+
+  const $status = document.getElementById('status');
+  const $exportBtn = document.getElementById('exportBtn');
+  const $importBtn = document.getElementById('importBtn');
+  const $importFile = document.getElementById('importFile');
+  const $overlay = document.getElementById('confirmOverlay');
+  const $confirmText = document.getElementById('confirmText');
+  const $confirmOK = document.getElementById('confirmOK');
+  const $confirmCancel = document.getElementById('confirmCancel');
+
+  function setStatus(msg, kind) {
+    $status.textContent = msg;
+    $status.className = 'status ' + (kind || '');
+  }
+
+  // -- IDB helpers ---------------------------------------------------------
+  function openDB(name, store) {
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(name, 1);
+      req.onupgradeneeded = () => {
+        const db = req.result;
+        if (!db.objectStoreNames.contains(store)) db.createObjectStore(store);
+      };
+      req.onerror = () => reject(req.error);
+      req.onsuccess = () => resolve(req.result);
+    });
+  }
+
+  function dumpStore(db, store) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(store, 'readonly');
+      const os = tx.objectStore(store);
+      const keysReq = os.getAllKeys();
+      const valsReq = os.getAll();
+      let keys = null, vals = null;
+      keysReq.onsuccess = () => { keys = keysReq.result; if (vals !== null) finish(); };
+      valsReq.onsuccess = () => { vals = valsReq.result; if (keys !== null) finish(); };
+      keysReq.onerror = () => reject(keysReq.error);
+      valsReq.onerror = () => reject(valsReq.error);
+      function finish() {
+        const out = {};
+        for (let i = 0; i < keys.length; i++) {
+          // Nycklar kan vara strings, numbers, dates etc. Här gör vi om till
+          // strängar för JSON men sparar typen så vi kan rekonstruera vid
+          // import. För denna app är nycklarna kända som strängar — vi tar
+          // den enkla vägen.
+          out[String(keys[i])] = vals[i];
+        }
+        resolve(out);
+      }
+    });
+  }
+
+  function writeStore(db, store, kvObj) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(store, 'readwrite');
+      const os = tx.objectStore(store);
+      // Rensa först så import är en clean overwrite
+      const clear = os.clear();
+      clear.onsuccess = () => {
+        const entries = Object.entries(kvObj);
+        if (entries.length === 0) { /* fall through till tx.oncomplete */ }
+        for (const [k, v] of entries) {
+          os.put(v, k);
+        }
+      };
+      clear.onerror = () => reject(clear.error);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+      tx.onabort = () => reject(tx.error || new Error('tx abort'));
+    });
+  }
+
+  // -- Export --------------------------------------------------------------
+  async function doExport() {
+    setStatus('Samlar in data…', 'warn');
+    try {
+      const ls = {};
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        ls[k] = localStorage.getItem(k);
+      }
+
+      const idb = {};
+      for (const { name, store } of KNOWN_IDB) {
+        try {
+          const db = await openDB(name, store);
+          idb[name] = await dumpStore(db, store);
+          db.close();
+        } catch (e) {
+          // Om DB inte finns / är tom — lämna utelämnad eller tom.
+          idb[name] = {};
+        }
+      }
+
+      const payload = {
+        format: '7srapport-backup',
+        version: EXPORT_VERSION,
+        exportedAt: new Date().toISOString(),
+        userAgent: navigator.userAgent,
+        localStorage: ls,
+        indexedDB: idb
+      };
+
+      const json = JSON.stringify(payload, null, 2);
+      const blob = new Blob([json], { type: 'application/json' });
+      const ts = new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19);
+      const fname = '7srapport-backup-' + ts + '.json';
+
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 200);
+
+      const lsCount = Object.keys(ls).length;
+      const idbCount = Object.values(idb).reduce((n, o) => n + Object.keys(o).length, 0);
+      setStatus(`Sparat ${fname}\n• ${lsCount} fält från localStorage\n• ${idbCount} objekt från IndexedDB`, 'ok');
+    } catch (e) {
+      setStatus('Export misslyckades: ' + (e && e.message ? e.message : e), 'err');
+    }
+  }
+
+  // -- Import --------------------------------------------------------------
+  let pendingPayload = null;
+
+  function pickFile() {
+    $importFile.value = '';
+    $importFile.click();
+  }
+
+  $importFile.addEventListener('change', () => {
+    const file = $importFile.files && $importFile.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const payload = JSON.parse(reader.result);
+        if (!payload || payload.format !== '7srapport-backup') {
+          throw new Error('Filen är inte en 7srapport-säkerhetskopia.');
+        }
+        if (payload.version > EXPORT_VERSION) {
+          throw new Error('Säkerhetskopian är från en nyare version (' + payload.version + ') än den här appen stödjer (' + EXPORT_VERSION + ').');
+        }
+        pendingPayload = payload;
+        const lsCount = Object.keys(payload.localStorage || {}).length;
+        const idb = payload.indexedDB || {};
+        const idbCount = Object.values(idb).reduce((n, o) => n + Object.keys(o || {}).length, 0);
+        $confirmText.textContent =
+          'Säkerhetskopian innehåller ' + lsCount + ' fält från localStorage och ' +
+          idbCount + ' objekt från IndexedDB. Exporterad: ' +
+          (payload.exportedAt || 'okänt datum') + '. ' +
+          'All befintlig lokal data skrivs över.';
+        $overlay.classList.add('open');
+      } catch (e) {
+        setStatus('Kunde inte läsa filen: ' + (e && e.message ? e.message : e), 'err');
+      }
+    };
+    reader.onerror = () => setStatus('Filen kunde inte läsas.', 'err');
+    reader.readAsText(file);
+  });
+
+  async function doImport(payload) {
+    setStatus('Återställer data…', 'warn');
+    try {
+      // localStorage
+      localStorage.clear();
+      const ls = payload.localStorage || {};
+      for (const [k, v] of Object.entries(ls)) {
+        try { localStorage.setItem(k, v); } catch (_) {}
+      }
+      // indexedDB
+      const idb = payload.indexedDB || {};
+      for (const { name, store } of KNOWN_IDB) {
+        const dump = idb[name];
+        if (!dump) continue;
+        try {
+          const db = await openDB(name, store);
+          await writeStore(db, store, dump);
+          db.close();
+        } catch (e) {
+          // Fortsätt med övriga, rapportera i status efteråt
+          console.warn('IDB import failed for', name, e);
+        }
+      }
+      setStatus('Återställning klar. Du kan stänga den här sidan och gå tillbaka till formulären.', 'ok');
+    } catch (e) {
+      setStatus('Import misslyckades: ' + (e && e.message ? e.message : e), 'err');
+    }
+  }
+
+  $exportBtn.addEventListener('click', doExport);
+  $importBtn.addEventListener('click', pickFile);
+  $confirmCancel.addEventListener('click', () => {
+    pendingPayload = null;
+    $overlay.classList.remove('open');
+  });
+  $confirmOK.addEventListener('click', () => {
+    const p = pendingPayload;
+    pendingPayload = null;
+    $overlay.classList.remove('open');
+    if (p) doImport(p);
+  });
+})();
+</script>
+</body>
+</html>

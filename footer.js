@@ -4,6 +4,50 @@
 //   <script src="footer.js"></script>
 // title styr GitHub-issue-titeln, body styr formularnamnet i issue-bodyn.
 // body är valfritt och defaultar till title.
+
+// --- iOS ITP-notis -------------------------------------------------------
+// Apples Intelligent Tracking Prevention kan rensa lokal data efter ~7
+// dagars inaktivitet — även för installerade PWA-appar. Om vi upptäcker
+// iOS-användare som varit borta >5 dagar visar vi en mild banner som
+// rekommenderar säkerhetskopia. Engångsnotis per återbesök (sessionStorage).
+(function () {
+    try {
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) ||
+            (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        if (!isIOS) return;
+
+        const FIVE_DAYS = 5 * 24 * 3600 * 1000;
+        const now = Date.now();
+        const lastSeenRaw = localStorage.getItem('hv_lastSeen');
+        const lastSeen = lastSeenRaw ? parseInt(lastSeenRaw, 10) : 0;
+        localStorage.setItem('hv_lastSeen', String(now));
+
+        // Är vi på data.html själva? Då är banner överflödig.
+        if (location.pathname.endsWith('data.html')) return;
+
+        const inactiveLong = lastSeen > 0 && (now - lastSeen) > FIVE_DAYS;
+        if (!inactiveLong) return;
+
+        if (sessionStorage.getItem('hv_itpNotisDismissed') === '1') return;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const banner = document.createElement('div');
+            banner.style.cssText = 'position:fixed;left:0;right:0;bottom:0;background:#0a1a2a;border-top:1px solid #1f4566;color:#a8d0ff;padding:12px 16px;font-family:inherit;font-size:0.84rem;line-height:1.45;z-index:9000;box-shadow:0 -4px 16px rgba(0,0,0,0.4)';
+            banner.innerHTML =
+                '<div style="max-width:600px;margin:0 auto;display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+                '<div style="flex:1;min-width:200px"><strong style="color:#c8e0ff">Tips för iPhone:</strong> Apples ITP kan rensa lokal data efter ~7 dagars inaktivitet. <a href="data.html" style="color:#90c0ff;font-weight:600">Ladda ner en säkerhetskopia →</a></div>' +
+                '<button id="hv-itp-dismiss" style="background:transparent;border:1px solid #1f4566;color:#a8d0ff;padding:6px 12px;border-radius:6px;font-family:inherit;font-size:0.82rem;cursor:pointer">Stäng</button>' +
+                '</div>';
+            document.body.appendChild(banner);
+            const dismissBtn = banner.querySelector('#hv-itp-dismiss');
+            if (dismissBtn) dismissBtn.addEventListener('click', () => {
+                sessionStorage.setItem('hv_itpNotisDismissed', '1');
+                banner.remove();
+            });
+        });
+    } catch (_) { /* iOS-notis är best-effort, inte säkerhetskritisk */ }
+})();
+
 (function () {
     const FORM = window.FORM_ID || { title: '7S' };
     const title = FORM.title;
@@ -21,6 +65,13 @@
 
         const footer = document.createElement('footer');
         footer.style.cssText = 'margin-top:24px;padding:0 0 32px;text-align:center;font-size:0.7rem;color:var(--text-muted);line-height:1.6';
+
+        // Positionerings-disclaimer (Paket D) — synlig direkt i sidfoten
+        // utan att man behöver öppna Om-sektionen. Tonen är diskret men
+        // texten är otvetydig: detta är ett självständigt verktyg.
+        const disclaimer = document.createElement('p');
+        disclaimer.textContent = 'Privatutvecklat utbildnings- och minneshjälpverktyg. Inte kopplat till eller fastställt av Försvarsmakten.';
+        disclaimer.style.cssText = 'font-size:0.65rem;color:var(--text-muted);opacity:0.75;margin-bottom:6px;max-width:480px;margin-left:auto;margin-right:auto';
 
         // Integritetsnot
         const priv = document.createElement('p');
@@ -59,7 +110,7 @@
 </div>
 
 <h3 style="color:var(--accent);font-size:0.85rem;margin:0 0 10px;letter-spacing:0.06em">OM 7S RAPPORT</h3>
-<p style="margin:0 0 10px">Webbaserade rapportverktyg för Hemvärnet. <strong>13 rapport-formulär</strong> plus två kart-verktyg (MINKARTA för minläggning, SENSORSKISS för bevakningsobjekt) — paketerade som en PWA (Progressive Web App) som fungerar <strong>100% offline</strong> direkt i mobilen.</p>
+<p style="margin:0 0 10px"><strong>Privatutvecklat utbildnings- och minneshjälpverktyg riktat till hemvärnssoldater.</strong> Inte kopplat till eller fastställt av Försvarsmakten. <strong>13 rapport-formulär</strong> plus två kart-verktyg (MINKARTA för minläggning, SENSORSKISS för bevakningsobjekt) — paketerade som en PWA (Progressive Web App) som fungerar <strong>100% offline</strong> direkt i mobilen.</p>
 
 <p style="margin:0 0 10px"><strong>Funktioner i urval:</strong></p>
 <ul style="margin:0 0 12px;padding-left:18px">
@@ -68,6 +119,10 @@
 <li>Anpassat för Signal – genererar ren text redo att klistras in</li>
 <li>Ingen data skickas utanför din enhet – allt stannar lokalt i webbläsaren</li>
 </ul>
+
+<h3 style="color:var(--accent);font-size:0.85rem;margin:16px 0 10px;letter-spacing:0.06em">MINA DATA & SÄKERHETSKOPIA</h3>
+<p style="margin:0 0 10px">All data ligger på din enhet — aldrig hos oss eller på GitHub. Du kan exportera alla utkast och sparade objekt som en JSON-fil och importera tillbaka senare.</p>
+<p style="margin:0 0 10px"><a href="data.html" style="color:var(--accent)">Mina data & säkerhetskopia →</a></p>
 
 <h3 style="color:var(--accent);font-size:0.85rem;margin:16px 0 10px;letter-spacing:0.06em">INTEGRITET & NÄTVERKSANROP</h3>
 <p style="margin:0 0 10px">Verktyget skickar <strong>aldrig</strong> dina rapporter, koordinater eller annan data till någon server. All information stannar på din enhet i webbläsarens lokala lagring. Formulären genererar ren text som du själv kopierar och klistrar in där du vill.</p>
@@ -157,6 +212,7 @@
         linkRow.appendChild(sep);
         linkRow.appendChild(aboutToggle);
 
+        footer.appendChild(disclaimer);
         footer.appendChild(priv);
         footer.appendChild(linkRow);
         footer.appendChild(aboutBox);
