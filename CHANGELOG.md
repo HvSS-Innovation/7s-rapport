@@ -20,6 +20,15 @@ Detaljerade beskrivningar finns i README-dagboken.
 
 **Avvikelse från roadmap:** GrpC + PlutC levereras som placeholders i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI och utan säker FM-publikation att luta sig på är felaktighetsrisken större än värdet av snabb leverans. Innehåll fylls på i v0.2.x när säkra referenser verifierats. TOS lämnad helt tills användaren preciserar.
 
+## v0.5 — 2026-05-12 — Privat kanban-tavla via samma Worker
+- Ny hemlig sida `tavla.html` — kanban med 4 kolumner (Önskat / Kommer snart / Pågår / Klart), klickbara items med flytta-knappar
+- Worker utökad med `GET /issues` (lista) och `POST /move` (flytta mellan kolumner). Mappning via `status:*`-labels + open/closed-state.
+- Worker skapar labels automatiskt — inga manuella labels behövs i GitHub
+- PR:s filtreras bort, bara Issues visas
+- SETUP.md uppdaterad med kanban-instruktioner + re-deploy-guide
+
+**Kräver manuell action av Joel:** re-deploya Workern i Cloudflare med nya `tipsa-worker.js` + uppdatera `tavla.html` med samma WORKER_URL + FORM_SECRET som tipsa.html.
+
 ## v0.4 — 2026-05-12 — Privat tipsa-ingång via Cloudflare Worker
 - Ny hemlig sida `tipsa.html` — ej länkad från någon annan del av appen, märkt `noindex,nofollow`
 - Formuläret POSTar till en Cloudflare Worker som skapar GitHub Issue automatiskt (användaren behöver inget GitHub-konto, ingen e-postklient)

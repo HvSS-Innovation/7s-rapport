@@ -1,108 +1,200 @@
-// tipsa-worker.js — Cloudflare Worker som tar emot formulärposter från
-// `tipsa.html` på 7srapport.com och skapar en GitHub Issue automatiskt.
+// tipsa-worker.js — Cloudflare Worker för 7srapport.com.
 //
-// Användaren behöver inte ha GitHub-konto. Tipset hamnar i samma
-// Issues-kö som "Lämna ett önskemål"-länken på den publika
-// roadmap-sidan, men kommer in via en separat, ej publik kanal.
-//
-// Konfiguration: se SETUP.md i samma mapp.
+// Tre endpoints:
+//   POST /         — ta emot tips från tipsa.html → skapa GitHub Issue
+//   GET  /issues   — lista GitHub Issues för tavla.html (kanban)
+//   POST /move     — flytta Issue mellan kanban-kolumner från tavla.html
 //
 // Worker secrets / vars (sätts i Cloudflare dashboard eller via wrangler):
 //   GITHUB_TOKEN     (secret) — PAT med scope `repo`
-//   FORM_SECRET      (secret) — delas med tipsa.html
+//   FORM_SECRET      (secret) — delas med tipsa.html OCH tavla.html
 //   ALLOWED_ORIGIN   (var)    — t.ex. "https://7srapport.com"
 //   GITHUB_REPO      (var)    — t.ex. "gitjoda71/7s-rapport"
+//
+// Kanban-kolumner mappas så här:
+//   Issue closed                                   → Klart
+//   Issue open + label "status:inprogress"         → Pågår
+//   Issue open + label "status:soon"               → Kommer snart
+//   Övriga öppna issues (inkl. label status:wished) → Önskat
 
 export default {
-  async fetch(request, env, ctx) {
-    const origin = request.headers.get('Origin') || '';
-    const corsHeaders = {
-      'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-      'Access-Control-Max-Age': '86400'
-    };
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    const path = url.pathname.replace(/\/+$/, '') || '/';
+    const cors = corsHeadersFor(env);
 
-    // CORS preflight
     if (request.method === 'OPTIONS') {
-      return new Response(null, { status: 204, headers: corsHeaders });
+      return new Response(null, { status: 204, headers: cors });
     }
 
-    if (request.method !== 'POST') {
-      return jsonErr('Method not allowed', 405, corsHeaders);
+    // POST / → tipsa
+    if (path === '/' && request.method === 'POST') {
+      return handleTipsa(request, env, cors);
+    }
+    // GET /issues → lista
+    if (path === '/issues' && request.method === 'GET') {
+      return handleListIssues(request, env, cors);
+    }
+    // POST /move → flytta
+    if (path === '/move' && request.method === 'POST') {
+      return handleMove(request, env, cors);
     }
 
-    // Origin-koll: bara requests från rätt sida släpps igenom
-    if (env.ALLOWED_ORIGIN && origin && origin !== env.ALLOWED_ORIGIN) {
-      return jsonErr('Origin ej tillåten', 403, corsHeaders);
-    }
-
-    // Läs JSON-payload
-    let payload;
-    try {
-      payload = await request.json();
-    } catch (e) {
-      return jsonErr('Ogiltig JSON', 400, corsHeaders);
-    }
-
-    // Shared-secret-koll (extra lager utöver Origin)
-    if (env.FORM_SECRET && payload.secret !== env.FORM_SECRET) {
-      return jsonErr('Ogiltig token', 403, corsHeaders);
-    }
-
-    // Validera fält (trimma + längdspärr som hard cap utöver formulärets maxlength)
-    const title = String(payload.title || '').trim().slice(0, 200);
-    const body  = String(payload.body  || '').trim().slice(0, 8000);
-    const cat   = String(payload.category || '').trim().slice(0, 50);
-    const role  = String(payload.role || '').trim().slice(0, 60);
-    const name  = String(payload.name || '').trim().slice(0, 100);
-
-    if (!title || !body) {
-      return jsonErr('Rubrik och beskrivning krävs', 400, corsHeaders);
-    }
-
-    // Bygg Issue
-    const issueTitle = buildIssueTitle(cat, title);
-    const issueBody  = buildIssueBody(body, name, role, cat);
-    const labels     = buildLabels(cat);
-
-    // Skapa Issue via GitHub API
-    if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) {
-      return jsonErr('Workern är inte konfigurerad (saknar GITHUB_REPO eller GITHUB_TOKEN)', 500, corsHeaders);
-    }
-
-    let ghResp;
-    try {
-      ghResp = await fetch('https://api.github.com/repos/' + env.GITHUB_REPO + '/issues', {
-        method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + env.GITHUB_TOKEN,
-          'Accept': 'application/vnd.github+json',
-          'X-GitHub-Api-Version': '2022-11-28',
-          'User-Agent': '7srapport-tipsa-worker',
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          title: issueTitle,
-          body: issueBody,
-          labels: labels
-        })
-      });
-    } catch (e) {
-      return jsonErr('Kunde inte nå GitHub: ' + (e && e.message ? e.message : e), 502, corsHeaders);
-    }
-
-    if (!ghResp.ok) {
-      const text = await ghResp.text().catch(() => '');
-      return jsonErr('GitHub API-fel (' + ghResp.status + ')', 502, corsHeaders, {
-        detail: text.slice(0, 300)
-      });
-    }
-
-    const issue = await ghResp.json();
-    return jsonOk({ issueNumber: issue.number }, corsHeaders);
+    return jsonErr('Method not allowed', 405, cors);
   }
 };
+
+// ── /  (tipsa) ───────────────────────────────────────────────────────
+
+async function handleTipsa(request, env, cors) {
+  if (!originOk(request, env)) return jsonErr('Origin ej tillåten', 403, cors);
+
+  let payload;
+  try { payload = await request.json(); } catch (e) {
+    return jsonErr('Ogiltig JSON', 400, cors);
+  }
+  if (!secretOk(payload.secret, env)) return jsonErr('Ogiltig token', 403, cors);
+
+  const title = String(payload.title || '').trim().slice(0, 200);
+  const body  = String(payload.body  || '').trim().slice(0, 8000);
+  const cat   = String(payload.category || '').trim().slice(0, 50);
+  const role  = String(payload.role || '').trim().slice(0, 60);
+  const name  = String(payload.name || '').trim().slice(0, 100);
+
+  if (!title || !body) return jsonErr('Rubrik och beskrivning krävs', 400, cors);
+
+  if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) {
+    return jsonErr('Workern är inte konfigurerad', 500, cors);
+  }
+
+  const issueTitle = buildIssueTitle(cat, title);
+  const issueBody  = buildIssueBody(body, name, role, cat);
+  const labels     = buildLabels(cat);
+
+  const r = await fetch(ghUrl(env, '/issues'), {
+    method: 'POST',
+    headers: ghHeaders(env, true),
+    body: JSON.stringify({ title: issueTitle, body: issueBody, labels })
+  });
+  if (!r.ok) {
+    const text = await r.text().catch(() => '');
+    return jsonErr('GitHub API-fel (' + r.status + ')', 502, cors, { detail: text.slice(0, 300) });
+  }
+  const issue = await r.json();
+  return jsonOk({ issueNumber: issue.number }, cors);
+}
+
+// ── /issues  (lista för kanban) ──────────────────────────────────────
+
+async function handleListIssues(request, env, cors) {
+  if (!originOk(request, env)) return jsonErr('Origin ej tillåten', 403, cors);
+
+  // FORM_SECRET via Authorization: Bearer <secret>
+  const auth = request.headers.get('Authorization') || '';
+  const token = auth.replace(/^Bearer\s+/i, '');
+  if (!secretOk(token, env)) return jsonErr('Ogiltig token', 403, cors);
+
+  if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) {
+    return jsonErr('Workern är inte konfigurerad', 500, cors);
+  }
+
+  // Hämta open + closed parallellt
+  const [openR, closedR] = await Promise.all([
+    fetch(ghUrl(env, '/issues?state=open&per_page=100'),  { headers: ghHeaders(env) }),
+    fetch(ghUrl(env, '/issues?state=closed&per_page=30'), { headers: ghHeaders(env) })
+  ]);
+  if (!openR.ok || !closedR.ok) {
+    return jsonErr('GitHub API-fel', 502, cors, {
+      detail: 'open=' + openR.status + ' closed=' + closedR.status
+    });
+  }
+  const openItems   = await openR.json();
+  const closedItems = await closedR.json();
+
+  // GitHub blandar Issues och PRs i samma endpoint — filtrera bort PRs.
+  const isPR = x => !!x.pull_request;
+  const all = [...openItems, ...closedItems].filter(x => !isPR(x));
+
+  const items = all.map(toItem);
+
+  return new Response(JSON.stringify({ ok: true, items }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json', ...cors }
+  });
+}
+
+// ── /move  (flytta mellan kolumner) ─────────────────────────────────
+
+async function handleMove(request, env, cors) {
+  if (!originOk(request, env)) return jsonErr('Origin ej tillåten', 403, cors);
+
+  let payload;
+  try { payload = await request.json(); } catch (e) {
+    return jsonErr('Ogiltig JSON', 400, cors);
+  }
+  if (!secretOk(payload.secret, env)) return jsonErr('Ogiltig token', 403, cors);
+
+  const issueNumber = parseInt(payload.issueNumber, 10);
+  const target = String(payload.target || '').trim();
+  const validTargets = ['wished', 'soon', 'inprogress', 'done'];
+  if (!issueNumber || !validTargets.includes(target)) {
+    return jsonErr('Ogiltigt request', 400, cors);
+  }
+
+  if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) {
+    return jsonErr('Workern är inte konfigurerad', 500, cors);
+  }
+
+  // 1) Hämta nuvarande issue
+  const curR = await fetch(ghUrl(env, '/issues/' + issueNumber), { headers: ghHeaders(env) });
+  if (!curR.ok) return jsonErr('Kunde inte hämta Issue ' + issueNumber, 502, cors);
+  const issue = await curR.json();
+
+  // 2) Ta bort alla existerande status:*-labels
+  const existing = (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);
+  for (const l of existing.filter(x => x.startsWith('status:'))) {
+    await fetch(ghUrl(env, '/issues/' + issueNumber + '/labels/' + encodeURIComponent(l)), {
+      method: 'DELETE',
+      headers: ghHeaders(env)
+    });
+  }
+
+  // 3) Sätt nytt tillstånd
+  if (target === 'done') {
+    // Closa issuet — status:* tas redan bort ovan
+    const r = await fetch(ghUrl(env, '/issues/' + issueNumber), {
+      method: 'PATCH',
+      headers: ghHeaders(env, true),
+      body: JSON.stringify({ state: 'closed', state_reason: 'completed' })
+    });
+    if (!r.ok) return jsonErr('Kunde inte stänga issue', 502, cors);
+  } else {
+    // Öppna issuet om den är closed
+    if (issue.state === 'closed') {
+      const r = await fetch(ghUrl(env, '/issues/' + issueNumber), {
+        method: 'PATCH',
+        headers: ghHeaders(env, true),
+        body: JSON.stringify({ state: 'open' })
+      });
+      if (!r.ok) return jsonErr('Kunde inte öppna issue', 502, cors);
+    }
+    // Lägg till önskad status-label (om något — wished är default utan label)
+    const newLabel = target === 'wished' ? null : 'status:' + target;
+    if (newLabel) {
+      const r = await fetch(ghUrl(env, '/issues/' + issueNumber + '/labels'), {
+        method: 'POST',
+        headers: ghHeaders(env, true),
+        body: JSON.stringify({ labels: [newLabel] })
+      });
+      if (!r.ok) return jsonErr('Kunde inte sätta label', 502, cors);
+    }
+  }
+
+  // Returnera nya item-state
+  const finalR = await fetch(ghUrl(env, '/issues/' + issueNumber), { headers: ghHeaders(env) });
+  const finalIssue = await finalR.json();
+  return jsonOk({ item: toItem(finalIssue) }, cors);
+}
 
 // ── helpers ──────────────────────────────────────────────────────────
 
@@ -135,23 +227,79 @@ function buildIssueBody(body, name, role, cat) {
 
 function buildLabels(cat) {
   const labels = ['tipsa'];
-  // Lägg också till en kategori-label så det är lätt att triagera
-  if (cat && CATEGORY_LABELS[cat]) {
-    labels.push('kat:' + cat);
-  }
+  if (cat && CATEGORY_LABELS[cat]) labels.push('kat:' + cat);
   return labels;
 }
 
-function jsonOk(extra, corsHeaders) {
+// Mappa GitHub-issue → kanban-item (det vi exponerar för tavla.html)
+function toItem(issue) {
+  const labels = (issue.labels || []).map(l => typeof l === 'string' ? l : l.name);
+  let column = 'wished';
+  if (issue.state === 'closed')                 column = 'done';
+  else if (labels.includes('status:inprogress')) column = 'inprogress';
+  else if (labels.includes('status:soon'))       column = 'soon';
+  else                                           column = 'wished';
+
+  return {
+    number:  issue.number,
+    title:   issue.title || '',
+    body:    String(issue.body || '').slice(0, 2000),
+    url:     issue.html_url,
+    state:   issue.state,
+    column:  column,
+    labels:  labels,
+    created: issue.created_at,
+    updated: issue.updated_at,
+    closed:  issue.closed_at || null
+  };
+}
+
+function originOk(request, env) {
+  if (!env.ALLOWED_ORIGIN) return true;
+  const origin = request.headers.get('Origin') || '';
+  if (!origin) return true; // tillåt om Origin saknas helt (ex. nyfiken curl)
+  return origin === env.ALLOWED_ORIGIN;
+}
+
+function secretOk(value, env) {
+  if (!env.FORM_SECRET) return true;
+  return value === env.FORM_SECRET;
+}
+
+function corsHeadersFor(env) {
+  return {
+    'Access-Control-Allow-Origin': env.ALLOWED_ORIGIN || '*',
+    'Access-Control-Allow-Methods': 'POST, GET, OPTIONS',
+    'Access-Control-Allow-Headers': 'Content-Type, Authorization',
+    'Access-Control-Max-Age': '86400'
+  };
+}
+
+function ghUrl(env, path) {
+  return 'https://api.github.com/repos/' + env.GITHUB_REPO + path;
+}
+
+function ghHeaders(env, withJson) {
+  const h = {
+    'Authorization': 'Bearer ' + env.GITHUB_TOKEN,
+    'Accept': 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+    'User-Agent': '7srapport-tipsa-worker'
+  };
+  if (withJson) h['Content-Type'] = 'application/json';
+  return h;
+}
+
+function jsonOk(extra, cors) {
   return new Response(JSON.stringify({ ok: true, ...(extra || {}) }), {
     status: 200,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    headers: { 'Content-Type': 'application/json', ...cors }
   });
 }
 
-function jsonErr(message, status, corsHeaders, extra) {
+function jsonErr(message, status, cors, extra) {
   return new Response(JSON.stringify({ ok: false, error: message, ...(extra || {}) }), {
     status,
-    headers: { 'Content-Type': 'application/json', ...corsHeaders }
+    headers: { 'Content-Type': 'application/json', ...cors }
   });
 }

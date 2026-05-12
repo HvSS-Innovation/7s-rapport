@@ -1,8 +1,13 @@
 # Tipsa-Worker — setup
 
-En Cloudflare Worker som tar emot tips från den hemliga sidan
-[`tipsa.html`](../../tipsa.html) på 7srapport.com och skapar en GitHub
-Issue automatiskt. Användaren behöver inget GitHub-konto.
+En Cloudflare Worker som driver två hemliga sidor på 7srapport.com:
+
+- [`tipsa.html`](../../tipsa.html) — formulär för utvalda att lämna förslag
+  (skapar GitHub Issue automatiskt, mottagaren behöver inget GitHub-konto)
+- [`tavla.html`](../../tavla.html) — privat kanban för utvalda att se och
+  flytta items mellan kolumnerna **Önskat / Kommer snart / Pågår / Klart**
+
+Båda sidorna pratar med samma Worker via samma `FORM_SECRET`.
 
 Du sätter upp det här en gång. Sen rullar det.
 
@@ -80,17 +85,17 @@ Tillbaka i Worker-vyn på Cloudflare:
 I Worker-vyn ser du URL:en under namnet, t.ex.
 `https://tipsa-7srapport.dittanvändarnamn.workers.dev`. Kopiera den.
 
-## Steg 5: Uppdatera tipsa.html
+## Steg 5: Uppdatera tipsa.html och tavla.html
 
-Öppna [`tipsa.html`](../../tipsa.html) i repots root. Hitta dessa två
-rader nära toppen av `<script>`-blocket:
+Öppna [`tipsa.html`](../../tipsa.html) och [`tavla.html`](../../tavla.html)
+i repots root. Båda har samma två rader nära toppen av sitt `<script>`-block:
 
 ```javascript
 const WORKER_URL = 'BYT-MIG-Worker-URL';
 const FORM_SECRET = 'BYT-MIG-Form-Secret';
 ```
 
-Byt:
+Byt i **båda filerna**:
 
 - `WORKER_URL` → URL:en från steg 4
 - `FORM_SECRET` → samma värde som du satte som `FORM_SECRET`-secret
@@ -99,19 +104,46 @@ Byt:
 Spara, committa och pusha:
 
 ```bash
-git add tipsa.html
-git commit -m "Konfigurera tipsa-worker URL och secret"
+git add tipsa.html tavla.html
+git commit -m "Konfigurera tipsa/tavla med Worker-URL och secret"
 git push
 ```
 
 ## Steg 6: Testa
 
+**Tipsa-sidan:**
 1. Öppna `https://7srapport.com/tipsa.html` i en browser.
 2. Fyll i rubrik och beskrivning.
 3. Klicka **Skicka tipset**.
 4. Du bör se "Tack! Tipset är registrerat (ärende #N)".
 5. Gå till repot på GitHub → Issues. Du ska se en ny issue med titel
    `[Tipsa] [...] ...` och labels `tipsa` + `kat:...`.
+
+**Tavlan:**
+1. Öppna `https://7srapport.com/tavla.html`.
+2. Du bör se 4 kolumner — Önskat / Kommer snart / Pågår / Klart — med
+   alla öppna och senaste closed Issues fördelade.
+3. Klicka på ett item → modal med detaljer + flytta-knappar.
+4. Klicka **Pågår** (t.ex.) → bekräfta → item flyttas både i UI:t och i
+   GitHub (label `status:inprogress` läggs på Issuen automatiskt).
+
+## Kanban-kolumner och GitHub status-labels
+
+Tavlan mappar GitHub Issues till kolumner enligt regler:
+
+| Kolumn        | Mappning                                            |
+|---------------|-----------------------------------------------------|
+| Önskat        | Öppen Issue utan `status:*`-label (eller med `status:wished`) |
+| Kommer snart  | Öppen Issue med label `status:soon`                 |
+| Pågår         | Öppen Issue med label `status:inprogress`           |
+| Klart         | **Closed** Issue (oavsett labels)                   |
+
+Workern hanterar att skapa/ta bort `status:*`-labels och öppna/stänga
+issues när du klickar "Flytta" på tavlan. **Du behöver inte skapa
+labels manuellt i GitHub** — Workern lägger till dem första gången de
+behövs.
+
+Pull-requests filtreras bort automatiskt — tavlan visar bara Issues.
 
 ## Säkerhet
 
@@ -171,7 +203,23 @@ verktyg/tipsa-worker/
 └── SETUP.md          ← detta dokument
 ```
 
-Hemliga sidan:
+Hemliga sidor:
 ```
-/tipsa.html           ← inte länkad någonstans; dela ut URL:en manuellt
+/tipsa.html           ← formulär för att lämna förslag — dela ut URL:en manuellt
+/tavla.html           ← privat kanban — dela ut URL:en manuellt
 ```
+
+## Uppdatera Workern senare
+
+Om Worker-koden uppdateras i repot (`verktyg/tipsa-worker/tipsa-worker.js`)
+deployas det **inte automatiskt** till Cloudflare — det är två separata
+världar.
+
+För att rulla ut ny Worker-kod:
+
+1. Öppna ny version av `tipsa-worker.js` i Antigravity, kopiera allt.
+2. Cloudflare dashboard → Workers & Pages → din Worker → **Edit code**.
+3. Markera allt i editorn, klistra in nya koden.
+4. Klicka **Save and deploy**.
+
+Secrets och variabler ligger kvar — du behöver inte sätta om dem.

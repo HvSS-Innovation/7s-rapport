@@ -121,6 +121,34 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
+### 2026-05-12: Privat kanban-tavla via samma Worker (v0.5)
+Bygger vidare på v0.4-modellen — samma Cloudflare Worker, samma
+`FORM_SECRET`, samma "hemlig URL"-mekanism, men nu också en kanban-vy.
+
+* **Ny hemlig sida `tavla.html`** — fyra kolumner (Önskat / Kommer snart
+  / Pågår / Klart). Listar öppna GitHub Issues + senaste closed.
+  Klick på item → modal med titel, beskrivning, taggar + flytta-knappar
+  + länk till GitHub. Klick på flytta → GitHub-Issue uppdateras
+  automatiskt (status-label sätts/tas bort, eller open/close togglas).
+  Inte länkad någonstans, märkt `noindex,nofollow`, inte i SW-cachen.
+* **Worker utökad** med två nya endpoints:
+  - `GET /issues` — listar Issues för tavlan (skyddat av `FORM_SECRET`
+    via `Authorization: Bearer`-header)
+  - `POST /move` — flyttar Issue mellan kolumner. Mappning: open utan
+    `status:*` → Önskat · open + `status:soon` → Kommer snart · open +
+    `status:inprogress` → Pågår · closed → Klart.
+* **PR:s filtreras bort** automatiskt (GitHub Issues-API blandar
+  Issues och PRs i samma endpoint).
+* Worker hanterar `status:*`-label-creation automatiskt — inga manuella
+  labels behöver skapas i GitHub i förväg.
+* **SETUP.md uppdaterad** med kanban-instruktioner + steg för att
+  re-deploya Workern efter kod-ändringar.
+
+**Att göra på din sida (manuellt):**
+1. Re-deploya Workern i Cloudflare (klistra in nya `tipsa-worker.js`)
+2. Uppdatera `tavla.html` med samma `WORKER_URL` + `FORM_SECRET` som
+   `tipsa.html` redan har
+
 ### 2026-05-12: Privat tipsa-ingång via Cloudflare Worker (v0.4)
 Ny ej-publik formulärsida `tipsa.html` för utvalda mottagare som inte vill
 eller kan använda GitHub. Sidan är inte länkad från någon annan del av

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.workers.dev; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<title>Tavla — privat kanban</title>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root { --bg:#0d1f0d; --bg-card:#152815; --bg-input:#0f240f; --fg:#c8e6c9; --muted:#a0c4a0; --dim:#5a7a5a; --line:#2d4a2d; --line-focus:#4a7c4a; --accent:#4caf50; --accent-dim:#1e3d1e; --warn:#e05050; --warn-bg:#3a1818; --info:#4a90d9; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--fg); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; line-height:1.5; }
+  .container { max-width:1300px; margin:0 auto; }
+
+  header { text-align:center; padding:14px 0 14px; }
+  header h1 { font-size:1.3rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--dim); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--dim); margin-top:8px; opacity:0.85; line-height:1.5; max-width:420px; margin-left:auto; margin-right:auto; }
+
+  .nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px; }
+  .nav a, .nav button { padding:6px 12px; background:var(--bg-card); border:1px solid var(--line); border-radius:6px; text-decoration:none; font-size:0.82rem; color:var(--fg); font-family:inherit; cursor:pointer; }
+  .nav a:hover, .nav button:hover { border-color:var(--accent); }
+  .nav .nav-spacer { flex:1; }
+
+  .status-line { font-size:0.78rem; color:var(--dim); margin:6px 0 14px; text-align:right; min-height:18px; }
+  .status-line .err { color:var(--warn); }
+  .status-line .working { color:#c8a24e; }
+  .status-line .ok { color:var(--accent); }
+
+  .kanban { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width: 1024px) { .kanban { grid-template-columns:repeat(2,1fr); } }
+  @media (max-width: 600px) { .kanban { grid-template-columns:1fr; } }
+
+  .column { background:var(--bg-card); border:1px solid var(--line); border-radius:8px; padding:12px; min-height:200px; }
+  .col-head { font-size:0.78rem; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .col-head .count { color:var(--dim); font-size:0.72rem; font-weight:400; letter-spacing:0; text-transform:none; }
+
+  .item { background:var(--bg-input); border:1px solid var(--line); border-radius:6px; padding:9px 11px; margin-bottom:8px; font-size:0.85rem; cursor:pointer; transition:border-color 0.12s, transform 0.06s; }
+  .item:hover { border-color:var(--line-focus); }
+  .item:active { transform:scale(0.99); }
+  .item-title { font-weight:600; color:var(--fg); line-height:1.35; margin-bottom:4px; word-break:break-word; }
+  .item-meta { display:flex; flex-wrap:wrap; gap:4px 6px; align-items:center; font-size:0.7rem; color:var(--dim); margin-top:4px; }
+  .item-meta .num { font-family:ui-monospace,monospace; color:var(--dim); }
+  .item-tag { font-size:0.62rem; color:var(--dim); background:transparent; border:1px solid var(--line); padding:1px 5px; border-radius:8px; letter-spacing:0.04em; text-transform:uppercase; font-weight:500; }
+  .item-tag.tipsa { color:#a8d0ff; border-color:#1f4566; }
+  .item-tag.kat { color:#c8a24e; border-color:#6a5a30; }
+  .item-tag.bugg { color:#ffb0b0; border-color:#6b2020; }
+
+  .empty { font-size:0.78rem; color:var(--dim); padding:14px 4px; text-align:center; font-style:italic; }
+  .spinner { display:inline-block; width:14px; height:14px; border:2px solid var(--line); border-top-color:var(--accent); border-radius:50%; animation:spin 0.7s linear infinite; vertical-align:-2px; margin-right:6px; }
+  @keyframes spin { to { transform:rotate(360deg); } }
+
+  /* ── Modal ── */
+  .modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.8); z-index:100; align-items:flex-start; justify-content:center; padding:20px 16px; overflow-y:auto; }
+  .modal-overlay.open { display:flex; }
+  .modal { width:100%; max-width:600px; background:var(--bg); border:1px solid var(--accent); border-radius:10px; padding:18px 20px; margin:auto; }
+  .modal h2 { font-size:1.05rem; color:var(--accent); margin-bottom:6px; line-height:1.35; word-break:break-word; }
+  .modal .modal-meta { font-size:0.72rem; color:var(--dim); margin-bottom:12px; font-family:ui-monospace,monospace; }
+  .modal .modal-tags { display:flex; flex-wrap:wrap; gap:4px; margin-bottom:12px; }
+  .modal .modal-body { background:var(--bg-input); border:1px solid var(--line); border-radius:6px; padding:10px 12px; max-height:280px; overflow-y:auto; font-size:0.85rem; color:var(--muted); white-space:pre-wrap; word-break:break-word; margin-bottom:14px; line-height:1.5; }
+  .modal h3 { font-size:0.78rem; color:var(--muted); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px; font-weight:600; }
+  .move-btns { display:flex; flex-wrap:wrap; gap:6px; margin-bottom:14px; }
+  .move-btns button { flex:1; min-width:120px; min-height:38px; background:var(--bg-card); color:var(--fg); border:1px solid var(--line); border-radius:6px; font-family:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; padding:8px 10px; transition:all 0.12s; }
+  .move-btns button:hover:not(:disabled) { border-color:var(--accent); background:var(--accent-dim); }
+  .move-btns button.current { background:var(--accent); color:#0d1f0d; border-color:var(--accent); cursor:default; }
+  .move-btns button:disabled { opacity:0.5; cursor:not-allowed; }
+  .modal-footer { display:flex; gap:8px; justify-content:space-between; align-items:center; }
+  .modal-footer a { color:var(--info); font-size:0.78rem; text-decoration:none; }
+  .modal-footer a:hover { text-decoration:underline; }
+  .modal-footer button.close-btn { background:none; color:var(--muted); border:1px solid var(--line); border-radius:6px; padding:6px 14px; font-family:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; }
+  .modal-footer button.close-btn:hover { color:var(--fg); border-color:var(--muted); }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Tavlan kräver JavaScript. Aktivera och ladda om.</div></noscript>
+
+<div class="container">
+
+  <header>
+    <h1>Tavla</h1>
+    <p>Privat kanban · ej publik länk</p>
+    <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
+  </header>
+
+  <nav class="nav">
+    <a href="./">← Tillbaka</a>
+    <a href="tipsa.html">Lämna nytt tips →</a>
+    <span class="nav-spacer"></span>
+    <button id="refreshBtn" title="Hämta senaste från servern">Uppdatera</button>
+  </nav>
+
+  <div class="status-line" id="status"></div>
+
+  <div class="kanban" id="kanban">
+    <div class="column"><div class="col-head"><span>Önskat</span><span class="count">…</span></div><div class="col-body" data-col="wished"></div></div>
+    <div class="column"><div class="col-head"><span>Kommer snart</span><span class="count">…</span></div><div class="col-body" data-col="soon"></div></div>
+    <div class="column"><div class="col-head"><span>Pågår</span><span class="count">…</span></div><div class="col-body" data-col="inprogress"></div></div>
+    <div class="column"><div class="col-head"><span>Klart</span><span class="count">…</span></div><div class="col-body" data-col="done"></div></div>
+  </div>
+
+</div>
+
+<!-- Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal" id="modal">
+    <h2 id="mTitle">—</h2>
+    <div class="modal-meta" id="mMeta">—</div>
+    <div class="modal-tags" id="mTags"></div>
+    <h3>Beskrivning</h3>
+    <div class="modal-body" id="mBody"></div>
+    <h3>Flytta till</h3>
+    <div class="move-btns" id="mBtns"></div>
+    <div class="modal-footer">
+      <a id="mLink" target="_blank" rel="noopener noreferrer">Öppna i GitHub ↗</a>
+      <button class="close-btn" id="mClose">Stäng</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  // === KONFIGURATION ===
+  // Samma värden som i tipsa.html — peka på din Cloudflare Worker.
+  // FORM_SECRET måste matcha worker-secreten exakt.
+  const WORKER_URL = 'BYT-MIG-Worker-URL';
+  const FORM_SECRET = 'BYT-MIG-Form-Secret';
+  // =====================
+
+  const COLUMNS = [
+    { id: 'wished',     name: 'Önskat' },
+    { id: 'soon',       name: 'Kommer snart' },
+    { id: 'inprogress', name: 'Pågår' },
+    { id: 'done',       name: 'Klart' }
+  ];
+
+  const $status = document.getElementById('status');
+  const $refresh = document.getElementById('refreshBtn');
+  const $kanban = document.getElementById('kanban');
+  const $overlay = document.getElementById('modalOverlay');
+  const $mClose = document.getElementById('mClose');
+  const $mTitle = document.getElementById('mTitle');
+  const $mMeta = document.getElementById('mMeta');
+  const $mTags = document.getElementById('mTags');
+  const $mBody = document.getElementById('mBody');
+  const $mBtns = document.getElementById('mBtns');
+  const $mLink = document.getElementById('mLink');
+
+  let allItems = [];
+  let currentItem = null;
+
+  function setStatus(html, kind) {
+    $status.innerHTML = html;
+    $status.className = 'status-line ' + (kind || '');
+  }
+
+  function fmtDate(s) {
+    if (!s) return '';
+    try { return s.slice(0, 10); } catch (_) { return ''; }
+  }
+
+  function tagClass(label) {
+    if (label === 'tipsa') return 'tipsa';
+    if (label.indexOf('kat:') === 0) return 'kat';
+    if (label === 'bug' || label === 'bugg' || label === 'kat:bugg') return 'bugg';
+    return '';
+  }
+
+  function tagText(label) {
+    if (label.indexOf('kat:') === 0) return label.slice(4);
+    if (label.indexOf('status:') === 0) return null; // göm status-labels
+    return label;
+  }
+
+  function itemEl(item) {
+    const div = document.createElement('div');
+    div.className = 'item';
+    div.dataset.num = item.number;
+
+    const title = document.createElement('div');
+    title.className = 'item-title';
+    title.textContent = item.title;
+    div.appendChild(title);
+
+    const meta = document.createElement('div');
+    meta.className = 'item-meta';
+    const num = document.createElement('span');
+    num.className = 'num';
+    num.textContent = '#' + item.number;
+    meta.appendChild(num);
+
+    (item.labels || []).forEach(l => {
+      const t = tagText(l);
+      if (!t) return;
+      const tg = document.createElement('span');
+      tg.className = 'item-tag ' + tagClass(l);
+      tg.textContent = t;
+      meta.appendChild(tg);
+    });
+
+    const date = document.createElement('span');
+    date.style.marginLeft = 'auto';
+    date.textContent = fmtDate(item.updated || item.created);
+    meta.appendChild(date);
+
+    div.appendChild(meta);
+
+    div.addEventListener('click', () => openModal(item));
+    return div;
+  }
+
+  function emptyEl(text) {
+    const d = document.createElement('div');
+    d.className = 'empty';
+    d.textContent = text;
+    return d;
+  }
+
+  function render(items) {
+    allItems = items;
+    COLUMNS.forEach(col => {
+      const body = document.querySelector('[data-col="' + col.id + '"]');
+      const cnt = body.parentElement.querySelector('.count');
+      body.innerHTML = '';
+      const list = items.filter(i => i.column === col.id).sort((a, b) => {
+        // Klart-kolumnen: senaste först. Annars: senast uppdaterad först.
+        return (b.updated || b.created || '').localeCompare(a.updated || a.created || '');
+      });
+      cnt.textContent = list.length;
+      if (list.length === 0) {
+        body.appendChild(emptyEl('—'));
+      } else {
+        list.forEach(it => body.appendChild(itemEl(it)));
+      }
+    });
+  }
+
+  function openModal(item) {
+    currentItem = item;
+    $mTitle.textContent = item.title;
+    $mMeta.textContent = '#' + item.number + ' · ' + (item.state === 'closed' ? 'stängd' : 'öppen') + ' · uppdaterad ' + fmtDate(item.updated || item.created);
+    $mTags.innerHTML = '';
+    (item.labels || []).forEach(l => {
+      const t = tagText(l);
+      if (!t) return;
+      const tg = document.createElement('span');
+      tg.className = 'item-tag ' + tagClass(l);
+      tg.textContent = t;
+      $mTags.appendChild(tg);
+    });
+    $mBody.textContent = item.body || '(tom beskrivning)';
+    $mLink.href = item.url;
+
+    $mBtns.innerHTML = '';
+    COLUMNS.forEach(col => {
+      const btn = document.createElement('button');
+      btn.textContent = col.name;
+      if (col.id === item.column) {
+        btn.classList.add('current');
+        btn.disabled = true;
+      } else {
+        btn.addEventListener('click', () => moveItem(item.number, col.id, btn));
+      }
+      $mBtns.appendChild(btn);
+    });
+
+    $overlay.classList.add('open');
+  }
+
+  function closeModal() {
+    $overlay.classList.remove('open');
+    currentItem = null;
+  }
+
+  $mClose.addEventListener('click', closeModal);
+  $overlay.addEventListener('click', (e) => {
+    if (e.target === $overlay) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && $overlay.classList.contains('open')) closeModal();
+  });
+
+  async function load() {
+    if (WORKER_URL === 'BYT-MIG-Worker-URL' || FORM_SECRET === 'BYT-MIG-Form-Secret') {
+      setStatus('Sidan är inte fullt konfigurerad — kontakta utvecklaren.', 'err');
+      return;
+    }
+    setStatus('<span class="spinner"></span><span class="working">Hämtar från servern…</span>');
+    try {
+      const r = await fetch(WORKER_URL.replace(/\/$/, '') + '/issues', {
+        method: 'GET',
+        headers: { 'Authorization': 'Bearer ' + FORM_SECRET }
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.ok) {
+        throw new Error((data && data.error) ? data.error : ('HTTP ' + r.status));
+      }
+      render(data.items || []);
+      setStatus('<span class="ok">' + (data.items || []).length + ' items · senast uppdaterad ' + new Date().toLocaleTimeString('sv-SE') + '</span>');
+    } catch (err) {
+      setStatus('<span class="err">Kunde inte ladda: ' + (err && err.message ? err.message : err) + '</span>', 'err');
+    }
+  }
+
+  async function moveItem(number, target, btn) {
+    if (!confirm('Flytta "' + currentItem.title + '" till ' + (COLUMNS.find(c => c.id === target) || {}).name + '?')) return;
+    btn.disabled = true;
+    btn.textContent = 'Flyttar…';
+    try {
+      const r = await fetch(WORKER_URL.replace(/\/$/, '') + '/move', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          secret: FORM_SECRET,
+          issueNumber: number,
+          target: target
+        })
+      });
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok || !data.ok) {
+        throw new Error((data && data.error) ? data.error : ('HTTP ' + r.status));
+      }
+      // Uppdatera lokalt och stäng modal
+      const updatedItem = data.item;
+      if (updatedItem) {
+        const idx = allItems.findIndex(x => x.number === updatedItem.number);
+        if (idx >= 0) allItems[idx] = updatedItem;
+        else allItems.push(updatedItem);
+        render(allItems);
+      } else {
+        // Fallback: reload allt
+        await load();
+      }
+      closeModal();
+      setStatus('<span class="ok">Flyttad ✓</span>');
+    } catch (err) {
+      btn.disabled = false;
+      btn.textContent = (COLUMNS.find(c => c.id === target) || {}).name || target;
+      alert('Kunde inte flytta: ' + (err && err.message ? err.message : err));
+    }
+  }
+
+  $refresh.addEventListener('click', load);
+
+  // Initial load
+  load();
+})();
+</script>
+</body>
+</html>
