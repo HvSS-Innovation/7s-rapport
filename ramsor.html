@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RAMSOR">
+<title>RAMSOR — Minnesramsor &amp; akronymer</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828; --danger-hover:#e53935;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; }
+  .container { max-width:680px; margin:0 auto; }
+
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:420px; margin-left:auto; margin-right:auto; }
+
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; transition:background 0.15s,color 0.15s; -webkit-tap-highlight-color:transparent; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; letter-spacing:0.05em; }
+
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  /* ── Roll-väljare ── */
+  .role-picker { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:14px; }
+  .role-picker.compact { padding:10px 12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .role-picker h2 { font-size:0.95rem; color:var(--text-secondary); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:10px; font-weight:600; }
+  .role-pills { display:flex; flex-wrap:wrap; gap:6px; }
+  .role-pill { background:var(--bg-input); border:1px solid var(--border); color:var(--text-secondary); font-size:0.85rem; font-weight:600; padding:8px 14px; border-radius:20px; cursor:pointer; font-family:inherit; min-height:36px; transition:all 0.15s; }
+  .role-pill:hover { background:var(--bg-secondary); border-color:var(--border-focus); color:var(--text-primary); }
+  .role-pill.active { background:var(--accent); border-color:var(--accent); color:#0d1f0d; }
+  .role-pill .role-desc { font-size:0.7rem; opacity:0.75; margin-left:4px; font-weight:400; }
+  .role-picker.compact .role-label { font-size:0.78rem; color:var(--text-muted); letter-spacing:0.05em; text-transform:uppercase; }
+  .role-change-btn { background:none; border:1px solid var(--border); color:var(--text-secondary); font-size:0.78rem; padding:6px 12px; border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; }
+  .role-change-btn:hover { border-color:var(--accent); color:var(--accent); }
+
+  /* ── Sök ── */
+  .search-wrap { margin-bottom:14px; }
+  .search-input { width:100%; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius); color:var(--text-primary); font-family:inherit; font-size:0.95rem; padding:12px 14px; outline:none; transition:border-color 0.15s; }
+  .search-input:focus { border-color:var(--border-focus); }
+  .search-input::placeholder { color:var(--text-muted); }
+
+  /* ── Ramsa-kort ── */
+  .section-header { font-size:0.78rem; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin:18px 0 8px; font-weight:600; display:flex; align-items:center; gap:8px; }
+  .section-header .count { font-size:0.72rem; color:var(--text-muted); opacity:0.6; font-weight:400; letter-spacing:0; text-transform:none; }
+  .ramsa { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; }
+  .ramsa-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
+  .ramsa-name { font-size:1.05rem; font-weight:700; color:var(--accent); letter-spacing:0.04em; }
+  .ramsa-tags { display:flex; gap:4px; flex-wrap:wrap; }
+  .ramsa-tag { font-size:0.65rem; color:var(--text-muted); background:var(--bg-input); border:1px solid var(--border); padding:2px 8px; border-radius:10px; letter-spacing:0.04em; text-transform:uppercase; font-weight:500; }
+  .ramsa-short { font-size:0.85rem; color:var(--text-secondary); line-height:1.5; margin-bottom:10px; }
+  .ramsa-lines { background:var(--bg-input); border-radius:var(--radius-sm); padding:10px 12px; margin-top:8px; }
+  .ramsa-line { display:flex; gap:10px; align-items:baseline; padding:4px 0; font-size:0.9rem; line-height:1.45; }
+  .ramsa-line + .ramsa-line { border-top:1px solid var(--border); padding-top:8px; margin-top:4px; }
+  .ramsa-line .letter { color:var(--accent); font-weight:700; min-width:22px; flex-shrink:0; }
+  .ramsa-line .text { color:var(--text-primary); }
+  .ramsa-usage { font-size:0.8rem; color:var(--text-muted); line-height:1.5; margin-top:10px; font-style:italic; }
+
+  /* ── Placeholder / övriga ── */
+  .placeholder-card { background:var(--bg-card); border:1px dashed var(--border); border-radius:var(--radius); padding:18px 16px; text-align:center; color:var(--text-muted); font-size:0.88rem; line-height:1.55; margin-bottom:10px; }
+  details.others { margin-top:20px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); }
+  details.others summary { padding:12px 16px; cursor:pointer; font-size:0.85rem; color:var(--text-secondary); font-weight:600; letter-spacing:0.04em; list-style:none; }
+  details.others summary::-webkit-details-marker { display:none; }
+  details.others summary::after { content:'▾'; float:right; transition:transform 0.15s; }
+  details.others[open] summary::after { transform:rotate(180deg); }
+  details.others .others-body { padding:0 12px 12px; }
+
+  .empty-state { text-align:center; color:var(--text-muted); font-size:0.88rem; padding:30px 16px; }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> RAMSOR kräver JavaScript. Aktivera och ladda om sidan.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>RAMSOR</h1>
+    <p>Minnesramsor &amp; akronymer</p>
+    <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+    <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+    <a href="fors.html" class="tab-link">FORS</a>
+    <a href="pedars.html" class="tab-link">PEDARS</a>
+    <a href="postschema.html" class="tab-link">SCHEMA</a>
+    <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+    <a href="obo.html" class="tab-link">OBO</a>
+    <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+    <a href="vader.html" class="tab-link">VÄDER</a>
+    <a href="minkarta.html" class="tab-link">MINKARTA</a>
+    <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+    <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+    <a href="matt.html" class="tab-link">MÅTT</a>
+    <a href="ramsor.html" class="tab-link active">RAMSOR</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <!-- Roll-väljare (visas både i öppet och kompakt läge) -->
+  <div id="roleSection"></div>
+
+  <!-- Sökfält -->
+  <div class="search-wrap">
+    <input type="text" id="searchInput" class="search-input" placeholder="Sök bland alla ramsor (oavsett vald roll)…" autocomplete="off" spellcheck="false">
+  </div>
+
+  <!-- Ramsor för rollen -->
+  <div id="rolesRamsor"></div>
+
+  <!-- Övriga ramsor (utanför vald roll) -->
+  <details class="others" id="othersWrap">
+    <summary>Övriga ramsor (utanför vald roll) <span id="othersCount" style="opacity:0.6;font-weight:400"></span></summary>
+    <div class="others-body" id="othersBody"></div>
+  </details>
+
+</div>
+
+<script src="ramsor-data.js"></script>
+<script>
+(function () {
+  const LS_KEY = 'hv_ramsor_role';
+  const data = window.RAMSOR_DATA || { roles: [], placeholders: {}, ramsor: [] };
+
+  const $roleSection = document.getElementById('roleSection');
+  const $rolesRamsor = document.getElementById('rolesRamsor');
+  const $othersWrap = document.getElementById('othersWrap');
+  const $othersBody = document.getElementById('othersBody');
+  const $othersCount = document.getElementById('othersCount');
+  const $searchInput = document.getElementById('searchInput');
+
+  function getRole() {
+    const r = localStorage.getItem(LS_KEY);
+    if (!r) return null;
+    return data.roles.find(x => x.id === r) ? r : null;
+  }
+  function setRole(id) {
+    if (id) localStorage.setItem(LS_KEY, id);
+    else localStorage.removeItem(LS_KEY);
+    render();
+  }
+
+  // ── Roll-välj-UI ────────────────────────────────────────────────────
+  function renderRolePicker(currentRole) {
+    $roleSection.innerHTML = '';
+    if (!currentRole) {
+      // Stor välkomstvy
+      const box = document.createElement('div');
+      box.className = 'role-picker';
+      const h2 = document.createElement('h2');
+      h2.textContent = 'Välj din roll';
+      box.appendChild(h2);
+      const desc = document.createElement('p');
+      desc.style.cssText = 'font-size:0.82rem;color:var(--text-muted);line-height:1.5;margin-bottom:12px';
+      desc.textContent = 'Visar ramsor som är relevanta för din roll. Du kan alltid se övriga ramsor i en expander och söka över hela samlingen.';
+      box.appendChild(desc);
+      const pills = document.createElement('div');
+      pills.className = 'role-pills';
+      data.roles.forEach(r => {
+        const pill = document.createElement('button');
+        pill.className = 'role-pill';
+        pill.innerHTML = '<strong>' + r.name + '</strong><span class="role-desc">' + r.desc + '</span>';
+        pill.addEventListener('click', () => setRole(r.id));
+        pills.appendChild(pill);
+      });
+      box.appendChild(pills);
+      $roleSection.appendChild(box);
+    } else {
+      // Kompakt rad med pillar + byt-knapp
+      const box = document.createElement('div');
+      box.className = 'role-picker compact';
+      const label = document.createElement('span');
+      label.className = 'role-label';
+      label.textContent = 'Roll:';
+      box.appendChild(label);
+      const pills = document.createElement('div');
+      pills.className = 'role-pills';
+      pills.style.flex = '1';
+      data.roles.forEach(r => {
+        const pill = document.createElement('button');
+        pill.className = 'role-pill' + (r.id === currentRole ? ' active' : '');
+        pill.textContent = r.name;
+        pill.title = r.desc;
+        pill.addEventListener('click', () => setRole(r.id));
+        pills.appendChild(pill);
+      });
+      box.appendChild(pills);
+      const change = document.createElement('button');
+      change.className = 'role-change-btn';
+      change.textContent = 'Nollställ roll';
+      change.addEventListener('click', () => setRole(null));
+      box.appendChild(change);
+      $roleSection.appendChild(box);
+    }
+  }
+
+  // ── Ramsa-rendering ────────────────────────────────────────────────
+  function ramsaEl(r) {
+    const div = document.createElement('div');
+    div.className = 'ramsa';
+    div.id = 'ramsa-' + r.id;
+
+    const head = document.createElement('div');
+    head.className = 'ramsa-head';
+    const name = document.createElement('div');
+    name.className = 'ramsa-name';
+    name.textContent = r.name;
+    head.appendChild(name);
+    if (Array.isArray(r.tags) && r.tags.length) {
+      const tags = document.createElement('div');
+      tags.className = 'ramsa-tags';
+      r.tags.forEach(t => {
+        const tg = document.createElement('span');
+        tg.className = 'ramsa-tag';
+        tg.textContent = t;
+        tags.appendChild(tg);
+      });
+      head.appendChild(tags);
+    }
+    div.appendChild(head);
+
+    if (r.short) {
+      const s = document.createElement('div');
+      s.className = 'ramsa-short';
+      s.textContent = r.short;
+      div.appendChild(s);
+    }
+
+    if (Array.isArray(r.lines) && r.lines.length) {
+      const lines = document.createElement('div');
+      lines.className = 'ramsa-lines';
+      r.lines.forEach(ln => {
+        const row = document.createElement('div');
+        row.className = 'ramsa-line';
+        const l = document.createElement('div');
+        l.className = 'letter';
+        l.textContent = ln.letter;
+        const t = document.createElement('div');
+        t.className = 'text';
+        t.textContent = ln.text;
+        row.appendChild(l);
+        row.appendChild(t);
+        lines.appendChild(row);
+      });
+      div.appendChild(lines);
+    }
+
+    if (r.usage) {
+      const u = document.createElement('div');
+      u.className = 'ramsa-usage';
+      u.textContent = r.usage;
+      div.appendChild(u);
+    }
+    return div;
+  }
+
+  function placeholderEl(text) {
+    const div = document.createElement('div');
+    div.className = 'placeholder-card';
+    div.textContent = text;
+    return div;
+  }
+
+  // ── Filtrering ─────────────────────────────────────────────────────
+  function filterText(r, q) {
+    if (!q) return true;
+    const hay = [
+      r.name, r.short || '', r.usage || '',
+      (r.tags || []).join(' '),
+      (r.lines || []).map(l => l.letter + ' ' + l.text).join(' ')
+    ].join(' ').toLowerCase();
+    return hay.indexOf(q.toLowerCase()) !== -1;
+  }
+
+  function inRole(r, roleId) {
+    if (!roleId) return false;
+    return Array.isArray(r.roles) && r.roles.indexOf(roleId) !== -1;
+  }
+
+  // ── Huvudrender ─────────────────────────────────────────────────────
+  function render() {
+    const role = getRole();
+    renderRolePicker(role);
+
+    const q = ($searchInput.value || '').trim();
+    const all = data.ramsor || [];
+
+    // 1) Ramsor för vald roll (eller alla om ingen roll vald)
+    $rolesRamsor.innerHTML = '';
+    let ownRamsor;
+    if (role) {
+      ownRamsor = all.filter(r => inRole(r, role) && filterText(r, q));
+    } else {
+      ownRamsor = all.filter(r => filterText(r, q));
+    }
+
+    if (role) {
+      const roleObj = data.roles.find(x => x.id === role);
+      const hdr = document.createElement('div');
+      hdr.className = 'section-header';
+      hdr.innerHTML = roleObj.name.toUpperCase() + ' <span class="count">' + ownRamsor.length + '</span>';
+      $rolesRamsor.appendChild(hdr);
+
+      if (ownRamsor.length === 0) {
+        const ph = (data.placeholders || {})[role];
+        if (ph && !q) {
+          $rolesRamsor.appendChild(placeholderEl(ph));
+        } else {
+          const empty = document.createElement('div');
+          empty.className = 'empty-state';
+          empty.textContent = q ? 'Ingen träff på "' + q + '" inom ' + roleObj.name + '.' : 'Inga ramsor inlagda för denna roll än.';
+          $rolesRamsor.appendChild(empty);
+        }
+      } else {
+        ownRamsor.forEach(r => $rolesRamsor.appendChild(ramsaEl(r)));
+      }
+    } else {
+      const hdr = document.createElement('div');
+      hdr.className = 'section-header';
+      hdr.innerHTML = 'ALLA RAMSOR <span class="count">' + ownRamsor.length + '</span>';
+      $rolesRamsor.appendChild(hdr);
+      if (ownRamsor.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = q ? 'Ingen träff på "' + q + '".' : 'Inga ramsor inlagda än.';
+        $rolesRamsor.appendChild(empty);
+      } else {
+        ownRamsor.forEach(r => $rolesRamsor.appendChild(ramsaEl(r)));
+      }
+    }
+
+    // 2) Övriga ramsor (utanför vald roll). Bara meningsfullt om roll är vald.
+    $othersBody.innerHTML = '';
+    if (role) {
+      const others = all.filter(r => !inRole(r, role) && filterText(r, q));
+      $othersCount.textContent = '· ' + others.length + ' st';
+      if (others.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'empty-state';
+        empty.textContent = q ? 'Ingen träff utanför ' + (data.roles.find(x => x.id === role) || {}).name + '.' : 'Inga övriga ramsor.';
+        $othersBody.appendChild(empty);
+      } else {
+        others.forEach(r => $othersBody.appendChild(ramsaEl(r)));
+      }
+      $othersWrap.style.display = '';
+    } else {
+      $othersWrap.style.display = 'none';
+    }
+  }
+
+  $searchInput.addEventListener('input', render);
+  render();
+})();
+</script>
+<script>window.FORM_ID = { title: 'RAMSOR' };</script>
+<script src="footer.js"></script>
+</body>
+</html>

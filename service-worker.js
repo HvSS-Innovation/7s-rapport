@@ -56,6 +56,8 @@ const FILES = [
   './footer.js',
   './opsec.html',
   './data.html',
+  './ramsor.html',
+  './ramsor-data.js',
   './ortnamn.json',
   './fonts/inter.css',
   './fonts/inter-400.woff2',

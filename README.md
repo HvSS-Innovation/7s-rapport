@@ -121,6 +121,44 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
+### 2026-05-12: Ramsor-flik (v0.2)
+Ny tab `ramsor.html` för minnesramsor och akronymer. Roll-vald vy som default-
+filter, sök som filtrerar oavsett vald roll, "Övriga ramsor"-expander för det
+som ligger utanför vald roll.
+
+*   **Datamodell:** `ramsor-data.js` med `roles[]`, `placeholders` och
+    `ramsor[]`. Varje ramsa har `lines[]` (bokstav-för-bokstav), `usage`-
+    fritext, `tags[]` (kategori-baserade, deskriptiva — INGEN
+    auktoritets-signal) och `roles[]` för vilka roller den dyker upp för.
+*   **Innehåll v0.2:**
+    *   **Sjv (5 ramsor):** METHANE, SAFE, C-ABCDE, MIST, 9-LINE MEDEVAC —
+        alla välkända internationellt etablerade strukturer inom prehospital
+        vård / NATO-doktrin.
+    *   **Sig (3 ramsor):** Talgruppsbyte (allmän procedur),
+        RA 1444-handhavande (kort intro), 1227-tabell (kort intro + flagg
+        att fulltabell läggs in senare).
+    *   **GrpC, PlutC, Förare:** Placeholders med klartext "Innehåll håller
+        på att samlas in" + uppmaning att höra av sig. Inget felaktigt
+        innehåll uppfunnet utan säker referens.
+    *   **TOS** lämnad helt — markör i koden tills användaren preciserar
+        vad som avses.
+*   **RAMSOR-tab i tab-nav-sub** tillagd på alla 19 sidor som har
+    `tab-nav-sub`. Sidor som ännu inte fått MÅTT-fliken får RAMSOR efter
+    SKYTTE (existerande inkonsekvens i tab-nav lämnas till framtida
+    städning).
+*   **Språk-sweep (Paket D, fortsättning):** `matt.html` mjukad —
+    "Försvarsmakten · Västra militärregionen" → "hjälpverktyg" /
+    "Hjälpverktyg för FM-blankett" så headern inte ger sken av officiell
+    FM-anknytning.
+*   `service-worker.js` `CACHE` bumpat, `ramsor.html` + `ramsor-data.js`
+    tillagda i FILES.
+
+**Avvikelse från roadmap:** GrpC + PlutC-ramsor levereras som placeholders
+i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI:t
+och utan säker FM-publikation att luta sig på är risk för felaktigt
+innehåll större än värdet av snabb leverans. Innehåll fylls på i v0.2.x
+allt eftersom säkra referenser kan verifieras.
+
 ### 2026-05-12: Positionering & Mina data (v0.1)
 Två fundament-paket levererade tillsammans inför kommande ramsor-flik och
 in-app roadmap (se `roadmap-positionering-ramsor.md` lokalt).

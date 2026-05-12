@@ -10,11 +10,15 @@ Detaljerade beskrivningar finns i README-dagboken.
 - iOS-ITP-engångsnotis efter >5 dagars inaktivitet (länk till `data.html` för säkerhetskopia)
 - Service worker `CACHE` bump → `hv-20260512_v01_disclaimer`, `data.html` i FILES
 
-## v0.2 — Planerad — Ramsor-flik (Paket A)
-- Ny tab `ramsor.html` med roll-vald vy (GrpC / PlutC / Sjv / Sig / Förare)
-- Deskriptiva grå taggar (kategori) — ingen auktoritets-signal
-- Innehåll: Sjv (METHANE/SAFE/CABCDE), Sig (1227/RA1444/talgrupp), GrpC/PlutC minneskort
-- TOS + Förare som `[Avvaktar specifikation]`-placeholders
+## v0.2 — 2026-05-12 — Ramsor-flik (Paket A)
+- Ny tab `ramsor.html` med roll-vald vy (Sjv / Sig / GrpC / PlutC / Förare), sök, "Övriga ramsor"-expander
+- `ramsor-data.js` med 8 ramsor: Sjv (METHANE, SAFE, C-ABCDE, MIST, 9-LINE MEDEVAC) + Sig (Talgruppsbyte, RA 1444-handhavande, 1227-tabell)
+- Deskriptiva grå kategoritaggar (Sjukvård, Signalist, Internationellt, Generellt, Materiel, Referens) — ingen auktoritets-signal
+- RAMSOR-tab tillagd i tab-nav-sub på 19 sidor
+- Språk-sweep matt.html: "Försvarsmakten · Västra militärregionen" → "hjälpverktyg"
+- Service worker `CACHE` bump + `ramsor.html` & `ramsor-data.js` i FILES
+
+**Avvikelse från roadmap:** GrpC + PlutC levereras som placeholders i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI och utan säker FM-publikation att luta sig på är felaktighetsrisken större än värdet av snabb leverans. Innehåll fylls på i v0.2.x när säkra referenser verifierats. TOS lämnad helt tills användaren preciserar.
 
 ## v0.3 — Planerad — In-app roadmap (Paket C)
 - `roadmap.html` med 4 kolumner: Önskat / Kommer snart / Pågår / Klart
