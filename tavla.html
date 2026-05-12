@@ -40,12 +40,12 @@
   @media (max-width: 1024px) { .kanban { grid-template-columns:repeat(2,1fr); } }
   @media (max-width: 600px) { .kanban { grid-template-columns:1fr; } }
 
-  .column { background:var(--bg-card); border:1px solid var(--line); border-radius:8px; padding:12px; min-height:200px; }
+  .column { background:var(--bg-card); border:1px solid var(--line); border-radius:8px; padding:12px; min-height:200px; transition:background 0.12s, border-color 0.12s, outline-color 0.12s; outline:2px dashed transparent; outline-offset:-2px; }
+  /* Hela kolumnen highlightas när drag är över den — tydligare drop-zon */
+  .column.drag-over { background:#1a3e1a; outline-color:var(--accent); }
   .col-head { font-size:0.78rem; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
   .col-head .count { color:var(--dim); font-size:0.72rem; font-weight:400; letter-spacing:0; text-transform:none; }
-  .col-body { min-height:60px; padding:2px; border-radius:6px; transition:background 0.12s, outline-color 0.12s; outline:2px dashed transparent; outline-offset:-2px; }
-  .col-body.drag-over { background:rgba(76, 175, 80, 0.08); outline-color:var(--accent); }
-  .col-body.drag-over-pending { background:rgba(255, 200, 80, 0.05); }
+  .col-body { min-height:120px; padding:2px; border-radius:6px; }
 
   .item { position:relative; background:var(--bg-input); border:1px solid var(--line); border-radius:6px; padding:9px 11px; margin-bottom:8px; font-size:0.85rem; cursor:grab; transition:transform 0.22s ease, border-color 0.12s, opacity 0.12s; user-select:none; }
   .item:hover { border-color:var(--line-focus); }
@@ -302,8 +302,8 @@
     div.addEventListener('dragend', () => {
       div.classList.remove('dragging');
       draggedItem = null;
-      document.querySelectorAll('.col-body.drag-over, .col-body.drag-over-pending')
-        .forEach(el => el.classList.remove('drag-over', 'drag-over-pending'));
+      document.querySelectorAll('.column.drag-over, .col-body.drag-over')
+        .forEach(el => el.classList.remove('drag-over'));
       document.querySelectorAll('.item.drop-before, .item.drop-after')
         .forEach(el => el.classList.remove('drop-before', 'drop-after'));
     });
@@ -672,24 +672,33 @@
       if (!body || body.__dropSetup) return;
       body.__dropSetup = true;
 
+      const column = body.closest('.column');
+
       body.addEventListener('dragover', (e) => {
         if (!draggedItem) return;
         e.preventDefault();
         try { e.dataTransfer.dropEffect = 'move'; } catch (_) {}
-        body.classList.add('drag-over');
+        column.classList.add('drag-over');
       });
       body.addEventListener('dragleave', (e) => {
-        // Bara om vi lämnar containern (inte ett underbarn)
-        if (e.target === body) body.classList.remove('drag-over');
+        // Ta bort highlight bara om vi lämnar HELA kolumnen — annars triggas
+        // dragleave när pekaren rör sig från col-body till ett barn-item.
+        if (!column.contains(e.relatedTarget)) {
+          column.classList.remove('drag-over');
+        }
       });
       body.addEventListener('drop', async (e) => {
         e.preventDefault();
-        body.classList.remove('drag-over');
+        column.classList.remove('drag-over');
+        console.info('[tavla] drop on col-body of', col.id, '— target was', e.target && e.target.tagName);
         // Items egna drop-handlers har stopPropagation och hanterar
         // before/after-positioning. Här hamnar vi bara om drop skedde
         // på tom yta i col-body (utanför något item) — placera sist.
         const src = resolveDragSource(e);
-        if (!src) return;
+        if (!src) {
+          console.warn('[tavla] drop saknar source — drag tappades i dragend');
+          return;
+        }
         draggedItem = null;
         await dropAtEnd(src, col.id);
       });
