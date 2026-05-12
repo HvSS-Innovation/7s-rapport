@@ -20,6 +20,14 @@ Detaljerade beskrivningar finns i README-dagboken.
 
 **Avvikelse från roadmap:** GrpC + PlutC levereras som placeholders i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI och utan säker FM-publikation att luta sig på är felaktighetsrisken större än värdet av snabb leverans. Innehåll fylls på i v0.2.x när säkra referenser verifierats. TOS lämnad helt tills användaren preciserar.
 
+## v0.7 — 2026-05-12 — Drag-and-drop på kanban-tavlan
+- HTML5 Drag-and-Drop på items i tavla.html (desktop)
+- Optimistic UI: item flyttas direkt vid drop, server-anrop i bakgrunden, rollback vid fel
+- Visuell feedback: dragging-state (opacity 0.4) + drop-zone highlight (streckad accent)
+- Refaktor: ny `executeMove()` är delad kärnlogik för modal-knapp-flytt och drag-drop
+- Modal/knapp-flytt kvar som alternativ + fallback för touch (touch-stöd kommer i v0.8)
+- Ingen Worker-ändring, ingen deploy-action — befintlig `POST /move` används
+
 ## v0.6 — 2026-05-12 — Pin-spärr (ACCESS_PIN) på tipsa.html och tavla.html
 - Ny Worker-endpoint `POST /auth` — testar pin utan side-effects
 - Ny secret `ACCESS_PIN` i Workern — primär kod, ersätter `FORM_SECRET` (som blir bakåtkompat-fallback)

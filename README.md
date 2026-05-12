@@ -121,6 +121,28 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
+### 2026-05-12: Drag-and-drop på kanban-tavlan (v0.7)
+Items i `tavla.html` kan nu dras direkt mellan kolumner — desktop-only
+i denna iteration. Modal-knapparna är kvar som alternativ väg och som
+fallback för touch-användare.
+
+* **HTML5 Drag-and-Drop API** — native, inga nya beroenden. `draggable=true`
+  på item-divet, `dragstart/dragend` hanterar drag-state, `dragover/drop`
+  på `.col-body`-elementen hanterar drop-zone.
+* **Optimistic UI:** Item flyttas direkt i UI:t när drop sker, server-anrop
+  går i bakgrunden. Vid fel (403, nätverk, etc.) rollback till tidigare
+  state och felmeddelande visas.
+* **Refaktor:** Ny `executeMove(number, target, oldColumn)` är delad
+  kärnlogik för både modal-knapp-flytt (med confirm-dialog) och drag-drop
+  (utan confirm — drop är intentful nog).
+* **Visuell feedback:** Item dimmas vid drag (`opacity: 0.4`), drop-zon
+  highlightas med streckad accent-färg och svag bakgrundston när hovrad.
+* **Touch-stöd skjutet till v0.8** — HTML5 D&D fungerar inte på touch.
+  Touch-användare använder modal-knappar tills vidare.
+
+Ingen Worker- eller deploy-action behövs — befintlig `POST /move`-endpoint
+används som tidigare.
+
 ### 2026-05-12: Pin-spärr på `tipsa.html` och `tavla.html` (v0.6)
 Bygger vidare på v0.4/v0.5 — sidorna är fortfarande tekniskt nåbara via
 direkta URL:er, men en **pin-wall** låser innehållet tills användaren

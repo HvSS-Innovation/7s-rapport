@@ -43,10 +43,14 @@
   .column { background:var(--bg-card); border:1px solid var(--line); border-radius:8px; padding:12px; min-height:200px; }
   .col-head { font-size:0.78rem; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase; font-weight:700; margin-bottom:8px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
   .col-head .count { color:var(--dim); font-size:0.72rem; font-weight:400; letter-spacing:0; text-transform:none; }
+  .col-body { min-height:60px; padding:2px; border-radius:6px; transition:background 0.12s, outline-color 0.12s; outline:2px dashed transparent; outline-offset:-2px; }
+  .col-body.drag-over { background:rgba(76, 175, 80, 0.08); outline-color:var(--accent); }
+  .col-body.drag-over-pending { background:rgba(255, 200, 80, 0.05); }
 
-  .item { background:var(--bg-input); border:1px solid var(--line); border-radius:6px; padding:9px 11px; margin-bottom:8px; font-size:0.85rem; cursor:pointer; transition:border-color 0.12s, transform 0.06s; }
+  .item { background:var(--bg-input); border:1px solid var(--line); border-radius:6px; padding:9px 11px; margin-bottom:8px; font-size:0.85rem; cursor:grab; transition:border-color 0.12s, transform 0.06s, opacity 0.12s; user-select:none; }
   .item:hover { border-color:var(--line-focus); }
-  .item:active { transform:scale(0.99); }
+  .item:active { cursor:grabbing; transform:scale(0.99); }
+  .item.dragging { opacity:0.4; }
   .item-title { font-weight:600; color:var(--fg); line-height:1.35; margin-bottom:4px; word-break:break-word; }
   .item-meta { display:flex; flex-wrap:wrap; gap:4px 6px; align-items:center; font-size:0.7rem; color:var(--dim); margin-top:4px; }
   .item-meta .num { font-family:ui-monospace,monospace; color:var(--dim); }
@@ -257,10 +261,28 @@
     return label;
   }
 
+  let draggedItem = null;
+
   function itemEl(item) {
     const div = document.createElement('div');
     div.className = 'item';
     div.dataset.num = item.number;
+    div.draggable = true;
+
+    div.addEventListener('dragstart', (e) => {
+      draggedItem = item;
+      div.classList.add('dragging');
+      try {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(item.number));
+      } catch (_) { /* dataTransfer kan vara begränsad i vissa miljöer */ }
+    });
+    div.addEventListener('dragend', () => {
+      div.classList.remove('dragging');
+      draggedItem = null;
+      document.querySelectorAll('.col-body.drag-over, .col-body.drag-over-pending')
+        .forEach(el => el.classList.remove('drag-over', 'drag-over-pending'));
+    });
 
     const title = document.createElement('div');
     title.className = 'item-title';
@@ -391,50 +413,105 @@
     }
   }
 
-  async function moveItem(number, target, btn) {
-    if (!confirm('Flytta "' + currentItem.title + '" till ' + (COLUMNS.find(c => c.id === target) || {}).name + '?')) return;
+  // Kärnlogik — anropas både från modal-knappar och drag-drop.
+  // Optimistic UI-uppdatering + rollback vid fel.
+  async function executeMove(number, target, oldColumn) {
     const pin = getPin();
-    if (!pin) { showPinWall(); return; }
-    btn.disabled = true;
-    btn.textContent = 'Flyttar…';
+    if (!pin) { showPinWall(); return false; }
+
+    // Optimistic: flytta i UI direkt
+    const idx = allItems.findIndex(x => x.number === number);
+    let beforeState = null;
+    if (idx >= 0) {
+      beforeState = Object.assign({}, allItems[idx]);
+      allItems[idx] = Object.assign({}, allItems[idx], { column: target });
+      render(allItems);
+    }
+
     try {
       const r = await fetch(workerUrl('/move'), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
-        body: JSON.stringify({
-          pin: pin,
-          issueNumber: number,
-          target: target
-        })
+        body: JSON.stringify({ pin: pin, issueNumber: number, target: target })
       });
       if (r.status === 403) {
         sessionStorage.removeItem(SESSION_KEY);
-        closeModal();
         showPinWall();
-        return;
+        return false;
       }
       const data = await r.json().catch(() => ({}));
       if (!r.ok || !data.ok) {
         throw new Error((data && data.error) ? data.error : ('HTTP ' + r.status));
       }
-      // Uppdatera lokalt och stäng modal
-      const updatedItem = data.item;
-      if (updatedItem) {
-        const idx = allItems.findIndex(x => x.number === updatedItem.number);
-        if (idx >= 0) allItems[idx] = updatedItem;
-        else allItems.push(updatedItem);
+      // Server är källan till sanning
+      if (data.item) {
+        const i = allItems.findIndex(x => x.number === data.item.number);
+        if (i >= 0) allItems[i] = data.item;
+        else allItems.push(data.item);
         render(allItems);
-      } else {
-        // Fallback: reload allt
-        await load();
       }
-      closeModal();
-      setStatus('<span class="ok">Flyttad ✓</span>');
+      const colName = (COLUMNS.find(c => c.id === target) || {}).name || target;
+      setStatus('<span class="ok">Flyttad till ' + colName + ' ✓</span>');
+      return true;
     } catch (err) {
+      // Rollback
+      if (idx >= 0 && beforeState) {
+        allItems[idx] = beforeState;
+        render(allItems);
+      }
+      setStatus('<span class="err">Kunde inte flytta: ' + (err && err.message ? err.message : err) + '</span>', 'err');
+      return false;
+    }
+  }
+
+  // Modal-knapp-versionen: med bekräftelsedialog
+  async function moveItem(number, target, btn) {
+    if (!confirm('Flytta "' + currentItem.title + '" till ' + (COLUMNS.find(c => c.id === target) || {}).name + '?')) return;
+    if (btn) {
+      btn.disabled = true;
+      btn.textContent = 'Flyttar…';
+    }
+    const oldCol = currentItem ? currentItem.column : null;
+    const ok = await executeMove(number, target, oldCol);
+    if (ok) {
+      closeModal();
+    } else if (btn) {
       btn.disabled = false;
       btn.textContent = (COLUMNS.find(c => c.id === target) || {}).name || target;
-      alert('Kunde inte flytta: ' + (err && err.message ? err.message : err));
     }
+  }
+
+  // ── Drag-and-drop drop-zones ─────────────────────────────────────
+  // Sätter upp dragover/dragleave/drop på varje .col-body. Körs en gång
+  // vid init eftersom col-body-elementen är statiska (items renderas
+  // dynamiskt inuti dem, men containrarna byts inte ut).
+  function setupDropZones() {
+    COLUMNS.forEach(col => {
+      const body = document.querySelector('[data-col="' + col.id + '"]');
+      if (!body || body.__dropSetup) return;
+      body.__dropSetup = true;
+
+      body.addEventListener('dragover', (e) => {
+        if (!draggedItem) return;
+        if (draggedItem.column === col.id) return; // samma kolumn → ingen flytt
+        e.preventDefault();
+        try { e.dataTransfer.dropEffect = 'move'; } catch (_) {}
+        body.classList.add('drag-over');
+      });
+      body.addEventListener('dragleave', (e) => {
+        // Bara om vi lämnar containern (inte ett underbarn)
+        if (e.target === body) body.classList.remove('drag-over');
+      });
+      body.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        body.classList.remove('drag-over');
+        if (!draggedItem || draggedItem.column === col.id) return;
+        const num = draggedItem.number;
+        const oldCol = draggedItem.column;
+        draggedItem = null;
+        await executeMove(num, col.id, oldCol);
+      });
+    });
   }
 
   $refresh.addEventListener('click', () => {
@@ -444,6 +521,7 @@
 
   // Initial: testa sparad pin, annars visa pin-wall
   (async function init() {
+    setupDropZones();
     const saved = getPin();
     if (!saved) { showPinWall(); return; }
     try {
