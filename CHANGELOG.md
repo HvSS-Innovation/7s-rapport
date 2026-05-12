@@ -20,6 +20,15 @@ Detaljerade beskrivningar finns i README-dagboken.
 
 **Avvikelse från roadmap:** GrpC + PlutC levereras som placeholders i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI och utan säker FM-publikation att luta sig på är felaktighetsrisken större än värdet av snabb leverans. Innehåll fylls på i v0.2.x när säkra referenser verifierats. TOS lämnad helt tills användaren preciserar.
 
+## v0.6 — 2026-05-12 — Pin-spärr (ACCESS_PIN) på tipsa.html och tavla.html
+- Ny Worker-endpoint `POST /auth` — testar pin utan side-effects
+- Ny secret `ACCESS_PIN` i Workern — primär kod, ersätter `FORM_SECRET` (som blir bakåtkompat-fallback)
+- Pin-wall i tipsa.html + tavla.html — sidans innehåll döljs tills pin matas in. Pin lagras i sessionStorage (försvinner vid stängd flik).
+- FORM_SECRET borttagen ur sidornas hardcoded kod — användaren matar in pin, ingen hemlighet i källkoden
+- Rotering: byt `ACCESS_PIN`-secret i Cloudflare när som helst utan deploy av sidan
+
+**Kräver manuell action av Joel:** sätt `ACCESS_PIN`-secret i Cloudflare + re-deploya Workern + dela koden med utvalda mottagare via privat kanal.
+
 ## v0.5 — 2026-05-12 — Privat kanban-tavla via samma Worker
 - Ny hemlig sida `tavla.html` — kanban med 4 kolumner (Önskat / Kommer snart / Pågår / Klart), klickbara items med flytta-knappar
 - Worker utökad med `GET /issues` (lista) och `POST /move` (flytta mellan kolumner). Mappning via `status:*`-labels + open/closed-state.

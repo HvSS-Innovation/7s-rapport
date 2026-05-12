@@ -98,6 +98,21 @@
     <button id="refreshBtn" title="Hämta senaste från servern">Uppdatera</button>
   </nav>
 
+  <!-- Pin-wall: visas initialt, döljs efter validerad pin -->
+  <div id="pinWall" class="column" style="max-width:420px;margin:30px auto;text-align:center;padding:24px 18px;">
+    <h2 style="font-size:0.95rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Privat sida</h2>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;line-height:1.55;">Ange åtkomstkoden du fått från utvecklaren.</p>
+    <form id="pinForm" autocomplete="off" style="display:flex;flex-direction:column;gap:10px;align-items:center;">
+      <input type="password" id="pinInput" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Åtkomstkod" style="max-width:280px;background:var(--bg-input);border:1px solid var(--line);border-radius:4px;color:var(--fg);font-family:inherit;font-size:0.95rem;padding:10px 12px;outline:none;text-align:center;width:100%;">
+      <button type="submit" id="pinBtn" style="max-width:280px;width:100%;min-height:42px;background:var(--accent);color:#fff;border:none;border-radius:6px;font-family:inherit;font-size:0.9rem;font-weight:600;cursor:pointer;">Lås upp</button>
+    </form>
+    <div id="pinStatus" style="min-height:18px;margin-top:14px;font-size:0.82rem;"></div>
+    <p style="font-size:0.7rem;color:var(--dim);margin-top:14px;line-height:1.5;">Koden lagras bara på den här enheten under sessionen.</p>
+  </div>
+
+  <!-- Egentliga innehållet — döljs tills pin är godkänd -->
+  <div id="protectedContent" style="display:none;">
+
   <div class="status-line" id="status"></div>
 
   <div class="kanban" id="kanban">
@@ -106,6 +121,8 @@
     <div class="column"><div class="col-head"><span>Pågår</span><span class="count">…</span></div><div class="col-body" data-col="inprogress"></div></div>
     <div class="column"><div class="col-head"><span>Klart</span><span class="count">…</span></div><div class="col-body" data-col="done"></div></div>
   </div>
+
+  </div><!-- /protectedContent -->
 
 </div>
 
@@ -129,10 +146,10 @@
 <script>
 (function () {
   // === KONFIGURATION ===
-  // Samma värden som i tipsa.html — peka på din Cloudflare Worker.
-  // FORM_SECRET måste matcha worker-secreten exakt.
-  const WORKER_URL = 'BYT-MIG-Worker-URL';
-  const FORM_SECRET = 'BYT-MIG-Form-Secret';
+  // Worker-URL pekar på Cloudflare Worker. Pin matas in av användaren
+  // i pin-wallen och lagras ENDAST i sessionStorage — aldrig i kod.
+  const WORKER_URL = 'https://dawn-star-7fc5.nijoda.workers.dev';
+  const SESSION_KEY = 'hv_tavla_pin';
   // =====================
 
   const COLUMNS = [
@@ -141,6 +158,13 @@
     { id: 'inprogress', name: 'Pågår' },
     { id: 'done',       name: 'Klart' }
   ];
+
+  const $pinWall = document.getElementById('pinWall');
+  const $pinForm = document.getElementById('pinForm');
+  const $pinInput = document.getElementById('pinInput');
+  const $pinBtn = document.getElementById('pinBtn');
+  const $pinStatus = document.getElementById('pinStatus');
+  const $protected = document.getElementById('protectedContent');
 
   const $status = document.getElementById('status');
   const $refresh = document.getElementById('refreshBtn');
@@ -156,6 +180,59 @@
 
   let allItems = [];
   let currentItem = null;
+
+  function workerUrl(p) { return WORKER_URL.replace(/\/$/, '') + p; }
+  function getPin() { return sessionStorage.getItem(SESSION_KEY); }
+
+  function showProtected() {
+    $pinWall.style.display = 'none';
+    $protected.style.display = '';
+  }
+  function showPinWall() {
+    $pinWall.style.display = '';
+    $protected.style.display = 'none';
+  }
+
+  async function testPin(pin) {
+    const r = await fetch(workerUrl('/auth'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
+      body: JSON.stringify({ pin })
+    });
+    return r.ok;
+  }
+
+  $pinForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $pinStatus.textContent = '';
+    $pinStatus.style.color = '';
+    const pin = ($pinInput.value || '').trim();
+    if (!pin) {
+      $pinStatus.textContent = 'Skriv in din åtkomstkod.';
+      $pinStatus.style.color = 'var(--warn)';
+      return;
+    }
+    $pinBtn.disabled = true;
+    $pinBtn.textContent = 'Kontrollerar…';
+    try {
+      const ok = await testPin(pin);
+      if (ok) {
+        sessionStorage.setItem(SESSION_KEY, pin);
+        $pinInput.value = '';
+        showProtected();
+        load();
+      } else {
+        $pinStatus.textContent = 'Fel kod. Försök igen.';
+        $pinStatus.style.color = 'var(--warn)';
+      }
+    } catch (err) {
+      $pinStatus.textContent = 'Kunde inte kontakta servern.';
+      $pinStatus.style.color = 'var(--warn)';
+    } finally {
+      $pinBtn.disabled = false;
+      $pinBtn.textContent = 'Lås upp';
+    }
+  });
 
   function setStatus(html, kind) {
     $status.innerHTML = html;
@@ -289,16 +366,20 @@
   });
 
   async function load() {
-    if (WORKER_URL === 'BYT-MIG-Worker-URL' || FORM_SECRET === 'BYT-MIG-Form-Secret') {
-      setStatus('Sidan är inte fullt konfigurerad — kontakta utvecklaren.', 'err');
-      return;
-    }
+    const pin = getPin();
+    if (!pin) { showPinWall(); return; }
+
     setStatus('<span class="spinner"></span><span class="working">Hämtar från servern…</span>');
     try {
-      const r = await fetch(WORKER_URL.replace(/\/$/, '') + '/issues', {
+      const r = await fetch(workerUrl('/issues'), {
         method: 'GET',
-        headers: { 'Authorization': 'Bearer ' + FORM_SECRET }
+        headers: { 'Authorization': 'Bearer ' + pin }
       });
+      if (r.status === 403) {
+        sessionStorage.removeItem(SESSION_KEY);
+        showPinWall();
+        return;
+      }
       const data = await r.json().catch(() => ({}));
       if (!r.ok || !data.ok) {
         throw new Error((data && data.error) ? data.error : ('HTTP ' + r.status));
@@ -312,18 +393,26 @@
 
   async function moveItem(number, target, btn) {
     if (!confirm('Flytta "' + currentItem.title + '" till ' + (COLUMNS.find(c => c.id === target) || {}).name + '?')) return;
+    const pin = getPin();
+    if (!pin) { showPinWall(); return; }
     btn.disabled = true;
     btn.textContent = 'Flyttar…';
     try {
-      const r = await fetch(WORKER_URL.replace(/\/$/, '') + '/move', {
+      const r = await fetch(workerUrl('/move'), {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
         body: JSON.stringify({
-          secret: FORM_SECRET,
+          pin: pin,
           issueNumber: number,
           target: target
         })
       });
+      if (r.status === 403) {
+        sessionStorage.removeItem(SESSION_KEY);
+        closeModal();
+        showPinWall();
+        return;
+      }
       const data = await r.json().catch(() => ({}));
       if (!r.ok || !data.ok) {
         throw new Error((data && data.error) ? data.error : ('HTTP ' + r.status));
@@ -348,10 +437,21 @@
     }
   }
 
-  $refresh.addEventListener('click', load);
+  $refresh.addEventListener('click', () => {
+    const pin = getPin();
+    if (pin) load(); else showPinWall();
+  });
 
-  // Initial load
-  load();
+  // Initial: testa sparad pin, annars visa pin-wall
+  (async function init() {
+    const saved = getPin();
+    if (!saved) { showPinWall(); return; }
+    try {
+      const ok = await testPin(saved);
+      if (ok) { showProtected(); load(); }
+      else { sessionStorage.removeItem(SESSION_KEY); showPinWall(); }
+    } catch (_) { showPinWall(); }
+  })();
 })();
 </script>
 </body>

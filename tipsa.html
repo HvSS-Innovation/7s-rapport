@@ -68,6 +68,21 @@
     <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
   </header>
 
+  <!-- Pin-wall: visas initialt, döljs efter validerad pin -->
+  <div id="pinWall" class="form-group" style="text-align:center;padding:24px 18px;">
+    <h2 style="font-size:0.95rem;letter-spacing:0.06em;text-transform:uppercase;color:var(--muted);margin-bottom:10px;">Privat sida</h2>
+    <p style="font-size:0.85rem;color:var(--muted);margin-bottom:16px;line-height:1.55;">Ange åtkomstkoden du fått från utvecklaren.</p>
+    <form id="pinForm" autocomplete="off" style="display:flex;flex-direction:column;gap:10px;align-items:center;">
+      <input type="password" id="pinInput" inputmode="text" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="Åtkomstkod" style="max-width:280px;background:var(--bg-input);border:1px solid var(--line);border-radius:4px;color:var(--fg);font-family:inherit;font-size:0.95rem;padding:10px 12px;outline:none;text-align:center;width:100%;">
+      <button type="submit" class="btn btn-primary" id="pinBtn" style="max-width:280px;width:100%;margin-top:0;">Lås upp</button>
+    </form>
+    <div id="pinStatus" class="status hidden" style="max-width:320px;margin:14px auto 0;"></div>
+    <p style="font-size:0.7rem;color:var(--dim);margin-top:18px;line-height:1.5;">Koden lagras bara på den här enheten under sessionen.<br>Inget skickas vidare förrän du klickar Lås upp.</p>
+  </div>
+
+  <!-- Egentliga innehållet — döljs tills pin är godkänd -->
+  <div id="protectedContent" style="display:none;">
+
   <div class="intro-card">
     Du har fått länken till denna sida av utvecklaren. Tipset skickas <strong>automatiskt</strong> och hamnar som ett ärende i utvecklarens kö — du behöver inte ha GitHub-konto, ingen e-postklient och inget annat. Bara fyll i och skicka.
   </div>
@@ -112,6 +127,8 @@
 
   </form>
 
+  </div><!-- /protectedContent -->
+
   <footer>
     Denna sida är inte länkad från någon annan del av appen. Endast du som fått URL:en når den.
   </footer>
@@ -121,27 +138,101 @@
 <script>
 (function () {
   // === KONFIGURATION ===
-  // Båda värdena byts i samband med deploy av Cloudflare Worker.
-  // Se verktyg/tipsa-worker/SETUP.md för stegen.
+  // Worker-URL pekar på Cloudflare Worker som hanterar autentisering och
+  // tar emot tipset. Pin matas in av användaren i pin-wallen och lagras
+  // ENDAST i sessionStorage på enheten — aldrig i kod eller repo.
   const WORKER_URL = 'https://dawn-star-7fc5.nijoda.workers.dev';
-  const FORM_SECRET = '2367845gbqwefadqBI7654&ygf&vjgh&/&f';
+  const SESSION_KEY = 'hv_tipsa_pin';
   // =====================
+
+  const $pinWall = document.getElementById('pinWall');
+  const $pinForm = document.getElementById('pinForm');
+  const $pinInput = document.getElementById('pinInput');
+  const $pinBtn = document.getElementById('pinBtn');
+  const $pinStatus = document.getElementById('pinStatus');
+  const $protected = document.getElementById('protectedContent');
 
   const $form = document.getElementById('tipsForm');
   const $btn = document.getElementById('submitBtn');
   const $status = document.getElementById('status');
 
+  function workerUrl(p) { return WORKER_URL.replace(/\/$/, '') + p; }
+
   function setStatus(msg, kind) {
     $status.textContent = msg;
     $status.className = 'status ' + (kind || '');
   }
+  function setPinStatus(msg, kind) {
+    $pinStatus.textContent = msg;
+    $pinStatus.className = 'status ' + (kind || '');
+  }
+
+  function showProtected() {
+    $pinWall.style.display = 'none';
+    $protected.style.display = '';
+  }
+  function showPinWall() {
+    $pinWall.style.display = '';
+    $protected.style.display = 'none';
+  }
+
+  async function testPin(pin) {
+    const r = await fetch(workerUrl('/auth'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
+      body: JSON.stringify({ pin })
+    });
+    return r.ok;
+  }
+
+  $pinForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $pinStatus.className = 'status hidden';
+    const pin = ($pinInput.value || '').trim();
+    if (!pin) {
+      setPinStatus('Skriv in din åtkomstkod.', 'err');
+      return;
+    }
+    $pinBtn.disabled = true;
+    $pinBtn.textContent = 'Kontrollerar…';
+    try {
+      const ok = await testPin(pin);
+      if (ok) {
+        sessionStorage.setItem(SESSION_KEY, pin);
+        $pinInput.value = '';
+        showProtected();
+      } else {
+        setPinStatus('Fel kod. Försök igen.', 'err');
+      }
+    } catch (err) {
+      setPinStatus('Kunde inte kontakta servern. Försök igen.', 'err');
+    } finally {
+      $pinBtn.disabled = false;
+      $pinBtn.textContent = 'Lås upp';
+    }
+  });
+
+  // Vid load: testa sparad pin (om finns)
+  (async function init() {
+    const saved = sessionStorage.getItem(SESSION_KEY);
+    if (!saved) { showPinWall(); return; }
+    try {
+      const ok = await testPin(saved);
+      if (ok) showProtected();
+      else { sessionStorage.removeItem(SESSION_KEY); showPinWall(); }
+    } catch (_) {
+      showPinWall();
+    }
+  })();
 
   $form.addEventListener('submit', async (e) => {
     e.preventDefault();
     $status.className = 'status hidden';
 
-    if (WORKER_URL === 'BYT-MIG-Worker-URL' || FORM_SECRET === 'BYT-MIG-Form-Secret') {
-      setStatus('Sidan är inte fullt konfigurerad än — kontakta den som gav dig länken.', 'err');
+    const pin = sessionStorage.getItem(SESSION_KEY);
+    if (!pin) {
+      setStatus('Sessionen har gått ut — låt upp igen.', 'err');
+      showPinWall();
       return;
     }
 
@@ -152,7 +243,7 @@
       category: (fd.get('category') || '').toString(),
       role: (fd.get('role') || '').toString().trim(),
       name: (fd.get('name') || '').toString().trim(),
-      secret: FORM_SECRET
+      pin: pin
     };
 
     if (!payload.title || !payload.body) {
@@ -165,15 +256,21 @@
     setStatus('Skickar tipset…', 'ok');
 
     try {
-      const r = await fetch(WORKER_URL, {
+      const r = await fetch(workerUrl('/'), {
         method: 'POST',
         mode: 'cors',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
         body: JSON.stringify(payload)
       });
 
       const data = await r.json().catch(() => ({}));
 
+      if (r.status === 403) {
+        sessionStorage.removeItem(SESSION_KEY);
+        setStatus('Sessionen har gått ut — låt upp igen.', 'err');
+        showPinWall();
+        return;
+      }
       if (!r.ok || !data.ok) {
         const msg = (data && data.error) ? data.error : ('Servern svarade med status ' + r.status);
         throw new Error(msg);
@@ -182,7 +279,7 @@
       setStatus('Tack! Tipset är registrerat (ärende #' + (data.issueNumber || '?') + '). Du kan stänga den här sidan.', 'ok');
       $form.reset();
     } catch (err) {
-      setStatus('Kunde inte skicka: ' + (err && err.message ? err.message : err) + '. Försök igen om en stund — om problemet kvarstår, hör av dig direkt till den som gav dig länken.', 'err');
+      setStatus('Kunde inte skicka: ' + (err && err.message ? err.message : err) + '. Försök igen om en stund.', 'err');
     } finally {
       $btn.disabled = false;
       $btn.textContent = 'Skicka tipset';

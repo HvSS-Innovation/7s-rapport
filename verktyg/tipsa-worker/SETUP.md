@@ -71,13 +71,16 @@ Tillbaka i Worker-vyn på Cloudflare:
      - **Variable name:** `ALLOWED_ORIGIN` · **Value:** `https://7srapport.com`
      - **Variable name:** `GITHUB_REPO` · **Value:** `gitjoda71/7s-rapport`
 3. Under **Secrets** (separat sektion, ofta längst ner):
-   - Klicka **Add secret** två gånger:
+   - Klicka **Add secret** två (eller tre) gånger:
      - **Secret name:** `GITHUB_TOKEN` · **Value:** tokenen du kopierade
        i steg 1
-     - **Secret name:** `FORM_SECRET` · **Value:** något långt och
-       slumpmässigt. Generera med `openssl rand -hex 32` eller bara
-       skriv 30+ slumpmässiga tecken. **Kopiera värdet** — vi använder
-       det i steg 5.
+     - **Secret name:** `ACCESS_PIN` · **Value:** den åtkomstkod som
+       utvalda mottagare ska mata in i pin-wallen på `tipsa.html` /
+       `tavla.html`. Välj något lätt att uttala/skriva (t.ex.
+       `gron-mossa-77` eller en passphrase). **Kopiera värdet** — vi
+       delar den med utvalda i steg 7.
+     - **Secret name:** `FORM_SECRET` (valfri, för bakåtkompat med v0.4)
+       — kan utelämnas om du börjar från v0.6.
 4. Klicka **Save and deploy**.
 
 ## Steg 4: Hitta Workerns URL
@@ -85,29 +88,37 @@ Tillbaka i Worker-vyn på Cloudflare:
 I Worker-vyn ser du URL:en under namnet, t.ex.
 `https://tipsa-7srapport.dittanvändarnamn.workers.dev`. Kopiera den.
 
-## Steg 5: Uppdatera tipsa.html och tavla.html
+## Steg 5: Verifiera Worker-URL i tipsa.html och tavla.html
 
-Öppna [`tipsa.html`](../../tipsa.html) och [`tavla.html`](../../tavla.html)
-i repots root. Båda har samma två rader nära toppen av sitt `<script>`-block:
+Sedan v0.6 har sidorna **ingen hardcoded pin/secret** — användaren matar
+in `ACCESS_PIN` i pin-wallen och den lagras bara i sessionStorage. Bara
+Worker-URL behöver vara rätt:
 
 ```javascript
-const WORKER_URL = 'BYT-MIG-Worker-URL';
-const FORM_SECRET = 'BYT-MIG-Form-Secret';
+const WORKER_URL = 'https://dawn-star-7fc5.nijoda.workers.dev';
 ```
 
-Byt i **båda filerna**:
-
-- `WORKER_URL` → URL:en från steg 4
-- `FORM_SECRET` → samma värde som du satte som `FORM_SECRET`-secret
-  i steg 3
-
-Spara, committa och pusha:
+Om din Worker har en annan URL: öppna [`tipsa.html`](../../tipsa.html)
+och [`tavla.html`](../../tavla.html), byt `WORKER_URL`, committa och
+pusha:
 
 ```bash
 git add tipsa.html tavla.html
-git commit -m "Konfigurera tipsa/tavla med Worker-URL och secret"
+git commit -m "Uppdatera Worker-URL"
 git push
 ```
+
+## Steg 7: Dela ACCESS_PIN med utvalda mottagare
+
+Skicka koden via en privat kanal (Signal, telefon, papper) till de
+personer som ska få använda `tipsa.html` och `tavla.html`. Skicka inte
+i öppna kanaler som loggas/arkiveras.
+
+Användaren öppnar sidan → ser pin-wall → matar in koden → får tillgång
+under sessionen (tills hen stänger browser-fliken).
+
+**Rotera koden:** ändra `ACCESS_PIN`-secreten i Cloudflare när du vill.
+Inga commits eller deploys av sidan behövs — bara den nya pinen delas.
 
 ## Steg 6: Testa
 

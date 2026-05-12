@@ -121,6 +121,36 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
+### 2026-05-12: Pin-spärr på `tipsa.html` och `tavla.html` (v0.6)
+Bygger vidare på v0.4/v0.5 — sidorna är fortfarande tekniskt nåbara via
+direkta URL:er, men en **pin-wall** låser innehållet tills användaren
+matat in en kod som BARA finns som secret i Workern (ej i kod, ej i repo).
+
+* **Ny Worker-endpoint `POST /auth`** — testar pin utan side-effects.
+  Används av sidorna för pin-wall-validering.
+* **Ny Worker-secret `ACCESS_PIN`** — den faktiska åtkomstkoden. Joel
+  sätter den i Cloudflare Workers UI (eller via `wrangler secret put`).
+  Backward-compat: om `ACCESS_PIN` saknas faller Workern tillbaka till
+  `FORM_SECRET` så befintlig v0.4-deploy fortsätter fungera under
+  migrationen.
+* **Pin-wall i `tipsa.html` och `tavla.html`** — sidans riktiga innehåll
+  döljs tills användaren matat in rätt kod. Pin lagras i `sessionStorage`
+  och försvinner när browser-fliken stängs. Vid 403 från Workern (t.ex.
+  pin har roterats) tvingas pin-wall fram igen.
+* **`FORM_SECRET` är borttagen ur sidornas kod** — användaren matar in
+  pin, vi har ingen hardcoded hemlighet i sidans källkod (som tidigare
+  var synlig i `tipsa.html`-historiken).
+* **Rotering:** Joel kan när som helst byta `ACCESS_PIN`-secret i
+  Workern. Inga commits eller deploys av sidan krävs — bara att nya
+  pinen delas med mottagarna.
+
+**Att göra på din sida (manuellt) för att aktivera v0.6:**
+1. Lägg till `ACCESS_PIN` som secret i Cloudflare (välj något lätt att
+   uttala/skriva, t.ex. `gron-mossa-77`).
+2. Re-deploya Workern med nya `tipsa-worker.js`.
+3. Dela `ACCESS_PIN` med de utvalda mottagarna via Signal eller
+   liknande privat kanal.
+
 ### 2026-05-12: Privat kanban-tavla via samma Worker (v0.5)
 Bygger vidare på v0.4-modellen — samma Cloudflare Worker, samma
 `FORM_SECRET`, samma "hemlig URL"-mekanism, men nu också en kanban-vy.

@@ -1,13 +1,20 @@
 // tipsa-worker.js — Cloudflare Worker för 7srapport.com.
 //
-// Tre endpoints:
+// Fyra endpoints:
+//   POST /auth     — validera pin (pin-wall i sidorna)
 //   POST /         — ta emot tips från tipsa.html → skapa GitHub Issue
 //   GET  /issues   — lista GitHub Issues för tavla.html (kanban)
 //   POST /move     — flytta Issue mellan kanban-kolumner från tavla.html
 //
+// Alla skyddade endpoints kräver att klienten skickar en kod (pin) via
+// Authorization: Bearer <PIN>  ELLER  body.pin  (alternativt body.secret
+// för bakåtkompat). Koden matchas mot ACCESS_PIN-secreten i Workern.
+//
 // Worker secrets / vars (sätts i Cloudflare dashboard eller via wrangler):
 //   GITHUB_TOKEN     (secret) — PAT med scope `repo`
-//   FORM_SECRET      (secret) — delas med tipsa.html OCH tavla.html
+//   ACCESS_PIN       (secret) — pin som mottagarna matar in i pin-wall
+//                               (primär — använd denna sedan v0.6)
+//   FORM_SECRET      (secret) — bakåtkompat, fallback om ACCESS_PIN saknas
 //   ALLOWED_ORIGIN   (var)    — t.ex. "https://7srapport.com"
 //   GITHUB_REPO      (var)    — t.ex. "gitjoda71/7s-rapport"
 //
@@ -27,6 +34,10 @@ export default {
       return new Response(null, { status: 204, headers: cors });
     }
 
+    // POST /auth → testa pin utan side-effects (pin-wall i sidorna)
+    if (path === '/auth' && request.method === 'POST') {
+      return handleAuth(request, env, cors);
+    }
     // POST / → tipsa
     if (path === '/' && request.method === 'POST') {
       return handleTipsa(request, env, cors);
@@ -44,6 +55,20 @@ export default {
   }
 };
 
+// ── /auth  (pin-wall validering) ─────────────────────────────────────
+
+async function handleAuth(request, env, cors) {
+  if (!originOk(request, env)) return jsonErr('Origin ej tillåten', 403, cors);
+  let payload;
+  try { payload = await request.json(); } catch (e) {
+    return jsonErr('Ogiltig JSON', 400, cors);
+  }
+  if (!secretOk(extractSecret(request, payload), env)) {
+    return jsonErr('Fel kod', 403, cors);
+  }
+  return jsonOk({}, cors);
+}
+
 // ── /  (tipsa) ───────────────────────────────────────────────────────
 
 async function handleTipsa(request, env, cors) {
@@ -53,7 +78,7 @@ async function handleTipsa(request, env, cors) {
   try { payload = await request.json(); } catch (e) {
     return jsonErr('Ogiltig JSON', 400, cors);
   }
-  if (!secretOk(payload.secret, env)) return jsonErr('Ogiltig token', 403, cors);
+  if (!secretOk(extractSecret(request, payload), env)) return jsonErr('Ogiltig kod', 403, cors);
 
   const title = String(payload.title || '').trim().slice(0, 200);
   const body  = String(payload.body  || '').trim().slice(0, 8000);
@@ -89,10 +114,8 @@ async function handleTipsa(request, env, cors) {
 async function handleListIssues(request, env, cors) {
   if (!originOk(request, env)) return jsonErr('Origin ej tillåten', 403, cors);
 
-  // FORM_SECRET via Authorization: Bearer <secret>
-  const auth = request.headers.get('Authorization') || '';
-  const token = auth.replace(/^Bearer\s+/i, '');
-  if (!secretOk(token, env)) return jsonErr('Ogiltig token', 403, cors);
+  // Pin via Authorization: Bearer <pin>
+  if (!secretOk(extractSecret(request, null), env)) return jsonErr('Ogiltig kod', 403, cors);
 
   if (!env.GITHUB_REPO || !env.GITHUB_TOKEN) {
     return jsonErr('Workern är inte konfigurerad', 500, cors);
@@ -132,7 +155,7 @@ async function handleMove(request, env, cors) {
   try { payload = await request.json(); } catch (e) {
     return jsonErr('Ogiltig JSON', 400, cors);
   }
-  if (!secretOk(payload.secret, env)) return jsonErr('Ogiltig token', 403, cors);
+  if (!secretOk(extractSecret(request, payload), env)) return jsonErr('Ogiltig kod', 403, cors);
 
   const issueNumber = parseInt(payload.issueNumber, 10);
   const target = String(payload.target || '').trim();
@@ -261,9 +284,28 @@ function originOk(request, env) {
   return origin === env.ALLOWED_ORIGIN;
 }
 
+// Kontrollerar inkommande "secret" mot serverns konfigurerade kod(er).
+// Sedan v0.6 är ACCESS_PIN primär — användaren matar in den i pin-wall
+// och den lagras BARA i sessionStorage på klienten + Worker-secrets.
+// FORM_SECRET behålls som fallback för bakåtkompat under övergången.
 function secretOk(value, env) {
-  if (!env.FORM_SECRET) return true;
-  return value === env.FORM_SECRET;
+  if (!value) return false;
+  if (env.ACCESS_PIN) return value === env.ACCESS_PIN;
+  if (env.FORM_SECRET) return value === env.FORM_SECRET;
+  return true; // ingen secret satt = öppet
+}
+
+// Extrahera secret från (i prioritetsordning):
+//   1) Authorization: Bearer <X>
+//   2) payload.pin
+//   3) payload.secret  (bakåtkompat)
+function extractSecret(request, payload) {
+  const auth = request.headers.get('Authorization') || '';
+  const fromAuth = auth.replace(/^Bearer\s+/i, '').trim();
+  if (fromAuth) return fromAuth;
+  if (payload && payload.pin) return String(payload.pin);
+  if (payload && payload.secret) return String(payload.secret);
+  return null;
 }
 
 function corsHeadersFor(env) {
