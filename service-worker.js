@@ -58,6 +58,8 @@ const FILES = [
   './data.html',
   './ramsor.html',
   './ramsor-data.js',
+  './roadmap.html',
+  './roadmap-data.js',
   './ortnamn.json',
   './fonts/inter.css',
   './fonts/inter-400.woff2',

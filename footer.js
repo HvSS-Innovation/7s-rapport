@@ -186,6 +186,10 @@
 </ol>
 <p style="margin:0 0 10px;font-size:0.72rem;color:var(--text-muted)">Använd aldrig en ogranskad klon i skarpt läge eller på övning. Gå alltid igenom koden innan.</p>
 
+<h3 style="color:var(--accent);font-size:0.85rem;margin:16px 0 10px;letter-spacing:0.06em">ROADMAP & ÖNSKEMÅL</h3>
+<p style="margin:0 0 10px">Se vad som är på gång och vad som finns på önskelistan — och lämna gärna ett eget önskemål.</p>
+<p style="margin:0 0 10px"><a href="roadmap.html" style="color:var(--accent)">Roadmap & önskemål →</a></p>
+
 <h3 style="color:var(--accent);font-size:0.85rem;margin:16px 0 10px;letter-spacing:0.06em">LICENS & KÄLLKOD</h3>
 <p style="margin:0 0 4px">Licensierat under <strong>CC BY-NC-SA 4.0</strong> – fritt att använda och anpassa för icke-kommersiellt bruk.</p>
 <p style="margin:0"><a href="https://github.com/gitjoda71/7s-rapport" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Källkod på GitHub →</a></p>

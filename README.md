@@ -121,6 +121,24 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
+### 2026-05-12: In-app roadmap (v0.3)
+Ny sida `roadmap.html` länkad från Om-sektionen — kanban-vy med fyra
+kolumner (Önskat / Kommer snart / Pågår / Klart). Användare som inte är
+på GitHub kan ändå se vad som är på gång utan att klicka sig till repo:t.
+
+*   **`roadmap-data.js`:** manuellt uppdaterad datakälla. Varje item har
+    `column`, `title`, `desc`, valfria `tags[]` och `date`. Initialt
+    innehåll: v0.1/v0.2/v0.3 i Klart, GrpC/PlutC i Pågår, 1227-fulltabell
+    + RA1444-detalj i Kommer snart, Förare-ramsor + TOS i Önskat.
+*   **Önska funktion-knapp:** återanvänder feedback-länkens GitHub Issues-
+    template med pre-fylld titel `[Roadmap-önskan]`. Inkonsekvent med
+    "ingen GitHub-integration"-idén, men feedback-länken finns redan och
+    det vore förvirrande att uppfinna en konkurrerande kanal.
+*   **Footer-Om-sektion:** ny sektion "ROADMAP & ÖNSKEMÅL" placerad före
+    "LICENS & KÄLLKOD".
+*   `service-worker.js` `CACHE` bumpat, `roadmap.html` + `roadmap-data.js`
+    tillagda i FILES.
+
 ### 2026-05-12: Ramsor-flik (v0.2)
 Ny tab `ramsor.html` för minnesramsor och akronymer. Roll-vald vy som default-
 filter, sök som filtrerar oavsett vald roll, "Övriga ramsor"-expander för det

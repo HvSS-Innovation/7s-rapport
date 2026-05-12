@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>Roadmap &amp; önskemål</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root { --bg:#0d1f0d; --bg-card:#152815; --bg-input:#0f240f; --fg:#c8e6c9; --muted:#a0c4a0; --dim:#5a7a5a; --line:#2d4a2d; --accent:#4caf50; --accent-dim:#1e3d1e; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--fg); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; line-height:1.55; }
+  .container { max-width:1100px; margin:0 auto; }
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--dim); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--dim); margin-top:6px; opacity:0.85; line-height:1.5; max-width:420px; margin-left:auto; margin-right:auto; }
+
+  .nav { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:16px; }
+  .nav a { padding:6px 12px; background:var(--bg-card); border:1px solid var(--line); border-radius:6px; text-decoration:none; font-size:0.82rem; color:var(--fg); }
+  .nav a:hover { border-color:var(--accent); }
+
+  .updated { font-size:0.78rem; color:var(--dim); margin:8px 0 14px; text-align:center; }
+
+  .request-card { background:var(--bg-card); border:1px solid var(--line); border-radius:8px; padding:16px 18px; margin-bottom:18px; }
+  .request-card h2 { font-size:0.95rem; color:var(--muted); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:8px; font-weight:600; }
+  .request-card p { font-size:0.88rem; color:var(--fg); margin-bottom:10px; }
+  .request-btn { display:inline-flex; align-items:center; gap:8px; background:var(--accent); color:#0d1f0d; border:none; padding:10px 16px; border-radius:6px; font-family:inherit; font-size:0.88rem; font-weight:600; text-decoration:none; cursor:pointer; }
+  .request-btn:hover { background:#66bb6a; }
+
+  .kanban { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; }
+  @media (max-width: 900px) { .kanban { grid-template-columns:repeat(2,1fr); } }
+  @media (max-width: 540px) { .kanban { grid-template-columns:1fr; } }
+
+  .column { background:var(--bg-card); border:1px solid var(--line); border-radius:8px; padding:12px; min-height:200px; }
+  .column-head { font-size:0.78rem; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase; font-weight:700; margin-bottom:4px; display:flex; justify-content:space-between; align-items:baseline; gap:8px; }
+  .column-head .count { color:var(--dim); font-size:0.72rem; font-weight:400; letter-spacing:0; text-transform:none; }
+  .column-desc { font-size:0.72rem; color:var(--dim); margin-bottom:10px; line-height:1.4; }
+
+  .item { background:var(--bg-input); border:1px solid var(--line); border-radius:6px; padding:10px 12px; margin-bottom:8px; font-size:0.85rem; }
+  .item-title { font-weight:600; color:var(--fg); margin-bottom:4px; line-height:1.35; }
+  .item-desc { font-size:0.78rem; color:var(--muted); line-height:1.45; }
+  .item-meta { display:flex; flex-wrap:wrap; gap:4px; margin-top:8px; align-items:center; }
+  .item-tag { font-size:0.65rem; color:var(--dim); background:transparent; border:1px solid var(--line); padding:1px 6px; border-radius:8px; letter-spacing:0.04em; text-transform:uppercase; font-weight:500; }
+  .item-date { font-size:0.68rem; color:var(--dim); margin-left:auto; font-family:ui-monospace,monospace; }
+
+  .empty { font-size:0.78rem; color:var(--dim); padding:14px 4px; text-align:center; font-style:italic; }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Roadmap-sidan kräver JavaScript. Aktivera och ladda om.</div></noscript>
+
+<div class="container">
+
+  <header>
+    <h1>Roadmap &amp; önskemål</h1>
+    <p>Vad som är på gång i 7srapport.com</p>
+    <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
+  </header>
+
+  <nav class="nav">
+    <a href="./">← Tillbaka</a>
+    <a href="index.html">7S</a>
+    <a href="ramsor.html">RAMSOR</a>
+    <a href="data.html">Mina data</a>
+  </nav>
+
+  <div class="updated" id="updated"></div>
+
+  <div class="request-card">
+    <h2>Önska en funktion</h2>
+    <p>Saknar du en ramsa, ett verktyg eller en förbättring? Beskriv ditt önskemål så lägger jag in det i kolumnen <strong>Önskat</strong> och hör av mig om något behöver klargöras.</p>
+    <a id="requestBtn" class="request-btn" href="#" target="_blank" rel="noopener noreferrer">Lämna ett önskemål →</a>
+  </div>
+
+  <div class="kanban" id="kanban"></div>
+
+</div>
+
+<script src="roadmap-data.js"></script>
+<script>
+(function () {
+  const data = window.ROADMAP_DATA || { columns: [], items: [], updated: '' };
+
+  const $updated = document.getElementById('updated');
+  const $kanban = document.getElementById('kanban');
+  const $req = document.getElementById('requestBtn');
+
+  // Sätt mottagar-URL för "Önska en funktion".
+  // Använder samma GitHub-Issues-template som footer.js (feedback-länken).
+  // Detta är inkonsekvent med beslutet om "ingen GitHub-integration" som
+  // koncept — men feedback-länken finns redan i sidfoten och pekar dit,
+  // så vi återanvänder samma mekanism istället för att uppfinna en
+  // konkurrerande kanal. Användare som inte vill till GitHub kan höra av
+  // sig via samma kanaler som tidigare.
+  const t = encodeURIComponent('[Roadmap-önskan] Ny funktion/ramsa');
+  const b = encodeURIComponent(
+    'Vad du önskar:\n\n' +
+    '\n---\n' +
+    'Roll (om relevant): GrpC / PlutC / Sjv / Sig / Förare / Annat\n' +
+    'Allmänt eller specifik flik: '
+  );
+  $req.href = 'https://github.com/gitjoda71/7s-rapport/issues/new?title=' + t + '&body=' + b;
+
+  // Updated-datum
+  if (data.updated) {
+    $updated.textContent = 'Senast uppdaterad: ' + data.updated;
+  }
+
+  // Bygg kanban
+  function itemEl(it) {
+    const wrap = document.createElement('div');
+    wrap.className = 'item';
+
+    const title = document.createElement('div');
+    title.className = 'item-title';
+    title.textContent = it.title;
+    wrap.appendChild(title);
+
+    if (it.desc) {
+      const desc = document.createElement('div');
+      desc.className = 'item-desc';
+      desc.textContent = it.desc;
+      wrap.appendChild(desc);
+    }
+
+    if ((Array.isArray(it.tags) && it.tags.length) || it.date) {
+      const meta = document.createElement('div');
+      meta.className = 'item-meta';
+      (it.tags || []).forEach(t => {
+        const tg = document.createElement('span');
+        tg.className = 'item-tag';
+        tg.textContent = t;
+        meta.appendChild(tg);
+      });
+      if (it.date) {
+        const d = document.createElement('span');
+        d.className = 'item-date';
+        d.textContent = it.date;
+        meta.appendChild(d);
+      }
+      wrap.appendChild(meta);
+    }
+    return wrap;
+  }
+
+  (data.columns || []).forEach(col => {
+    const div = document.createElement('div');
+    div.className = 'column';
+
+    const items = (data.items || []).filter(x => x.column === col.id);
+
+    const head = document.createElement('div');
+    head.className = 'column-head';
+    head.innerHTML = '<span>' + col.name + '</span><span class="count">' + items.length + '</span>';
+    div.appendChild(head);
+
+    if (col.desc) {
+      const cdesc = document.createElement('div');
+      cdesc.className = 'column-desc';
+      cdesc.textContent = col.desc;
+      div.appendChild(cdesc);
+    }
+
+    if (items.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'empty';
+      empty.textContent = '—';
+      div.appendChild(empty);
+    } else {
+      items.forEach(it => div.appendChild(itemEl(it)));
+    }
+
+    $kanban.appendChild(div);
+  });
+})();
+</script>
+<script>window.FORM_ID = { title: 'ROADMAP' };</script>
+<script src="footer.js"></script>
+</body>
+</html>
