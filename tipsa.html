@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://*.workers.dev; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<title>Tipsa — privat ingång</title>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root { --bg:#0d1f0d; --bg-card:#152815; --bg-input:#0f240f; --fg:#c8e6c9; --muted:#a0c4a0; --dim:#5a7a5a; --line:#2d4a2d; --line-focus:#4a7c4a; --accent:#4caf50; --accent-dim:#1e3d1e; --warn:#e05050; --warn-bg:#3a1818; }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',ui-sans-serif,system-ui,sans-serif; background:var(--bg); color:var(--fg); min-height:100vh; padding:24px 16px; -webkit-font-smoothing:antialiased; line-height:1.55; }
+  .container { max-width:560px; margin:0 auto; }
+
+  header { text-align:center; padding:8px 0 16px; }
+  header h1 { font-size:1.3rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--dim); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--dim); margin-top:10px; opacity:0.85; line-height:1.5; max-width:420px; margin-left:auto; margin-right:auto; }
+
+  .intro-card { background:var(--bg-card); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-bottom:16px; font-size:0.85rem; color:var(--muted); }
+  .intro-card strong { color:var(--fg); }
+
+  .form-group { background:var(--bg-card); border:1px solid var(--line); border-radius:8px; padding:14px 16px; margin-bottom:10px; }
+  label { display:block; font-weight:600; font-size:0.82rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--muted); margin-bottom:6px; }
+  .hint { font-size:0.72rem; color:var(--dim); margin-top:4px; }
+
+  input[type="text"], select, textarea {
+    width:100%; background:var(--bg-input); border:1px solid var(--line);
+    border-radius:4px; color:var(--fg); font-family:inherit; font-size:0.95rem;
+    padding:10px 12px; outline:none; transition:border-color 0.15s;
+    -webkit-appearance:none; appearance:none;
+  }
+  input[type="text"]:focus, select:focus, textarea:focus { border-color:var(--line-focus); }
+  textarea { resize:vertical; min-height:120px; }
+  select { background-image:none; padding-right:10px; }
+
+  .btn { display:inline-flex; align-items:center; justify-content:center; min-height:48px; width:100%; padding:12px 20px; border:none; border-radius:8px; font-family:inherit; font-size:0.95rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; transition:background 0.15s, transform 0.1s; -webkit-tap-highlight-color:transparent; }
+  .btn:active { transform:scale(0.98); }
+  .btn-primary { background:var(--accent); color:#fff; margin-top:8px; }
+  .btn-primary:hover { background:#66bb6a; }
+  .btn-primary:disabled { opacity:0.6; cursor:not-allowed; }
+
+  .status { margin-top:14px; padding:12px 14px; border-radius:6px; font-size:0.88rem; line-height:1.5; }
+  .status.ok { background:#0d2a0d; border:1px solid var(--accent); color:#c8e0c8; }
+  .status.err { background:var(--warn-bg); border:1px solid var(--warn); color:#ffd1d1; }
+  .status.hidden { display:none; }
+
+  footer { text-align:center; padding:24px 0 8px; font-size:0.65rem; color:var(--dim); opacity:0.7; line-height:1.5; }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Formuläret kräver JavaScript. Aktivera och ladda om.</div></noscript>
+
+<div class="container">
+
+  <header>
+    <h1>Tipsa</h1>
+    <p>Privat ingång · ej publik länk</p>
+    <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
+  </header>
+
+  <div class="intro-card">
+    Du har fått länken till denna sida av utvecklaren. Tipset skickas <strong>automatiskt</strong> och hamnar som ett ärende i utvecklarens kö — du behöver inte ha GitHub-konto, ingen e-postklient och inget annat. Bara fyll i och skicka.
+  </div>
+
+  <form id="tipsForm">
+
+    <div class="form-group">
+      <label for="title">Rubrik</label>
+      <input type="text" id="title" name="title" maxlength="180" required placeholder="T.ex. Saknad ramsa för GrpC: STIM" autocomplete="off" spellcheck="false">
+    </div>
+
+    <div class="form-group">
+      <label for="category">Kategori</label>
+      <select id="category" name="category">
+        <option value="onskemal">Önskemål / ny funktion</option>
+        <option value="ramsa">Förslag på ramsa</option>
+        <option value="bugg">Bugg / problem</option>
+        <option value="forbattring">Förbättring av befintlig funktion</option>
+        <option value="ovrigt">Övrigt</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label for="body">Beskrivning</label>
+      <textarea id="body" name="body" maxlength="7000" required placeholder="Beskriv ditt önskemål så detaljerat du vill. Om det är en ramsa: vad står bokstäverna för och när används den?"></textarea>
+      <div class="hint">Max 7000 tecken.</div>
+    </div>
+
+    <div class="form-group">
+      <label for="role">Din roll <span style="font-weight:400;color:var(--dim);text-transform:none">(valfritt)</span></label>
+      <input type="text" id="role" name="role" maxlength="60" placeholder="T.ex. GrpC, Sjv, Sig, Förare" autocomplete="off">
+    </div>
+
+    <div class="form-group">
+      <label for="name">Ditt namn eller alias <span style="font-weight:400;color:var(--dim);text-transform:none">(valfritt)</span></label>
+      <input type="text" id="name" name="name" maxlength="100" placeholder="Lämna tomt om du vill vara anonym" autocomplete="off">
+    </div>
+
+    <button type="submit" class="btn btn-primary" id="submitBtn">Skicka tipset</button>
+
+    <div class="status hidden" id="status"></div>
+
+  </form>
+
+  <footer>
+    Denna sida är inte länkad från någon annan del av appen. Endast du som fått URL:en når den.
+  </footer>
+
+</div>
+
+<script>
+(function () {
+  // === KONFIGURATION ===
+  // Båda värdena byts i samband med deploy av Cloudflare Worker.
+  // Se verktyg/tipsa-worker/SETUP.md för stegen.
+  const WORKER_URL = 'BYT-MIG-Worker-URL';
+  const FORM_SECRET = 'BYT-MIG-Form-Secret';
+  // =====================
+
+  const $form = document.getElementById('tipsForm');
+  const $btn = document.getElementById('submitBtn');
+  const $status = document.getElementById('status');
+
+  function setStatus(msg, kind) {
+    $status.textContent = msg;
+    $status.className = 'status ' + (kind || '');
+  }
+
+  $form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    $status.className = 'status hidden';
+
+    if (WORKER_URL === 'BYT-MIG-Worker-URL' || FORM_SECRET === 'BYT-MIG-Form-Secret') {
+      setStatus('Sidan är inte fullt konfigurerad än — kontakta den som gav dig länken.', 'err');
+      return;
+    }
+
+    const fd = new FormData($form);
+    const payload = {
+      title: (fd.get('title') || '').toString().trim(),
+      body: (fd.get('body') || '').toString().trim(),
+      category: (fd.get('category') || '').toString(),
+      role: (fd.get('role') || '').toString().trim(),
+      name: (fd.get('name') || '').toString().trim(),
+      secret: FORM_SECRET
+    };
+
+    if (!payload.title || !payload.body) {
+      setStatus('Fyll i både rubrik och beskrivning.', 'err');
+      return;
+    }
+
+    $btn.disabled = true;
+    $btn.textContent = 'Skickar…';
+    setStatus('Skickar tipset…', 'ok');
+
+    try {
+      const r = await fetch(WORKER_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await r.json().catch(() => ({}));
+
+      if (!r.ok || !data.ok) {
+        const msg = (data && data.error) ? data.error : ('Servern svarade med status ' + r.status);
+        throw new Error(msg);
+      }
+
+      setStatus('Tack! Tipset är registrerat (ärende #' + (data.issueNumber || '?') + '). Du kan stänga den här sidan.', 'ok');
+      $form.reset();
+    } catch (err) {
+      setStatus('Kunde inte skicka: ' + (err && err.message ? err.message : err) + '. Försök igen om en stund — om problemet kvarstår, hör av dig direkt till den som gav dig länken.', 'err');
+    } finally {
+      $btn.disabled = false;
+      $btn.textContent = 'Skicka tipset';
+    }
+  });
+})();
+</script>
+</body>
+</html>

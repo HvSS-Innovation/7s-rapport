@@ -20,6 +20,13 @@ Detaljerade beskrivningar finns i README-dagboken.
 
 **Avvikelse från roadmap:** GrpC + PlutC levereras som placeholders i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI och utan säker FM-publikation att luta sig på är felaktighetsrisken större än värdet av snabb leverans. Innehåll fylls på i v0.2.x när säkra referenser verifierats. TOS lämnad helt tills användaren preciserar.
 
+## v0.4 — 2026-05-12 — Privat tipsa-ingång via Cloudflare Worker
+- Ny hemlig sida `tipsa.html` — ej länkad från någon annan del av appen, märkt `noindex,nofollow`
+- Formuläret POSTar till en Cloudflare Worker som skapar GitHub Issue automatiskt (användaren behöver inget GitHub-konto, ingen e-postklient)
+- Worker-kod, wrangler.toml och SETUP.md i `verktyg/tipsa-worker/`
+- Workern kräver engångs-config (GitHub PAT, FORM_SECRET, ALLOWED_ORIGIN, GITHUB_REPO) — full guide i SETUP.md
+- `tipsa.html` ingår inte i service workerns FILES — sidan ska inte seedas i alla användares enheter
+
 ## v0.3.1 — 2026-05-12 — Mindre städning
 - Tagit bort 1227-tabell-rutan i RAMSOR-fliken. Den var bara en intro-platshållare utan riktigt innehåll. Full 1227-tabell ligger kvar i roadmap-data.js under "Kommer snart" och läggs in när tabellen är komplett.
 

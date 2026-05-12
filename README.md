@@ -121,6 +121,29 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
+### 2026-05-12: Privat tipsa-ingång via Cloudflare Worker (v0.4)
+Ny ej-publik formulärsida `tipsa.html` för utvalda mottagare som inte vill
+eller kan använda GitHub. Sidan är inte länkad från någon annan del av
+appen, ligger inte i tab-nav, inte i Om-sektionen, och är märkt
+`noindex,nofollow` så den inte fastnar i sökmotorer. URL:en delas
+manuellt med dem som ska få bidra.
+
+Tekniskt: formuläret POSTar till en separat Cloudflare Worker
+(`verktyg/tipsa-worker/`) som validerar Origin + delad hemlighet och
+skapar en GitHub Issue automatiskt via GitHub API. Användaren behöver
+ingen e-postklient och inget GitHub-konto. Workers-koden, wrangler.toml
+och SETUP.md ligger i `verktyg/tipsa-worker/`.
+
+**Workern kräver en engångs-konfiguration** (GitHub PAT, FORM_SECRET,
+ALLOWED_ORIGIN, GITHUB_REPO) — se `verktyg/tipsa-worker/SETUP.md` för
+stegen. Tills den är deploy:ad och `tipsa.html` har uppdaterade
+WORKER_URL + FORM_SECRET visar sidan "Sidan är inte fullt konfigurerad
+än — kontakta den som gav dig länken."
+
+`tipsa.html` ingår **inte** i service workerns precache (FILES) —
+medvetet, eftersom sidan inte är avsedd för offline-bruk och vi inte vill
+att den seedas i alla användares enheter.
+
 ### 2026-05-12: In-app roadmap (v0.3)
 Ny sida `roadmap.html` länkad från Om-sektionen — kanban-vy med fyra
 kolumner (Önskat / Kommer snart / Pågår / Klart). Användare som inte är

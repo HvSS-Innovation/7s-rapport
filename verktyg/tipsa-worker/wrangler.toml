@@ -1,0 +1,19 @@
+# wrangler.toml — konfiguration för tipsa-worker.
+# Bara nödvändigt om du vill deploya via Wrangler CLI istället för
+# Cloudflare-dashboard. Stegen i SETUP.md beskriver båda vägarna.
+
+name = "tipsa-7srapport"
+main = "tipsa-worker.js"
+compatibility_date = "2025-01-01"
+
+# Publika variabler (ej hemligheter). Sätts antingen här eller i UI:t.
+# GITHUB_REPO och ALLOWED_ORIGIN är inte hemliga — det är OK att de syns
+# i wrangler.toml.
+[vars]
+ALLOWED_ORIGIN = "https://7srapport.com"
+GITHUB_REPO = "gitjoda71/7s-rapport"
+
+# Hemligheter (GITHUB_TOKEN och FORM_SECRET) sätts ALDRIG här utan via:
+#   wrangler secret put GITHUB_TOKEN
+#   wrangler secret put FORM_SECRET
+# eller via Cloudflare-dashboard → Settings → Variables → "Add secret".
