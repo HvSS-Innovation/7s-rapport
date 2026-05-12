@@ -220,6 +220,47 @@ Hemliga sidor:
 /tavla.html           ← privat kanban — dela ut URL:en manuellt
 ```
 
+## Steg 8 (krävs sedan v0.8): KV-namespace för manuell prio-ordning
+
+Tavlan stöder reorder inom kolumn (dra items upp/ner i prio-ordning).
+Ordningen lagras i en Cloudflare KV-namespace som Workern läser/skriver.
+
+### Skapa KV-namespace
+
+1. Cloudflare dashboard → vänstermenyn → **Storage & Databases** →
+   **KV** (eller direkt **Workers & Pages → KV** beroende på UI-version).
+2. Klicka **Create a namespace** (eller **+ Create**).
+3. Namn: `kanban-state` (eller vad du vill — det är bara internt).
+4. Klicka **Add**.
+
+### Binda namespacen till Workern
+
+1. Tillbaka till din Worker → **Settings** → **Variables and Secrets**
+   (eller **Bindings**, beroende på UI-version).
+2. Hitta avsnittet **KV Namespace Bindings** (kan ligga längst ner eller
+   som egen tab "Bindings").
+3. **Add binding** → **KV namespace**.
+4. **Variable name:** `KANBAN_KV` — **måste vara exakt detta**, det är
+   vad Worker-koden refererar till.
+5. **KV namespace:** välj `kanban-state` från dropdownen.
+6. **Save**.
+
+### Re-deploya Workern
+
+Med ny binding aktiverad: gå till **Edit code** → klistra in senaste
+`tipsa-worker.js` (om du inte redan har gjort det) → **Save and deploy**.
+
+### Test
+
+På tavlan: dra ett item uppåt eller nedåt inom samma kolumn. Du bör se
+en accentfärgad streck-indikator där droppen hamnar, items glider på
+plats med en mjuk animation, och statusraden visar "Sparat ordning ✓".
+Ladda om sidan — ordningen ska finnas kvar.
+
+Om du får felmeddelandet **"KV-binding KANBAN_KV saknas"** — bindingen
+är inte satt eller heter fel. Variabelnamnet måste vara exakt
+`KANBAN_KV` (versaler och understreck).
+
 ## Uppdatera Workern senare
 
 Om Worker-koden uppdateras i repot (`verktyg/tipsa-worker/tipsa-worker.js`)

@@ -20,6 +20,17 @@ Detaljerade beskrivningar finns i README-dagboken.
 
 **Avvikelse från roadmap:** GrpC + PlutC levereras som placeholders i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI och utan säker FM-publikation att luta sig på är felaktighetsrisken större än värdet av snabb leverans. Innehåll fylls på i v0.2.x när säkra referenser verifierats. TOS lämnad helt tills användaren preciserar.
 
+## v0.8 — 2026-05-12 — Reorder inom kolumn + FLIP-animation
+- Drop på item-nivå: drag kan landa `before` eller `after` ett specifikt item baserat på muspos
+- Visuell drop-indikator (accentfärgad streck) ovanför/under target-itemet
+- Manuell prio-ordning persisterad i Cloudflare KV (namespace bunden som `KANBAN_KV`)
+- Ny Worker-endpoint `POST /reorder { column, orderedNumbers }`
+- `GET /issues` berikar items med `position`-fält från KV — frontend sorterar efter den
+- FLIP-animation i render(): items mäts före/efter rebuild, glider på plats med CSS-transition
+- Optimistic UI med rollback vid fel + load()-fallback
+
+**Kräver manuell action av Joel:** skapa Cloudflare KV-namespace + binda som `KANBAN_KV` till Workern + re-deploya Worker. Detaljerade steg i `verktyg/tipsa-worker/SETUP.md` (Steg 8).
+
 ## v0.7 — 2026-05-12 — Drag-and-drop på kanban-tavlan
 - HTML5 Drag-and-Drop på items i tavla.html (desktop)
 - Optimistic UI: item flyttas direkt vid drop, server-anrop i bakgrunden, rollback vid fel

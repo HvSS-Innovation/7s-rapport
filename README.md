@@ -121,6 +121,42 @@ Se [LICENSE](LICENSE) för fullständig licenstext.
 
 ## Dagbok: Utvecklingslogg
 
+### 2026-05-12: Reorder inom kolumn + FLIP-animation (v0.8)
+Bygger vidare på v0.7. Items kan nu dras både mellan och inom kolumner
+i `tavla.html`. Andra items glider undan smidigt när något flyttas.
+
+* **Drop-target på item-nivå:** drop kan landa på ett specifikt item och
+  positioneras `before`/`after` baserat på muspos relativ till items
+  mittpunkt. Visuell drop-indikator (accentfärgad streck-linje) ovan
+  eller under target-itemet.
+* **Manuell prio-ordning persisterad i Cloudflare KV.** Worker-endpoint
+  `POST /reorder { column, orderedNumbers }` skriver ordning per
+  kolumn till KV-namespace bunden som `KANBAN_KV`. `GET /issues`
+  berikar varje item med `position`-fält från KV. Frontend sorterar
+  efter `position` (lägre först), items utan position hamnar sist
+  sorterade på `updated_at`.
+* **FLIP-animation i render():** mäter bounding rect för alla items
+  före rebuild, mäter igen efter, applicerar reverse-translate, sen
+  släpps via `requestAnimationFrame` så CSS-transition animerar till
+  slutposition. Funkar för både reorder inom kolumn och flytt mellan
+  kolumner.
+* **Refaktorerad sorter:** `sortColumnItems(list)` är delad mellan
+  render och `dropOnItem` — säkerställer att ny ordning byggs från
+  exakt samma vy som visas.
+* **Optimistic UI med rollback:** klient uppdaterar lokal state direkt
+  vid drop, server-anrop går i bakgrunden. Vid fel: rollback + load()
+  från servern.
+
+**Att göra på din sida (manuellt) för att aktivera v0.8:**
+1. Cloudflare → Storage & Databases → KV → skapa namespace
+   `kanban-state` (eller annat namn).
+2. Worker → Settings → Variables and Secrets → KV Namespace Bindings →
+   `KANBAN_KV` ↦ `kanban-state`.
+3. Re-deploya Workern med senaste `tipsa-worker.js`.
+
+Tills steg 1–3 är gjorda fungerar tavlan som tidigare — bara reorder-
+funktionen ger felmeddelande tills bindingen är på plats.
+
 ### 2026-05-12: Drag-and-drop på kanban-tavlan (v0.7)
 Items i `tavla.html` kan nu dras direkt mellan kolumner — desktop-only
 i denna iteration. Modal-knapparna är kvar som alternativ väg och som

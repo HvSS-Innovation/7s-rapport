@@ -47,10 +47,16 @@
   .col-body.drag-over { background:rgba(76, 175, 80, 0.08); outline-color:var(--accent); }
   .col-body.drag-over-pending { background:rgba(255, 200, 80, 0.05); }
 
-  .item { background:var(--bg-input); border:1px solid var(--line); border-radius:6px; padding:9px 11px; margin-bottom:8px; font-size:0.85rem; cursor:grab; transition:border-color 0.12s, transform 0.06s, opacity 0.12s; user-select:none; }
+  .item { position:relative; background:var(--bg-input); border:1px solid var(--line); border-radius:6px; padding:9px 11px; margin-bottom:8px; font-size:0.85rem; cursor:grab; transition:transform 0.22s ease, border-color 0.12s, opacity 0.12s; user-select:none; }
   .item:hover { border-color:var(--line-focus); }
-  .item:active { cursor:grabbing; transform:scale(0.99); }
-  .item.dragging { opacity:0.4; }
+  .item:active { cursor:grabbing; }
+  .item.dragging { opacity:0.35; }
+  /* Drop-indikator: streck ovanför eller under target-item */
+  .item.drop-before::before, .item.drop-after::after { content:''; position:absolute; left:-2px; right:-2px; height:3px; background:var(--accent); border-radius:2px; box-shadow:0 0 4px var(--accent); pointer-events:none; }
+  .item.drop-before::before { top:-6px; }
+  .item.drop-after::after { bottom:-6px; }
+  /* Stäng av animation under aktiv drag (känns konstigt annars) */
+  .item.dragging, .item.no-anim { transition:opacity 0.12s; }
   .item-title { font-weight:600; color:var(--fg); line-height:1.35; margin-bottom:4px; word-break:break-word; }
   .item-meta { display:flex; flex-wrap:wrap; gap:4px 6px; align-items:center; font-size:0.7rem; color:var(--dim); margin-top:4px; }
   .item-meta .num { font-family:ui-monospace,monospace; color:var(--dim); }
@@ -271,7 +277,8 @@
 
     div.addEventListener('dragstart', (e) => {
       draggedItem = item;
-      div.classList.add('dragging');
+      // Snabb opacity-feedback utan att vi förlorar drag-bilden
+      requestAnimationFrame(() => div.classList.add('dragging'));
       try {
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', String(item.number));
@@ -282,6 +289,36 @@
       draggedItem = null;
       document.querySelectorAll('.col-body.drag-over, .col-body.drag-over-pending')
         .forEach(el => el.classList.remove('drag-over', 'drag-over-pending'));
+      document.querySelectorAll('.item.drop-before, .item.drop-after')
+        .forEach(el => el.classList.remove('drop-before', 'drop-after'));
+    });
+
+    // Drop-target på item-nivå: bestäm "before" eller "after" baserat på
+    // muspos relativ till items mittpunkt. Detta möjliggör reorder INOM
+    // kolumn samt exakt positioning vid drag mellan kolumner.
+    div.addEventListener('dragover', (e) => {
+      if (!draggedItem) return;
+      if (draggedItem.number === item.number) return; // kan inte droppa sig själv
+      e.preventDefault();
+      try { e.dataTransfer.dropEffect = 'move'; } catch (_) {}
+      const rect = div.getBoundingClientRect();
+      const before = e.clientY < rect.top + rect.height / 2;
+      div.classList.toggle('drop-before', before);
+      div.classList.toggle('drop-after', !before);
+    });
+    div.addEventListener('dragleave', () => {
+      div.classList.remove('drop-before', 'drop-after');
+    });
+    div.addEventListener('drop', async (e) => {
+      if (!draggedItem) return;
+      if (draggedItem.number === item.number) return;
+      e.preventDefault();
+      e.stopPropagation(); // hindra att col-body drop också triggas
+      const before = div.classList.contains('drop-before');
+      div.classList.remove('drop-before', 'drop-after');
+      const src = draggedItem;
+      draggedItem = null;
+      await dropOnItem(src, item, before);
     });
 
     const title = document.createElement('div');
@@ -323,16 +360,34 @@
     return d;
   }
 
+  // Stabil sort: items med `position` (från server-KV) först i prio-ordning,
+  // sedan items utan position (senast uppdaterad först).
+  function sortColumnItems(list) {
+    return list.slice().sort((a, b) => {
+      const ap = a.position;
+      const bp = b.position;
+      const aHas = Number.isInteger(ap);
+      const bHas = Number.isInteger(bp);
+      if (aHas && bHas) return ap - bp;
+      if (aHas) return -1;
+      if (bHas) return 1;
+      return (b.updated || b.created || '').localeCompare(a.updated || a.created || '');
+    });
+  }
+
   function render(items) {
+    // ── FLIP: First — mät position på alla nuvarande items innan rebuild
+    const firstRects = {};
+    document.querySelectorAll('.item').forEach(el => {
+      firstRects[el.dataset.num] = el.getBoundingClientRect();
+    });
+
     allItems = items;
     COLUMNS.forEach(col => {
       const body = document.querySelector('[data-col="' + col.id + '"]');
       const cnt = body.parentElement.querySelector('.count');
       body.innerHTML = '';
-      const list = items.filter(i => i.column === col.id).sort((a, b) => {
-        // Klart-kolumnen: senaste först. Annars: senast uppdaterad först.
-        return (b.updated || b.created || '').localeCompare(a.updated || a.created || '');
-      });
+      const list = sortColumnItems(items.filter(i => i.column === col.id));
       cnt.textContent = list.length;
       if (list.length === 0) {
         body.appendChild(emptyEl('—'));
@@ -340,6 +395,107 @@
         list.forEach(it => body.appendChild(itemEl(it)));
       }
     });
+
+    // ── FLIP: Last + Invert — mät nya positioner, sätt reverse-translate
+    requestAnimationFrame(() => {
+      document.querySelectorAll('.item').forEach(el => {
+        const first = firstRects[el.dataset.num];
+        if (!first) return;
+        const last = el.getBoundingClientRect();
+        const dx = first.left - last.left;
+        const dy = first.top - last.top;
+        if (dx === 0 && dy === 0) return;
+        el.classList.add('no-anim');
+        el.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
+      });
+      // FLIP: Play — släpp transform nästa frame så CSS-transition animerar
+      requestAnimationFrame(() => {
+        document.querySelectorAll('.item').forEach(el => {
+          el.classList.remove('no-anim');
+          el.style.transform = '';
+        });
+      });
+    });
+  }
+
+  // Drop på ett item (reorder inom kolumn + flytt mellan kolumner med
+  // specifik position). Bygger ny ordnings-lista och anropar
+  // executeMove (om kolumnbyte) + executeReorder.
+  async function dropOnItem(src, target, before) {
+    const targetCol = target.column;
+    const wasDifferentColumn = src.column !== targetCol;
+
+    // Bygg ny ordning för målkolumnen
+    const colList = sortColumnItems(allItems.filter(i => i.column === targetCol && i.number !== src.number));
+    const newOrder = [];
+    for (const it of colList) {
+      if (it.number === target.number) {
+        if (before) newOrder.push(src.number);
+        newOrder.push(it.number);
+        if (!before) newOrder.push(src.number);
+      } else {
+        newOrder.push(it.number);
+      }
+    }
+
+    // Optimistic: uppdatera kolumn + positioner lokalt direkt
+    const idx = allItems.findIndex(x => x.number === src.number);
+    const beforeState = idx >= 0 ? Object.assign({}, allItems[idx]) : null;
+    if (idx >= 0) allItems[idx] = Object.assign({}, allItems[idx], { column: targetCol });
+    // Ersätt position på samtliga items i målkolumnen
+    newOrder.forEach((num, i) => {
+      const k = allItems.findIndex(x => x.number === num);
+      if (k >= 0) allItems[k] = Object.assign({}, allItems[k], { column: targetCol, position: i });
+    });
+    render(allItems);
+
+    // Server-sync: först /move om kolumnbyte, sen /reorder
+    try {
+      if (wasDifferentColumn) {
+        const movedOk = await executeMoveSilent(src.number, targetCol);
+        if (!movedOk) throw new Error('Flytt misslyckades');
+      }
+      await executeReorder(targetCol, newOrder);
+    } catch (err) {
+      // Rollback på fel — låt nästa load() rätta till
+      if (idx >= 0 && beforeState) allItems[idx] = beforeState;
+      render(allItems);
+      setStatus('<span class="err">Kunde inte spara ny ordning — laddar om…</span>', 'err');
+      load();
+    }
+  }
+
+  // Variant av executeMove utan UI-toast (används när vi själva visar status)
+  async function executeMoveSilent(number, target) {
+    const pin = getPin();
+    if (!pin) { showPinWall(); return false; }
+    try {
+      const r = await fetch(workerUrl('/move'), {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
+        body: JSON.stringify({ pin: pin, issueNumber: number, target: target })
+      });
+      if (r.status === 403) { sessionStorage.removeItem(SESSION_KEY); showPinWall(); return false; }
+      const data = await r.json().catch(() => ({}));
+      return r.ok && data && data.ok;
+    } catch (_) { return false; }
+  }
+
+  async function executeReorder(column, orderedNumbers) {
+    const pin = getPin();
+    if (!pin) { showPinWall(); throw new Error('Ingen pin'); }
+    const r = await fetch(workerUrl('/reorder'), {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + pin },
+      body: JSON.stringify({ pin: pin, column: column, orderedNumbers: orderedNumbers })
+    });
+    if (r.status === 403) { sessionStorage.removeItem(SESSION_KEY); showPinWall(); throw new Error('Pin ogiltig'); }
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok || !data.ok) {
+      throw new Error((data && data.error) ? data.error : ('HTTP ' + r.status));
+    }
+    const colName = (COLUMNS.find(c => c.id === column) || {}).name || column;
+    setStatus('<span class="ok">Sparat ordning i ' + colName + ' ✓</span>');
   }
 
   function openModal(item) {

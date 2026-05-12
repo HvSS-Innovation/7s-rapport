@@ -18,6 +18,9 @@
 //   ALLOWED_ORIGIN   (var)    — t.ex. "https://7srapport.com"
 //   GITHUB_REPO      (var)    — t.ex. "gitjoda71/7s-rapport"
 //
+// KV-binding (lagring av kanban-ordning, sedan v0.8):
+//   KANBAN_KV        (KV)     — namespace för manuell prio-ordning per kolumn
+//
 // Kanban-kolumner mappas så här:
 //   Issue closed                                   → Klart
 //   Issue open + label "status:inprogress"         → Pågår
@@ -49,6 +52,10 @@ export default {
     // POST /move → flytta
     if (path === '/move' && request.method === 'POST') {
       return handleMove(request, env, cors);
+    }
+    // POST /reorder → spara ny ordning för en kolumn (KV-baserad)
+    if (path === '/reorder' && request.method === 'POST') {
+      return handleReorder(request, env, cors);
     }
 
     return jsonErr('Method not allowed', 405, cors);
@@ -140,10 +147,62 @@ async function handleListIssues(request, env, cors) {
 
   const items = all.map(toItem);
 
+  // Berika med position-fält från KV (om binding är konfigurerad)
+  let order = null;
+  if (env.KANBAN_KV) {
+    try { order = await env.KANBAN_KV.get('order', 'json'); } catch (_) { /* om KV inte fungerar, fall tillbaka till default-sort */ }
+  }
+  if (order) {
+    for (const item of items) {
+      const colOrder = order[item.column];
+      if (Array.isArray(colOrder)) {
+        const idx = colOrder.indexOf(item.number);
+        if (idx >= 0) item.position = idx;
+      }
+    }
+  }
+
   return new Response(JSON.stringify({ ok: true, items }), {
     status: 200,
     headers: { 'Content-Type': 'application/json', ...cors }
   });
+}
+
+// ── /reorder  (manuell prio-ordning per kolumn, lagrad i KV) ────────
+
+async function handleReorder(request, env, cors) {
+  if (!originOk(request, env)) return jsonErr('Origin ej tillåten', 403, cors);
+
+  let payload;
+  try { payload = await request.json(); } catch (e) {
+    return jsonErr('Ogiltig JSON', 400, cors);
+  }
+  if (!secretOk(extractSecret(request, payload), env)) return jsonErr('Ogiltig kod', 403, cors);
+
+  const column = String(payload.column || '').trim();
+  if (!['wished', 'soon', 'inprogress', 'done'].includes(column)) {
+    return jsonErr('Ogiltig kolumn', 400, cors);
+  }
+  if (!Array.isArray(payload.orderedNumbers)) {
+    return jsonErr('orderedNumbers (array) krävs', 400, cors);
+  }
+  const orderedNumbers = payload.orderedNumbers
+    .map(n => parseInt(n, 10))
+    .filter(n => Number.isInteger(n) && n > 0);
+
+  if (!env.KANBAN_KV) {
+    return jsonErr('KV-binding KANBAN_KV saknas — se SETUP.md', 500, cors);
+  }
+
+  // Slå ihop med existerande ordning för övriga kolumner
+  let existing = null;
+  try { existing = await env.KANBAN_KV.get('order', 'json'); } catch (_) {}
+  if (!existing || typeof existing !== 'object') existing = {};
+  existing[column] = orderedNumbers;
+
+  await env.KANBAN_KV.put('order', JSON.stringify(existing));
+
+  return jsonOk({ column, count: orderedNumbers.length }, cors);
 }
 
 // ── /move  (flytta mellan kolumner) ─────────────────────────────────
