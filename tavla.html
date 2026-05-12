@@ -418,14 +418,39 @@
     });
   }
 
-  // Drop på ett item (reorder inom kolumn + flytt mellan kolumner med
-  // specifik position). Bygger ny ordnings-lista och anropar
-  // executeMove (om kolumnbyte) + executeReorder.
-  async function dropOnItem(src, target, before) {
-    const targetCol = target.column;
+  // Delad kärnlogik för all reorder-/flytt-via-drop:
+  // optimistic update + server-sync av kolumn-flytt + ny ordning.
+  async function commitReorder(src, targetCol, newOrder) {
     const wasDifferentColumn = src.column !== targetCol;
 
-    // Bygg ny ordning för målkolumnen
+    // Optimistic: uppdatera kolumn + positioner lokalt direkt
+    const idx = allItems.findIndex(x => x.number === src.number);
+    const beforeState = idx >= 0 ? Object.assign({}, allItems[idx]) : null;
+    if (idx >= 0) allItems[idx] = Object.assign({}, allItems[idx], { column: targetCol });
+    newOrder.forEach((num, i) => {
+      const k = allItems.findIndex(x => x.number === num);
+      if (k >= 0) allItems[k] = Object.assign({}, allItems[k], { column: targetCol, position: i });
+    });
+    render(allItems);
+
+    try {
+      if (wasDifferentColumn) {
+        const movedOk = await executeMoveSilent(src.number, targetCol);
+        if (!movedOk) throw new Error('Flytt misslyckades');
+      }
+      await executeReorder(targetCol, newOrder);
+    } catch (err) {
+      if (idx >= 0 && beforeState) allItems[idx] = beforeState;
+      render(allItems);
+      setStatus('<span class="err">Kunde inte spara ny ordning — laddar om…</span>', 'err');
+      load();
+    }
+  }
+
+  // Drop på ett item (mellan items eller exakt position).
+  // Bygger ny ordning där src sätts före/efter target.
+  async function dropOnItem(src, target, before) {
+    const targetCol = target.column;
     const colList = sortColumnItems(allItems.filter(i => i.column === targetCol && i.number !== src.number));
     const newOrder = [];
     for (const it of colList) {
@@ -437,32 +462,17 @@
         newOrder.push(it.number);
       }
     }
+    await commitReorder(src, targetCol, newOrder);
+  }
 
-    // Optimistic: uppdatera kolumn + positioner lokalt direkt
-    const idx = allItems.findIndex(x => x.number === src.number);
-    const beforeState = idx >= 0 ? Object.assign({}, allItems[idx]) : null;
-    if (idx >= 0) allItems[idx] = Object.assign({}, allItems[idx], { column: targetCol });
-    // Ersätt position på samtliga items i målkolumnen
-    newOrder.forEach((num, i) => {
-      const k = allItems.findIndex(x => x.number === num);
-      if (k >= 0) allItems[k] = Object.assign({}, allItems[k], { column: targetCol, position: i });
-    });
-    render(allItems);
-
-    // Server-sync: först /move om kolumnbyte, sen /reorder
-    try {
-      if (wasDifferentColumn) {
-        const movedOk = await executeMoveSilent(src.number, targetCol);
-        if (!movedOk) throw new Error('Flytt misslyckades');
-      }
-      await executeReorder(targetCol, newOrder);
-    } catch (err) {
-      // Rollback på fel — låt nästa load() rätta till
-      if (idx >= 0 && beforeState) allItems[idx] = beforeState;
-      render(allItems);
-      setStatus('<span class="err">Kunde inte spara ny ordning — laddar om…</span>', 'err');
-      load();
-    }
+  // Drop på tom yta i en kolumn (eller längst ner under sista item).
+  // Placerar src sist i kolumnen — funkar både för reorder inom kolumn
+  // och flytt mellan kolumner.
+  async function dropAtEnd(src, targetCol) {
+    const colList = sortColumnItems(allItems.filter(i => i.column === targetCol && i.number !== src.number));
+    const newOrder = colList.map(it => it.number);
+    newOrder.push(src.number);
+    await commitReorder(src, targetCol, newOrder);
   }
 
   // Variant av executeMove utan UI-toast (används när vi själva visar status)
@@ -649,7 +659,6 @@
 
       body.addEventListener('dragover', (e) => {
         if (!draggedItem) return;
-        if (draggedItem.column === col.id) return; // samma kolumn → ingen flytt
         e.preventDefault();
         try { e.dataTransfer.dropEffect = 'move'; } catch (_) {}
         body.classList.add('drag-over');
@@ -661,11 +670,13 @@
       body.addEventListener('drop', async (e) => {
         e.preventDefault();
         body.classList.remove('drag-over');
-        if (!draggedItem || draggedItem.column === col.id) return;
-        const num = draggedItem.number;
-        const oldCol = draggedItem.column;
+        if (!draggedItem) return;
+        // Items egna drop-handlers har stopPropagation och hanterar
+        // before/after-positioning. Här hamnar vi bara om drop skedde
+        // på tom yta i col-body (utanför något item) — placera sist.
+        const src = draggedItem;
         draggedItem = null;
-        await executeMove(num, col.id, oldCol);
+        await dropAtEnd(src, col.id);
       });
     });
   }

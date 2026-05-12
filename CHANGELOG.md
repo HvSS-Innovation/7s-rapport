@@ -20,6 +20,12 @@ Detaljerade beskrivningar finns i README-dagboken.
 
 **Avvikelse från roadmap:** GrpC + PlutC levereras som placeholders i v0.2 istället för fyllt innehåll. Skäl: utan synlig SoldF-källa i UI och utan säker FM-publikation att luta sig på är felaktighetsrisken större än värdet av snabb leverans. Innehåll fylls på i v0.2.x när säkra referenser verifierats. TOS lämnad helt tills användaren preciserar.
 
+## v0.8.1 — 2026-05-12 — Drop var som helst i kolumnen
+- Drop på tom yta i en kolumn (under sista item) placerar nu kortet sist
+- Refaktor: ny `commitReorder()` delas mellan `dropOnItem` och `dropAtEnd`
+- Drop fungerar både för reorder inom kolumn och flytt mellan kolumner via tom yta
+- Ingen Worker- eller Cloudflare-action behövs
+
 ## v0.8 — 2026-05-12 — Reorder inom kolumn + FLIP-animation
 - Drop på item-nivå: drag kan landa `before` eller `after` ett specifikt item baserat på muspos
 - Visuell drop-indikator (accentfärgad streck) ovanför/under target-itemet
