@@ -3,6 +3,15 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.1 — 2026-05-13 — TCCC-flik (Tactical Combat Casualty Care)
+- Ny tab `tccc.html` med utbildningsmaterial för stridsskadad sjukvård
+- `tccc-data.js` med 3 faser (CUF/TFC/TACEVAC), 9 MARCH-PAWS-bokstäver med interventioner + pitfalls, 5 fördjupningsämnen (TQ-konvertering, krikotyrotomi, TBI, hypotermi, Casualty Card)
+- TCCC Guidelines 2026-PDF committad till `tccc/tccc-guidelines-2026.pdf` (304 KB)
+- Tydlig varning överst: "Inte för skarpt läge — använd för utbildning, träning, repetition"
+- Sök som auto-öppnar matchande sektioner
+- TCCC-tab tillagd i tab-nav-sub på 20 sidor
+- Service worker `CACHE` bump → `hv-20260513_tccc_v01`, `tccc.html` + `tccc-data.js` i FILES
+
 ## v0.1 — 2026-05-12 — Positionering & Mina data
 - Disclaimer i `footer.js` (sprids till alla 14+ formulär) + synlig på `index.html` + i README
 - README-sweep: "för Hemvärnet" → "riktat till hemvärnssoldater" där det kan antyda officiell anknytning

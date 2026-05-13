@@ -44,6 +44,8 @@ Verktyget kommer nu att fungera även när du har flygplansläge eller är i rad
 | **VÄDER** | Meteorologisk prognos (Hämtar SMHI-data vid täckning) |
 | **MINKARTA** | Minläggningskarta & minprotokoll (reglementstecken från stab-paketet 2026-04-26, UPK-numrering 001–999, UPK/SP-auto-inmätning, datalista, automatisk dela-med-karta, jumbo-symboler i PNG-export, övningsläge) |
 | **SENSORSKISS** | Sensoruppsättning & beslutsstödsplan (sensorer från Utbildningsanvisning sensorer Hemvärn 2025: CIM/PIR/KAMERA/UMRA + Larmmina + RPAS + poster + sensorområden, auto-numrering C/P/K/U/L, riktningslinjer, sensorprotokoll-export, mini-skola lökprincipen) |
+| **RAMSOR** | Minnesramsor & akronymer (METHANE, SAFE, C-ABCDE, MIST, 9-LINE MEDEVAC m.fl., roll-filtrerat) |
+| **TCCC** | Tactical Combat Casualty Care — utbildningsmaterial om stridsskadad sjukvård (faser CUF/TFC/TACEVAC, MARCH-PAWS, fördjupningar). Inte avsett för skarpt läge — för träning och repetition. |
 
 ## Teknisk Arkitektur
 Applikationen är byggd som en "Modern Vanilla" webbapplikation med ren HTML5, CSS3 och JavaScript (ES6). Den använder inga tunga bibliotek eller ramverk för att säkerställa extremt snabb uppstart och minimal batteriförbrukning på mobila enheter. Service Workers hanterar cachning för offline-bruk.

@@ -1,0 +1,569 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TCCC">
+<title>TCCC — Tactical Combat Casualty Care</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828; --danger-hover:#e53935; --warn:#ff9800;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; }
+  .container { max-width:760px; margin:0 auto; }
+
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:480px; margin-left:auto; margin-right:auto; }
+
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; transition:background 0.15s,color 0.15s; -webkit-tap-highlight-color:transparent; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; letter-spacing:0.05em; }
+
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  /* ── VARNING-ruta ── */
+  .warning-box {
+    background:#3a2a14; border:1px solid var(--warn); color:#ffd9a0;
+    border-radius:var(--radius); padding:14px 16px; margin-bottom:14px;
+    font-size:0.86rem; line-height:1.5;
+  }
+  .warning-box strong { color:#ffc266; display:block; margin-bottom:4px; font-size:0.92rem; letter-spacing:0.04em; }
+
+  /* ── Intro / Bakgrund ── */
+  .info-box {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px 16px; margin-bottom:14px;
+    font-size:0.86rem; line-height:1.55; color:var(--text-secondary);
+  }
+  .info-box p + p { margin-top:8px; }
+  .info-box .meta { font-size:0.72rem; color:var(--text-muted); font-style:italic; margin-top:8px; }
+
+  /* ── Sök ── */
+  .search-wrap { margin-bottom:14px; position:sticky; top:0; z-index:10; background:var(--bg-primary); padding:8px 0; }
+  .search-input { width:100%; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius); color:var(--text-primary); font-family:inherit; font-size:0.95rem; padding:12px 14px; outline:none; transition:border-color 0.15s; }
+  .search-input:focus { border-color:var(--border-focus); }
+  .search-input::placeholder { color:var(--text-muted); }
+
+  /* ── Sektioner ── */
+  .section-header {
+    font-size:0.85rem; color:var(--accent); letter-spacing:0.1em;
+    text-transform:uppercase; margin:22px 0 10px; font-weight:700;
+    padding-bottom:6px; border-bottom:1px solid var(--border);
+  }
+
+  /* ── Fas-kort ── */
+  .phase {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px 16px; margin-bottom:10px;
+  }
+  .phase-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:8px; }
+  .phase-acronym { font-size:1.2rem; font-weight:700; color:var(--accent); letter-spacing:0.06em; }
+  .phase-full { font-size:0.88rem; color:var(--text-primary); font-weight:600; }
+  .phase-sv { font-size:0.75rem; color:var(--text-muted); font-style:italic; }
+  .phase-desc { font-size:0.88rem; color:var(--text-secondary); line-height:1.55; margin-bottom:10px; }
+  .phase-focus { background:var(--bg-input); border-radius:var(--radius-sm); padding:10px 14px; }
+  .phase-focus-title { font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin-bottom:6px; font-weight:600; }
+  .phase-focus ul { list-style:none; padding:0; margin:0; }
+  .phase-focus li { font-size:0.85rem; color:var(--text-primary); padding:4px 0 4px 18px; position:relative; line-height:1.45; }
+  .phase-focus li::before { content:'›'; position:absolute; left:4px; color:var(--accent); font-weight:700; }
+
+  /* ── MARCH-PAWS-bokstav ── */
+  .march {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); margin-bottom:8px; overflow:hidden;
+  }
+  .march-head {
+    display:flex; align-items:center; gap:14px; padding:12px 16px;
+    cursor:pointer; background:var(--bg-card); border:none;
+    width:100%; text-align:left; color:inherit; font-family:inherit;
+  }
+  .march-head:hover { background:var(--bg-secondary); }
+  .march-letter {
+    background:var(--accent); color:#0d1f0d; font-size:1.3rem; font-weight:800;
+    width:38px; height:38px; border-radius:50%; display:flex;
+    align-items:center; justify-content:center; flex-shrink:0;
+    letter-spacing:0;
+  }
+  .march-title-wrap { flex:1; min-width:0; }
+  .march-title { font-size:0.98rem; color:var(--text-primary); font-weight:700; letter-spacing:0.03em; }
+  .march-sv { font-size:0.74rem; color:var(--text-muted); font-style:italic; margin-top:1px; }
+  .march-toggle { color:var(--text-muted); font-size:1rem; transition:transform 0.15s; flex-shrink:0; }
+  .march[open] .march-toggle { transform:rotate(180deg); }
+  .march-body { padding:0 16px 14px; border-top:1px solid var(--border); display:none; }
+  .march[open] .march-body { display:block; padding-top:12px; }
+  .march-desc { font-size:0.86rem; color:var(--text-secondary); line-height:1.55; margin-bottom:10px; }
+  .march-list-title { font-size:0.72rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; margin:10px 0 6px; font-weight:600; }
+  .march-list { list-style:none; padding:0; margin:0; background:var(--bg-input); border-radius:var(--radius-sm); padding:8px 12px; }
+  .march-list li { font-size:0.84rem; color:var(--text-primary); padding:5px 0 5px 18px; position:relative; line-height:1.45; }
+  .march-list li::before { content:'•'; position:absolute; left:4px; color:var(--accent); font-weight:700; }
+  .march-list.pitfalls li::before { content:'!'; color:var(--warn); }
+
+  /* ── Topic-kort ── */
+  .topic {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); margin-bottom:8px; overflow:hidden;
+  }
+  .topic-head {
+    display:flex; align-items:center; gap:10px; padding:12px 16px;
+    cursor:pointer; background:var(--bg-card); border:none;
+    width:100%; text-align:left; color:inherit; font-family:inherit;
+  }
+  .topic-head:hover { background:var(--bg-secondary); }
+  .topic-title { flex:1; font-size:0.95rem; color:var(--text-primary); font-weight:600; letter-spacing:0.03em; }
+  .topic-category { font-size:0.65rem; color:var(--text-muted); background:var(--bg-input); border:1px solid var(--border); padding:2px 8px; border-radius:10px; letter-spacing:0.04em; text-transform:uppercase; font-weight:500; flex-shrink:0; }
+  .topic-toggle { color:var(--text-muted); font-size:1rem; transition:transform 0.15s; flex-shrink:0; }
+  .topic[open] .topic-toggle { transform:rotate(180deg); }
+  .topic-body { padding:14px 16px; border-top:1px solid var(--border); display:none; }
+  .topic[open] .topic-body { display:block; }
+  .topic-content { font-size:0.86rem; color:var(--text-secondary); line-height:1.6; white-space:pre-wrap; }
+
+  /* ── Dokument-länkar ── */
+  .doc {
+    display:flex; align-items:center; gap:12px;
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:12px 16px; margin-bottom:8px;
+    text-decoration:none; color:inherit; transition:border-color 0.15s, background 0.15s;
+  }
+  .doc:hover { border-color:var(--border-focus); background:var(--bg-secondary); }
+  .doc-icon { font-size:1.4rem; flex-shrink:0; }
+  .doc-info { flex:1; min-width:0; }
+  .doc-title { font-size:0.92rem; font-weight:600; color:var(--text-primary); }
+  .doc-desc { font-size:0.78rem; color:var(--text-muted); margin-top:2px; line-height:1.4; }
+  .doc-type { font-size:0.62rem; color:var(--text-muted); background:var(--bg-input); border:1px solid var(--border); padding:2px 8px; border-radius:10px; letter-spacing:0.04em; text-transform:uppercase; font-weight:500; flex-shrink:0; }
+
+  .empty-state { text-align:center; color:var(--text-muted); font-size:0.88rem; padding:30px 16px; }
+  .hidden { display:none !important; }
+
+  /* Highlight i sökresultat */
+  mark { background:var(--accent); color:#0d1f0d; padding:0 2px; border-radius:2px; }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> TCCC kräver JavaScript. Aktivera och ladda om sidan.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>TCCC</h1>
+    <p>Tactical Combat Casualty Care</p>
+    <p class="disclaimer">Privatutvecklat utbildnings- och referensverktyg.<br>Inte fastställt av Försvarsmakten. TCCC är amerikansk doktrin.</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+    <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+    <a href="fors.html" class="tab-link">FORS</a>
+    <a href="pedars.html" class="tab-link">PEDARS</a>
+    <a href="postschema.html" class="tab-link">SCHEMA</a>
+    <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+    <a href="obo.html" class="tab-link">OBO</a>
+    <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+    <a href="vader.html" class="tab-link">VÄDER</a>
+    <a href="minkarta.html" class="tab-link">MINKARTA</a>
+    <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+    <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+    <a href="matt.html" class="tab-link">MÅTT</a>
+    <a href="ramsor.html" class="tab-link">RAMSOR</a>
+    <a href="tccc.html" class="tab-link active">TCCC</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <!-- Stor varning överst -->
+  <div class="warning-box" id="warningBox"></div>
+
+  <!-- Intro / bakgrund -->
+  <div class="info-box" id="introBox"></div>
+
+  <!-- Sök -->
+  <div class="search-wrap">
+    <input type="text" id="searchInput" class="search-input" placeholder="Sök bland faser, MARCH-PAWS, fördjupningar…" autocomplete="off" spellcheck="false">
+  </div>
+
+  <!-- Faser -->
+  <div id="phasesSection">
+    <div class="section-header">Faser av stridsskadad sjukvård</div>
+    <div id="phasesList"></div>
+  </div>
+
+  <!-- MARCH-PAWS -->
+  <div id="marchSection">
+    <div class="section-header">MARCH-PAWS — ramverket</div>
+    <div id="marchList"></div>
+  </div>
+
+  <!-- Fördjupningar -->
+  <div id="topicsSection">
+    <div class="section-header">Fördjupningar</div>
+    <div id="topicsList"></div>
+  </div>
+
+  <!-- Dokument & länkar -->
+  <div id="docsSection">
+    <div class="section-header">Dokument &amp; källor</div>
+    <div id="docsList"></div>
+  </div>
+
+  <!-- Tomtillstånd för sök -->
+  <div id="emptyState" class="empty-state hidden">Inga träffar.</div>
+</div>
+
+<script src="tccc-data.js"></script>
+<script>
+(function () {
+  const data = window.TCCC_DATA || { intro:{}, phases:[], marchpaws:[], topics:[], docs:[] };
+
+  const $warning = document.getElementById('warningBox');
+  const $intro = document.getElementById('introBox');
+  const $phasesList = document.getElementById('phasesList');
+  const $marchList = document.getElementById('marchList');
+  const $topicsList = document.getElementById('topicsList');
+  const $docsList = document.getElementById('docsList');
+  const $emptyState = document.getElementById('emptyState');
+  const $searchInput = document.getElementById('searchInput');
+
+  // ── Intro & varning ──────────────────────────────────────────────────
+  function renderIntro() {
+    $warning.innerHTML = '';
+    const strong = document.createElement('strong');
+    strong.textContent = 'OBS — ej för skarpt läge';
+    $warning.appendChild(strong);
+    const p = document.createElement('div');
+    p.textContent = data.intro.warning || '';
+    $warning.appendChild(p);
+
+    $intro.innerHTML = '';
+    const p1 = document.createElement('p');
+    p1.textContent = data.intro.background || '';
+    $intro.appendChild(p1);
+    if (data.intro.disclaimer) {
+      const p2 = document.createElement('p');
+      p2.className = 'meta';
+      p2.textContent = data.intro.disclaimer;
+      $intro.appendChild(p2);
+    }
+  }
+
+  // ── Faser ────────────────────────────────────────────────────────────
+  function phaseEl(p) {
+    const div = document.createElement('div');
+    div.className = 'phase';
+    div.dataset.searchable = '1';
+
+    const head = document.createElement('div');
+    head.className = 'phase-head';
+    const ac = document.createElement('div');
+    ac.className = 'phase-acronym';
+    ac.textContent = p.name;
+    head.appendChild(ac);
+    const full = document.createElement('div');
+    full.className = 'phase-full';
+    full.textContent = p.full;
+    head.appendChild(full);
+    if (p.sv) {
+      const sv = document.createElement('div');
+      sv.className = 'phase-sv';
+      sv.textContent = '— ' + p.sv;
+      head.appendChild(sv);
+    }
+    div.appendChild(head);
+
+    const desc = document.createElement('div');
+    desc.className = 'phase-desc';
+    desc.textContent = p.desc;
+    div.appendChild(desc);
+
+    if (Array.isArray(p.focus) && p.focus.length) {
+      const fb = document.createElement('div');
+      fb.className = 'phase-focus';
+      const ft = document.createElement('div');
+      ft.className = 'phase-focus-title';
+      ft.textContent = 'Fokus i denna fas';
+      fb.appendChild(ft);
+      const ul = document.createElement('ul');
+      p.focus.forEach(f => {
+        const li = document.createElement('li');
+        li.textContent = f;
+        ul.appendChild(li);
+      });
+      fb.appendChild(ul);
+      div.appendChild(fb);
+    }
+
+    // Hela texten lagras som searchHaystack på root-elementet för enkel
+    // filtrering vid sök.
+    div.dataset.haystack = [p.name, p.full, p.sv || '', p.desc, (p.focus || []).join(' ')]
+      .join(' ').toLowerCase();
+    return div;
+  }
+
+  // ── MARCH-PAWS ───────────────────────────────────────────────────────
+  function marchEl(m, idx) {
+    const wrap = document.createElement('div');
+    wrap.className = 'march';
+    wrap.dataset.searchable = '1';
+
+    const head = document.createElement('button');
+    head.className = 'march-head';
+    head.type = 'button';
+    const letter = document.createElement('div');
+    letter.className = 'march-letter';
+    letter.textContent = m.letter;
+    head.appendChild(letter);
+    const tw = document.createElement('div');
+    tw.className = 'march-title-wrap';
+    const t = document.createElement('div');
+    t.className = 'march-title';
+    t.textContent = m.title;
+    tw.appendChild(t);
+    if (m.sv) {
+      const sv = document.createElement('div');
+      sv.className = 'march-sv';
+      sv.textContent = m.sv;
+      tw.appendChild(sv);
+    }
+    head.appendChild(tw);
+    const tog = document.createElement('div');
+    tog.className = 'march-toggle';
+    tog.textContent = '▾';
+    head.appendChild(tog);
+    head.addEventListener('click', () => {
+      const isOpen = wrap.hasAttribute('open');
+      if (isOpen) wrap.removeAttribute('open');
+      else wrap.setAttribute('open', '');
+    });
+    wrap.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'march-body';
+    if (m.desc) {
+      const d = document.createElement('div');
+      d.className = 'march-desc';
+      d.textContent = m.desc;
+      body.appendChild(d);
+    }
+    if (Array.isArray(m.interventions) && m.interventions.length) {
+      const lt = document.createElement('div');
+      lt.className = 'march-list-title';
+      lt.textContent = 'Interventioner';
+      body.appendChild(lt);
+      const ul = document.createElement('ul');
+      ul.className = 'march-list';
+      m.interventions.forEach(it => {
+        const li = document.createElement('li');
+        li.textContent = it;
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    }
+    if (Array.isArray(m.pitfalls) && m.pitfalls.length) {
+      const lt = document.createElement('div');
+      lt.className = 'march-list-title';
+      lt.textContent = 'Att vara observant på';
+      body.appendChild(lt);
+      const ul = document.createElement('ul');
+      ul.className = 'march-list pitfalls';
+      m.pitfalls.forEach(it => {
+        const li = document.createElement('li');
+        li.textContent = it;
+        ul.appendChild(li);
+      });
+      body.appendChild(ul);
+    }
+    wrap.appendChild(body);
+
+    wrap.dataset.haystack = [
+      m.letter, m.title, m.sv || '', m.desc,
+      (m.interventions || []).join(' '),
+      (m.pitfalls || []).join(' ')
+    ].join(' ').toLowerCase();
+
+    return wrap;
+  }
+
+  // ── Topics ───────────────────────────────────────────────────────────
+  function topicEl(t) {
+    const wrap = document.createElement('div');
+    wrap.className = 'topic';
+    wrap.dataset.searchable = '1';
+
+    const head = document.createElement('button');
+    head.className = 'topic-head';
+    head.type = 'button';
+    const title = document.createElement('div');
+    title.className = 'topic-title';
+    title.textContent = t.title;
+    head.appendChild(title);
+    if (t.category) {
+      const cat = document.createElement('div');
+      cat.className = 'topic-category';
+      cat.textContent = t.category;
+      head.appendChild(cat);
+    }
+    const tog = document.createElement('div');
+    tog.className = 'topic-toggle';
+    tog.textContent = '▾';
+    head.appendChild(tog);
+    head.addEventListener('click', () => {
+      const isOpen = wrap.hasAttribute('open');
+      if (isOpen) wrap.removeAttribute('open');
+      else wrap.setAttribute('open', '');
+    });
+    wrap.appendChild(head);
+
+    const body = document.createElement('div');
+    body.className = 'topic-body';
+    const content = document.createElement('div');
+    content.className = 'topic-content';
+    content.textContent = t.content;
+    body.appendChild(content);
+    wrap.appendChild(body);
+
+    wrap.dataset.haystack = [t.title, t.category || '', t.content]
+      .join(' ').toLowerCase();
+    return wrap;
+  }
+
+  // ── Dokument ─────────────────────────────────────────────────────────
+  function docEl(d) {
+    const a = document.createElement('a');
+    a.className = 'doc';
+    a.href = d.url;
+    if (d.type === 'extern') {
+      a.target = '_blank';
+      a.rel = 'noopener noreferrer';
+    } else if (d.type === 'pdf') {
+      a.target = '_blank';
+      a.rel = 'noopener';
+    }
+    a.dataset.searchable = '1';
+
+    const icon = document.createElement('div');
+    icon.className = 'doc-icon';
+    icon.textContent = d.type === 'pdf' ? '📄' : (d.type === 'extern' ? '🌐' : '🔗');
+    a.appendChild(icon);
+
+    const info = document.createElement('div');
+    info.className = 'doc-info';
+    const t = document.createElement('div');
+    t.className = 'doc-title';
+    t.textContent = d.title;
+    info.appendChild(t);
+    if (d.desc) {
+      const ds = document.createElement('div');
+      ds.className = 'doc-desc';
+      ds.textContent = d.desc;
+      info.appendChild(ds);
+    }
+    a.appendChild(info);
+
+    const type = document.createElement('div');
+    type.className = 'doc-type';
+    type.textContent = d.type || '';
+    a.appendChild(type);
+
+    a.dataset.haystack = [d.title, d.desc || '', d.type || ''].join(' ').toLowerCase();
+    return a;
+  }
+
+  // ── Sök ──────────────────────────────────────────────────────────────
+  function applyFilter(q) {
+    const term = (q || '').trim().toLowerCase();
+    const all = document.querySelectorAll('[data-searchable="1"]');
+    let visible = 0;
+    all.forEach(el => {
+      if (!term) {
+        el.classList.remove('hidden');
+        visible++;
+        return;
+      }
+      const hay = el.dataset.haystack || '';
+      if (hay.includes(term)) {
+        el.classList.remove('hidden');
+        visible++;
+        // Auto-öppna sektioner med träff
+        if (el.classList.contains('march') || el.classList.contains('topic')) {
+          el.setAttribute('open', '');
+        }
+      } else {
+        el.classList.add('hidden');
+      }
+    });
+
+    // Dölj sektionsrubriker om alla element under är dolda
+    document.querySelectorAll('[id$="Section"]').forEach(sec => {
+      const visibleInSec = sec.querySelectorAll('[data-searchable="1"]:not(.hidden)');
+      const header = sec.querySelector('.section-header');
+      if (header) {
+        if (visibleInSec.length === 0 && term) header.classList.add('hidden');
+        else header.classList.remove('hidden');
+      }
+    });
+
+    $emptyState.classList.toggle('hidden', !term || visible > 0);
+  }
+
+  // ── Render ───────────────────────────────────────────────────────────
+  function render() {
+    renderIntro();
+    $phasesList.innerHTML = '';
+    (data.phases || []).forEach(p => $phasesList.appendChild(phaseEl(p)));
+    $marchList.innerHTML = '';
+    (data.marchpaws || []).forEach((m, i) => $marchList.appendChild(marchEl(m, i)));
+    $topicsList.innerHTML = '';
+    (data.topics || []).forEach(t => $topicsList.appendChild(topicEl(t)));
+    $docsList.innerHTML = '';
+    (data.docs || []).forEach(d => $docsList.appendChild(docEl(d)));
+  }
+
+  $searchInput.addEventListener('input', e => applyFilter(e.target.value));
+  render();
+
+  // Deep-link: tccc.html#march-A öppnar och scrollar
+  if (location.hash) {
+    const id = location.hash.replace('#', '');
+    const el = document.getElementById(id);
+    if (el) {
+      el.setAttribute('open', '');
+      setTimeout(() => el.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+    }
+  }
+})();
+</script>
+
+<script src="version.js"></script>
+<script src="footer.js"></script>
+<script src="pwa.js"></script>
+</body>
+</html>

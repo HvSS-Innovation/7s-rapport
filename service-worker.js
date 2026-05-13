@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260512_161809';
+const CACHE = 'hv-20260513_tccc_v01';
 // Separat cache för offline-tiles. FÅR INTE rensas av activate-cleanup
 // nedan — användaren har själv laddat ner data hit och förväntar sig att
 // den överlever en deploy. Versionera bara om format ändras.
@@ -58,6 +58,8 @@ const FILES = [
   './data.html',
   './ramsor.html',
   './ramsor-data.js',
+  './tccc.html',
+  './tccc-data.js',
   './roadmap.html',
   './roadmap-data.js',
   './ortnamn.json',
