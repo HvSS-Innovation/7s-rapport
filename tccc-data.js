@@ -32,7 +32,10 @@ window.TCCC_DATA = {
     warning: 'Detta är ett utbildnings- och referensverktyg. Det är ' +
              'INTE en checklista att klicka fram i en skarp situation — ' +
              'då finns ingen tid att scrolla. Läs, träna, repetera. ' +
-             'Under skarpt läge gäller utbildad reflex, inte mobilen.',
+             'Under skarpt läge gäller utbildad reflex, inte mobilen.\n\n' +
+             'Innehållet är under uppbyggnad (BETA) och bör gås igenom ' +
+             'tillsammans med en utbildad instruktör innan det används ' +
+             'som studiematerial. Använd det inte som ensam källa.',
     background: 'TCCC (Tactical Combat Casualty Care) är ett amerikanskt ' +
                 'ramverk utvecklat av Committee on TCCC under Joint Trauma ' +
                 'System. Det är världsstandard inom prehospital strids- ' +
