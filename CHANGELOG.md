@@ -3,6 +3,16 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.1 — 2026-05-15 — Fyra nya decks på flashcards-engine: RA763, APP-6, FÖRKORT, FG
+
+- **RA763** (`ra763.html`): 35 kort + 20 provfrågor — vredinställningar (SQL/VOL/RIT/MIC/RFPWR), menyer (MENY5/MENY6), uppstart-/bryt-sekvens, swALE-konfiguration (TX TUNE 500 ms, WAIT 2000 ms, ALE DETECTION etc.).
+- **APP-6** (`app6.html`): 62 kort + 20 provfrågor — symbolens delar, affiliation/färg, ramformer per battle dimension, status (heldragen/streckad), förbandsstorlek (Ø/●●●/X/XX…), transportsätt, vanliga ikoner (luft/mark), text-placering. Komplement till befintliga MINKARTA.
+- **FÖRKORT** (`forkort.html`): 147 kort + 25 provfrågor — Handbok Armé Begrepp 2016 i 8 kategorier (Befäl & rang, Förband & truppslag, Vapen & ammunition, Fordon & transport, Ledning & rapportering, Sjukvård & skydd, Samband & signalskydd, Stridsmiljö & taktik, Internationella & engelska). Urval av ~120 vanliga + tilläggsförkortningar.
+- **FG** (`fg.html`): 41 kort + 25 provfrågor — farligt gods enligt ADR-S: klasser 1–9 + 2.1/2.2/2.3/4.1/4.2/4.3/5.1/5.2/6.1/6.2/7, åtgärder vid olycka, utrustningskrav på transportenheten, drivmedelsdunk (60 L-gränsen, A/B/C-krav, UN 1202/1203, Etikett nr 3), ansvarskoder A–F, godsdeklaration.
+- **HTML-mall:** alla fyra sidor genererade från `sigskydd.html` via sed — identiska Kort-/Prov-/Referens-flikar, samma engine.
+- **Tab-nav:** ny 5-länks-grupp (SIGSKYDD → RA763 → APP-6 → FÖRKORT → FG) tillagd på 27 sidor.
+- Service worker auto-bumpas.
+
 ## v0.3.0 — 2026-05-15 — SIGSKYDD: minneskort + repetitionsprov (FRO Signalskydd v1.0)
 
 - **Ny sida:** `sigskydd.html` med tre lägen — **Kort** (bläddra/vänd/markera kunde/kunde inte; missade kort köas in igen i samma session), **Prov** (20 slumpade flervalsfrågor, godkänt ≥ 16, slumpad svarsordning, resultat med fellista), **Referens** (alla kort listade per kategori för uppslag).

@@ -27,8 +27,8 @@
 <link rel="icon" type="image/svg+xml" href="icon.svg">
 <link rel="alternate icon" href="favicon.ico">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="SIGSKYDD">
-<title>SIGSKYDD — Minneskort &amp; prov</title>
+<meta name="apple-mobile-web-app-title" content="FÖRKORT">
+<title>FÖRKORT — Minneskort &amp; prov</title>
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="shared/theme-toggle.css">
 <script src="shared/theme-toggle.js" defer></script>
@@ -144,8 +144,8 @@
 
 <div class="container">
   <header>
-    <h1>SIGSKYDD</h1>
-    <p>Minneskort &amp; repetitionsprov</p>
+    <h1>FÖRKORT</h1>
+    <p>Militära förkortningar</p>
     <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
   </header>
 
@@ -171,10 +171,10 @@
     <a href="matt.html" class="tab-link">MÅTT</a>
     <a href="ramsor.html" class="tab-link">RAMSOR</a>
     <a href="tccc.html" class="tab-link">TCCC</a>
-    <a href="sigskydd.html" class="tab-link active">SIGSKYDD</a>
+    <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
     <a href="ra763.html" class="tab-link">RA763</a>
     <a href="app6.html" class="tab-link">APP-6</a>
-    <a href="forkort.html" class="tab-link">FÖRKORT</a>
+    <a href="forkort.html" class="tab-link active">FÖRKORT</a>
     <a href="fg.html" class="tab-link">FG</a>
   </nav>
 
@@ -189,11 +189,11 @@
   <main id="modeContent"></main>
 </div>
 
-<script src="sigskydd-data.js"></script>
+<script src="forkort-data.js"></script>
 <script src="flashcards-engine.js"></script>
 <script>
 (function () {
-  const data = window.SIGSKYDD_DATA;
+  const data = window.FORKORT_DATA;
   const $content = document.getElementById('modeContent');
   const $modeBtns = document.querySelectorAll('.mode-btn');
   let activeHandle = null;
@@ -222,7 +222,7 @@
       $content.innerHTML = '';
       const host = document.createElement('div');
       $content.appendChild(host);
-      activeHandle = Flashcards.mountBrowse(host, data.cards, { storageKey: 'sigskydd_cards' });
+      activeHandle = Flashcards.mountBrowse(host, data.cards, { storageKey: 'forkort_cards' });
     });
     $content.appendChild(start);
   }
@@ -241,7 +241,7 @@
       $content.innerHTML = '';
       const host = document.createElement('div');
       $content.appendChild(host);
-      activeHandle = Flashcards.mountExam(host, data.exam, { storageKey: 'sigskydd_exam', count: count, passAt: passAt });
+      activeHandle = Flashcards.mountExam(host, data.exam, { storageKey: 'forkort_exam', count: count, passAt: passAt });
     });
     $content.appendChild(start);
   }
