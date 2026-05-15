@@ -54,6 +54,8 @@ const FILES = [
   './vendor/pmtiles/pmtiles.esm.js',
   './vendor/protomaps/protomaps-leaflet.esm.js',
   './footer.js',
+  './shared/theme-toggle.css',
+  './shared/theme-toggle.js',
   './opsec.html',
   './data.html',
   './ramsor.html',

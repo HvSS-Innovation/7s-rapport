@@ -7,6 +7,20 @@
 <meta name="referrer" content="strict-origin">
 <meta name="google" content="notranslate">
 <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<script>
+    // Theme — sätt FÖRE body renderas, undviker FOUC. Synkar med SKYTTEBOK via samma localStorage-nyckel.
+    (function(){
+        try {
+            var stored = localStorage.getItem('skyttebok_settings_lightmode');
+            var useLight;
+            if (stored === 'on') useLight = true;
+            else if (stored === 'off') useLight = false;
+            else useLight = window.matchMedia &&
+                window.matchMedia('(prefers-color-scheme: light)').matches;
+            if (useLight) document.documentElement.setAttribute('data-theme', 'light');
+        } catch (_) {}
+    })();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0d1f0d">
 <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
@@ -18,6 +32,8 @@
 <meta name="apple-mobile-web-app-title" content="HJÄLM 24">
 <title>HJÄLM 24 – Storleksguide & utprovning</title>
 <link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared/theme-toggle.css">
+<script src="shared/theme-toggle.js" defer></script>
 <link rel="stylesheet" href="fonts/inter.css">
 <style>
   :root {

@@ -3,6 +3,13 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.2.2 — 2026-05-15 — Ljust/mörkt tema på 14 tab-sidor
+- Theme-toggle (sun/moon FAB, top-right) på FORS, PEDARS, POSTSCHEMA, EOBUSARE, OBO, RASSOIKA, VÄDER, MINKARTA, SENSORSKISS, MÅTT, RAMSOR, TCCC, OBSLÖSA, HJÄLM 24.
+- Delade `shared/theme-toggle.css` (light-mode-overrides + FAB-styling) och `shared/theme-toggle.js` (auto-mount + click-handler).
+- Inline FOUC-init i `<head>` på alla 14 sidor; samma `skyttebok_settings_lightmode` localStorage-nyckel → val följer mellan tabs.
+- Exkluderade per begäran: 7S (index), WHAT, SCRIM, WEFT, A–H. SKYTTEBOK + SKYTTEBOK-INFO hade redan toggle.
+- Service worker `CACHE` bump → `hv-20260515_theme_toggle_v01`, nya shared-filer i FILES.
+
 ## v0.2.1 — 2026-05-15 — Ramsor: AT-MIST + 4B (issue #31, #32)
 - MIST → AT-MIST: Age och Time of injury tillagt framför MIST-bokstäverna (det är AT-MIST som lärs ut på TOS/TCCC idag). `id` ändrat `mist` → `at-mist`, usage uppdaterad.
 - Ny ramsa **4B** under Sjv: Bröstkorg / Buk / Bäcken / Ben — skadesvep efter inre blödning som del av lilla c i C-ABCDE (TCCC-praxis).

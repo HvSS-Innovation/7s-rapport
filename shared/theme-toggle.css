@@ -1,0 +1,59 @@
+/* shared/theme-toggle.css — gemensam ljust/mörkt-tema-toggle för tab-sidor.
+   Återanvänder samma color-token-namn som tab-sidornas mörka tema. */
+
+html[data-theme="light"] {
+    color-scheme: light;
+    --bg-primary:#ffffff;
+    --bg-secondary:#f3f6f3;
+    --bg-card:#ffffff;
+    --bg-input:#fafbfa;
+    --border:#c8d4c8;
+    --border-focus:#2e7d32;
+    --text-primary:#1a1a1a;
+    --text-secondary:#33523a;
+    --text-muted:#5e6f5e;
+    --accent:#2e7d32;
+    --accent-hover:#1b5e20;
+    --accent-dim:#e3f0e4;
+    --danger:#b71c1c;
+    --danger-hover:#7f0000;
+}
+html[data-theme="light"] input[type="date"],
+html[data-theme="light"] input[type="time"],
+html[data-theme="light"] input[type="number"],
+html[data-theme="light"] input[type="text"],
+html[data-theme="light"] textarea,
+html[data-theme="light"] select { color-scheme: light; }
+
+.theme-toggle-fab {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 10000;
+    background: var(--bg-secondary);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    border-radius: 999px;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-family: inherit;
+    -webkit-tap-highlight-color: transparent;
+    transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.theme-toggle-fab:hover {
+    background: var(--bg-card);
+    color: var(--accent);
+    border-color: var(--accent);
+}
+.theme-toggle-fab:active { transform: scale(0.95); }
+.theme-toggle-fab svg { width: 20px; height: 20px; display: block; }
+
+@media print {
+    .theme-toggle-fab { display: none !important; }
+}
