@@ -3,6 +3,15 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.3 — 2026-05-15 — Tab-nav uppdelad i Fält + Övning
+
+- **Tab-nav-sub** tidigare 23-länkar i ett block — nu uppdelad i två logiska rader:
+  - **Fält** (14): MINKARTA, SENSORSKISS, OBSLÖSA, FORS, PEDARS, EOBUSARE, OBO, RASSOIKA, VÄDER, MÅTT, SCHEMA, SÄKR, PATL, UN — operativa fältverktyg.
+  - **Övning** (9): SKYTTE, RAMSOR, TCCC, SIGSKYDD, RA763, APP-6, SYMBOL, FÖRKORT, FG — utbildnings-/repetitionsverktyg.
+- Genomfört via Python-script på 27 sidor (skip: roadmap, opsec, tipsa, data, skyttebok-info, tavla — sidor utan tab-nav-sub).
+- Ingen synlig label per grupp (Joel-minimal stil) — bara visuell margin-separator.
+- Service worker auto-bumpas.
+
 ## v0.3.2 — 2026-05-15 — Fyra interaktiva verktyg: SYMBOL, UN, SÄKR, PATL
 
 - **SYMBOL** (`symbol.html`): APP-6-byggare — välj affiliation × battle dimension × ikon × förbandsstorlek × status, live SVG-rendering, kopiera/exportera SVG. Mystery-läge: slumpad symbol → gissa affiliation + battle dimension. Komplement till APP-6-deck.
