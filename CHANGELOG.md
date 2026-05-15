@@ -3,6 +3,15 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.0 — 2026-05-15 — SIGSKYDD: minneskort + repetitionsprov (FRO Signalskydd v1.0)
+
+- **Ny sida:** `sigskydd.html` med tre lägen — **Kort** (bläddra/vänd/markera kunde/kunde inte; missade kort köas in igen i samma session), **Prov** (20 slumpade flervalsfrågor, godkänt ≥ 16, slumpad svarsordning, resultat med fellista), **Referens** (alla kort listade per kategori för uppslag).
+- **Återanvändbar engine:** `flashcards-engine.js` (mountBrowse + mountExam, ren vanilla, ingen build) — nästa deck (Förkortningar, RA-rattvärden, FG-prov) använder samma engine via egen data-fil.
+- **Datakälla:** `sigskydd-data.js` — 30 kort + 20 provfrågor täcker skyddsnivåer (TS/S/C/R/TRF), förvaring, hantering, kortfärger (TAK/TEID/NBK/CEK/DBK), incidenter, förstöring (papper/eldning/CD), delgivning, publikationer (FFS 2021:1, SMK Nycklar, H TST Grunder).
+- **UX-defaults:** ingen fanfar, ingen konfetti, "bästa"-not osynligt i localStorage, tangentbordsstöd (Space=vänd, J/F=kunde/kunde inte) — passar 7S-Rapport-stilen.
+- **Navigation:** SIGSKYDD-flik tillagd i tab-nav-sub på 21 sidor.
+- Service worker auto-bumpas.
+
 ## v0.2.5 — 2026-05-15 — Ramsor: kategorier (subrubriker) + 16 nya ramsor (issue #39–49, #55–59)
 - **Struktur:** ramsor grupperas nu under kategori-rubriker (subrubriker) i listan. 11 kategorier definieras i `categories[]` i `ramsor-data.js`; ordningen där styr renderingsordningen. Rendering grupperar både i roll-vy och i "Övriga ramsor"-expander. Sökresultat behåller samma gruppering — kategorier vars sektion blir tom döljs automatiskt.
 - **Ny roll:** "Soldat" tillagd som basroll (sex roller totalt: Soldat, Sjv, Sig, GrpC, PlutC, Förare). Stridsteknik-ramsor riktade till soldatnivå har nu naturlig hemvist.

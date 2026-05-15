@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<script>
+    (function(){
+        try {
+            var stored = localStorage.getItem('skyttebok_settings_lightmode');
+            var useLight;
+            if (stored === 'on') useLight = true;
+            else if (stored === 'off') useLight = false;
+            else useLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+            if (useLight) document.documentElement.setAttribute('data-theme', 'light');
+        } catch (_) {}
+    })();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SIGSKYDD">
+<title>SIGSKYDD — Minneskort &amp; prov</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared/theme-toggle.css">
+<script src="shared/theme-toggle.js" defer></script>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828; --danger-hover:#e53935;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; }
+  .container { max-width:680px; margin:0 auto; }
+
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:420px; margin-left:auto; margin-right:auto; }
+
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; transition:background 0.15s,color 0.15s; -webkit-tap-highlight-color:transparent; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; letter-spacing:0.05em; }
+
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  /* ── Mode-väljare (KORT/PROV/REFERENS) ── */
+  .mode-nav { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-bottom:14px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .mode-btn { background:transparent; border:none; color:var(--text-muted); font-size:0.78rem; font-weight:700; letter-spacing:0.06em; padding:11px 4px; border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; text-transform:uppercase; min-height:44px; transition:background 0.15s,color 0.15s; }
+  .mode-btn:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .mode-btn.active { background:var(--accent-dim); color:var(--accent); }
+
+  /* ── Flashcards-engine styling (.fc-*) ── */
+  .fc-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:14px; }
+  .fc-progress { display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; gap:10px; }
+  .fc-prog-counter { font-size:0.78rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; font-weight:600; }
+  .fc-prog-cat { font-size:0.7rem; color:var(--accent); background:var(--accent-dim); border:1px solid var(--accent-dim); padding:3px 10px; border-radius:10px; letter-spacing:0.06em; text-transform:uppercase; font-weight:600; }
+
+  .fc-card { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius); padding:30px 20px; min-height:200px; display:flex; align-items:center; justify-content:center; cursor:pointer; user-select:none; transition:border-color 0.15s; outline:none; }
+  .fc-card:hover { border-color:var(--border-focus); }
+  .fc-card:focus-visible { border-color:var(--accent); }
+  .fc-card.flipped { background:var(--bg-secondary); border-color:var(--accent-dim); }
+
+  .fc-front { display:flex; flex-direction:column; align-items:center; gap:12px; width:100%; }
+  .fc-front-text { font-size:1.3rem; font-weight:700; color:var(--text-primary); letter-spacing:0.04em; text-align:center; line-height:1.4; }
+  .fc-hint { font-size:0.78rem; color:var(--text-muted); text-align:center; }
+  .fc-tap-hint { font-size:0.7rem; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; opacity:0.55; margin-top:6px; }
+
+  .fc-back { width:100%; }
+  .fc-back-text { font-size:0.98rem; color:var(--text-primary); line-height:1.6; white-space:pre-wrap; }
+
+  .fc-actions { display:flex; gap:8px; margin-top:14px; }
+  .fc-btn { flex:1; padding:13px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:0.9rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; min-height:48px; transition:background 0.15s,border-color 0.15s; }
+  .fc-btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .fc-btn-primary { background:var(--accent); color:#0d1f0d; border-color:var(--accent); }
+  .fc-btn-primary:hover { background:var(--accent-hover); border-color:var(--accent-hover); }
+  .fc-btn-secondary { background:var(--bg-input); }
+  .fc-btn-yes { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+  .fc-btn-yes:hover { background:var(--accent); color:#0d1f0d; }
+  .fc-btn-no { background:var(--bg-input); border-color:var(--border); color:var(--text-secondary); }
+  .fc-btn-no:hover { border-color:var(--danger); color:var(--danger); }
+
+  /* Prov */
+  .fc-q { font-size:1.05rem; color:var(--text-primary); line-height:1.5; padding:6px 4px 14px; font-weight:500; }
+  .fc-options { display:flex; flex-direction:column; gap:8px; }
+  .fc-option { text-align:left; padding:13px 16px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; font-size:0.92rem; line-height:1.4; min-height:48px; transition:background 0.15s,border-color 0.15s; }
+  .fc-option:hover:not(:disabled) { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .fc-option:disabled { cursor:default; opacity:0.85; }
+  .fc-option.correct { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+  .fc-option.wrong { background:rgba(198,40,40,0.15); border-color:var(--danger); color:var(--danger); }
+
+  /* Resultat */
+  .fc-done-head { font-size:1.3rem; font-weight:700; color:var(--accent); letter-spacing:0.1em; text-transform:uppercase; text-align:center; padding:10px 0 16px; }
+  .fc-done-head.fail { color:var(--danger); }
+  .fc-stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:8px; margin-bottom:14px; }
+  .fc-stat { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px 10px; text-align:center; }
+  .fc-stat-val { font-size:1.4rem; font-weight:700; color:var(--text-primary); letter-spacing:0.02em; }
+  .fc-stat-label { font-size:0.7rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; margin-top:4px; }
+
+  .fc-wrong-head { font-size:0.8rem; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin:14px 0 8px; font-weight:600; }
+  .fc-wrong-list { display:flex; flex-direction:column; gap:8px; margin-bottom:14px; max-height:280px; overflow-y:auto; }
+  .fc-wrong-row { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; }
+  .fc-wrong-q { font-size:0.88rem; color:var(--text-primary); line-height:1.45; margin-bottom:6px; }
+  .fc-wrong-ans { display:flex; flex-direction:column; gap:2px; font-size:0.8rem; }
+  .fc-wrong-picked { color:var(--danger); }
+  .fc-wrong-right { color:var(--accent); }
+
+  /* Referens-vy */
+  .ref-cat { font-size:0.72rem; color:var(--accent); letter-spacing:0.1em; text-transform:uppercase; margin:14px 0 6px; font-weight:600; padding:6px 10px; background:var(--bg-secondary); border-left:3px solid var(--accent); border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
+  .ref-cat:first-child { margin-top:6px; }
+  .ref-row { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; margin-bottom:8px; }
+  .ref-front { font-size:0.95rem; font-weight:700; color:var(--accent); letter-spacing:0.03em; margin-bottom:6px; }
+  .ref-back { font-size:0.88rem; color:var(--text-secondary); line-height:1.55; white-space:pre-wrap; }
+
+  .start-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:18px 16px; margin-bottom:14px; text-align:center; }
+  .start-card h2 { font-size:0.95rem; color:var(--text-secondary); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:8px; font-weight:600; }
+  .start-card p { font-size:0.85rem; color:var(--text-muted); line-height:1.5; margin-bottom:14px; }
+  .start-btn { background:var(--accent); color:#0d1f0d; border:1px solid var(--accent); padding:13px 28px; border-radius:var(--radius-sm); font-family:inherit; font-size:0.92rem; font-weight:700; letter-spacing:0.06em; text-transform:uppercase; cursor:pointer; min-height:48px; transition:background 0.15s; }
+  .start-btn:hover { background:var(--accent-hover); }
+
+  .keys-hint { font-size:0.7rem; color:var(--text-muted); text-align:center; margin-top:10px; opacity:0.7; letter-spacing:0.04em; }
+  @media (max-width:480px) { .keys-hint { display:none; } }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> SIGSKYDD kräver JavaScript. Aktivera och ladda om sidan.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>SIGSKYDD</h1>
+    <p>Minneskort &amp; repetitionsprov</p>
+    <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+    <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+    <a href="fors.html" class="tab-link">FORS</a>
+    <a href="pedars.html" class="tab-link">PEDARS</a>
+    <a href="postschema.html" class="tab-link">SCHEMA</a>
+    <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+    <a href="obo.html" class="tab-link">OBO</a>
+    <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+    <a href="vader.html" class="tab-link">VÄDER</a>
+    <a href="minkarta.html" class="tab-link">MINKARTA</a>
+    <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+    <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+    <a href="matt.html" class="tab-link">MÅTT</a>
+    <a href="ramsor.html" class="tab-link">RAMSOR</a>
+    <a href="tccc.html" class="tab-link">TCCC</a>
+    <a href="sigskydd.html" class="tab-link active">SIGSKYDD</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <div class="mode-nav" role="tablist">
+    <button class="mode-btn active" data-mode="cards" type="button" role="tab">Kort</button>
+    <button class="mode-btn" data-mode="exam" type="button" role="tab">Prov</button>
+    <button class="mode-btn" data-mode="ref" type="button" role="tab">Referens</button>
+  </div>
+
+  <main id="modeContent"></main>
+</div>
+
+<script src="sigskydd-data.js"></script>
+<script src="flashcards-engine.js"></script>
+<script>
+(function () {
+  const data = window.SIGSKYDD_DATA;
+  const $content = document.getElementById('modeContent');
+  const $modeBtns = document.querySelectorAll('.mode-btn');
+  let activeHandle = null;
+
+  function setMode(mode) {
+    $modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    if (activeHandle && activeHandle.destroy) { try { activeHandle.destroy(); } catch (_) {} }
+    activeHandle = null;
+    $content.innerHTML = '';
+
+    if (mode === 'cards') renderStartCards();
+    else if (mode === 'exam') renderStartExam();
+    else if (mode === 'ref') renderRef();
+  }
+
+  function renderStartCards() {
+    const start = document.createElement('div');
+    start.className = 'start-card';
+    start.innerHTML = `
+      <h2>Bläddra ${data.cards.length} kort</h2>
+      <p>Vänd kortet, markera om du kunde svaret. Missade kort dyker upp igen innan sessionen är klar.</p>
+      <button class="start-btn" type="button">Starta</button>
+      <div class="keys-hint">Mellanslag = vänd · J = kunde · F = kunde inte</div>
+    `;
+    start.querySelector('button').addEventListener('click', () => {
+      $content.innerHTML = '';
+      const host = document.createElement('div');
+      $content.appendChild(host);
+      activeHandle = Flashcards.mountBrowse(host, data.cards, { storageKey: 'sigskydd_cards' });
+    });
+    $content.appendChild(start);
+  }
+
+  function renderStartExam() {
+    const start = document.createElement('div');
+    start.className = 'start-card';
+    const count = Math.min(20, data.exam.length);
+    const passAt = Math.ceil(count * 0.8);
+    start.innerHTML = `
+      <h2>Prov — ${count} frågor</h2>
+      <p>Slumpade flervalsfrågor. Godkänt ≥ ${passAt}.</p>
+      <button class="start-btn" type="button">Starta prov</button>
+    `;
+    start.querySelector('button').addEventListener('click', () => {
+      $content.innerHTML = '';
+      const host = document.createElement('div');
+      $content.appendChild(host);
+      activeHandle = Flashcards.mountExam(host, data.exam, { storageKey: 'sigskydd_exam', count: count, passAt: passAt });
+    });
+    $content.appendChild(start);
+  }
+
+  function renderRef() {
+    const byCat = {};
+    const order = [];
+    data.cards.forEach(c => {
+      const cat = c.category || 'Övrigt';
+      if (!byCat[cat]) { byCat[cat] = []; order.push(cat); }
+      byCat[cat].push(c);
+    });
+    order.forEach(cat => {
+      const h = document.createElement('div');
+      h.className = 'ref-cat';
+      h.textContent = cat;
+      $content.appendChild(h);
+      byCat[cat].forEach(c => {
+        const row = document.createElement('div');
+        row.className = 'ref-row';
+        const f = document.createElement('div');
+        f.className = 'ref-front';
+        f.textContent = c.front;
+        const b = document.createElement('div');
+        b.className = 'ref-back';
+        b.textContent = c.back;
+        row.appendChild(f);
+        row.appendChild(b);
+        $content.appendChild(row);
+      });
+    });
+  }
+
+  $modeBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  setMode('cards');
+})();
+</script>
+
+<script src="pwa.js" defer></script>
+</body>
+</html>
