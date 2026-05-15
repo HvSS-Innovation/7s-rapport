@@ -85,6 +85,10 @@
   /* ── Ramsa-kort ── */
   .section-header { font-size:0.78rem; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin:18px 0 8px; font-weight:600; display:flex; align-items:center; gap:8px; }
   .section-header .count { font-size:0.72rem; color:var(--text-muted); opacity:0.6; font-weight:400; letter-spacing:0; text-transform:none; }
+  /* Kategorirubriker — mindre prominenta än rollrubriken, tydlig grupperingssignal */
+  .cat-header { font-size:0.72rem; color:var(--accent); letter-spacing:0.1em; text-transform:uppercase; margin:14px 0 6px; font-weight:600; padding:6px 10px; background:var(--bg-secondary); border-left:3px solid var(--accent); border-radius:0 var(--radius-sm) var(--radius-sm) 0; display:flex; align-items:baseline; gap:8px; }
+  .cat-header .count { font-size:0.7rem; color:var(--text-muted); opacity:0.7; font-weight:400; letter-spacing:0; text-transform:none; }
+  .cat-header:first-child { margin-top:6px; }
   .ramsa { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:10px; }
   .ramsa-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:6px; }
   .ramsa-name { font-size:1.05rem; font-weight:700; color:var(--accent); letter-spacing:0.04em; }
@@ -340,6 +344,40 @@
     return div;
   }
 
+  // Returnerar id→name-map för kategorier, samt en ordnad lista av kategori-id:n.
+  // Ramsor utan känd category hamnar i en virtuell sista grupp "ovrigt".
+  function getCategoryMeta() {
+    const cats = Array.isArray(data.categories) ? data.categories : [];
+    const order = cats.map(c => c.id).concat(['__ovrigt__']);
+    const names = {};
+    cats.forEach(c => { names[c.id] = c.name; });
+    names['__ovrigt__'] = 'Övrigt';
+    return { order: order, names: names };
+  }
+
+  // Renderar en lista ramsor grupperat per kategori in i target.
+  function renderCategorized(list, target) {
+    if (!list.length) return;
+    const meta = getCategoryMeta();
+    // Gruppera
+    const groups = {};
+    list.forEach(r => {
+      const cid = (r.category && meta.names[r.category]) ? r.category : '__ovrigt__';
+      if (!groups[cid]) groups[cid] = [];
+      groups[cid].push(r);
+    });
+    // Rendera i definierad ordning
+    meta.order.forEach(cid => {
+      const items = groups[cid];
+      if (!items || !items.length) return;
+      const hdr = document.createElement('div');
+      hdr.className = 'cat-header';
+      hdr.innerHTML = (meta.names[cid] || cid) + ' <span class="count">' + items.length + '</span>';
+      target.appendChild(hdr);
+      items.forEach(r => target.appendChild(ramsaEl(r)));
+    });
+  }
+
   // ── Filtrering ─────────────────────────────────────────────────────
   function filterText(r, q) {
     if (!q) return true;
@@ -391,7 +429,7 @@
           $rolesRamsor.appendChild(empty);
         }
       } else {
-        ownRamsor.forEach(r => $rolesRamsor.appendChild(ramsaEl(r)));
+        renderCategorized(ownRamsor, $rolesRamsor);
       }
     } else {
       const hdr = document.createElement('div');
@@ -404,7 +442,7 @@
         empty.textContent = q ? 'Ingen träff på "' + q + '".' : 'Inga ramsor inlagda än.';
         $rolesRamsor.appendChild(empty);
       } else {
-        ownRamsor.forEach(r => $rolesRamsor.appendChild(ramsaEl(r)));
+        renderCategorized(ownRamsor, $rolesRamsor);
       }
     }
 
@@ -419,7 +457,7 @@
         empty.textContent = q ? 'Ingen träff utanför ' + (data.roles.find(x => x.id === role) || {}).name + '.' : 'Inga övriga ramsor.';
         $othersBody.appendChild(empty);
       } else {
-        others.forEach(r => $othersBody.appendChild(ramsaEl(r)));
+        renderCategorized(others, $othersBody);
       }
       $othersWrap.style.display = '';
     } else {

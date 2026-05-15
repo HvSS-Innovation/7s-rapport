@@ -3,6 +3,16 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.2.5 — 2026-05-15 — Ramsor: kategorier (subrubriker) + 16 nya ramsor (issue #39–49, #55–59)
+- **Struktur:** ramsor grupperas nu under kategori-rubriker (subrubriker) i listan. 11 kategorier definieras i `categories[]` i `ramsor-data.js`; ordningen där styr renderingsordningen. Rendering grupperar både i roll-vy och i "Övriga ramsor"-expander. Sökresultat behåller samma gruppering — kategorier vars sektion blir tom döljs automatiskt.
+- **Ny roll:** "Soldat" tillagd som basroll (sex roller totalt: Soldat, Sjv, Sig, GrpC, PlutC, Förare). Stridsteknik-ramsor riktade till soldatnivå har nu naturlig hemvist.
+- **Sjv** (kategorier: Bedömning · Överlämning · Evakuering): nya ramsor **Triagering — T0–T4** (färg/brådska/åtgärdsfönster + MASCAL-anmärkning, #58) och **CASEVAC vs MEDEVAC** (icke-medicinsk vs medicinsk evakuering, #59). ACVPU-usage utökad med Casualty Card-referens (#50, #51).
+- **Sig** (Sambandsprocedur · Sambandsmateriel): befintliga 5 ramsor flyttade in i nya kategorier, inget nytt innehåll.
+- **Stridsteknik** (Planering & order · Stridsställning · Strid & skytte · Patrull & säkring · Materielvård): 12 nya ramsor — **UFETÅSS** (#39), **UFETÅSSSO** (#48), **OBK** (#42), **8F** (#46), **EKER** (#41), **NUHKK** (#43), **4S3V** (#49), **Vapenkontroll** (10-punkts, #47), **SMUVS** (#40), **SOLO** (#45), **STOP** (#44), **Felrapport — fält** (#55).
+- **Försvarsmakten — allmänt** (synlig för alla roller): **Befälsordning — NATO-koder** (OF-1…OF-9, OR-1…OR-9, armén · flottan i tvåkolumns-vy, #57) och **Gradbeteckningar — kategorier** (textöversikt utan bilder, #56).
+- **Skippas i denna iteration:** handtecken (#52, #53, #54) — kräver bildmaterial som inte kan hotlinkas från rustadsoldat.se. Markerat för v0.2.x när egna SVG/textbeskrivningar finns.
+- Service worker auto-bumpas.
+
 ## v0.2.2 — 2026-05-15 — Ljust/mörkt tema på 14 tab-sidor
 - Theme-toggle (sun/moon FAB, top-right) på FORS, PEDARS, POSTSCHEMA, EOBUSARE, OBO, RASSOIKA, VÄDER, MINKARTA, SENSORSKISS, MÅTT, RAMSOR, TCCC, OBSLÖSA, HJÄLM 24.
 - Delade `shared/theme-toggle.css` (light-mode-overrides + FAB-styling) och `shared/theme-toggle.js` (auto-mount + click-handler).
