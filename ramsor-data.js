@@ -112,6 +112,36 @@ window.RAMSOR_DATA = {
     },
 
     {
+      id: 'acvpu',
+      name: 'ACVPU',
+      short: 'Snabb skattning av medvetandegrad — del av (C)ABCDE och TCCC.',
+      lines: [
+        { letter: 'A', text: 'Alert — vaken, orienterad, öppnar ögon spontant och reagerar adekvat på tilltal.' },
+        { letter: 'C', text: 'Confusion — vaken men nytillkommen eller förvärrad förvirring/desorientering.' },
+        { letter: 'V', text: 'Verbal — reagerar enbart på tilltal (öppnar ögon eller svarar med ljud när du pratar).' },
+        { letter: 'P', text: 'Pain — okontaktbar via tal, reagerar på smärtstimulering (rycker undan lem, stönar).' },
+        { letter: 'U', text: 'Unresponsive — medvetslös, ingen reaktion på vare sig tilltal eller smärta.' }
+      ],
+      usage: 'Internationell skala för att snabbt bedöma och övervaka medvetandegrad. Används inom TCCC och som del av D i (C)ABCDE. Den ersätter ofta tidigare AVPU genom att lägga till "C" (Confusion) — en nytillkommen förvirring fångas tidigare än om man bara skiljer på vaken/röst/smärta/medvetslös.',
+      tags: ['Sjukvård', 'Internationellt'],
+      roles: ['sjv']
+    },
+
+    {
+      id: 'gcs',
+      name: 'GCS — Glasgow Coma Scale',
+      short: 'Internationell poängskala för medvetandegrad (3–15 p) över tre tester.',
+      lines: [
+        { letter: 'E', text: 'Ögonöppning (1–4): 4 spontant · 3 vid tilltal · 2 vid smärta · 1 ingen reaktion.' },
+        { letter: 'V', text: 'Verbalt svar (1–5): 5 fullt orienterad · 4 desorienterad/konfusionell · 3 enstaka ord · 2 oartikulerat ljud · 1 ingen reaktion.' },
+        { letter: 'M', text: 'Motorisk reaktion (1–6): 6 lyder uppmaning · 5 lokaliserar smärta · 4 drar undan armen · 3 flexion i armbåge · 2 extension · 1 ingen reaktion.' }
+      ],
+      usage: 'Summera de tre delpoängen. Max 15 p = helt vaken patient. Komatös patient får minst 3 p. Skalan är internationellt etablerad. I Sverige (särskilt västra) används parallellt den svenska RLS-85.',
+      tags: ['Sjukvård', 'Internationellt'],
+      roles: ['sjv']
+    },
+
+    {
       id: 'at-mist',
       name: 'AT-MIST',
       short: 'Strukturerad överlämning av skadad till nästa vårdnivå.',
@@ -183,6 +213,89 @@ window.RAMSOR_DATA = {
       ],
       usage: 'Mycket förenklad påminnelse. Detaljerade handhavande-instruktioner och felsökning kommer i en senare version — hör av dig om du har konkreta önskemål.',
       tags: ['Signalist', 'Materiel'],
+      roles: ['sig']
+    },
+
+    {
+      id: 'ra180-1247-eff',
+      name: 'RA 180 — 1-2-4-7-Effekt',
+      short: 'Felsökning och upprättning av RA 180 — knapparna att kontrollera i ordning.',
+      lines: [
+        { letter: '1', text: 'Tid — kontrollera att radion har rätt tid.' },
+        { letter: '2', text: 'Nätdata — verifiera att rätt nät är inläst.' },
+        { letter: '4', text: 'Kryptonycklar — kontrollera att nycklar finns laddade.' },
+        { letter: '7', text: 'Rätt nyckel aktiverad — verifiera att rätt nyckel är vald.' },
+        { letter: 'Eff', text: 'Effekt-knappen i rätt läge — NORM vid normal användning. Kolla även att radion inte fastnat i dataläge (DDA), samt att antenn och kablage är hela och fastskruvade.' }
+      ],
+      usage: 'Vid sambandsavbrott: tryck metodiskt på knapparna 1, 2, 4, 7 i tur och ordning för att verifiera tid, nätdata, nycklar och aktiv nyckel. Kontrollera sedan Effekt-läget. Ett vanligt fel är att RA 180 står i låg-läge (avsett för att minska röjande signal/spara batteri vid korta avstånd) när det är svårt att få samband.',
+      tags: ['Signalist', 'Materiel'],
+      roles: ['sig']
+    },
+
+    {
+      id: 'passningsalternativ',
+      name: 'Passningsalternativ',
+      short: 'Passningsschema för sambandssystem — när och hur ofta radion ska passas.',
+      lines: [
+        { letter: '1', text: 'Alltid — kontinuerlig passning.' },
+        { letter: '2', text: '5 min varje 15 min.' },
+        { letter: '3', text: '5 min varje 30 min.' },
+        { letter: '4', text: '10 min varje 60 min.' }
+      ],
+      usage: 'Kom överens om från NÄR passningen ska börja. Undvik hela siffror som 00, 15, 30, 45 — välj en udda starttid så att flera enheter inte hamnar synkat på samma minut. Exempel: "Från kl 13.48. Passalt 3." → radion passas i 5 min varje xx.48 och xx.18.',
+      tags: ['Signalist', 'Generellt'],
+      roles: ['sig']
+    },
+
+    {
+      id: 'bokstavering',
+      name: 'Bokstavering — svensk + internationell',
+      short: 'Bokstavering och siffer-uttal: svensk standard (Adam/Bertil) och NATO (Alfa/Bravo).',
+      lines: [
+        { letter: 'A', text: 'Adam · Alpha' },
+        { letter: 'B', text: 'Bertil · Bravo' },
+        { letter: 'C', text: 'Cesar · Charlie' },
+        { letter: 'D', text: 'David · Delta' },
+        { letter: 'E', text: 'Erik · Echo' },
+        { letter: 'F', text: 'Filip · Foxtrot' },
+        { letter: 'G', text: 'Gustav · Golf' },
+        { letter: 'H', text: 'Helge · Hotel' },
+        { letter: 'I', text: 'Ivar · India' },
+        { letter: 'J', text: 'Johan · Juliet' },
+        { letter: 'K', text: 'Kalle · Kilo' },
+        { letter: 'L', text: 'Ludvig · Lima' },
+        { letter: 'M', text: 'Martin · Mike' },
+        { letter: 'N', text: 'Niklas · November' },
+        { letter: 'O', text: 'Olof · Oscar' },
+        { letter: 'P', text: 'Petter · Papa' },
+        { letter: 'Q', text: 'Quintus · Quebec' },
+        { letter: 'R', text: 'Rikard · Romeo' },
+        { letter: 'S', text: 'Sigurd · Sierra' },
+        { letter: 'T', text: 'Tore · Tango' },
+        { letter: 'U', text: 'Urban · Uniform' },
+        { letter: 'V', text: 'Viktor · Victor' },
+        { letter: 'W', text: 'Wilhelm · Whiskey' },
+        { letter: 'X', text: 'Xerxes · X-ray' },
+        { letter: 'Y', text: 'Yngve · Yankee' },
+        { letter: 'Z', text: 'Zäta · Zulu' },
+        { letter: 'Å', text: 'Åke · (Alfa-Alfa, AA internationellt)' },
+        { letter: 'Ä', text: 'Ärlig · (Alfa-Echo, AE internationellt)' },
+        { letter: 'Ö', text: 'Östen · (Oscar-Echo, OE internationellt)' },
+        { letter: '0', text: 'Nolla · ZERO' },
+        { letter: '1', text: 'Ett · ONE' },
+        { letter: '2', text: 'Tvåa · TWO' },
+        { letter: '3', text: 'Trea · THREE' },
+        { letter: '4', text: 'Fyra · FOUR' },
+        { letter: '5', text: 'Femma · FIVE' },
+        { letter: '6', text: 'Sexa · SIX' },
+        { letter: '7', text: 'Sju · SEVEN' },
+        { letter: '8', text: 'Åtta · EIGHT' },
+        { letter: '9', text: 'Nia · NINER' },
+        { letter: ',', text: 'Komma · DECIMAL' },
+        { letter: '.', text: 'Punkt · STOP' }
+      ],
+      usage: 'Svenska bokstaverings­alfabetet används i nationell radio­trafik. NATO-alfabetet (ICAO Phonetic) används i internationella sammanhang och i samband med utländska enheter. Å, Ä, Ö saknas internationellt — bokstaveras då som AA, AE respektive OE (Alfa-Alfa, Alfa-Echo, Oscar-Echo). NINER används istället för NINE för att undvika sammanblandning med tyska "nein".',
+      tags: ['Signalist', 'Internationellt'],
       roles: ['sig']
     }
 

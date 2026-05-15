@@ -10,6 +10,12 @@ Detaljerade beskrivningar finns i README-dagboken.
 - Exkluderade per begäran: 7S (index), WHAT, SCRIM, WEFT, A–H. SKYTTEBOK + SKYTTEBOK-INFO hade redan toggle.
 - Service worker auto-bumpas; nya `shared/theme-toggle.css` + `shared/theme-toggle.js` tillagda i FILES.
 
+## v0.2.4 — 2026-05-15 — Ramsor: ACVPU, GCS, Bokstavering, Passningsalt, RA180 1-2-4-7-Eff (issue #33, #35, #36, #37, #38) + MARCH-PAWS komplement-text (#34)
+- **Sjv:** ny ramsa **ACVPU** (Alert/Confusion/Verbal/Pain/Unresponsive — del av D i (C)ABCDE, ersätter ofta AVPU). Ny ramsa **GCS — Glasgow Coma Scale** (E/V/M, 3–15 p).
+- **Sig:** ny ramsa **RA 180 — 1-2-4-7-Effekt** (felsökning vid sambandsavbrott — tid/nätdata/nycklar/aktiv nyckel/Effekt-läge, varning för låg-läge). Ny ramsa **Passningsalternativ** (1: alltid; 2: 5/15; 3: 5/30; 4: 10/60 — starta på udda minut). Ny ramsa **Bokstavering — svensk + internationell** (Adam/Alpha … Östen/(OE) + siffror 0–9 + komma/punkt).
+- **TCCC:** MARCH-PAWS-sektionen har ny intro-text: "Används som komplement eller ersättning för (C)ABCDE — samma syfte, struktur efter de interventioner som räddar liv mest frekvent i strid."
+- Service worker auto-bumpas.
+
 ## v0.2.3 — 2026-05-15 — AT-MIST: kön i Age-raden
 - AT-MIST Age-raden utvidgad: "patientens ålder och kön (eller bedömd ålder och kön om okänd, ange då bedömt läge)".
 - Service worker auto-bumpas.
