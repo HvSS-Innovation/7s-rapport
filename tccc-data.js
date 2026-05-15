@@ -104,7 +104,7 @@ window.TCCC_DATA = {
         'Smärta — analgesi enligt protokoll',
         'Antibiotika vid penetrerande skador',
         '9-LINE MEDEVAC-rapport till mottagande enhet',
-        'Överlämning enligt MIST (i RAMSOR-fliken)'
+        'Överlämning enligt AT-MIST (i RAMSOR-fliken)'
       ]
     }
   ],
@@ -387,7 +387,7 @@ window.TCCC_DATA = {
       desc: 'Penn Tactical Solutions kommentar på 2026-uppdateringen'
     },
     {
-      title: 'RAMSOR — METHANE, C-ABCDE, SAFE, MIST, 9-LINE MEDEVAC',
+      title: 'RAMSOR — METHANE, C-ABCDE, 4B, SAFE, AT-MIST, 9-LINE MEDEVAC',
       url: 'ramsor.html',
       type: 'intern',
       desc: 'Relaterade sjukvårdsramsor i RAMSOR-fliken'

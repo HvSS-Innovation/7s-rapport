@@ -3,6 +3,12 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.2.1 — 2026-05-15 — Ramsor: AT-MIST + 4B (issue #31, #32)
+- MIST → AT-MIST: Age och Time of injury tillagt framför MIST-bokstäverna (det är AT-MIST som lärs ut på TOS/TCCC idag). `id` ändrat `mist` → `at-mist`, usage uppdaterad.
+- Ny ramsa **4B** under Sjv: Bröstkorg / Buk / Bäcken / Ben — skadesvep efter inre blödning som del av lilla c i C-ABCDE (TCCC-praxis).
+- README + tccc-data.js uppdaterade med nya namn och 4B-referens.
+- Service worker `CACHE` bump → `hv-20260515_atmist_4b_v01`.
+
 ## v0.1 — 2026-05-13 — TCCC-flik (Tactical Combat Casualty Care)
 - Ny tab `tccc.html` med utbildningsmaterial för stridsskadad sjukvård
 - `tccc-data.js` med 3 faser (CUF/TFC/TACEVAC), 9 MARCH-PAWS-bokstäver med interventioner + pitfalls, 5 fördjupningsämnen (TQ-konvertering, krikotyrotomi, TBI, hypotermi, Casualty Card)

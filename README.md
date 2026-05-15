@@ -44,7 +44,7 @@ Verktyget kommer nu att fungera även när du har flygplansläge eller är i rad
 | **VÄDER** | Meteorologisk prognos (Hämtar SMHI-data vid täckning) |
 | **MINKARTA** | Minläggningskarta & minprotokoll (reglementstecken från stab-paketet 2026-04-26, UPK-numrering 001–999, UPK/SP-auto-inmätning, datalista, automatisk dela-med-karta, jumbo-symboler i PNG-export, övningsläge) |
 | **SENSORSKISS** | Sensoruppsättning & beslutsstödsplan (sensorer från Utbildningsanvisning sensorer Hemvärn 2025: CIM/PIR/KAMERA/UMRA + Larmmina + RPAS + poster + sensorområden, auto-numrering C/P/K/U/L, riktningslinjer, sensorprotokoll-export, mini-skola lökprincipen) |
-| **RAMSOR** | Minnesramsor & akronymer (METHANE, SAFE, C-ABCDE, MIST, 9-LINE MEDEVAC m.fl., roll-filtrerat) |
+| **RAMSOR** | Minnesramsor & akronymer (METHANE, SAFE, C-ABCDE, 4B, AT-MIST, 9-LINE MEDEVAC m.fl., roll-filtrerat) |
 | **TCCC** | Tactical Combat Casualty Care — utbildningsmaterial om stridsskadad sjukvård (faser CUF/TFC/TACEVAC, MARCH-PAWS, fördjupningar). Inte avsett för skarpt läge — för träning och repetition. |
 
 ## Teknisk Arkitektur
@@ -290,9 +290,10 @@ som ligger utanför vald roll.
     fritext, `tags[]` (kategori-baserade, deskriptiva — INGEN
     auktoritets-signal) och `roles[]` för vilka roller den dyker upp för.
 *   **Innehåll v0.2:**
-    *   **Sjv (5 ramsor):** METHANE, SAFE, C-ABCDE, MIST, 9-LINE MEDEVAC —
+    *   **Sjv (6 ramsor):** METHANE, SAFE, C-ABCDE, 4B, AT-MIST, 9-LINE MEDEVAC —
         alla välkända internationellt etablerade strukturer inom prehospital
-        vård / NATO-doktrin.
+        vård / NATO-doktrin. 4B är skadesvep under lilla c, AT-MIST är den
+        variant av MIST som lärs ut på TOS/TCCC idag (Age + Time of injury).
     *   **Sig (3 ramsor):** Talgruppsbyte (allmän procedur),
         RA 1444-handhavande (kort intro), 1227-tabell (kort intro + flagg
         att fulltabell läggs in senare).

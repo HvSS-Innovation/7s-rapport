@@ -97,16 +97,33 @@ window.RAMSOR_DATA = {
     },
 
     {
-      id: 'mist',
-      name: 'MIST',
+      id: '4b',
+      name: '4B',
+      short: 'Skadesvep efter tecken på inre blödning — del av lilla c i C-ABCDE.',
+      lines: [
+        { letter: 'B', text: 'Bröstkorg — palpera revben, leta instabilitet, smärta, andningspåverkan.' },
+        { letter: 'B', text: 'Buk — palpera kvadranter, leta defense, distension, smärta vid tryck.' },
+        { letter: 'B', text: 'Bäcken — kontrollera stabilitet (en gång, försiktigt — komprimera ej upprepat).' },
+        { letter: 'B', text: 'Ben — låren först (femurfraktur kan dölja stor inre blödning), sedan underben.' }
+      ],
+      usage: 'Inom TCCC används 4B som del av skadesvepet vid lilla c i (C)ABCDE — undersöker fyra områden där stor inre blödning kan döljas utan synligt yttre tecken. Snabb minnesregel för att inte missa något av de stora "blödningsrummen".',
+      tags: ['Sjukvård', 'Internationellt'],
+      roles: ['sjv']
+    },
+
+    {
+      id: 'at-mist',
+      name: 'AT-MIST',
       short: 'Strukturerad överlämning av skadad till nästa vårdnivå.',
       lines: [
+        { letter: 'A', text: 'Age — patientens ålder (eller bedömd ålder om okänd).' },
+        { letter: 'T', text: 'Time — tidpunkt för skadan (eller bedömd tid om okänd).' },
         { letter: 'M', text: 'Mechanism — skademekanism (vad orsakade skadan).' },
         { letter: 'I', text: 'Injuries — funna och misstänkta skador.' },
         { letter: 'S', text: 'Signs / Symptoms — vitalparametrar, smärta, medvetande.' },
         { letter: 'T', text: 'Treatment — vad har gjorts (förband, tourniquet, smärtlindring).' }
       ],
-      usage: 'Vanlig överlämningsstruktur från fältsjukvårdare till sjukhus eller högre vårdnivå. Internationellt etablerad.',
+      usage: 'Vanlig överlämningsstruktur från fältsjukvårdare till sjukhus eller högre vårdnivå. AT-MIST är den variant som lärs ut på TOS/TCCC idag — Age och Time of injury läggs till framför MIST. Internationellt etablerad.',
       tags: ['Sjukvård', 'Internationellt'],
       roles: ['sjv']
     },
