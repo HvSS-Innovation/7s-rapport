@@ -62,7 +62,18 @@
         btn.className = 'theme-toggle-fab';
         btn.id = 'themeToggleFab';
         btn.addEventListener('click', function () { toggleTheme(btn); });
-        document.body.appendChild(btn);
+
+        // Placering: i <header> så knappen ligger på rubrikens rad
+        // (matchar SKYTTEBOK). Saknas header → fallback till fixed FAB i hörn.
+        var header = document.querySelector('header');
+        if (header) {
+            var cs = window.getComputedStyle(header).position;
+            if (cs === 'static') header.style.position = 'relative';
+            header.appendChild(btn);
+        } else {
+            btn.classList.add('theme-toggle-fab--floating');
+            document.body.appendChild(btn);
+        }
         syncIcon(btn);
         applyMetaThemeColor();
     }

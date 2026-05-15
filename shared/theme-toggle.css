@@ -25,18 +25,19 @@ html[data-theme="light"] input[type="text"],
 html[data-theme="light"] textarea,
 html[data-theme="light"] select { color-scheme: light; }
 
+/* Placering matchar SKYTTEBOK: absolute i header, top-right.
+   JS sätter `header.style.position = 'relative'` om den är static. */
 .theme-toggle-fab {
-    position: fixed;
-    top: 12px;
-    right: 12px;
-    z-index: 10000;
+    position: absolute;
+    top: 16px;
+    right: 0;
     background: var(--bg-secondary);
     border: 1px solid var(--border);
     color: var(--text-secondary);
     border-radius: 999px;
-    width: 44px;
-    height: 44px;
-    min-height: 44px;
+    width: 48px;
+    height: 48px;
+    min-height: 48px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -44,7 +45,6 @@ html[data-theme="light"] select { color-scheme: light; }
     font-family: inherit;
     -webkit-tap-highlight-color: transparent;
     transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.15s;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
 }
 .theme-toggle-fab:hover {
     background: var(--bg-card);
@@ -52,7 +52,26 @@ html[data-theme="light"] select { color-scheme: light; }
     border-color: var(--accent);
 }
 .theme-toggle-fab:active { transform: scale(0.95); }
-.theme-toggle-fab svg { width: 20px; height: 20px; display: block; }
+.theme-toggle-fab svg { width: 22px; height: 22px; display: block; }
+
+/* Fallback-läge: om sidan saknar <header> sätter JS denna class på knappen
+   och faller tillbaka till fixed top-right hörn. */
+.theme-toggle-fab.theme-toggle-fab--floating {
+    position: fixed;
+    top: 12px;
+    right: 12px;
+    z-index: 10000;
+    width: 44px;
+    height: 44px;
+    min-height: 44px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+}
+.theme-toggle-fab.theme-toggle-fab--floating svg { width: 20px; height: 20px; }
+
+@media (max-width: 360px) {
+    .theme-toggle-fab { width: 44px; height: 44px; min-height: 44px; top: 14px; }
+    .theme-toggle-fab svg { width: 20px; height: 20px; }
+}
 
 @media print {
     .theme-toggle-fab { display: none !important; }
