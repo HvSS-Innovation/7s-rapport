@@ -95,7 +95,14 @@
   .ramsa-line { display:flex; gap:10px; align-items:baseline; padding:4px 0; font-size:0.9rem; line-height:1.45; }
   .ramsa-line + .ramsa-line { border-top:1px solid var(--border); padding-top:8px; margin-top:4px; }
   .ramsa-line .letter { color:var(--accent); font-weight:700; min-width:22px; flex-shrink:0; }
-  .ramsa-line .text { color:var(--text-primary); }
+  .ramsa-line .text { color:var(--text-primary); flex:1; min-width:0; }
+  /* Tvåkolumnsläge: när rad har text2 visas båda som lika breda kolumner med vertikal avgränsare. */
+  .ramsa-line .text2 { color:var(--text-secondary); flex:1; min-width:0; border-left:1px solid var(--border); padding-left:10px; }
+  /* Kolumnrubriker ovanför första raden, samma kolumnbredd som .text/.text2 */
+  .ramsa-cols { display:flex; gap:10px; padding:4px 0 6px; margin-bottom:4px; border-bottom:1px solid var(--border); font-size:0.7rem; color:var(--text-muted); text-transform:uppercase; letter-spacing:0.06em; font-weight:600; }
+  .ramsa-cols .letter-sp { min-width:22px; flex-shrink:0; }
+  .ramsa-cols .col { flex:1; min-width:0; }
+  .ramsa-cols .col + .col { border-left:1px solid var(--border); padding-left:10px; }
   .ramsa-usage { font-size:0.8rem; color:var(--text-muted); line-height:1.5; margin-top:10px; font-style:italic; }
 
   /* ── Placeholder / övriga ── */
@@ -277,6 +284,24 @@
     if (Array.isArray(r.lines) && r.lines.length) {
       const lines = document.createElement('div');
       lines.className = 'ramsa-lines';
+
+      // Kolumnrubriker — visas bara om ramsan har explicit columns-array
+      // (typiskt för tvåspalts-ramsor som bokstavering)
+      if (Array.isArray(r.columns) && r.columns.length >= 2) {
+        const head = document.createElement('div');
+        head.className = 'ramsa-cols';
+        const sp = document.createElement('div');
+        sp.className = 'letter-sp';
+        head.appendChild(sp);
+        r.columns.slice(0, 2).forEach(c => {
+          const col = document.createElement('div');
+          col.className = 'col';
+          col.textContent = c;
+          head.appendChild(col);
+        });
+        lines.appendChild(head);
+      }
+
       r.lines.forEach(ln => {
         const row = document.createElement('div');
         row.className = 'ramsa-line';
@@ -288,6 +313,12 @@
         t.textContent = ln.text;
         row.appendChild(l);
         row.appendChild(t);
+        if (ln.text2) {
+          const t2 = document.createElement('div');
+          t2.className = 'text2';
+          t2.textContent = ln.text2;
+          row.appendChild(t2);
+        }
         lines.appendChild(row);
       });
       div.appendChild(lines);
@@ -315,7 +346,7 @@
     const hay = [
       r.name, r.short || '', r.usage || '',
       (r.tags || []).join(' '),
-      (r.lines || []).map(l => l.letter + ' ' + l.text).join(' ')
+      (r.lines || []).map(l => l.letter + ' ' + l.text + ' ' + (l.text2 || '')).join(' ')
     ].join(' ').toLowerCase();
     return hay.indexOf(q.toLowerCase()) !== -1;
   }
