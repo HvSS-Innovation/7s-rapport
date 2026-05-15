@@ -3,6 +3,15 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.2 — 2026-05-15 — Fyra interaktiva verktyg: SYMBOL, UN, SÄKR, PATL
+
+- **SYMBOL** (`symbol.html`): APP-6-byggare — välj affiliation × battle dimension × ikon × förbandsstorlek × status, live SVG-rendering, kopiera/exportera SVG. Mystery-läge: slumpad symbol → gissa affiliation + battle dimension. Komplement till APP-6-deck.
+- **UN** (`un.html`): militär ↔ UN-nummer-uppslag (20 vanliga ämnen: bensin/diesel/alkylat/sprit/syrgas/spillolja/ammunition/raketer/granater/Li-batterier/matvärmare/gasol) + godsdeklaration-generator (formulär → text-output enligt ADR-S 5.4.1, kopiera/skriv ut).
+- **SÄKR** (`saekr.html`): RadioLådeSnack pre-flight-checklista — 8 punkter (uppgift/tilldela/andra verksamheter/risker/brytpunkter/olycka/spela spelet/avbryt). Progress-bar, tidstämpel vid klart, sessionStorage (inget kvar efter stängning). Inkluderar Varna–Säkra–Bedöm–Larma–Vårda-ruta.
+- **PATL** (`patl.html`): Patientliggare — fyllbar tabell (TNR IN, LÖPNR, VAPEN NR, NAMN, TP ENHET, SMART TAG, SKADETYP, PRIO T0–T4 med triagefärger, AVTP ENH/TID), CSV-export, print-stilar för utskrift. Data i sessionStorage (PII rensas vid stängning).
+- **Tab-nav:** 4 verktygslänkar tillagda efter FG på alla 31 sidor. Tab-nav-sub börjar bli stor — flagga för omstrukturering i v0.4 (kanske separera "Decks" och "Verktyg" i två grupper).
+- Service worker auto-bumpas.
+
 ## v0.3.1 — 2026-05-15 — Fyra nya decks på flashcards-engine: RA763, APP-6, FÖRKORT, FG
 
 - **RA763** (`ra763.html`): 35 kort + 20 provfrågor — vredinställningar (SQL/VOL/RIT/MIC/RFPWR), menyer (MENY5/MENY6), uppstart-/bryt-sekvens, swALE-konfiguration (TX TUNE 500 ms, WAIT 2000 ms, ALE DETECTION etc.).

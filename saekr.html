@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<script>(function(){try{var s=localStorage.getItem('skyttebok_settings_lightmode');var l=(s==='on')||(s!=='off'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches);if(l)document.documentElement.setAttribute('data-theme','light');}catch(_){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SÄKR">
+<title>SÄKR — RadioLådeSnack</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared/theme-toggle.css">
+<script src="shared/theme-toggle.js" defer></script>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; }
+  .container { max-width:680px; margin:0 auto; }
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:420px; margin:6px auto 0; }
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; }
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  .progress-bar { background:var(--bg-secondary); border:1px solid var(--border); border-radius:20px; height:8px; overflow:hidden; margin-bottom:14px; }
+  .progress-fill { background:var(--accent); height:100%; transition:width 0.2s; }
+  .progress-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .progress-label { font-size:0.78rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; font-weight:600; }
+  .progress-num { font-size:0.78rem; color:var(--text-secondary); font-family:ui-monospace,monospace; }
+
+  .item { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:8px; transition:opacity 0.15s,border-color 0.15s; cursor:pointer; user-select:none; }
+  .item.done { opacity:0.55; border-color:var(--accent-dim); }
+  .item-head { display:flex; align-items:flex-start; gap:12px; }
+  .checkbox { width:24px; height:24px; border:2px solid var(--border-focus); border-radius:6px; flex-shrink:0; background:var(--bg-input); transition:all 0.15s; display:flex; align-items:center; justify-content:center; margin-top:2px; }
+  .item.done .checkbox { background:var(--accent); border-color:var(--accent); }
+  .checkbox::after { content:''; width:6px; height:11px; border-right:2.5px solid #0d1f0d; border-bottom:2.5px solid #0d1f0d; transform:rotate(45deg) translate(-1px,-1px); opacity:0; transition:opacity 0.15s; }
+  .item.done .checkbox::after { opacity:1; }
+  .item-body { flex:1; min-width:0; }
+  .item-title { font-size:0.95rem; font-weight:700; color:var(--text-primary); letter-spacing:0.03em; margin-bottom:4px; }
+  .item.done .item-title { text-decoration:line-through; text-decoration-color:var(--text-muted); }
+  .item-desc { font-size:0.83rem; color:var(--text-secondary); line-height:1.55; }
+  .item.done .item-desc { color:var(--text-muted); }
+
+  .done-banner { background:var(--accent-dim); border:1px solid var(--accent); border-radius:var(--radius); padding:18px 16px; margin-bottom:14px; text-align:center; }
+  .done-banner-title { font-size:1.05rem; font-weight:700; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:6px; }
+  .done-banner-time { font-size:0.9rem; color:var(--text-secondary); font-family:ui-monospace,monospace; }
+
+  .actions { display:flex; gap:8px; margin-top:14px; }
+  .btn { flex:1; padding:13px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:0.9rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; min-height:48px; }
+  .btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .btn-danger { color:var(--danger); }
+  .btn-danger:hover { border-color:var(--danger); }
+  .btn-primary { background:var(--accent); color:#0d1f0d; border-color:var(--accent); }
+
+  .intro { background:var(--bg-card); border:1px solid var(--border); border-left:3px solid var(--accent); border-radius:0 var(--radius) var(--radius) 0; padding:14px 16px; margin-bottom:12px; font-size:0.85rem; line-height:1.55; color:var(--text-secondary); }
+  .intro strong { color:var(--text-primary); }
+
+  .emergency { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-top:14px; }
+  .emergency h2 { font-size:0.78rem; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px; font-weight:600; }
+  .emergency-row { display:flex; gap:10px; padding:6px 0; align-items:baseline; font-size:0.86rem; line-height:1.5; }
+  .emergency-row + .emergency-row { border-top:1px solid var(--border); padding-top:8px; margin-top:4px; }
+  .emergency-letter { color:var(--accent); font-weight:700; min-width:60px; flex-shrink:0; }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px;text-align:center">JavaScript krävs.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>SÄKR</h1>
+    <p>RadioLådeSnack — pre-flight checklista</p>
+    <p class="disclaimer">Privatutvecklat utbildningsverktyg. Innehållet följer FRO SäkR/Radiolådesnack v1.1 men är inte fastställt av Försvarsmakten.</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+    <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+    <a href="fors.html" class="tab-link">FORS</a>
+    <a href="pedars.html" class="tab-link">PEDARS</a>
+    <a href="postschema.html" class="tab-link">SCHEMA</a>
+    <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+    <a href="obo.html" class="tab-link">OBO</a>
+    <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+    <a href="vader.html" class="tab-link">VÄDER</a>
+    <a href="minkarta.html" class="tab-link">MINKARTA</a>
+    <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+    <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+    <a href="matt.html" class="tab-link">MÅTT</a>
+    <a href="ramsor.html" class="tab-link">RAMSOR</a>
+    <a href="tccc.html" class="tab-link">TCCC</a>
+    <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
+    <a href="ra763.html" class="tab-link">RA763</a>
+    <a href="app6.html" class="tab-link">APP-6</a>
+    <a href="forkort.html" class="tab-link">FÖRKORT</a>
+    <a href="fg.html" class="tab-link">FG</a>
+    <a href="symbol.html" class="tab-link">SYMBOL</a>
+    <a href="un.html" class="tab-link">UN</a>
+    <a href="patl.html" class="tab-link">PATL</a>
+    <a href="saekr.html" class="tab-link active">SÄKR</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <div class="intro">
+    <strong>Genomförs innan verksamhet påbörjas.</strong>
+    Samla gruppen och gå igenom punkterna i ordning. Att stanna upp stärker både säkerhet och effektivitet.
+  </div>
+
+  <div class="progress-row">
+    <span class="progress-label">Genomgång</span>
+    <span class="progress-num" id="progNum">0 / 8</span>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+
+  <div id="doneBanner"></div>
+
+  <main id="items"></main>
+
+  <div class="actions">
+    <button class="btn btn-danger" type="button" id="resetBtn">Nollställ</button>
+  </div>
+
+  <section class="emergency">
+    <h2>Vid olycka — Varna · Säkra · Bedöm · Larma · Vårda</h2>
+    <div class="emergency-row"><span class="emergency-letter">Varna</span><span>Ropa "Avbryt!", "Sten!" eller "Olycka!" — alla repeterar.</span></div>
+    <div class="emergency-row"><span class="emergency-letter">Säkra</span><span>Stoppa arbetet och farliga aktiviteter. Flytta personer till säker plats om möjligt.</span></div>
+    <div class="emergency-row"><span class="emergency-letter">Bedöm</span><span>Snabb bedömning — hantera akut: luftväg, blödningar (L-CABcDE).</span></div>
+    <div class="emergency-row"><span class="emergency-letter">Larma</span><span>Rätt kanal till sjukvård eller högre chef. Kort, tydlig beskrivning.</span></div>
+    <div class="emergency-row"><span class="emergency-letter">Vårda</span><span>Första hjälpen tills professionell hjälp anländer. Varm, lugn, stabil.</span></div>
+  </section>
+</div>
+
+<script>
+(function () {
+  const ITEMS = [
+    { id:'uppgift', title:'Identifiera uppgiften',
+      desc:'Vad är uppdraget? Vilka resurser har vi? Vilken tidsfaktor gäller?' },
+    { id:'tilldela', title:'Tilldela uppgifter',
+      desc:'Alla vet sina roller, sitt ansvar, och hur de bidrar till att lösa uppdraget.' },
+    { id:'andra', title:'Andra verksamheter',
+      desc:'Påverkar någon annan pågående verksamhet oss?' },
+    { id:'risker', title:'Identifiera risker',
+      desc:'Finns riskhantering? Gå igenom den. Bedöm personella, materiella, miljömässiga och lost-time-risker. Försvarsmaktens rykte räknas också.' },
+    { id:'brytpunkter', title:'Koordinera brytpunkter',
+      desc:'Behöver hela gruppen stanna och agera samtidigt? Ex: "Fatta – säkra – lyft" vid resning av högantenn 2K.' },
+    { id:'olycka', title:'Vad gör vi om det händer en olycka?',
+      desc:'Varna – Säkra – Bedöm – Larma – Vårda. Var finns första hjälpen? Vilken radio/telefon/larmknapp gäller? Alla kan L-CABcDE?' },
+    { id:'spela', title:'Spela spelet',
+      desc:'Låt varje gruppmedlem beskriva sin uppgift, sina risker och hur de hanteras.' },
+    { id:'avbryt', title:'Avbryt',
+      desc:'Alla förstår: vem som helst kan ropa "Avbryt". Då stoppar alla, repeterar, säkrar sin position och lyssnar.' }
+  ];
+
+  const SK = 'saekr_state';
+  let state = loadState();
+  let startedAt = state.startedAt || null;
+  let completedAt = state.completedAt || null;
+
+  function loadState() {
+    try { return JSON.parse(sessionStorage.getItem(SK) || '{}'); } catch (_) { return {}; }
+  }
+  function saveState() {
+    sessionStorage.setItem(SK, JSON.stringify({ ...state, startedAt, completedAt }));
+  }
+
+  function fmtNow() {
+    const d = new Date();
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+  function durMin(fromIso) {
+    if (!fromIso) return null;
+    const ms = Date.now() - new Date(fromIso).getTime();
+    const m = Math.round(ms / 60000);
+    return m;
+  }
+
+  function render() {
+    const $items = document.getElementById('items');
+    $items.innerHTML = '';
+    let done = 0;
+
+    ITEMS.forEach(item => {
+      const isDone = !!state[item.id];
+      if (isDone) done++;
+      const el = document.createElement('div');
+      el.className = 'item' + (isDone ? ' done' : '');
+      el.innerHTML = `<div class="item-head"><div class="checkbox" aria-checked="${isDone}"></div><div class="item-body"><div class="item-title">${escapeHtml(item.title)}</div><div class="item-desc">${escapeHtml(item.desc)}</div></div></div>`;
+      el.addEventListener('click', () => toggle(item.id));
+      $items.appendChild(el);
+    });
+
+    document.getElementById('progNum').textContent = `${done} / ${ITEMS.length}`;
+    document.getElementById('progFill').style.width = `${(done / ITEMS.length) * 100}%`;
+
+    const $banner = document.getElementById('doneBanner');
+    if (done === ITEMS.length) {
+      if (!completedAt) { completedAt = new Date().toISOString(); saveState(); }
+      const dur = startedAt ? durMin(startedAt) : null;
+      const txt = `Klart kl ${fmtCompletedTime()}` + (dur != null ? ` · ${dur} min från start` : '');
+      $banner.innerHTML = `<div class="done-banner"><div class="done-banner-title">Genomgång klar</div><div class="done-banner-time">${escapeHtml(txt)}</div></div>`;
+    } else {
+      $banner.innerHTML = '';
+      if (done === 0) completedAt = null;
+    }
+
+    if (done > 0 && !startedAt) { startedAt = new Date().toISOString(); saveState(); }
+  }
+
+  function fmtCompletedTime() {
+    if (!completedAt) return fmtNow();
+    const d = new Date(completedAt);
+    return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  }
+
+  function toggle(id) {
+    state[id] = !state[id];
+    saveState();
+    render();
+  }
+
+  document.getElementById('resetBtn').addEventListener('click', () => {
+    state = {};
+    startedAt = null;
+    completedAt = null;
+    sessionStorage.removeItem(SK);
+    render();
+  });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  render();
+})();
+</script>
+
+<script src="pwa.js" defer></script>
+</body>
+</html>

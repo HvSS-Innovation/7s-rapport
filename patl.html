@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<script>(function(){try{var s=localStorage.getItem('skyttebok_settings_lightmode');var l=(s==='on')||(s!=='off'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches);if(l)document.documentElement.setAttribute('data-theme','light');}catch(_){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="PATL">
+<title>PATL — Patientliggare</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared/theme-toggle.css">
+<script src="shared/theme-toggle.js" defer></script>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828;
+    /* Triage-färger (T0–T4) */
+    --t0:#1a1a1a; --t1:#c62828; --t2:#e09320; --t3:#4caf50; --t4:#888;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; }
+  .container { max-width:920px; margin:0 auto; }
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:420px; margin:6px auto 0; }
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; }
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  .meta-panel { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px; }
+  .meta-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:520px) { .meta-grid { grid-template-columns:1fr; } }
+  .field { display:flex; flex-direction:column; gap:4px; }
+  .field label { font-size:0.7rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; font-weight:600; }
+  .field input { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-primary); font-family:inherit; font-size:0.95rem; padding:9px 11px; outline:none; }
+  .field input:focus { border-color:var(--border-focus); }
+
+  .table-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; margin-bottom:12px; }
+  table { width:100%; border-collapse:collapse; font-size:0.84rem; }
+  thead th { background:var(--bg-secondary); padding:9px 8px; text-align:left; font-size:0.66rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); font-weight:700; }
+  tbody td { padding:4px; vertical-align:top; border-bottom:1px solid var(--border); }
+  tbody tr:last-child td { border-bottom:none; }
+  tbody input, tbody select { width:100%; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); color:var(--text-primary); font-family:inherit; font-size:0.84rem; padding:7px 8px; outline:none; min-height:36px; }
+  tbody input:focus, tbody select:focus { border-color:var(--border-focus); }
+  tbody select { -webkit-appearance:none; appearance:none; background-position:right 8px center; background-repeat:no-repeat; padding-right:24px; }
+
+  .prio-T0 { background:var(--t0) !important; color:#fff; border-color:var(--t0) !important; font-weight:700; }
+  .prio-T1 { background:var(--t1) !important; color:#fff; border-color:var(--t1) !important; font-weight:700; }
+  .prio-T2 { background:var(--t2) !important; color:#1a1a1a; border-color:var(--t2) !important; font-weight:700; }
+  .prio-T3 { background:var(--t3) !important; color:#1a1a1a; border-color:var(--t3) !important; font-weight:700; }
+  .prio-T4 { background:var(--t4) !important; color:#fff; border-color:var(--t4) !important; font-weight:700; }
+
+  .row-actions { display:flex; gap:4px; }
+  .row-btn { background:none; border:none; color:var(--text-muted); cursor:pointer; padding:6px 8px; font-size:1rem; line-height:1; border-radius:var(--radius-sm); min-width:32px; min-height:32px; }
+  .row-btn:hover { color:var(--danger); background:var(--bg-secondary); }
+
+  .actions { display:flex; gap:8px; }
+  .btn { flex:1; padding:13px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:0.9rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; min-height:48px; }
+  .btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .btn-primary { background:var(--accent); color:#0d1f0d; border-color:var(--accent); }
+  .btn-primary:hover { background:var(--accent-hover); }
+  .btn-danger { color:var(--danger); }
+  .btn-danger:hover { border-color:var(--danger); }
+
+  .hint { font-size:0.74rem; color:var(--text-muted); margin-top:8px; line-height:1.5; }
+
+  /* Print-stilar */
+  @media print {
+    body { background:#fff; color:#000; padding:0; font-size:10pt; }
+    .tab-nav, .tab-nav-sub, .back-link, .actions, .row-btn, header .disclaimer, .hint, header p { display:none; }
+    .meta-panel, .table-wrap { background:#fff; border:1px solid #000; }
+    .field input, tbody input, tbody select { background:#fff; color:#000; border-color:#000; }
+    table { font-size:9pt; }
+    thead th { background:#eee; color:#000; }
+    .prio-T0, .prio-T1, .prio-T4 { background:#000 !important; color:#fff; }
+    .prio-T2, .prio-T3 { background:#fff !important; color:#000; border:2px solid #000; }
+  }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px;text-align:center">JavaScript krävs.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>PATL</h1>
+    <p>Patientliggare</p>
+    <p class="disclaimer">Privatutvecklat fältverktyg. Mall följer FM-/HV-praxis men är inte fastställt av Försvarsmakten. PII sparas endast i webbläsaren under sessionen — rensa innan du lämnar enheten.</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+    <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+    <a href="fors.html" class="tab-link">FORS</a>
+    <a href="pedars.html" class="tab-link">PEDARS</a>
+    <a href="postschema.html" class="tab-link">SCHEMA</a>
+    <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+    <a href="obo.html" class="tab-link">OBO</a>
+    <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+    <a href="vader.html" class="tab-link">VÄDER</a>
+    <a href="minkarta.html" class="tab-link">MINKARTA</a>
+    <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+    <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+    <a href="matt.html" class="tab-link">MÅTT</a>
+    <a href="ramsor.html" class="tab-link">RAMSOR</a>
+    <a href="tccc.html" class="tab-link">TCCC</a>
+    <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
+    <a href="ra763.html" class="tab-link">RA763</a>
+    <a href="app6.html" class="tab-link">APP-6</a>
+    <a href="forkort.html" class="tab-link">FÖRKORT</a>
+    <a href="fg.html" class="tab-link">FG</a>
+    <a href="symbol.html" class="tab-link">SYMBOL</a>
+    <a href="un.html" class="tab-link">UN</a>
+    <a href="saekr.html" class="tab-link">SÄKR</a>
+    <a href="patl.html" class="tab-link active">PATL</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <div class="meta-panel">
+    <div class="meta-grid">
+      <div class="field"><label>Förband</label><input type="text" id="metaForband" placeholder="t.ex. 42. HVBAT"></div>
+      <div class="field"><label>Datum</label><input type="text" id="metaDatum" placeholder="ÅÅÅÅ-MM-DD"></div>
+      <div class="field"><label>Plats</label><input type="text" id="metaPlats" placeholder="t.ex. Skövde garnison"></div>
+      <div class="field"><label>Sjvgrupp/-pluton</label><input type="text" id="metaSjv" placeholder="t.ex. Sjvgrp 1"></div>
+    </div>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:90px">TNR IN</th>
+          <th style="width:60px">LÖPNR</th>
+          <th style="width:100px">VAPEN NR</th>
+          <th>NAMN</th>
+          <th style="width:90px">TP ENHET</th>
+          <th style="width:90px">SMART TAG</th>
+          <th>SKADETYP</th>
+          <th style="width:80px">PRIO</th>
+          <th style="width:90px">AVTP ENH</th>
+          <th style="width:90px">AVTP TID</th>
+          <th style="width:48px"></th>
+        </tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+
+  <div class="actions">
+    <button class="btn" type="button" id="addRow">+ Lägg till patient</button>
+    <button class="btn btn-danger" type="button" id="clearAll">Rensa alla</button>
+    <button class="btn" type="button" id="exportCsv">Export CSV</button>
+    <button class="btn btn-primary" type="button" id="printIt">Skriv ut</button>
+  </div>
+
+  <p class="hint">Tips: tryck "Skriv ut" för att få en utskriftsvänlig version. Data sparas bara i sessionen (rensas när du stänger fliken). Triagefärger (T0–T4): T0 svart (död), T1 röd (omedelbar), T2 gul (brådskande), T3 grön (väntan), T4 grå (förväntad död).</p>
+</div>
+
+<script>
+(function () {
+  const SK = 'patl_state';
+  const PRIOS = ['', 'T0', 'T1', 'T2', 'T3', 'T4'];
+
+  let state = loadState();
+
+  function loadState() {
+    try { const s = JSON.parse(sessionStorage.getItem(SK) || '{}'); return s.rows ? s : { meta:{}, rows:[emptyRow()] }; }
+    catch (_) { return { meta:{}, rows:[emptyRow()] }; }
+  }
+  function saveState() { sessionStorage.setItem(SK, JSON.stringify(state)); }
+  function emptyRow() { return { tnr:'', lopnr:'', vapen:'', namn:'', tpenh:'', smarttag:'', skada:'', prio:'', avtpe:'', avtpt:'' }; }
+
+  /* Meta */
+  ['Forband','Datum','Plats','Sjv'].forEach(k => {
+    const id = 'meta' + k;
+    const $el = document.getElementById(id);
+    const key = k.toLowerCase();
+    $el.value = state.meta[key] || '';
+    $el.addEventListener('input', () => { state.meta[key] = $el.value; saveState(); });
+  });
+
+  function render() {
+    const $rows = document.getElementById('rows');
+    $rows.innerHTML = '';
+    state.rows.forEach((row, idx) => {
+      const tr = document.createElement('tr');
+      ['tnr','lopnr','vapen','namn','tpenh','smarttag','skada'].forEach(field => {
+        const td = document.createElement('td');
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.value = row[field] || '';
+        inp.placeholder = '';
+        inp.addEventListener('input', () => { row[field] = inp.value; saveState(); });
+        td.appendChild(inp);
+        tr.appendChild(td);
+      });
+      // PRIO som select
+      const tdPrio = document.createElement('td');
+      const sel = document.createElement('select');
+      PRIOS.forEach(p => {
+        const o = document.createElement('option');
+        o.value = p; o.textContent = p || '—';
+        if (row.prio === p) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.className = row.prio ? 'prio-' + row.prio : '';
+      sel.addEventListener('change', () => { row.prio = sel.value; sel.className = sel.value ? 'prio-' + sel.value : ''; saveState(); });
+      tdPrio.appendChild(sel);
+      tr.appendChild(tdPrio);
+
+      ['avtpe','avtpt'].forEach(field => {
+        const td = document.createElement('td');
+        const inp = document.createElement('input');
+        inp.type = 'text';
+        inp.value = row[field] || '';
+        inp.addEventListener('input', () => { row[field] = inp.value; saveState(); });
+        td.appendChild(inp);
+        tr.appendChild(td);
+      });
+
+      // Ta bort
+      const tdAct = document.createElement('td');
+      tdAct.className = 'row-actions';
+      const del = document.createElement('button');
+      del.className = 'row-btn';
+      del.type = 'button';
+      del.title = 'Ta bort raden';
+      del.textContent = '×';
+      del.addEventListener('click', () => {
+        state.rows.splice(idx, 1);
+        if (state.rows.length === 0) state.rows.push(emptyRow());
+        saveState(); render();
+      });
+      tdAct.appendChild(del);
+      tr.appendChild(tdAct);
+
+      $rows.appendChild(tr);
+    });
+  }
+
+  document.getElementById('addRow').addEventListener('click', () => {
+    state.rows.push(emptyRow()); saveState(); render();
+  });
+  document.getElementById('clearAll').addEventListener('click', () => {
+    if (!confirm('Rensa alla rader och meta? Detta kan inte ångras.')) return;
+    state = { meta:{}, rows:[emptyRow()] };
+    saveState();
+    ['Forband','Datum','Plats','Sjv'].forEach(k => { document.getElementById('meta'+k).value = ''; });
+    render();
+  });
+  document.getElementById('exportCsv').addEventListener('click', () => {
+    const head = ['TNR_IN','LOPNR','VAPEN','NAMN','TP_ENHET','SMART_TAG','SKADETYP','PRIO','AVTP_ENHET','AVTP_TID'];
+    const cells = (r) => [r.tnr,r.lopnr,r.vapen,r.namn,r.tpenh,r.smarttag,r.skada,r.prio,r.avtpe,r.avtpt];
+    const rows = state.rows.filter(r => cells(r).some(c => c && c.trim()));
+    const csv = [head, ...rows.map(cells)].map(row => row.map(v => {
+      const s = String(v||'');
+      return /[",;\n]/.test(s) ? '"' + s.replace(/"/g,'""') + '"' : s;
+    }).join(';')).join('\n');
+    const meta = state.meta;
+    const header = `# Patientliggare\n# Förband: ${meta.forband||''}\n# Datum: ${meta.datum||''}\n# Plats: ${meta.plats||''}\n# Sjvgrp: ${meta.sjv||''}\n`;
+    const blob = new Blob(['﻿' + header + csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    const dt = meta.datum || new Date().toISOString().slice(0,10);
+    a.download = `patl-${dt}.csv`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 100);
+  });
+  document.getElementById('printIt').addEventListener('click', () => window.print());
+
+  render();
+})();
+</script>
+
+<script src="pwa.js" defer></script>
+</body>
+</html>

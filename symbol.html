@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<script>(function(){try{var s=localStorage.getItem('skyttebok_settings_lightmode');var l=(s==='on')||(s!=='off'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches);if(l)document.documentElement.setAttribute('data-theme','light');}catch(_){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="SYMBOL">
+<title>SYMBOL — APP-6-byggare</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared/theme-toggle.css">
+<script src="shared/theme-toggle.js" defer></script>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; }
+  .container { max-width:680px; margin:0 auto; }
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:420px; margin:6px auto 0; }
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; transition:background 0.15s,color 0.15s; -webkit-tap-highlight-color:transparent; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; letter-spacing:0.05em; }
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  .mode-nav { display:grid; grid-template-columns:repeat(2,1fr); gap:4px; margin-bottom:14px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .mode-btn { background:transparent; border:none; color:var(--text-muted); font-size:0.78rem; font-weight:700; letter-spacing:0.06em; padding:11px 4px; border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; text-transform:uppercase; min-height:44px; transition:background 0.15s,color 0.15s; }
+  .mode-btn:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .mode-btn.active { background:var(--accent-dim); color:var(--accent); }
+
+  .panel { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px; }
+  .panel h2 { font-size:0.78rem; color:var(--text-secondary); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px; font-weight:600; }
+
+  .pills { display:flex; flex-wrap:wrap; gap:6px; }
+  .pill { background:var(--bg-input); border:1px solid var(--border); color:var(--text-secondary); font-size:0.85rem; font-weight:600; padding:8px 14px; border-radius:20px; cursor:pointer; font-family:inherit; min-height:36px; transition:all 0.15s; }
+  .pill:hover { background:var(--bg-secondary); border-color:var(--border-focus); color:var(--text-primary); }
+  .pill.active { background:var(--accent); border-color:var(--accent); color:#0d1f0d; }
+
+  .preview { display:flex; flex-direction:column; align-items:center; gap:12px; padding:20px 0; }
+  .preview-svg { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:20px; min-width:200px; }
+  .preview-label { font-size:0.85rem; color:var(--text-secondary); text-align:center; line-height:1.5; }
+
+  .actions { display:flex; gap:8px; }
+  .btn { flex:1; padding:13px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:0.9rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; min-height:48px; transition:all 0.15s; }
+  .btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .btn-primary { background:var(--accent); color:#0d1f0d; border-color:var(--accent); }
+  .btn-primary:hover { background:var(--accent-hover); }
+
+  /* Quiz */
+  .quiz-options { display:flex; flex-direction:column; gap:8px; }
+  .quiz-option-group { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; }
+  .quiz-option-group .group-label { font-size:0.7rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px; font-weight:600; }
+  .quiz-feedback { font-size:0.85rem; padding:10px 12px; border-radius:var(--radius-sm); margin-top:10px; }
+  .quiz-feedback.correct { background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); }
+  .quiz-feedback.partial { background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border); }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px;text-align:center;font-size:0.9rem">JavaScript krävs.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>SYMBOL</h1>
+    <p>APP-6-byggare</p>
+    <p class="disclaimer">Privatutvecklat utbildnings-/övningsverktyg. Inte fastställt av Försvarsmakten.</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+    <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+    <a href="fors.html" class="tab-link">FORS</a>
+    <a href="pedars.html" class="tab-link">PEDARS</a>
+    <a href="postschema.html" class="tab-link">SCHEMA</a>
+    <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+    <a href="obo.html" class="tab-link">OBO</a>
+    <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+    <a href="vader.html" class="tab-link">VÄDER</a>
+    <a href="minkarta.html" class="tab-link">MINKARTA</a>
+    <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+    <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+    <a href="matt.html" class="tab-link">MÅTT</a>
+    <a href="ramsor.html" class="tab-link">RAMSOR</a>
+    <a href="tccc.html" class="tab-link">TCCC</a>
+    <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
+    <a href="ra763.html" class="tab-link">RA763</a>
+    <a href="app6.html" class="tab-link">APP-6</a>
+    <a href="forkort.html" class="tab-link">FÖRKORT</a>
+    <a href="fg.html" class="tab-link">FG</a>
+    <a href="un.html" class="tab-link">UN</a>
+    <a href="saekr.html" class="tab-link">SÄKR</a>
+    <a href="patl.html" class="tab-link">PATL</a>
+    <a href="symbol.html" class="tab-link active">SYMBOL</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <div class="mode-nav" role="tablist">
+    <button class="mode-btn active" data-mode="build" type="button">Bygg</button>
+    <button class="mode-btn" data-mode="quiz" type="button">Mystery</button>
+  </div>
+
+  <main id="modeContent"></main>
+</div>
+
+<script>
+(function () {
+  /* ─── Symbol-definitioner ─── */
+  // Box: 120 × 100 svg-units. Vi använder transparent fyll om "ofylld" annars affiliation-färg.
+  const COLORS = {
+    'van':     { fill:'#5fafff', stroke:'#1565c0' },
+    'fiende':  { fill:'#ff5c5c', stroke:'#b71c1c' },
+    'neutral': { fill:'#7fd896', stroke:'#1b5e20' },
+    'okand':   { fill:'#ffd166', stroke:'#8d6708' }
+  };
+
+  const AFF_LABEL  = { 'van':'Vän', 'fiende':'Fiende', 'neutral':'Neutral', 'okand':'Okänd' };
+  const DIM_LABEL  = { 'luft':'Luft', 'mark':'Mark', 'sjo':'Sjö', 'uv':'Undervatten', 'mtrl':'Materiel' };
+
+  // Ramformer per (affiliation, dimension). Origo 0,0 - 120,100. ikon-yta ca 30,25 - 90,80
+  function framePath(aff, dim) {
+    if (dim === 'luft') {
+      if (aff === 'van')     return { d:'M10,90 Q60,10 110,90', closed:false };
+      if (aff === 'fiende')  return { d:'M10,90 L10,45 L60,15 L110,45 L110,90', closed:false };
+      if (aff === 'neutral') return { d:'M10,90 L10,15 L110,15 L110,90', closed:false };
+      if (aff === 'okand')   return { d:'M30,90 C5,90 5,55 25,55 C25,30 60,30 60,55 C95,30 115,55 95,55 C115,90 90,90 90,90', closed:false };
+    }
+    if (dim === 'mark') {
+      if (aff === 'van' || aff === 'neutral') {
+        const fill = aff === 'neutral' ? COLORS.neutral.fill : COLORS.van.fill;
+        const stroke = aff === 'neutral' ? COLORS.neutral.stroke : COLORS.van.stroke;
+        return { kind:'rect', x:10, y:30, w:100, h:60, fill, stroke };
+      }
+      if (aff === 'fiende') return { kind:'poly', points:'60,15 110,55 60,95 10,55' };
+      if (aff === 'okand')  return { kind:'cloverleaf' };
+    }
+    if (dim === 'sjo') {
+      if (aff === 'van')     return { kind:'circle', cx:60, cy:55, r:40 };
+      if (aff === 'fiende')  return { kind:'poly', points:'60,15 110,55 60,95 10,55' };
+      if (aff === 'neutral') return { kind:'rect', x:10, y:30, w:100, h:60 };
+      if (aff === 'okand')   return { kind:'cloverleaf' };
+    }
+    if (dim === 'uv') {
+      if (aff === 'van')     return { d:'M10,15 Q60,95 110,15', closed:false };
+      if (aff === 'fiende')  return { d:'M10,15 L10,55 L60,90 L110,55 L110,15', closed:false };
+      if (aff === 'neutral') return { d:'M10,15 L10,90 L110,90 L110,15', closed:false };
+      if (aff === 'okand')   return { kind:'cloverleaf', inverted:true };
+    }
+    if (dim === 'mtrl') {
+      if (aff === 'van')     return { kind:'circle', cx:60, cy:55, r:40 };
+      if (aff === 'fiende')  return { kind:'poly', points:'60,15 110,55 60,95 10,55' };
+      if (aff === 'neutral') return { kind:'rect', x:10, y:30, w:100, h:60 };
+      if (aff === 'okand')   return { kind:'cloverleaf' };
+    }
+    return null;
+  }
+
+  function cloverleafPath(inverted) {
+    // Fyrklöver/moln-form. ungefärligt.
+    if (inverted) {
+      return 'M25,90 a18,18 0 0 1 0,-30 a18,18 0 0 1 25,-15 a18,18 0 0 1 35,0 a18,18 0 0 1 25,15 a18,18 0 0 1 0,30 Z';
+    }
+    return 'M25,20 a18,18 0 0 0 0,30 a18,18 0 0 0 25,15 a18,18 0 0 0 35,0 a18,18 0 0 0 25,-15 a18,18 0 0 0 0,-30 a18,18 0 0 0 -25,-15 a18,18 0 0 0 -35,0 a18,18 0 0 0 -25,15 Z';
+  }
+
+  /* ─── Ikoner — enkla SVG-pathar i ikon-ytan ─── */
+  const ICONS = {
+    'inget':    { label:'(ingen)', draw:() => '' },
+    'inf':      { label:'Infanteri (X)',         draw:(c) => `<line x1="${c.x1}" y1="${c.y1}" x2="${c.x2}" y2="${c.y2}" stroke="${c.s}" stroke-width="2.5"/><line x1="${c.x2}" y1="${c.y1}" x2="${c.x1}" y2="${c.y2}" stroke="${c.s}" stroke-width="2.5"/>` },
+    'pansar':   { label:'Pansar (oval)',         draw:(c) => `<ellipse cx="60" cy="${(c.y1+c.y2)/2}" rx="22" ry="11" fill="none" stroke="${c.s}" stroke-width="2.5"/>` },
+    'pv':       { label:'Pansarvärn (Λ)',        draw:(c) => `<polyline points="${c.x1},${c.y2} 60,${c.y1} ${c.x2},${c.y2}" fill="none" stroke="${c.s}" stroke-width="2.5"/>` },
+    'art':      { label:'Artilleri (●)',         draw:(c) => `<circle cx="60" cy="${(c.y1+c.y2)/2}" r="5.5" fill="${c.s}"/>` },
+    'grk':      { label:'Granatkastare (↑)',     draw:(c) => `<line x1="60" y1="${c.y2}" x2="60" y2="${c.y1+4}" stroke="${c.s}" stroke-width="2.5"/><polyline points="55,${c.y1+8} 60,${c.y1+2} 65,${c.y1+8}" fill="none" stroke="${c.s}" stroke-width="2.5"/>` },
+    'lv':       { label:'Luftvärn (∩)',          draw:(c) => `<path d="M${c.x1+5},${c.y2} Q60,${c.y1-5} ${c.x2-5},${c.y2}" fill="none" stroke="${c.s}" stroke-width="2.5"/>` },
+    'sjv':      { label:'Sjukvård (+)',          draw:(c) => `<line x1="60" y1="${c.y1+4}" x2="60" y2="${c.y2-4}" stroke="${c.s}" stroke-width="3.5"/><line x1="${c.x1+6}" y1="${(c.y1+c.y2)/2}" x2="${c.x2-6}" y2="${(c.y1+c.y2)/2}" stroke="${c.s}" stroke-width="3.5"/>` },
+    'rec':      { label:'Spaning (\\)',          draw:(c) => `<line x1="${c.x1+4}" y1="${c.y1+4}" x2="${c.x2-4}" y2="${c.y2-4}" stroke="${c.s}" stroke-width="2.5"/>` },
+    'hkp':      { label:'Helikopter (bog-fluga)', draw:(c) => `<line x1="${c.x1+4}" y1="${(c.y1+c.y2)/2}" x2="${c.x2-4}" y2="${(c.y1+c.y2)/2}" stroke="${c.s}" stroke-width="2.5"/><polygon points="${c.x1+4},${(c.y1+c.y2)/2-6} ${c.x1+14},${(c.y1+c.y2)/2} ${c.x1+4},${(c.y1+c.y2)/2+6}" fill="${c.s}"/><polygon points="${c.x2-4},${(c.y1+c.y2)/2-6} ${c.x2-14},${(c.y1+c.y2)/2} ${c.x2-4},${(c.y1+c.y2)/2+6}" fill="${c.s}"/>` },
+    'uav':      { label:'UAV (drone)',           draw:(c) => `<line x1="${c.x1+4}" y1="${(c.y1+c.y2)/2}" x2="${c.x2-4}" y2="${(c.y1+c.y2)/2}" stroke="${c.s}" stroke-width="2.5"/><polygon points="${c.x1+4},${(c.y1+c.y2)/2-6} ${c.x1+14},${(c.y1+c.y2)/2} ${c.x1+4},${(c.y1+c.y2)/2+6}" fill="none" stroke="${c.s}" stroke-width="2"/><polygon points="${c.x2-4},${(c.y1+c.y2)/2-6} ${c.x2-14},${(c.y1+c.y2)/2} ${c.x2-4},${(c.y1+c.y2)/2+6}" fill="none" stroke="${c.s}" stroke-width="2"/>` }
+  };
+
+  /* ─── Förbandsstorlek-modifierare (ovanför ramen) ─── */
+  const SIZES = [
+    { id:'none',   label:'(ingen)' },
+    { id:'grupp', label:'Grupp •',         render:'<circle cx="60" cy="6" r="3" fill="currentColor"/>' },
+    { id:'tropp', label:'Tropp ••',        render:'<circle cx="53" cy="6" r="3" fill="currentColor"/><circle cx="67" cy="6" r="3" fill="currentColor"/>' },
+    { id:'plut',  label:'Pluton •••',      render:'<circle cx="46" cy="6" r="3" fill="currentColor"/><circle cx="60" cy="6" r="3" fill="currentColor"/><circle cx="74" cy="6" r="3" fill="currentColor"/>' },
+    { id:'komp',  label:'Kompani |',       render:'<line x1="60" y1="0" x2="60" y2="12" stroke="currentColor" stroke-width="2.5"/>' },
+    { id:'bat',   label:'Bataljon ||',     render:'<line x1="54" y1="0" x2="54" y2="12" stroke="currentColor" stroke-width="2.5"/><line x1="66" y1="0" x2="66" y2="12" stroke="currentColor" stroke-width="2.5"/>' },
+    { id:'reg',   label:'Regemente |||',   render:'<line x1="48" y1="0" x2="48" y2="12" stroke="currentColor" stroke-width="2.5"/><line x1="60" y1="0" x2="60" y2="12" stroke="currentColor" stroke-width="2.5"/><line x1="72" y1="0" x2="72" y2="12" stroke="currentColor" stroke-width="2.5"/>' },
+    { id:'brig',  label:'Brigad X',        render:'<text x="60" y="11" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">X</text>' },
+    { id:'div',   label:'Division XX',     render:'<text x="60" y="11" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">XX</text>' },
+    { id:'kar',   label:'Kår XXX',         render:'<text x="60" y="11" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">XXX</text>' },
+    { id:'arme',  label:'Armé XXXX',       render:'<text x="60" y="11" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">XXXX</text>' }
+  ];
+
+  /* ─── State ─── */
+  const state = {
+    aff: 'van',
+    dim: 'mark',
+    icon: 'inf',
+    size: 'plut',
+    status: 'present'  // present | planned
+  };
+
+  /* ─── SVG-rendering ─── */
+  function buildSvg(s, opts) {
+    opts = opts || {};
+    const w = 140, h = 130;
+    const col = COLORS[s.aff];
+    const fr = framePath(s.aff, s.dim);
+    const dashed = s.status === 'planned' ? ' stroke-dasharray="5,3"' : '';
+    const fill = (s.dim === 'luft' || s.dim === 'uv') ? 'none' : col.fill;
+
+    let frameSvg = '';
+    if (fr) {
+      if (fr.kind === 'rect') {
+        frameSvg = `<rect x="${fr.x}" y="${fr.y}" width="${fr.w}" height="${fr.h}" fill="${fr.fill || col.fill}" stroke="${fr.stroke || col.stroke}" stroke-width="2.5"${dashed}/>`;
+      } else if (fr.kind === 'circle') {
+        frameSvg = `<circle cx="${fr.cx}" cy="${fr.cy}" r="${fr.r}" fill="${col.fill}" stroke="${col.stroke}" stroke-width="2.5"${dashed}/>`;
+      } else if (fr.kind === 'poly') {
+        frameSvg = `<polygon points="${fr.points}" fill="${col.fill}" stroke="${col.stroke}" stroke-width="2.5"${dashed}/>`;
+      } else if (fr.kind === 'cloverleaf') {
+        frameSvg = `<path d="${cloverleafPath(fr.inverted)}" fill="${col.fill}" stroke="${col.stroke}" stroke-width="2.5"${dashed}/>`;
+      } else if (fr.d) {
+        // Linje-bara (luft/uv): inget fyll, bara stroke
+        frameSvg = `<path d="${fr.d}" fill="none" stroke="${col.stroke}" stroke-width="2.5"${dashed}/>`;
+      }
+    }
+
+    // Ikon-yta (clamp inom ramen)
+    const iconCoords = { x1:28, y1:s.dim==='uv'?22:32, x2:92, y2:s.dim==='uv'?78:78, s:col.stroke };
+    if (s.dim === 'luft') { iconCoords.y1 = 38; iconCoords.y2 = 80; }
+    if (s.dim === 'mtrl' || s.dim === 'sjo') { iconCoords.y1 = 38; iconCoords.y2 = 74; }
+    const iconSvg = (ICONS[s.icon] && ICONS[s.icon].draw) ? ICONS[s.icon].draw(iconCoords) : '';
+
+    // Förbandsstorlek (ovanför ramen — gäller bara förbandssymboler, dvs ej mtrl)
+    let sizeSvg = '';
+    if (s.size !== 'none' && s.dim !== 'mtrl') {
+      const sz = SIZES.find(x => x.id === s.size);
+      if (sz && sz.render) sizeSvg = `<g style="color:${col.stroke}" transform="translate(10,3)">${sz.render}</g>`;
+    }
+
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${w*2}" height="${h*2}" viewBox="0 0 ${w} ${h}">${sizeSvg}<g transform="translate(10,15)">${frameSvg}${iconSvg}</g></svg>`;
+    return svg;
+  }
+
+  function describe(s) {
+    const sz = SIZES.find(x => x.id === s.size);
+    const ic = ICONS[s.icon];
+    const parts = [AFF_LABEL[s.aff], DIM_LABEL[s.dim]];
+    if (s.dim !== 'mtrl' && s.size !== 'none' && sz) parts.push(sz.label.split(' ')[0]);
+    if (s.icon !== 'inget' && ic) parts.push(ic.label.split(' ')[0]);
+    if (s.status === 'planned') parts.push('(planerad)');
+    return parts.join(' · ');
+  }
+
+  /* ─── Bygg-läge ─── */
+  function renderBuild() {
+    const $c = document.getElementById('modeContent');
+    $c.innerHTML = '';
+
+    const preview = document.createElement('div');
+    preview.className = 'panel preview';
+    preview.innerHTML = `<div class="preview-svg" id="previewSvg"></div><div class="preview-label" id="previewLabel"></div>`;
+    $c.appendChild(preview);
+
+    const sections = [
+      { title:'Affiliation', key:'aff', opts:[['van','Vän'],['fiende','Fiende'],['neutral','Neutral'],['okand','Okänd']] },
+      { title:'Battle dimension', key:'dim', opts:[['luft','Luft'],['mark','Mark'],['sjo','Sjö'],['uv','Undervatten'],['mtrl','Materiel']] },
+      { title:'Status', key:'status', opts:[['present','Befintlig (heldragen)'],['planned','Planerad (streckad)']] },
+      { title:'Förbandsstorlek', key:'size', opts: SIZES.map(s => [s.id, s.label]) },
+      { title:'Ikon', key:'icon', opts: Object.entries(ICONS).map(([k,v]) => [k, v.label]) }
+    ];
+
+    sections.forEach(sec => {
+      const p = document.createElement('div');
+      p.className = 'panel';
+      p.innerHTML = `<h2>${sec.title}</h2><div class="pills" data-key="${sec.key}"></div>`;
+      const pills = p.querySelector('.pills');
+      sec.opts.forEach(([val, label]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pill' + (state[sec.key] === val ? ' active' : '');
+        b.textContent = label;
+        b.dataset.val = val;
+        b.addEventListener('click', () => { state[sec.key] = val; renderBuild(); });
+        pills.appendChild(b);
+      });
+      $c.appendChild(p);
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'panel actions';
+    actions.innerHTML = `<button class="btn" type="button" id="copySvg">Kopiera SVG</button><button class="btn btn-primary" type="button" id="downloadSvg">Ladda ner SVG</button>`;
+    $c.appendChild(actions);
+
+    // Update preview
+    document.getElementById('previewSvg').innerHTML = buildSvg(state);
+    document.getElementById('previewLabel').textContent = describe(state);
+
+    document.getElementById('copySvg').addEventListener('click', () => {
+      const svg = buildSvg(state);
+      navigator.clipboard.writeText(svg).then(
+        () => { document.getElementById('previewLabel').textContent = describe(state) + ' — kopierad'; },
+        () => { document.getElementById('previewLabel').textContent = describe(state) + ' — kopiering misslyckades'; }
+      );
+    });
+    document.getElementById('downloadSvg').addEventListener('click', () => {
+      const svg = buildSvg(state);
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `app6-${state.aff}-${state.dim}-${state.icon}-${state.size}.svg`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    });
+  }
+
+  /* ─── Mystery-läge ─── */
+  function newMystery() {
+    const affs = ['van','fiende','neutral','okand'];
+    const dims = ['luft','mark','sjo','uv','mtrl'];
+    const iconKeys = Object.keys(ICONS).filter(k => k !== 'inget');
+    const sizeKeys = SIZES.map(s => s.id).filter(s => s !== 'none');
+    return {
+      aff: affs[Math.floor(Math.random()*affs.length)],
+      dim: dims[Math.floor(Math.random()*dims.length)],
+      icon: Math.random() < 0.6 ? iconKeys[Math.floor(Math.random()*iconKeys.length)] : 'inget',
+      size: Math.random() < 0.6 ? sizeKeys[Math.floor(Math.random()*sizeKeys.length)] : 'none',
+      status: 'present'
+    };
+  }
+
+  let mystery = null;
+  let mysteryGuess = null;
+
+  function renderQuiz() {
+    const $c = document.getElementById('modeContent');
+    $c.innerHTML = '';
+
+    if (!mystery) mystery = newMystery();
+    if (!mysteryGuess) mysteryGuess = { aff:null, dim:null };
+
+    const preview = document.createElement('div');
+    preview.className = 'panel preview';
+    preview.innerHTML = `<div class="preview-svg">${buildSvg(mystery)}</div><div class="preview-label">Vad ser du? Gissa affiliation och battle dimension.</div>`;
+    $c.appendChild(preview);
+
+    // Pillar för affiliation
+    const aSec = document.createElement('div');
+    aSec.className = 'panel';
+    aSec.innerHTML = `<h2>Affiliation</h2><div class="pills" id="qAff"></div>`;
+    ['van','fiende','neutral','okand'].forEach(v => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pill' + (mysteryGuess.aff === v ? ' active' : '');
+      b.textContent = AFF_LABEL[v];
+      b.addEventListener('click', () => { mysteryGuess.aff = v; renderQuiz(); });
+      aSec.querySelector('#qAff').appendChild(b);
+    });
+    $c.appendChild(aSec);
+
+    const dSec = document.createElement('div');
+    dSec.className = 'panel';
+    dSec.innerHTML = `<h2>Battle dimension</h2><div class="pills" id="qDim"></div>`;
+    ['luft','mark','sjo','uv','mtrl'].forEach(v => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pill' + (mysteryGuess.dim === v ? ' active' : '');
+      b.textContent = DIM_LABEL[v];
+      b.addEventListener('click', () => { mysteryGuess.dim = v; renderQuiz(); });
+      dSec.querySelector('#qDim').appendChild(b);
+    });
+    $c.appendChild(dSec);
+
+    const act = document.createElement('div');
+    act.className = 'panel actions';
+    act.innerHTML = `<button class="btn" type="button" id="qSkip">Ny</button><button class="btn btn-primary" type="button" id="qCheck"${(mysteryGuess.aff && mysteryGuess.dim) ? '' : ' disabled'}>Kontrollera</button>`;
+    $c.appendChild(act);
+
+    document.getElementById('qSkip').addEventListener('click', () => {
+      mystery = newMystery(); mysteryGuess = { aff:null, dim:null }; renderQuiz();
+    });
+    document.getElementById('qCheck').addEventListener('click', () => {
+      const ok = (mysteryGuess.aff === mystery.aff) && (mysteryGuess.dim === mystery.dim);
+      const fb = document.createElement('div');
+      fb.className = 'quiz-feedback ' + (ok ? 'correct' : 'partial');
+      fb.textContent = ok ? `Rätt — ${describe(mystery)}` : `Rätt svar: ${AFF_LABEL[mystery.aff]} · ${DIM_LABEL[mystery.dim]}`;
+      preview.appendChild(fb);
+      document.getElementById('qCheck').disabled = true;
+      setTimeout(() => {
+        mystery = newMystery(); mysteryGuess = { aff:null, dim:null }; renderQuiz();
+      }, ok ? 1100 : 2400);
+    });
+  }
+
+  /* ─── Mode-växel ─── */
+  function setMode(m) {
+    document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === m));
+    if (m === 'build') renderBuild();
+    else if (m === 'quiz') { mystery = null; mysteryGuess = null; renderQuiz(); }
+  }
+  document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
+  setMode('build');
+})();
+</script>
+
+<script src="pwa.js" defer></script>
+</body>
+</html>

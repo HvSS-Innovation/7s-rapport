@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<script>(function(){try{var s=localStorage.getItem('skyttebok_settings_lightmode');var l=(s==='on')||(s!=='off'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches);if(l)document.documentElement.setAttribute('data-theme','light');}catch(_){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="UN">
+<title>UN — uppslag &amp; godsdeklaration</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared/theme-toggle.css">
+<script src="shared/theme-toggle.js" defer></script>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; }
+  .container { max-width:680px; margin:0 auto; }
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:420px; margin:6px auto 0; }
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; }
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  .mode-nav { display:grid; grid-template-columns:repeat(2,1fr); gap:4px; margin-bottom:14px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .mode-btn { background:transparent; border:none; color:var(--text-muted); font-size:0.78rem; font-weight:700; letter-spacing:0.06em; padding:11px 4px; border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; text-transform:uppercase; min-height:44px; }
+  .mode-btn:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .mode-btn.active { background:var(--accent-dim); color:var(--accent); }
+
+  .panel { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px; }
+  .panel h2 { font-size:0.78rem; color:var(--text-secondary); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px; font-weight:600; }
+
+  input[type="text"], textarea {
+    width:100%; background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); color:var(--text-primary); font-family:inherit;
+    font-size:1rem; padding:11px 13px; outline:none; transition:border-color 0.15s;
+  }
+  input[type="text"]:focus, textarea:focus { border-color:var(--border-focus); }
+  input::placeholder { color:var(--text-muted); }
+
+  /* Uppslagsresultat */
+  .un-list { display:flex; flex-direction:column; gap:8px; }
+  .un-row { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; cursor:pointer; transition:border-color 0.15s; }
+  .un-row:hover { border-color:var(--border-focus); }
+  .un-row-head { display:flex; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:4px; }
+  .un-mil { font-size:0.95rem; font-weight:700; color:var(--accent); letter-spacing:0.03em; }
+  .un-nr { font-size:0.78rem; color:var(--text-muted); font-family:ui-monospace,monospace; }
+  .un-name { font-size:0.86rem; color:var(--text-secondary); line-height:1.45; }
+  .un-meta { display:flex; gap:6px; flex-wrap:wrap; margin-top:6px; }
+  .un-tag { font-size:0.66rem; color:var(--text-muted); background:var(--bg-secondary); border:1px solid var(--border); padding:2px 8px; border-radius:10px; letter-spacing:0.04em; text-transform:uppercase; font-weight:500; }
+
+  /* Detalj-modal (inline) */
+  .un-detail { background:var(--bg-secondary); border:1px solid var(--accent-dim); border-radius:var(--radius-sm); padding:12px 14px; margin-top:8px; }
+  .un-detail-row { display:flex; justify-content:space-between; gap:10px; padding:5px 0; font-size:0.85rem; border-bottom:1px solid var(--border); }
+  .un-detail-row:last-child { border-bottom:none; }
+  .un-detail-label { color:var(--text-muted); letter-spacing:0.04em; font-weight:500; }
+  .un-detail-val { color:var(--text-primary); text-align:right; font-weight:600; }
+
+  .empty { text-align:center; color:var(--text-muted); font-size:0.88rem; padding:30px 16px; }
+
+  /* Godsdeklaration */
+  .form-row { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+  .form-row label { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; font-weight:600; }
+  .form-grid { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:480px) { .form-grid { grid-template-columns:1fr; } }
+  .preview-box { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:14px; font-family:ui-monospace,Menlo,monospace; font-size:0.85rem; line-height:1.55; white-space:pre-wrap; color:var(--text-primary); }
+  .actions { display:flex; gap:8px; margin-top:10px; }
+  .btn { flex:1; padding:13px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:0.9rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; min-height:48px; }
+  .btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .btn-primary { background:var(--accent); color:#0d1f0d; border-color:var(--accent); }
+  .btn-primary:hover { background:var(--accent-hover); }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px;text-align:center">JavaScript krävs.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>UN</h1>
+    <p>Uppslag &amp; godsdeklaration</p>
+    <p class="disclaimer">Privatutvecklat utbildnings-/repetitionsverktyg. Inte fastställt av Försvarsmakten. Slå alltid upp gällande ADR-S vid skarpa transporter.</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+    <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+    <a href="fors.html" class="tab-link">FORS</a>
+    <a href="pedars.html" class="tab-link">PEDARS</a>
+    <a href="postschema.html" class="tab-link">SCHEMA</a>
+    <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+    <a href="obo.html" class="tab-link">OBO</a>
+    <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+    <a href="vader.html" class="tab-link">VÄDER</a>
+    <a href="minkarta.html" class="tab-link">MINKARTA</a>
+    <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+    <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+    <a href="matt.html" class="tab-link">MÅTT</a>
+    <a href="ramsor.html" class="tab-link">RAMSOR</a>
+    <a href="tccc.html" class="tab-link">TCCC</a>
+    <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
+    <a href="ra763.html" class="tab-link">RA763</a>
+    <a href="app6.html" class="tab-link">APP-6</a>
+    <a href="forkort.html" class="tab-link">FÖRKORT</a>
+    <a href="fg.html" class="tab-link">FG</a>
+    <a href="symbol.html" class="tab-link">SYMBOL</a>
+    <a href="saekr.html" class="tab-link">SÄKR</a>
+    <a href="patl.html" class="tab-link">PATL</a>
+    <a href="un.html" class="tab-link active">UN</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <div class="mode-nav">
+    <button class="mode-btn active" data-mode="lookup" type="button">Uppslag</button>
+    <button class="mode-btn" data-mode="godsdek" type="button">Godsdeklaration</button>
+  </div>
+
+  <main id="modeContent"></main>
+</div>
+
+<script>
+(function () {
+  /* ─── UN-databas (urval — bygger på FM Konvertering militär benämning till UN + ADR-S vanliga) ─── */
+  const UN_DB = [
+    { mil:'Bensin',                       un:'1203', namn:'Petrol / Bensin',                 klass:'3',   pg:'II',  etikett:'3' },
+    { mil:'Diesel',                       un:'1202', namn:'Dieselbrännolja / Diesel',        klass:'3',   pg:'III', etikett:'3' },
+    { mil:'Alkylatbensin (t.ex. OKQ8 4T)', un:'1203', namn:'Petrol / Bensin',                klass:'3',   pg:'II',  etikett:'3' },
+    { mil:'Fotogen',                      un:'1223', namn:'Kerosin / Fotogen',                klass:'3',   pg:'III', etikett:'3' },
+    { mil:'Sprit 35',                     un:'1170', namn:'Etanol',                           klass:'3',   pg:'II',  etikett:'3' },
+    { mil:'Klorkalk (personsaneringsmedel)', un:'1748', namn:'Kalciumhypoklorit, torr blandning', klass:'5.1', pg:'II', etikett:'5.1' },
+    { mil:'Acetylen',                     un:'1001', namn:'Acetylen, löst',                   klass:'2.1', pg:'—',   etikett:'2.1' },
+    { mil:'Syrgas',                       un:'1072', namn:'Syrgas, komprimerad',              klass:'2.2', pg:'—',   etikett:'2.2 + 5.1' },
+    { mil:'Batterisyra',                  un:'2796', namn:'Batterivätska, sur',               klass:'8',   pg:'II',  etikett:'8' },
+    { mil:'Spillolja',                    un:'3082', namn:'Miljöfarliga ämnen, flytande, N.O.S. (Spillolja)', klass:'9', pg:'III', etikett:'9' },
+    { mil:'Finkalibrig skarp ammunition', un:'0339', namn:'Patroner för vapen, fullprojektil', klass:'1.4S', pg:'—', etikett:'1.4S' },
+    { mil:'Finkalibrig lös ammunition',   un:'0339', namn:'Patroner för vapen, fullprojektil', klass:'1.4S', pg:'—', etikett:'1.4S' },
+    { mil:'Rökhgr 05',                    un:'0303', namn:'Rökammunition',                    klass:'1.4G', pg:'—', etikett:'1.4G' },
+    { mil:'SkPskott 86',                  un:'0181', namn:'Raketer',                          klass:'1.1F', pg:'—', etikett:'1.1F' },
+    { mil:'Shgr 56',                      un:'0284', namn:'Granater',                         klass:'1.1D', pg:'—', etikett:'1.1D' },
+    { mil:'Rbs 56 med litiumbatterier (utan robot)', un:'3091', namn:'Litiumbatterier, primära, förpackade med utrustning', klass:'9', pg:'II', etikett:'9' },
+    { mil:'Food Heater / matvärmare',     un:'3131', namn:'Vattenreaktivt fast ämne, N.O.S.', klass:'4.3', pg:'II', etikett:'4.3' },
+    { mil:'Gasol till soldatkök',         un:'2037', namn:'Gasbehållare, små (engångs)',      klass:'2.1', pg:'—',   etikett:'2.1' },
+    { mil:'Propan',                       un:'1978', namn:'Propan',                           klass:'2.1', pg:'—',   etikett:'2.1' },
+    { mil:'Sprängämne (allmänt)',         un:'0084', namn:'Sprängämne, typ D',                klass:'1.1D', pg:'—', etikett:'1.1D' }
+  ];
+
+  const $content = document.getElementById('modeContent');
+
+  /* ─── Uppslag ─── */
+  function renderLookup() {
+    $content.innerHTML = '';
+
+    const search = document.createElement('div');
+    search.className = 'panel';
+    search.innerHTML = `<h2>Sök militär benämning eller UN-nr</h2><input type="text" id="qSearch" placeholder="t.ex. bensin, 1203, syrgas…" autocomplete="off" spellcheck="false">`;
+    $content.appendChild(search);
+
+    const list = document.createElement('div');
+    list.className = 'panel';
+    list.innerHTML = `<h2>Träffar</h2><div class="un-list" id="qList"></div>`;
+    $content.appendChild(list);
+
+    const $input = document.getElementById('qSearch');
+    const $list = document.getElementById('qList');
+    let openId = null;
+
+    function renderList(q) {
+      const norm = (q || '').trim().toLowerCase();
+      const hits = norm === ''
+        ? UN_DB
+        : UN_DB.filter(r => r.mil.toLowerCase().includes(norm) || r.un.includes(norm) || r.namn.toLowerCase().includes(norm) || r.klass.includes(norm));
+
+      if (hits.length === 0) {
+        $list.innerHTML = '<div class="empty">Inga träffar.</div>';
+        return;
+      }
+
+      $list.innerHTML = '';
+      hits.forEach(r => {
+        const id = r.un + '-' + r.mil;
+        const row = document.createElement('div');
+        row.className = 'un-row';
+        row.innerHTML = `
+          <div class="un-row-head">
+            <span class="un-mil">${escapeHtml(r.mil)}</span>
+            <span class="un-nr">UN ${r.un}</span>
+          </div>
+          <div class="un-name">${escapeHtml(r.namn)}</div>
+          <div class="un-meta">
+            <span class="un-tag">Klass ${r.klass}</span>
+            ${r.pg !== '—' ? `<span class="un-tag">PG ${r.pg}</span>` : ''}
+            <span class="un-tag">Etikett ${r.etikett}</span>
+          </div>
+        `;
+        if (openId === id) {
+          const det = document.createElement('div');
+          det.className = 'un-detail';
+          det.innerHTML = `
+            <div class="un-detail-row"><span class="un-detail-label">Militär benämning</span><span class="un-detail-val">${escapeHtml(r.mil)}</span></div>
+            <div class="un-detail-row"><span class="un-detail-label">UN-nummer</span><span class="un-detail-val">${r.un}</span></div>
+            <div class="un-detail-row"><span class="un-detail-label">Officiell transportbenämning</span><span class="un-detail-val">${escapeHtml(r.namn)}</span></div>
+            <div class="un-detail-row"><span class="un-detail-label">Klass</span><span class="un-detail-val">${r.klass}</span></div>
+            <div class="un-detail-row"><span class="un-detail-label">Förpackningsgrupp</span><span class="un-detail-val">${r.pg}</span></div>
+            <div class="un-detail-row"><span class="un-detail-label">Etikettförlaga</span><span class="un-detail-val">${r.etikett}</span></div>
+          `;
+          row.appendChild(det);
+        }
+        row.addEventListener('click', () => { openId = (openId === id) ? null : id; renderList($input.value); });
+        $list.appendChild(row);
+      });
+    }
+    $input.addEventListener('input', e => renderList(e.target.value));
+    renderList('');
+  }
+
+  /* ─── Godsdeklaration-generator ─── */
+  function renderGodsdek() {
+    $content.innerHTML = '';
+    const state = JSON.parse(sessionStorage.getItem('un_godsdek') || '{}');
+
+    const form = document.createElement('div');
+    form.className = 'panel';
+    form.innerHTML = `
+      <h2>Fyll i</h2>
+      <div class="form-row"><label>Avsändare</label><input type="text" data-k="avsandare" value="${escapeAttr(state.avsandare||'')}" placeholder="t.ex. 42. Hemvärnsbataljonen"></div>
+      <div class="form-row"><label>Mottagare</label><input type="text" data-k="mottagare" value="${escapeAttr(state.mottagare||'')}" placeholder="t.ex. Skövde garnison, Oljebaren"></div>
+      <div class="form-row"><label>UN-nummer</label><input type="text" data-k="un" value="${escapeAttr(state.un||'')}" placeholder="t.ex. 1203" inputmode="numeric"></div>
+      <div class="form-row"><label>Officiell transportbenämning</label><input type="text" data-k="namn" value="${escapeAttr(state.namn||'')}" placeholder="t.ex. Bensin"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Klass</label><input type="text" data-k="klass" value="${escapeAttr(state.klass||'')}" placeholder="3"></div>
+        <div class="form-row"><label>Förpackningsgrupp</label><input type="text" data-k="pg" value="${escapeAttr(state.pg||'')}" placeholder="II"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Etikettförlaga</label><input type="text" data-k="etikett" value="${escapeAttr(state.etikett||'')}" placeholder="3"></div>
+        <div class="form-row"><label>Antal kollin</label><input type="text" data-k="antal" value="${escapeAttr(state.antal||'')}" placeholder="2 dunkar"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Nettovikt / volym</label><input type="text" data-k="vikt" value="${escapeAttr(state.vikt||'')}" placeholder="40 liter"></div>
+        <div class="form-row"><label>Tunnelrestriktionskod (om aktuell)</label><input type="text" data-k="tunnel" value="${escapeAttr(state.tunnel||'')}" placeholder="(D/E)"></div>
+      </div>
+      <div class="form-row"><label>Övrigt (kontrolltemp / nödläges-temp m.m.)</label><textarea data-k="ovrigt" placeholder="" rows="2">${escapeHtml(state.ovrigt||'')}</textarea></div>
+    `;
+    $content.appendChild(form);
+
+    const preview = document.createElement('div');
+    preview.className = 'panel';
+    preview.innerHTML = `<h2>Förhandsgranskning</h2><div class="preview-box" id="prev"></div>`;
+    $content.appendChild(preview);
+
+    const act = document.createElement('div');
+    act.className = 'panel actions';
+    act.innerHTML = `<button class="btn" type="button" id="copyTxt">Kopiera text</button><button class="btn btn-primary" type="button" id="printPg">Skriv ut</button>`;
+    $content.appendChild(act);
+
+    function build() {
+      const s = {};
+      form.querySelectorAll('[data-k]').forEach(el => { s[el.dataset.k] = el.value.trim(); });
+      sessionStorage.setItem('un_godsdek', JSON.stringify(s));
+
+      const dash = '─'.repeat(48);
+      const lines = [
+        'GODSDEKLARATION  (ADR-S 5.4.1)',
+        dash,
+        'Avsändare:  ' + (s.avsandare || ''),
+        'Mottagare:  ' + (s.mottagare || ''),
+        dash,
+        `UN ${s.un || '____'}, ${s.namn || '____________'}, klass ${s.klass || '_'}` +
+          (s.pg ? ', PG ' + s.pg : '') +
+          `, etikett ${s.etikett || '_'}`,
+        `Antal kollin:   ${s.antal || ''}`,
+        `Nettovikt/volym: ${s.vikt || ''}`,
+        s.tunnel ? `Tunnelkod:      ${s.tunnel}` : null,
+        s.ovrigt ? '' : null,
+        s.ovrigt ? 'Övrigt:' : null,
+        s.ovrigt || null,
+        '',
+        dash,
+        'Underskrift avsändare: ___________________________',
+        'Datum: __________  Plats: __________'
+      ].filter(x => x !== null);
+      document.getElementById('prev').textContent = lines.join('\n');
+    }
+
+    form.querySelectorAll('[data-k]').forEach(el => el.addEventListener('input', build));
+    document.getElementById('copyTxt').addEventListener('click', () => {
+      const text = document.getElementById('prev').textContent;
+      navigator.clipboard.writeText(text).then(
+        () => { document.getElementById('copyTxt').textContent = 'Kopierad ✓'; setTimeout(() => document.getElementById('copyTxt').textContent = 'Kopiera text', 1500); },
+        () => { document.getElementById('copyTxt').textContent = 'Misslyckades'; }
+      );
+    });
+    document.getElementById('printPg').addEventListener('click', () => {
+      const text = document.getElementById('prev').textContent;
+      const w = window.open('', '_blank');
+      if (!w) return;
+      w.document.write(`<pre style="font-family:ui-monospace,monospace;font-size:11pt;white-space:pre-wrap;padding:24px">${escapeHtml(text)}</pre>`);
+      w.document.title = 'Godsdeklaration';
+      w.print();
+    });
+    build();
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+  function escapeAttr(s) { return escapeHtml(s); }
+
+  document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => {
+    document.querySelectorAll('.mode-btn').forEach(x => x.classList.toggle('active', x === b));
+    if (b.dataset.mode === 'lookup') renderLookup(); else renderGodsdek();
+  }));
+  renderLookup();
+})();
+</script>
+
+<script src="pwa.js" defer></script>
+</body>
+</html>
