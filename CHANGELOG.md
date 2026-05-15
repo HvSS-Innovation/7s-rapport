@@ -10,11 +10,15 @@ Detaljerade beskrivningar finns i README-dagboken.
 - Exkluderade per begäran: 7S (index), WHAT, SCRIM, WEFT, A–H. SKYTTEBOK + SKYTTEBOK-INFO hade redan toggle.
 - Service worker auto-bumpas; nya `shared/theme-toggle.css` + `shared/theme-toggle.js` tillagda i FILES.
 
+## v0.2.3 — 2026-05-15 — AT-MIST: kön i Age-raden
+- AT-MIST Age-raden utvidgad: "patientens ålder och kön (eller bedömd ålder och kön om okänd, ange då bedömt läge)".
+- Service worker auto-bumpas.
+
 ## v0.2.1 — 2026-05-15 — Ramsor: AT-MIST + 4B (issue #31, #32)
 - MIST → AT-MIST: Age och Time of injury tillagt framför MIST-bokstäverna (det är AT-MIST som lärs ut på TOS/TCCC idag). `id` ändrat `mist` → `at-mist`, usage uppdaterad.
 - Ny ramsa **4B** under Sjv: Bröstkorg / Buk / Bäcken / Ben — skadesvep efter inre blödning som del av lilla c i C-ABCDE (TCCC-praxis).
 - README + tccc-data.js uppdaterade med nya namn och 4B-referens.
-- Service worker `CACHE` bump → `hv-20260515_atmist_4b_v01`.
+- Service worker auto-bumpas.
 
 ## v0.1 — 2026-05-13 — TCCC-flik (Tactical Combat Casualty Care)
 - Ny tab `tccc.html` med utbildningsmaterial för stridsskadad sjukvård

@@ -116,7 +116,7 @@ window.RAMSOR_DATA = {
       name: 'AT-MIST',
       short: 'Strukturerad överlämning av skadad till nästa vårdnivå.',
       lines: [
-        { letter: 'A', text: 'Age — patientens ålder (eller bedömd ålder om okänd).' },
+        { letter: 'A', text: 'Age — patientens ålder och kön (eller bedömd ålder och kön om okänd, ange då bedömt läge).' },
         { letter: 'T', text: 'Time — tidpunkt för skadan (eller bedömd tid om okänd).' },
         { letter: 'M', text: 'Mechanism — skademekanism (vad orsakade skadan).' },
         { letter: 'I', text: 'Injuries — funna och misstänkta skador.' },
