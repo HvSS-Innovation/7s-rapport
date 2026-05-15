@@ -8,7 +8,7 @@ Detaljerade beskrivningar finns i README-dagboken.
 - Delade `shared/theme-toggle.css` (light-mode-overrides + FAB-styling) och `shared/theme-toggle.js` (auto-mount + click-handler).
 - Inline FOUC-init i `<head>` på alla 14 sidor; samma `skyttebok_settings_lightmode` localStorage-nyckel → val följer mellan tabs.
 - Exkluderade per begäran: 7S (index), WHAT, SCRIM, WEFT, A–H. SKYTTEBOK + SKYTTEBOK-INFO hade redan toggle.
-- Service worker `CACHE` bump → `hv-20260515_theme_toggle_v01`, nya shared-filer i FILES.
+- Service worker auto-bumpas; nya `shared/theme-toggle.css` + `shared/theme-toggle.js` tillagda i FILES.
 
 ## v0.2.1 — 2026-05-15 — Ramsor: AT-MIST + 4B (issue #31, #32)
 - MIST → AT-MIST: Age och Time of injury tillagt framför MIST-bokstäverna (det är AT-MIST som lärs ut på TOS/TCCC idag). `id` ändrat `mist` → `at-mist`, usage uppdaterad.
