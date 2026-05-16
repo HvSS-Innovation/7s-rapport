@@ -286,6 +286,12 @@
             width: 34px; height: 34px; display: block;
             filter: drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 1.5px #fff) drop-shadow(0 1px 1.5px rgba(0,0,0,0.45));
         }
+        /* Patrullstig-pilspets (midpunkt-marker pa polyline-segment). */
+        .sk-line-arrow { background: transparent !important; border: none !important; pointer-events: none; }
+        .sk-line-arrow svg {
+            width: 18px; height: 18px; display: block;
+            filter: drop-shadow(0 0 1.2px #fff) drop-shadow(0 0 1px #fff);
+        }
 
         .leaflet-tooltip.sk-label {
             font: 600 11px Inter, sans-serif;
@@ -953,7 +959,7 @@ const LAYERS_KEY = 'sensorskiss.layers';
 const state = {
     objects: [],
     layers: {},
-    counters: { C: 0, P: 0, K: 0, U: 0, L: 0 },
+    counters: { C: 0, P: 0, K: 0, U: 0, L: 0, H: 0 },
     draft: null,
     draftLayer: null,
     showLabels: (function(){
@@ -981,7 +987,7 @@ function pushUndo() {
 function applySnapshot(snap) {
     const obj = JSON.parse(snap);
     state.objects = obj.objects || [];
-    state.counters = obj.counters || { C: 0, P: 0, K: 0, U: 0, L: 0 };
+    state.counters = obj.counters || { C: 0, P: 0, K: 0, U: 0, L: 0, H: 0 };
     rebuildLayers();
     scheduleAutosave();
 }
@@ -1039,7 +1045,9 @@ async function loadPersisted() {
         });
         if (data) {
             state.objects = Array.isArray(data.objects) ? data.objects : [];
-            state.counters = data.counters || { C: 0, P: 0, K: 0, U: 0, L: 0 };
+            state.counters = data.counters || { C: 0, P: 0, K: 0, U: 0, L: 0, H: 0 };
+            // Bakåtkompat: säkerställ att H-räknare finns för hund.
+            if (state.counters.H == null) state.counters.H = 0;
         }
     } catch (_) {}
 }
@@ -1103,14 +1111,79 @@ function addLabelMarker(obj) {
 function addDirectionLine(obj) {
     if (!obj.rotation && obj.rotation !== 0) return;
     const sym = window.SK_SYMBOLS[obj.typ];
-    if (!sym || !sym.externalLine) return;  // Endast PIR (sym.externalLine===true)
-    // Använd ~100 m som referenslängd vid normal zoom — synligt vid z 13–16
-    const end = dirLineEndpoint(obj.lat, obj.lng, obj.rotation, 100);
-    const line = L.polyline([[obj.lat, obj.lng], end], {
-        color: '#000', weight: 2, dashArray: '6 4', opacity: 0.8, interactive: false
-    });
-    line.addTo(map);
-    state.layers[obj.id + '_dir'] = line;
+    if (!sym) return;
+    if (sym.externalLine) {
+        // Långt streckat streck (PIR) ~100 m vid normal zoom.
+        const end = dirLineEndpoint(obj.lat, obj.lng, obj.rotation, 100);
+        const line = L.polyline([[obj.lat, obj.lng], end], {
+            color: '#000', weight: 2, dashArray: '6 4', opacity: 0.8, interactive: false
+        });
+        line.addTo(map);
+        state.layers[obj.id + '_dir'] = line;
+    } else if (sym.sector) {
+        // Vridbar sektor (CCTV/DSLR). Anvand obj.sectorAngle/range om satta,
+        // annars symbolens default. Polygon: center + bage med 18 segment.
+        const angle = Number.isFinite(obj.sectorAngle) ? obj.sectorAngle : sym.sector.angle;
+        const range = Number.isFinite(obj.sectorRange) ? obj.sectorRange : sym.sector.range;
+        const pts = sectorPath(obj.lat, obj.lng, obj.rotation || 0, angle, range);
+        const poly = L.polygon(pts, {
+            color: '#000', weight: 1.5, dashArray: '4 3', opacity: 0.85,
+            fillColor: '#000', fillOpacity: 0.07, interactive: false
+        });
+        poly.addTo(map);
+        state.layers[obj.id + '_dir'] = poly;
+    }
+}
+
+// Bygg en sektor-polygon: center + bage med `steps` segment. bearing=mitten
+// av sektorns riktning, angle=hela oppningsvinkeln (grader), rangeM=radie i
+// meter. Returnerar array av [lat,lng]-par.
+function sectorPath(lat, lng, bearingDeg, angleDeg, rangeM, steps) {
+    steps = steps || 18;
+    const half = angleDeg / 2;
+    const pts = [[lat, lng]];
+    for (let i = 0; i <= steps; i++) {
+        const a = bearingDeg - half + (angleDeg * i / steps);
+        pts.push(dirLineEndpoint(lat, lng, a, rangeM));
+    }
+    return pts;
+}
+
+// Bearing fran p1 till p2 i grader (0=norr, medurs).
+function bearingBetween(lat1, lng1, lat2, lng2) {
+    const toRad = d => d * Math.PI / 180;
+    const toDeg = r => r * 180 / Math.PI;
+    const dLng = toRad(lng2 - lng1);
+    const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+    const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+              Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+
+// Pilspetsar pa varje segment-midpunkt for patrullstig-stil. Pilen ritas
+// som L.divIcon med roterad SVG. Lagras som obj.id + '_arr_' + i.
+function addLineArrows(obj) {
+    if (!obj.path || obj.path.length < 2) return;
+    for (let i = 0; i < obj.path.length - 1; i++) {
+        const p1 = obj.path[i], p2 = obj.path[i + 1];
+        const midLat = (p1.lat + p2.lat) / 2;
+        const midLng = (p1.lng + p2.lng) / 2;
+        const bear = bearingBetween(p1.lat, p1.lng, p2.lat, p2.lng);
+        const icon = L.divIcon({
+            className: 'sk-line-arrow',
+            html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" ' +
+                  'style="transform:rotate(' + bear + 'deg)">' +
+                  '<polygon points="12,3 6,15 12,12 18,15" fill="#000"/>' +
+                  '</svg>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+        const m = L.marker([midLat, midLng], {
+            icon: icon, interactive: false, keyboard: false
+        });
+        m.addTo(map);
+        state.layers[obj.id + '_arr_' + i] = m;
+    }
 }
 
 // ── Rendering av enskilt objekt ───────────────────────────────────────────
@@ -1166,6 +1239,22 @@ function renderObject(obj) {
         }
         layer.addTo(map);
         state.layers[obj.id] = layer;
+    } else if (sym.category === 'polyline') {
+        const style = obj.style || sym.defaultStyle || 'heldragen';
+        const opts = {
+            color: sym.stroke || '#000', weight: 2.5, opacity: 0.9
+        };
+        if (style === 'streckad') opts.dashArray = '6 4';
+        layer = L.polyline(obj.path.map(p => [p.lat, p.lng]), opts);
+        if (obj.antalText) {
+            layer.bindTooltip(obj.antalText, {
+                permanent: true, direction: 'center', className: 'sk-label'
+            });
+        }
+        layer.addTo(map);
+        state.layers[obj.id] = layer;
+        // Pilad stil: lagg pilspetsar pa varje segment-midpunkt.
+        if (style === 'pilad') addLineArrows(obj);
     }
     if (!layer) return;
 
@@ -1218,7 +1307,11 @@ function openEditPopup(obj, layer, evt) {
         prev();
     }
     const isPolygon = sym.category === 'polygon';
+    const isPolyline = sym.category === 'polyline';
     const directional = !!sym.directional;
+    const isSector = !!sym.sector;
+    const hasToggle = !!sym.toggle;
+    const isPost = window.SK_POST_TYPES && window.SK_POST_TYPES.has(obj.typ);
 
     let html = '<div style="font:600 12px Inter,sans-serif;color:#0d1f0d;min-width:220px">';
     html += '<div style="font-size:13px;margin-bottom:8px;color:#0d1f0d"><b>' + escapeHtml(sym.label) + '</b></div>';
@@ -1236,10 +1329,56 @@ function openEditPopup(obj, layer, evt) {
             '" style="width:100%;margin-bottom:8px">';
     }
 
+    if (isSector) {
+        const a = Number.isFinite(obj.sectorAngle) ? obj.sectorAngle : sym.sector.angle;
+        const r = Number.isFinite(obj.sectorRange) ? obj.sectorRange : sym.sector.range;
+        html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Öppningsvinkel <span id="skfSecAngleVal">' + a + '°</span></label>';
+        html += '<input type="range" id="skfSecAngle" min="5" max="180" value="' + a +
+            '" style="width:100%;margin-bottom:6px">';
+        html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Räckvidd <span id="skfSecRangeVal">' + r + ' m</span></label>';
+        html += '<input type="range" id="skfSecRange" min="10" max="1000" step="10" value="' + r +
+            '" style="width:100%;margin-bottom:8px">';
+    }
+
+    if (hasToggle) {
+        const on = !!obj[sym.toggle.field];
+        html += '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f0d;margin-bottom:8px;text-transform:none;letter-spacing:0">' +
+            '<input type="checkbox" id="skfToggle"' + (on ? ' checked' : '') + ' style="width:14px;height:14px;margin:0">' +
+            '<span><b>' + escapeHtml(sym.toggle.on) + '</b> (annars: ' + escapeHtml(sym.toggle.off) + ')</span>' +
+        '</label>';
+    }
+
+    if (isPost && window.SK_POST_UTRUSTNING) {
+        html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:4px">Utrustning</label>';
+        html += '<div style="display:flex;flex-direction:column;gap:3px;margin-bottom:8px">';
+        const current = Array.isArray(obj.utrustning) ? obj.utrustning : [];
+        window.SK_POST_UTRUSTNING.forEach(u => {
+            const ck = current.includes(u.id) ? ' checked' : '';
+            html += '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f0d;text-transform:none;letter-spacing:0;font-weight:500">' +
+                '<input type="checkbox" class="skfUtr" value="' + u.id + '"' + ck + ' style="width:13px;height:13px;margin:0">' +
+                escapeHtml(u.label) + '</label>';
+        });
+        html += '</div>';
+    }
+
     if (isPolygon) {
         html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Antal &amp; typ</label>';
         html += '<input type="text" id="skfAntal" value="' + escapeHtml(obj.antalText || '') +
             '" placeholder="t.ex. 3 PIR + 1 KAMERA" style="width:100%;padding:4px 6px;font:400 12px Inter,sans-serif;border:1px solid #888;border-radius:3px;margin-bottom:8px">';
+    }
+
+    if (isPolyline) {
+        html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Stil</label>';
+        html += '<select id="skfStyle" style="width:100%;padding:4px 6px;font:600 12px Inter,sans-serif;border:1px solid #888;border-radius:3px;margin-bottom:8px;background:#fff">';
+        const stilar = window.SK_LINJE_STILAR || [];
+        const cur = obj.style || sym.defaultStyle || 'heldragen';
+        stilar.forEach(s => {
+            html += '<option value="' + s.id + '"' + (s.id === cur ? ' selected' : '') + '>' + escapeHtml(s.label) + '</option>';
+        });
+        html += '</select>';
+        html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Text (visas på kartan)</label>';
+        html += '<input type="text" id="skfAntal" value="' + escapeHtml(obj.antalText || '') +
+            '" placeholder="t.ex. Patrullstig, Snubbeltråd" style="width:100%;padding:4px 6px;font:400 12px Inter,sans-serif;border:1px solid #888;border-radius:3px;margin-bottom:8px">';
     }
 
     html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Anteckning</label>';
@@ -1287,20 +1426,34 @@ function openEditPopup(obj, layer, evt) {
             fadeTimer = null;
             if (popup._container) popup._container.classList.remove('is-editing-live');
         };
+        // Helper: ersatt dir-layer (linje eller sektor) genom att riva och
+        // ata-skapa. Anvands av live-rotation OCH sektor-justering.
+        const refreshDirLayer = () => {
+            const dir = state.layers[obj.id + '_dir'];
+            if (dir) {
+                try { map.removeLayer(dir); } catch (_) {}
+                delete state.layers[obj.id + '_dir'];
+            }
+            addDirectionLine(obj);
+        };
         const liveRotate = (deg) => {
             obj.rotation = deg;
-            // Uppdatera ikonens inre roterande grupp
             const layer = state.layers[obj.id];
             if (layer && layer.setIcon && window.skMakeIcon) {
                 layer.setIcon(window.skMakeIcon(obj.typ, obj));
             }
-            // Uppdatera den långa externa riktningslinjen (bara PIR har en)
-            const dir = state.layers[obj.id + '_dir'];
-            if (dir) {
-                const end = dirLineEndpoint(obj.lat, obj.lng, deg, 100);
-                dir.setLatLngs([[obj.lat, obj.lng], end]);
+            // PIR: enkel uppdatering av linjen. Sektor: enklare att ata-skapa
+            // hela polygonen. Bada via refreshDirLayer.
+            if (sym.sector) {
+                refreshDirLayer();
             } else {
-                addDirectionLine(obj);
+                const dir = state.layers[obj.id + '_dir'];
+                if (dir && dir.setLatLngs) {
+                    const end = dirLineEndpoint(obj.lat, obj.lng, deg, 100);
+                    dir.setLatLngs([[obj.lat, obj.lng], end]);
+                } else {
+                    addDirectionLine(obj);
+                }
             }
         };
         if (rot && rotVal) {
@@ -1315,25 +1468,70 @@ function openEditPopup(obj, layer, evt) {
             rot.addEventListener('touchend', endFade);
         }
 
-        // Återställ rotation om popupen stängs utan Spara/Ta bort.
+        // Sektor: live-justering av oppningsvinkel + rackvidd.
+        const origSectorAngle = Number.isFinite(obj.sectorAngle) ? obj.sectorAngle : (sym.sector ? sym.sector.angle : null);
+        const origSectorRange = Number.isFinite(obj.sectorRange) ? obj.sectorRange : (sym.sector ? sym.sector.range : null);
+        let sectorCommitted = false;
+        const secAngle = document.getElementById('skfSecAngle');
+        const secAngleVal = document.getElementById('skfSecAngleVal');
+        const secRange = document.getElementById('skfSecRange');
+        const secRangeVal = document.getElementById('skfSecRangeVal');
+        if (secAngle && secAngleVal) {
+            secAngle.addEventListener('input', () => {
+                const v = parseInt(secAngle.value, 10) || 5;
+                secAngleVal.textContent = v + '°';
+                obj.sectorAngle = v;
+                refreshDirLayer();
+                beginFade();
+            });
+            secAngle.addEventListener('change', endFade);
+            secAngle.addEventListener('pointerup', endFade);
+            secAngle.addEventListener('touchend', endFade);
+        }
+        if (secRange && secRangeVal) {
+            secRange.addEventListener('input', () => {
+                const v = parseInt(secRange.value, 10) || 10;
+                secRangeVal.textContent = v + ' m';
+                obj.sectorRange = v;
+                refreshDirLayer();
+                beginFade();
+            });
+            secRange.addEventListener('change', endFade);
+            secRange.addEventListener('pointerup', endFade);
+            secRange.addEventListener('touchend', endFade);
+        }
+
+        // Återställ rotation/sektor om popupen stängs utan Spara/Ta bort.
         const restoreOnClose = (ev) => {
             if (ev.popup !== popup) return;
             map.off('popupclose', restoreOnClose);
-            if (rotCommitted) return;
-            if (obj.rotation === origRotation) return;
-            obj.rotation = origRotation;
-            // Återställ ikonens rotation
-            const layer = state.layers[obj.id];
-            if (layer && layer.setIcon && window.skMakeIcon) {
-                layer.setIcon(window.skMakeIcon(obj.typ, obj));
+            if (rotCommitted && sectorCommitted) return;
+            let changed = false;
+            if (!rotCommitted && obj.rotation !== origRotation) {
+                obj.rotation = origRotation;
+                const layer = state.layers[obj.id];
+                if (layer && layer.setIcon && window.skMakeIcon) {
+                    layer.setIcon(window.skMakeIcon(obj.typ, obj));
+                }
+                changed = true;
             }
-            const dir = state.layers[obj.id + '_dir'];
-            if (!hadDirLine && dir) {
-                try { map.removeLayer(dir); } catch (_) {}
-                delete state.layers[obj.id + '_dir'];
-            } else if (dir) {
-                const end = dirLineEndpoint(obj.lat, obj.lng, origRotation, 100);
-                dir.setLatLngs([[obj.lat, obj.lng], end]);
+            if (!sectorCommitted && sym.sector) {
+                if (obj.sectorAngle !== origSectorAngle) { obj.sectorAngle = origSectorAngle; changed = true; }
+                if (obj.sectorRange !== origSectorRange) { obj.sectorRange = origSectorRange; changed = true; }
+            }
+            if (changed) {
+                const dir = state.layers[obj.id + '_dir'];
+                if (!hadDirLine && dir) {
+                    try { map.removeLayer(dir); } catch (_) {}
+                    delete state.layers[obj.id + '_dir'];
+                } else {
+                    // Ata-skapa for att tacka bade linje- och sektor-fall.
+                    if (dir) {
+                        try { map.removeLayer(dir); } catch (_) {}
+                        delete state.layers[obj.id + '_dir'];
+                    }
+                    addDirectionLine(obj);
+                }
             }
         };
         map.on('popupclose', restoreOnClose);
@@ -1345,10 +1543,22 @@ function openEditPopup(obj, layer, evt) {
         _activeEditCommit = commitFn;
         if (save) save.addEventListener('click', () => {
             rotCommitted = true;
+            sectorCommitted = true;
             pushUndo();
             const numEl = document.getElementById('skfNum');
             if (numEl) obj.numLabel = numEl.value.trim();
             if (rot) obj.rotation = parseInt(rot.value, 10) || 0;
+            if (secAngle) obj.sectorAngle = parseInt(secAngle.value, 10) || sym.sector.angle;
+            if (secRange) obj.sectorRange = parseInt(secRange.value, 10) || sym.sector.range;
+            const tog = document.getElementById('skfToggle');
+            if (tog && sym.toggle) obj[sym.toggle.field] = !!tog.checked;
+            const utrCks = document.querySelectorAll('.skfUtr');
+            if (utrCks.length) {
+                obj.utrustning = [];
+                utrCks.forEach(c => { if (c.checked) obj.utrustning.push(c.value); });
+            }
+            const styleSel = document.getElementById('skfStyle');
+            if (styleSel) obj.style = styleSel.value;
             const ant = document.getElementById('skfAntal');
             if (ant) obj.antalText = ant.value.trim();
             const note = document.getElementById('skfNote');
@@ -1373,16 +1583,28 @@ function openEditPopup(obj, layer, evt) {
     }, 0);
 }
 
-// ── Polygon-ritning (Sensorområde) ────────────────────────────────────────
-let polyDraft = null;     // { path: [{lat,lng}], markers: [L.marker], line: L.polyline }
-function polyDraftStart() {
-    polyDraft = { path: [], markers: [], line: L.polyline([], {
-        color: '#000', weight: 2, dashArray: '6 4'
-    }).addTo(map) };
-    toast('Klicka punkter, dubbelklicka för att stänga.', 2400);
+// ── Polygon-/polyline-ritning (Sensorområde + Linje) ────────────────────────
+// polyDraft.kind: 'polygon' (sluten, min 3 noder) eller 'polyline' (oppen,
+// min 2 noder). Bada avslutas med dubbelklick eller Esc.
+let polyDraft = null;     // { kind, typ, path, markers, line }
+function polyDraftStart(typ) {
+    const sym = window.SK_SYMBOLS[typ];
+    const isPolyline = sym && sym.category === 'polyline';
+    polyDraft = {
+        kind: isPolyline ? 'polyline' : 'polygon',
+        typ: typ,
+        path: [],
+        markers: [],
+        line: L.polyline([], {
+            color: '#000', weight: 2, dashArray: '6 4'
+        }).addTo(map)
+    };
+    toast(isPolyline
+        ? 'Klicka punkter, dubbelklicka för att avsluta.'
+        : 'Klicka punkter, dubbelklicka för att stänga.', 2400);
 }
 function polyDraftAdd(latlng) {
-    if (!polyDraft) polyDraftStart();
+    if (!polyDraft) return;
     polyDraft.path.push({ lat: latlng.lat, lng: latlng.lng });
     const m = L.marker(latlng, {
         icon: L.divIcon({ className: 'sk-poly-node',
@@ -1395,19 +1617,26 @@ function polyDraftAdd(latlng) {
     polyDraft.line.setLatLngs(polyDraft.path.map(p => [p.lat, p.lng]));
 }
 function polyDraftFinish() {
-    if (!polyDraft || polyDraft.path.length < 3) {
-        if (polyDraft) polyDraftCancel();
+    if (!polyDraft) return;
+    const minNoder = polyDraft.kind === 'polyline' ? 2 : 3;
+    if (polyDraft.path.length < minNoder) {
+        polyDraftCancel();
         return;
     }
+    const typ = polyDraft.typ;
+    const sym = window.SK_SYMBOLS[typ];
     const obj = {
-        id: uid(), typ: 'sensoromrade',
+        id: uid(), typ: typ,
         path: polyDraft.path.slice(),
         antalText: '', anteckning: ''
     };
+    if (polyDraft.kind === 'polyline') {
+        obj.style = (sym && sym.defaultStyle) || 'heldragen';
+    }
     polyDraftCancel();
     addObject(obj);
     setActiveTool(null);
-    // Auto-öppna popup för antal-text-redigering
+    // Auto-öppna popup för redigering
     setTimeout(() => {
         const layer = state.layers[obj.id];
         if (layer) openEditPopup(obj, layer, null);
@@ -1602,8 +1831,8 @@ function openShortcutDialog(toolId) {
 }
 
 function setActiveTool(id) {
-    // Avbryt pågående polygon-ritning vid byte
-    if (polyDraft && id !== 'sensoromrade') polyDraftCancel();
+    // Avbryt pågående polygon-/polyline-ritning vid byte
+    if (polyDraft && polyDraft.typ !== id) polyDraftCancel();
     activeTool = id;
     hideHoverPreview();
     const sym = id ? window.SK_SYMBOLS[id] : null;
@@ -1645,21 +1874,35 @@ function attachMapDrawHandlers() {
                 lat: e.latlng.lat, lng: e.latlng.lng,
                 rotation: 0, anteckning: ''
             };
-            // Auto-numrering för C/P/K/U/L
+            // Auto-numrering för C/P/K/U/L/H
             if (sym.prefix) {
                 state.counters[sym.prefix] = (state.counters[sym.prefix] || 0) + 1;
                 obj.numLabel = sym.prefix + state.counters[sym.prefix];
+            }
+            // Defaults for sektor-symboler (cctv/dslr).
+            if (sym.sector) {
+                obj.sectorAngle = sym.sector.angle;
+                obj.sectorRange = sym.sector.range;
+            }
+            // Defaults for toggle-falt (hund: patrull = false).
+            if (sym.toggle) {
+                obj[sym.toggle.field] = false;
+            }
+            // Defaults for post-utrustning.
+            if (window.SK_POST_TYPES && window.SK_POST_TYPES.has(activeTool)) {
+                obj.utrustning = [];
             }
             addObject(obj);
             // Auto-öppna popup för redigering
             const layer = state.layers[obj.id];
             if (layer) setTimeout(() => openEditPopup(obj, layer, null), 50);
-        } else if (sym.category === 'polygon') {
+        } else if (sym.category === 'polygon' || sym.category === 'polyline') {
+            if (!polyDraft) polyDraftStart(activeTool);
             polyDraftAdd(e.latlng);
         }
     });
     map.on('dblclick', e => {
-        if (activeTool === 'sensoromrade' && polyDraft) {
+        if (polyDraft) {
             L.DomEvent.stopPropagation(e);
             L.DomEvent.preventDefault(e);
             polyDraftFinish();
@@ -1748,7 +1991,7 @@ function attachPaletteToolbar() {
         if (!confirm('Säker? Alla sensorer och områden försvinner.')) return;
         pushUndo();
         state.objects = [];
-        state.counters = { C: 0, P: 0, K: 0, U: 0, L: 0 };
+        state.counters = { C: 0, P: 0, K: 0, U: 0, L: 0, H: 0 };
         rebuildLayers();
         _lastExport = null;
     });
@@ -2310,11 +2553,12 @@ function addBspRow() {
 
 // ── Sensorprotokoll-text ──────────────────────────────────────────────────
 const SENSOR_GROUPS_PROTO = {
-    markbundna: ['cim', 'pir', 'kamera', 'umra'],
+    markbundna: ['cim', 'pir', 'kamera', 'umra', 'cctv', 'dslr', 'hund'],
     larmminor:  ['larmmina'],
     luftburna:  ['rpas'],
     poster:     ['enkelpost', 'dubbelpost', 'infart'],
-    omraden:    ['sensoromrade']
+    omraden:    ['sensoromrade'],
+    linjer:     ['linje']
 };
 
 function zuluNow() {
@@ -2344,6 +2588,28 @@ function generateProtocolText() {
     }
     function pad(s, w) { return (String(s) + ' '.repeat(w)).slice(0, w); }
 
+    function sectorStr(o) {
+        const sym = window.SK_SYMBOLS[o.typ];
+        if (!sym || !sym.sector) return '';
+        const a = Number.isFinite(o.sectorAngle) ? o.sectorAngle : sym.sector.angle;
+        const r = Number.isFinite(o.sectorRange) ? o.sectorRange : sym.sector.range;
+        return a + '°/' + r + 'm';
+    }
+    function toggleStr(o) {
+        const sym = window.SK_SYMBOLS[o.typ];
+        if (!sym || !sym.toggle) return '';
+        return o[sym.toggle.field] ? sym.toggle.on : sym.toggle.off;
+    }
+    function utrStr(o) {
+        if (!Array.isArray(o.utrustning) || !o.utrustning.length) return '';
+        if (!window.SK_POST_UTRUSTNING) return '';
+        const labels = o.utrustning.map(id => {
+            const u = window.SK_POST_UTRUSTNING.find(x => x.id === id);
+            return u ? u.label : id;
+        });
+        return '[' + labels.join(', ') + ']';
+    }
+
     function listSensors(typs, title) {
         const items = state.objects.filter(o => typs.includes(o.typ));
         if (!items.length) return;
@@ -2353,8 +2619,10 @@ function generateProtocolText() {
             const lab = o.numLabel || (window.SK_SYMBOLS[o.typ] && window.SK_SYMBOLS[o.typ].label) || o.typ;
             const m = mgrsOf(o);
             const r = rotStr(o);
+            const extra = [sectorStr(o), toggleStr(o)].filter(Boolean).join(' ');
             const note = o.anteckning ? '"' + o.anteckning.replace(/\n/g, ' ') + '"' : '';
-            lines.push('  ' + pad(lab, 4) + ' ' + pad(m, 19) + ' ' + pad(r, 13) + ' ' + note);
+            lines.push('  ' + pad(lab, 4) + ' ' + pad(m, 19) + ' ' + pad(r, 13) + ' ' +
+                (extra ? pad(extra, 16) + ' ' : '') + note);
         }
         lines.push('');
     }
@@ -2363,17 +2631,27 @@ function generateProtocolText() {
     listSensors(SENSOR_GROUPS_PROTO.larmminor,  'Larmminor');
     listSensors(SENSOR_GROUPS_PROTO.luftburna,  'Luftburna sensorer');
 
-    // Poster — räkna per typ
-    const posterCount = {};
-    SENSOR_GROUPS_PROTO.poster.forEach(t => {
-        posterCount[t] = state.objects.filter(o => o.typ === t).length;
-    });
-    const posterAny = Object.values(posterCount).some(n => n > 0);
-    if (posterAny) {
+    // Poster — lista per styck med MGRS + ev. utrustning, plus summa.
+    const posters = state.objects.filter(o => SENSOR_GROUPS_PROTO.poster.includes(o.typ));
+    if (posters.length) {
         lines.push('Poster:');
+        const posterCount = { enkelpost: 0, dubbelpost: 0, infart: 0 };
+        posters.forEach(o => { posterCount[o.typ] = (posterCount[o.typ] || 0) + 1; });
         if (posterCount.enkelpost) lines.push('  ' + posterCount.enkelpost + ' enkelpost' + (posterCount.enkelpost > 1 ? 'er' : ''));
         if (posterCount.dubbelpost) lines.push('  ' + posterCount.dubbelpost + ' dubbelpost' + (posterCount.dubbelpost > 1 ? 'er' : '') + ' / patrull');
         if (posterCount.infart) lines.push('  ' + posterCount.infart + ' in/utfartspost' + (posterCount.infart > 1 ? 'er' : ''));
+        // Detalj per post (om de har utrustning eller anteckning).
+        const detail = posters.filter(o => (o.utrustning && o.utrustning.length) || o.anteckning);
+        if (detail.length) {
+            detail.forEach((o, i) => {
+                const sym = window.SK_SYMBOLS[o.typ];
+                const lbl = (sym ? sym.label : o.typ);
+                const m = mgrsOf(o);
+                const u = utrStr(o);
+                const note = o.anteckning ? ' "' + o.anteckning.replace(/\n/g, ' ') + '"' : '';
+                lines.push('  · ' + lbl + ' ' + m + (u ? ' ' + u : '') + note);
+            });
+        }
         lines.push('');
     }
 
@@ -2385,6 +2663,25 @@ function generateProtocolText() {
             const t = o.antalText || '(ingen specifikation)';
             const note = o.anteckning ? ' — "' + o.anteckning.replace(/\n/g, ' ') + '"' : '';
             lines.push('  Område ' + (i + 1) + ': ' + t + note);
+        });
+        lines.push('');
+    }
+
+    // Linjer (patrullstigar, snubbeltradar, fri annotation).
+    const linjer = state.objects.filter(o => o.typ === 'linje');
+    if (linjer.length) {
+        lines.push('Linjer:');
+        const stilLbl = (id) => {
+            const s = (window.SK_LINJE_STILAR || []).find(x => x.id === id);
+            return s ? s.label : id;
+        };
+        linjer.forEach((o, i) => {
+            const stil = stilLbl(o.style || 'heldragen');
+            const t = o.antalText || '';
+            const note = o.anteckning ? ' "' + o.anteckning.replace(/\n/g, ' ') + '"' : '';
+            const segments = (o.path ? o.path.length - 1 : 0);
+            lines.push('  Linje ' + (i + 1) + ' [' + stil + ', ' + segments + ' segment]: ' +
+                t + note);
         });
         lines.push('');
     }

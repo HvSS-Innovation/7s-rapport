@@ -59,12 +59,26 @@
             for (const p of pts) include(p.lat, p.lng);
             // Inkludera etikettens drag-bara position så den ryms i exporten.
             if (o.labelLat != null && o.labelLng != null) include(o.labelLat, o.labelLng);
+            const sym = SYM[o.typ];
+            if (!sym) continue;
             // Inkludera ändpunkten av den långa externa riktningslinjen så
             // bbox täcker den. Bara symboler med externalLine-flagga (= PIR).
-            const sym = SYM[o.typ];
-            if (o.rotation && o.lat != null && o.lng != null && sym && sym.externalLine) {
+            if (o.rotation && o.lat != null && o.lng != null && sym.externalLine) {
                 const e = dirEndpoint(o.lat, o.lng, o.rotation, 100);
                 include(e.lat, e.lng);
+            }
+            // Inkludera sektorns ytterhorn (CCTV/DSLR) sa hela synfaltet ryms.
+            if (sym.sector && o.lat != null && o.lng != null) {
+                const ang = Number.isFinite(o.sectorAngle) ? o.sectorAngle : sym.sector.angle;
+                const rng = Number.isFinite(o.sectorRange) ? o.sectorRange : sym.sector.range;
+                const bear = Number.isFinite(o.rotation) ? o.rotation : 0;
+                const half = ang / 2;
+                // Sampla pa bagens kanter (8 punkter racker for bbox).
+                for (let i = 0; i <= 8; i++) {
+                    const a = bear - half + (ang * i / 8);
+                    const e = dirEndpoint(o.lat, o.lng, a, rng);
+                    include(e.lat, e.lng);
+                }
             }
         }
         if (!isFinite(minLat)) return null;
@@ -240,21 +254,48 @@
         // linje; övriga directional symboler indikerar riktning via sin
         // inre roterande delsymbol.
         for (const o of objects) {
-            if (!o.rotation) continue;
+            if (!o.rotation && o.rotation !== 0) continue;
             const sym = SYM[o.typ];
-            if (!sym || !sym.externalLine) continue;
-            const start = project(o.lat, o.lng);
-            const endLL = dirEndpoint(o.lat, o.lng, o.rotation, 100);
-            const end = project(endLL.lat, endLL.lng);
-            ctx.save();
-            ctx.setLineDash([6, 4]);
-            ctx.strokeStyle = '#000';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.moveTo(start.x, start.y);
-            ctx.lineTo(end.x, end.y);
-            ctx.stroke();
-            ctx.restore();
+            if (!sym) continue;
+            if (sym.externalLine && o.rotation) {
+                const start = project(o.lat, o.lng);
+                const endLL = dirEndpoint(o.lat, o.lng, o.rotation, 100);
+                const end = project(endLL.lat, endLL.lng);
+                ctx.save();
+                ctx.setLineDash([6, 4]);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(start.x, start.y);
+                ctx.lineTo(end.x, end.y);
+                ctx.stroke();
+                ctx.restore();
+            } else if (sym.sector) {
+                // Sektor-polygon (CCTV/DSLR): center + bage som halvgenomskinlig
+                // fyllning med streckad kant.
+                const ang = Number.isFinite(o.sectorAngle) ? o.sectorAngle : sym.sector.angle;
+                const rng = Number.isFinite(o.sectorRange) ? o.sectorRange : sym.sector.range;
+                const bear = Number.isFinite(o.rotation) ? o.rotation : 0;
+                const half = ang / 2;
+                const steps = 18;
+                const pts = [project(o.lat, o.lng)];
+                for (let i = 0; i <= steps; i++) {
+                    const a = bear - half + (ang * i / steps);
+                    const e = dirEndpoint(o.lat, o.lng, a, rng);
+                    pts.push(project(e.lat, e.lng));
+                }
+                ctx.save();
+                ctx.beginPath();
+                pts.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+                ctx.closePath();
+                ctx.fillStyle = 'rgba(0,0,0,0.07)';
+                ctx.fill();
+                ctx.setLineDash([4, 3]);
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                ctx.restore();
+            }
         }
 
         // Rita objekten
@@ -315,6 +356,56 @@
                     ctx.fillText(o.antalText, c.x, c.y);
                     ctx.restore();
                 }
+            } else if (sym.category === 'polyline') {
+                const style = o.style || sym.defaultStyle || 'heldragen';
+                const projected = o.path.map(pt => project(pt.lat, pt.lng));
+                // Vit halo for kontrast mot karta.
+                ctx.save();
+                ctx.setLineDash([]);
+                ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 4.5;
+                ctx.beginPath();
+                projected.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+                ctx.stroke();
+                ctx.setLineDash(style === 'streckad' ? [6, 4] : []);
+                ctx.strokeStyle = sym.stroke || '#000'; ctx.lineWidth = 2.5;
+                ctx.beginPath();
+                projected.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
+                ctx.stroke();
+                ctx.setLineDash([]);
+                // Pilspetsar pa segment-midpunkter for patrullstig-stil.
+                if (style === 'pilad') {
+                    for (let i = 0; i < projected.length - 1; i++) {
+                        const p1 = projected[i], p2 = projected[i + 1];
+                        const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+                        const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x);
+                        ctx.save();
+                        ctx.translate(mx, my);
+                        ctx.rotate(ang);
+                        ctx.fillStyle = '#000';
+                        ctx.beginPath();
+                        ctx.moveTo(8, 0); ctx.lineTo(-4, -5); ctx.lineTo(-1, 0); ctx.lineTo(-4, 5);
+                        ctx.closePath();
+                        ctx.fill();
+                        ctx.restore();
+                    }
+                }
+                // Linje-text vid midpunkten.
+                if (o.antalText && projected.length >= 2) {
+                    const midIdx = Math.floor(projected.length / 2);
+                    const mid = projected[midIdx];
+                    ctx.save();
+                    ctx.font = '700 13px Inter, sans-serif';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
+                    ctx.lineJoin = 'round';
+                    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+                    ctx.lineWidth = 4;
+                    ctx.strokeText(o.antalText, mid.x, mid.y - 10);
+                    ctx.fillStyle = '#000';
+                    ctx.fillText(o.antalText, mid.x, mid.y - 10);
+                    ctx.restore();
+                }
+                ctx.restore();
             }
         }
 

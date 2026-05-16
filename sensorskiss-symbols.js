@@ -13,8 +13,14 @@
 //  makeIcon ersätter {ROT} med obj.rotation vid render.
 //
 //  Kategorier:
-//    'point'   — engångsklick placerar en punktsymbol (ev. directional)
-//    'polygon' — sluten polygon (klicka noder, dubbelklick stänger)
+//    'point'    — engångsklick placerar en punktsymbol (ev. directional)
+//    'polygon'  — sluten polygon (klicka noder, dubbelklick stänger)
+//    'polyline' — öppen linje (klicka noder, dubbelklick avslutar)
+//
+//  Extra-flaggor:
+//    sym.externalLine — lång streckad riktningslinje (PIR)
+//    sym.sector       — { angle, range } vridbar sektor (CCTV/DSLR-kameror)
+//    sym.toggle       — { field, on, off } toggle-fält i edit-popup (Hund)
 // ─────────────────────────────────────────────────────────────────────────────
 
 const SK_INK  = '#000000';
@@ -78,6 +84,42 @@ const SYMBOLS = {
         prefix: null,
         directional: false,
         svg: textIcon('UMRA')
+    },
+
+    // CCTV — vridbar kamera med sektorfält (~60° default, räckvidd ~50 m).
+    // Sektorn ritas som halvgenomskinlig polygon från symbolens center i
+    // obj.rotation grader. Anvandaren kan andra angle/range i edit-popupen.
+    cctv: {
+        label: 'CCTV',
+        category: 'point',
+        prefix: null,
+        directional: true,
+        sector: { angle: 60, range: 50 },
+        svg: textIcon('CCTV')
+    },
+
+    // Digital systemkamera med stark zoom — smalare sektor (~15°) men
+    // langre rackvidd (~300 m). Samma rendering som CCTV men andra defaults.
+    dslr: {
+        label: 'DSLR',
+        category: 'point',
+        prefix: null,
+        directional: true,
+        sector: { angle: 15, range: 300 },
+        svg: textIcon('DSLR')
+    },
+
+    // Hund — markbunden sensor. Toggle "Fast / Patrullerande" i edit-popup
+    // styr obj.patrull (default false). Vid patrullerande ritar Joel en
+    // separat patrullstig (linje-verktyget) for rutten. Directional = vart
+    // hunden tittar/gar.
+    hund: {
+        label: 'Hund',
+        category: 'point',
+        prefix: 'H',
+        directional: true,
+        toggle: { field: 'patrull', on: 'Patrullerande', off: 'Fast' },
+        svg: textIcon('HUND')
     },
 
     // Larmmina — stor fylld svart cirkel + linje. Linjen anger
@@ -171,22 +213,57 @@ const SYMBOLS = {
         fill: 'rgba(0,0,0,0.08)',
         fillOpacity: 0.08,
         dashArray: '6 4'
+    },
+
+    // Linje — oppen polyline. Anvands for patrullstig (style='pilad'),
+    // snubbeltrad (style='streckad') och fri annotation (style='heldragen').
+    // Stilen valjs i edit-popupen efter ritning. Min 2 noder, dubbelklick
+    // avslutar.
+    linje: {
+        label: 'Linje',
+        category: 'polyline',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+            '<path d="M2 19 L9 11 L15 15 L22 5" fill="none" ' +
+                'stroke="' + SK_INK + '" stroke-width="2" ' +
+                'stroke-linecap="round" stroke-linejoin="round"/>' +
+            '<polygon points="22,5 18,5 21,8" fill="' + SK_INK + '"/>' +
+        '</svg>',
+        stroke: SK_INK,
+        defaultStyle: 'pilad'
     }
 };
 
 // Palett-grupper (UI-layout). Speglar PDF-strukturen.
 const SYMBOL_GROUPS = [
-    { title: 'Markbundna sensorer', ids: ['cim', 'pir', 'kamera', 'umra'] },
+    { title: 'Markbundna sensorer', ids: ['cim', 'pir', 'kamera', 'umra', 'cctv', 'dslr', 'hund'] },
     { title: 'Larmmina',            ids: ['larmmina'] },
     { title: 'Luftburna sensorer',  ids: ['rpas'] },
     { title: 'Poster',              ids: ['enkelpost', 'dubbelpost', 'infart'] },
-    { title: 'Områden',             ids: ['sensoromrade'] }
+    { title: 'Områden & linjer',    ids: ['sensoromrade', 'linje'] }
 ];
 
 // Symboler där rotation/riktningslinje gäller (directional).
 const DIRECTIONAL_TYPES = new Set(
     Object.keys(SYMBOLS).filter(k => SYMBOLS[k].directional === true)
 );
+
+// Posters (enkelpost, dubbelpost, infart) kan ha utrustning. Listan delas
+// med edit-popup, protokoll-export och PNG-export.
+const POST_UTRUSTNING = [
+    { id: 'kikare',      label: 'Kikare',       short: 'K'   },
+    { id: 'morkerkikare', label: 'Mörkerkikare', short: 'MN' },
+    { id: 'varmekam',    label: 'Värmekamera',  short: 'VK'  }
+];
+const POST_TYPES = new Set(['enkelpost', 'dubbelpost', 'infart']);
+
+// Linje-stilar. Visas i edit-popupen som dropdown. 'pilad' = patrullstig
+// (heldragen + pilspetsar), 'streckad' = snubbeltrad/markering, 'heldragen'
+// = generisk linje/annotation.
+const LINJE_STILAR = [
+    { id: 'pilad',     label: 'Patrullstig (pilar)' },
+    { id: 'streckad',  label: 'Streckad (snubbeltråd)' },
+    { id: 'heldragen', label: 'Heldragen' }
+];
 
 // Bygger en Leaflet divIcon för en symbol. Rotation appliceras genom att
 // ersätta {ROT}-placeholdern i SVG:n — bara den inre <g>-gruppen vrids.
@@ -221,3 +298,6 @@ window.SK_SYMBOL_GROUPS = SYMBOL_GROUPS;
 window.skMakeIcon = makeIcon;
 window.skSymbolSvg = symbolSvg;
 window.SK_DIRECTIONAL_TYPES = DIRECTIONAL_TYPES;
+window.SK_POST_UTRUSTNING = POST_UTRUSTNING;
+window.SK_POST_TYPES = POST_TYPES;
+window.SK_LINJE_STILAR = LINJE_STILAR;
