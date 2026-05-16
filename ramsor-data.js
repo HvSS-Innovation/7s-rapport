@@ -49,6 +49,8 @@ window.RAMSOR_DATA = {
     // Samband
     { id: 'procedur',     name: 'Sambandsprocedur' },
     { id: 'materiel-sig', name: 'Sambandsmateriel' },
+    // Tyst ledning
+    { id: 'handtecken',   name: 'Handtecken' },
     // Stridsteknik & taktik
     { id: 'planering',    name: 'Planering & order' },
     { id: 'stridsstallning', name: 'Stridsställning' },
@@ -630,13 +632,101 @@ window.RAMSOR_DATA = {
       usage: 'Översikt i text — kategorierna är samma för armén och hemvärnet. Flottan har egna grad­namn för motsvarande nivåer (se "Befälsordning" för översättning). Visuella gradbeteckningar för parad­uniform respektive fältuniform skiljer sig åt; för bilder hänvisas till officiellt material.',
       tags: ['Försvarsmakten', 'Grader'],
       roles: ['soldat', 'sjv', 'sig', 'grpc', 'plutc', 'forare']
+    },
+
+    // ── HANDTECKEN ────────────────────────────────────────────────────
+    // Tre tecken-listor — textindex, inte bildmanual. För visuellt utförande
+    // hänvisas till SoldR / FM-material. Vi listar tecknens namn och vilken
+    // ordergivning de motsvarar så soldaten vet vilka tecken som finns att lära.
+    {
+      id: 'handtecken-trupp',
+      name: 'Trupptecken — vid all verksamhet',
+      category: 'handtecken',
+      short: 'Allmänna handtecken för tyst ledning av trupp.',
+      lines: [
+        { letter: '·', text: 'Avbryt, avbryt — eld upphör.' },
+        { letter: '·', text: 'Allt klart — uppfattat.' },
+        { letter: '·', text: 'Samband sökes.' },
+        { letter: '·', text: 'Samling.' },
+        { letter: '·', text: 'Färdiga till strid.' },
+        { letter: '·', text: 'Förflyttning i utpekad riktning.' },
+        { letter: '·', text: 'Framåt — öka hastigheten.' },
+        { letter: '·', text: 'Halt.' },
+        { letter: '·', text: 'Var försiktig.' },
+        { letter: '·', text: 'Runtomkringförsvar ("igelkottsförsvar").' },
+        { letter: '·', text: 'Cheferna till mig.' },
+        { letter: '·', text: 'Formation: ansatsvis framåt/bakåt.' },
+        { letter: '·', text: 'Formation: växelvis framåt/bakåt.' },
+        { letter: '·', text: 'Formation: skytteled.' },
+        { letter: '·', text: 'Formation: skyttekolonn.' },
+        { letter: '·', text: 'Formation: skyttesvärm.' },
+        { letter: '·', text: 'Formation: skyttelinje.' },
+        { letter: '·', text: 'Formation: skytteplog.' },
+        { letter: '·', text: 'Observation i utpekad riktning.' },
+        { letter: '·', text: 'Lyssna!' },
+        { letter: '·', text: 'Fienden synlig i utpekad riktning.' },
+        { letter: '·', text: 'Eld mot mål i utpekad riktning.' },
+        { letter: '·', text: 'Egen trupp (inget fientligt).' },
+        { letter: '·', text: 'Fientlig fottrupp.' },
+        { letter: '·', text: 'Fientligt pansarskyttefordon.' },
+        { letter: '·', text: 'Fientlig stridsvagn.' },
+        { letter: '·', text: 'Takgruppera.' },
+        { letter: '·', text: 'Markgruppera.' },
+        { letter: '·', text: 'Lägg om elden.' },
+        { letter: '·', text: 'Skyddsställning.' },
+        { letter: '·', text: 'Behov av ammunition.' },
+        { letter: '·', text: 'Hundtjänst: spårmarkering.' },
+        { letter: '·', text: 'Hundtjänst: vindmarkering.' }
+      ],
+      usage: 'Tyst ledning vid all verksamhet — minskar röjning och fungerar när röst inte når fram. Lista över tecken som ska kännas igen och kunna ges. Visuellt utförande finns i Soldatreglementet och annat FM-/FRO-utbildningsmaterial; lär dig faktiska gester av instruktör.',
+      tags: ['Stridsteknik', 'Handtecken', 'Tyst ledning'],
+      roles: ['soldat', 'sjv', 'sig', 'grpc', 'plutc', 'forare']
+    },
+
+    {
+      id: 'handtecken-kolonn',
+      name: 'Kolonntecken — fordon',
+      category: 'handtecken',
+      short: 'Handtecken till fordon i kolonn — från ledare eller bakomliggande.',
+      lines: [
+        { letter: '·', text: 'Kön marschfärdig — uppmärksamhet påkallas.' },
+        { letter: '·', text: 'Uppsittning / avsittning (motorer igång/stannas).' },
+        { letter: '·', text: 'Framåt — ökning av hastighet.' },
+        { letter: '·', text: 'Ökning / minskning av avstånd.' },
+        { letter: '·', text: 'Minskning av hastigheten / halt.' },
+        { letter: '·', text: 'Motorerna sätts igång.' },
+        { letter: '·', text: 'Motorerna stannas.' },
+        { letter: '·', text: 'Backning.' },
+        { letter: '·', text: 'Styr åt vänster (höger).' },
+        { letter: '·', text: 'Motorcykelordonnans fram.' },
+        { letter: '·', text: 'Helomvändning fordonsvis.' },
+        { letter: '·', text: 'Klosskörning.' },
+        { letter: '·', text: 'Tjänst till fots.' }
+      ],
+      usage: 'Används vid förflyttning i kolonn när röst, radio eller signal inte räcker. Ges från ledare eller från ett bakomliggande fordon framåt. Visuellt utförande finns i Soldatreglementet och FM-/FRO-utbildningsmaterial.',
+      tags: ['Fordon', 'Kolonn', 'Handtecken'],
+      roles: ['soldat', 'grpc', 'plutc', 'forare']
+    },
+
+    {
+      id: 'handtecken-kor',
+      name: 'Körtecken — körning med ledare',
+      category: 'handtecken',
+      short: 'Tecken från ledare till förare vid manövrering på trång plats.',
+      lines: [
+        { letter: '·', text: 'Utgångsställning — ledaren står synligt med knutna händer framför bröstet, redo att ge nästa tecken.' },
+        { letter: '·', text: 'Sväng åt höger / vänster — armen leds tydligt i svängriktningen.' },
+        { letter: '·', text: 'Återför ratten (spaken) till normalläge — visa att styrningen ska rätas upp till rakt fram.' },
+        { letter: '·', text: 'Centrumsväng vänster / höger — fordonet svänger runt sin egen centrumaxel (litet utrymme).' }
+      ],
+      usage: 'Tecken från ledare som går framför eller bakom fordonet vid manövrering där föraren inte själv har full sikt — t.ex. trång gruppering, backning, klosskörning. Ledaren håller sig synlig för föraren hela tiden. Visuellt utförande finns i FM-/FRO-utbildningsmaterial.',
+      tags: ['Fordon', 'Körning', 'Handtecken'],
+      roles: ['soldat', 'grpc', 'forare']
     }
 
-    // Skippade i denna iteration:
-    //  - Handtecken (issues #52, #53, #54): kräver bildmaterial. Vi länkar inte
-    //    till rustadsoldat.se-bildkällor (CDN, deras rättigheter). Kommer som
-    //    egen ramsa med egna SVG eller textbeskrivningar i kommande version.
-    //  - AVPU → ACVPU (issues #50, #51): redan implementerat i v0.2.4.
+    // Tidigare skippat, nu implementerat:
+    //  - Handtecken (#52, #53, #54) — textlista med signalnamn (inga bilder).
+    //  - AVPU → ACVPU (#50, #51) — implementerat i v0.2.4.
 
   ]
 };
