@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<script>(function(){try{var s=localStorage.getItem('skyttebok_settings_lightmode');var l=(s==='on')||(s!=='off'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches);if(l)document.documentElement.setAttribute('data-theme','light');}catch(_){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="LINJE">
+<title>LINJE — Linjebyggnad</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared/theme-toggle.css">
+<script src="shared/theme-toggle.js" defer></script>
+<link rel="stylesheet" href="fonts/inter.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828;
+    --suit-1:#4caf50; --suit-2:#8aaa8a; --suit-3:#e09320; --suit-4:#c62828;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; }
+  .container { max-width:760px; margin:0 auto; }
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:460px; margin:6px auto 0; }
+
+  .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; }
+  .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-link.active { background:var(--accent-dim); color:var(--accent); }
+  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; }
+
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  /* Sektioner & rubriker */
+  .section { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:12px; }
+  .section h2 { font-size:0.9rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
+  .section h2 .lead { font-size:0.7rem; color:var(--text-muted); letter-spacing:0.04em; text-transform:none; font-weight:500; opacity:0.85; }
+
+  /* Avstånd-lista */
+  .kv-list { display:flex; flex-direction:column; gap:6px; margin-bottom:10px; }
+  .kv-row { display:flex; gap:10px; align-items:baseline; padding:6px 0; font-size:0.92rem; }
+  .kv-row + .kv-row { border-top:1px solid var(--border); }
+  .kv-row .k { color:var(--text-secondary); flex:1; min-width:0; line-height:1.45; }
+  .kv-row .v { color:var(--accent); font-weight:700; font-family:ui-monospace,monospace; min-width:90px; text-align:right; flex-shrink:0; }
+
+  /* Tabeller */
+  .table-wrap { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; margin-top:8px; }
+  table { width:100%; border-collapse:collapse; font-size:0.86rem; }
+  thead th { background:var(--bg-secondary); padding:8px 10px; text-align:left; font-size:0.66rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); border-bottom:1px solid var(--border); font-weight:700; }
+  thead th.num { text-align:right; }
+  tbody td { padding:8px 10px; vertical-align:top; border-bottom:1px solid var(--border); color:var(--text-primary); line-height:1.5; }
+  tbody td.num { text-align:right; color:var(--accent); font-weight:700; font-family:ui-monospace,monospace; white-space:nowrap; }
+  tbody td.label { font-weight:600; white-space:nowrap; color:var(--text-secondary); }
+  tbody tr:last-child td { border-bottom:none; }
+
+  /* Skarvar-tabell — suit-färgindikator */
+  .suit-cell { display:inline-flex; align-items:center; gap:6px; font-family:ui-monospace,monospace; font-weight:700; }
+  .suit-dot { display:inline-block; width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .suit-1 .suit-dot { background:var(--suit-1); }
+  .suit-2 .suit-dot { background:var(--suit-2); }
+  .suit-3 .suit-dot { background:var(--suit-3); }
+  .suit-4 .suit-dot { background:var(--suit-4); }
+  .suit-1 { color:var(--suit-1); }
+  .suit-2 { color:var(--suit-2); }
+  .suit-3 { color:var(--suit-3); }
+  .suit-4 { color:var(--suit-4); }
+  .suit-legend { display:flex; flex-wrap:wrap; gap:10px; font-size:0.74rem; color:var(--text-muted); margin-top:8px; }
+  .suit-legend > span { display:inline-flex; align-items:center; gap:6px; }
+
+  /* Patrull-roller */
+  .role-list { display:flex; flex-direction:column; gap:8px; }
+  .role-item { display:flex; gap:10px; align-items:flex-start; padding:8px 0; }
+  .role-item + .role-item { border-top:1px solid var(--border); }
+  .role-num { color:var(--accent); font-weight:700; font-size:0.95rem; min-width:22px; flex-shrink:0; font-family:ui-monospace,monospace; }
+  .role-body { flex:1; min-width:0; }
+  .role-name { font-weight:700; color:var(--text-primary); font-size:0.92rem; }
+  .role-desc { color:var(--text-secondary); font-size:0.85rem; line-height:1.5; margin-top:2px; }
+
+  /* Utrustnings-checklist */
+  .progress-row { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+  .progress-label { font-size:0.78rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; font-weight:600; }
+  .progress-num { font-size:0.78rem; color:var(--text-secondary); font-family:ui-monospace,monospace; }
+  .progress-bar { background:var(--bg-secondary); border:1px solid var(--border); border-radius:20px; height:8px; overflow:hidden; margin-bottom:14px; }
+  .progress-fill { background:var(--accent); height:100%; transition:width 0.2s; }
+
+  .item { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 14px; margin-bottom:6px; cursor:pointer; user-select:none; display:flex; gap:10px; align-items:center; transition:opacity 0.15s,border-color 0.15s; }
+  .item.done { opacity:0.55; border-color:var(--accent-dim); }
+  .checkbox { width:22px; height:22px; border:2px solid var(--border-focus); border-radius:6px; flex-shrink:0; background:var(--bg-primary); transition:all 0.15s; display:flex; align-items:center; justify-content:center; }
+  .item.done .checkbox { background:var(--accent); border-color:var(--accent); }
+  .checkbox::after { content:''; width:6px; height:11px; border-right:2.5px solid #0d1f0d; border-bottom:2.5px solid #0d1f0d; transform:rotate(45deg) translate(-1px,-1px); opacity:0; transition:opacity 0.15s; }
+  .item.done .checkbox::after { opacity:1; }
+  .item-title { flex:1; min-width:0; font-size:0.92rem; color:var(--text-primary); letter-spacing:0.02em; }
+  .item.done .item-title { text-decoration:line-through; text-decoration-color:var(--text-muted); }
+  .item-qty { font-size:0.78rem; color:var(--text-muted); font-family:ui-monospace,monospace; flex-shrink:0; }
+
+  .actions { display:flex; gap:8px; margin-top:10px; }
+  .btn { flex:1; padding:12px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:0.88rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; min-height:44px; }
+  .btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .btn-danger { color:var(--danger); }
+  .btn-danger:hover { border-color:var(--danger); }
+
+  /* DUM PIL — bokstavslista */
+  .dumpil-list { display:flex; flex-direction:column; gap:8px; }
+  .dumpil-row { display:flex; gap:12px; padding:10px 12px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); align-items:flex-start; }
+  .dumpil-letter { color:var(--accent); font-weight:700; font-size:1.2rem; min-width:30px; flex-shrink:0; font-family:ui-monospace,monospace; }
+  .dumpil-body { flex:1; min-width:0; }
+  .dumpil-name { font-weight:700; color:var(--text-primary); font-size:0.92rem; letter-spacing:0.04em; text-transform:uppercase; }
+  .dumpil-desc { color:var(--text-secondary); font-size:0.85rem; line-height:1.5; margin-top:3px; }
+  .dumpil-desc ul { margin-top:6px; padding-left:18px; }
+  .dumpil-desc li { margin-bottom:2px; }
+
+  .hint { font-size:0.74rem; color:var(--text-muted); margin-top:10px; line-height:1.5; }
+
+  /* Print */
+  @media print {
+    body { background:#fff; color:#000; padding:0; font-size:10pt; }
+    .tab-nav, .tab-nav-sub, .back-link, .actions, header .disclaimer, .hint { display:none; }
+    .section { background:#fff; border:1px solid #000; break-inside:avoid; }
+    .section h2 { color:#000; border-color:#000; }
+    .kv-row .v, .dumpil-letter, tbody td.num, .role-num { color:#000; }
+    .table-wrap, .item { background:#fff; border-color:#000; }
+    thead th { background:#eee; color:#000; }
+  }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px;text-align:center">JavaScript krävs.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>LINJE</h1>
+    <p>Linjebyggnad — gränsvärden, utrustning, skarvning</p>
+    <p class="disclaimer">Privatutvecklat fältverktyg. Innehåll bygger på FRO-minneskort "Linjebyggnad v2.0" av Lukas Tonneman och är inte fastställt av Försvarsmakten.</p>
+  </header>
+
+  <nav class="tab-nav">
+    <a href="index.html" class="tab-link">7S</a>
+    <a href="what.html" class="tab-link">WHAT</a>
+    <a href="scrim.html" class="tab-link">SCRIM</a>
+    <a href="weft.html" class="tab-link">WEFT</a>
+    <a href="ah.html" class="tab-link">A–H</a>
+  </nav>
+  <nav class="tab-nav-sub">
+      <a href="minkarta.html" class="tab-link">MINKARTA</a>
+      <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
+      <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
+      <a href="fors.html" class="tab-link">FORS</a>
+      <a href="pedars.html" class="tab-link">PEDARS</a>
+      <a href="eobusare.html" class="tab-link">EOBUSARE</a>
+      <a href="obo.html" class="tab-link">OBO</a>
+      <a href="rassoika.html" class="tab-link">RASSOIKA</a>
+      <a href="vader.html" class="tab-link">VÄDER</a>
+      <a href="matt.html" class="tab-link">MÅTT</a>
+      <a href="postschema.html" class="tab-link">SCHEMA</a>
+      <a href="saekr.html" class="tab-link">SÄKR</a>
+      <a href="patl.html" class="tab-link">PATL</a>
+      <a href="un.html" class="tab-link">UN</a>
+      <a href="linje.html" class="tab-link active">LINJE</a>
+  </nav>
+  <nav class="tab-nav-sub">
+      <a href="skyttebok.html" class="tab-link">SKYTTE</a>
+      <a href="ramsor.html" class="tab-link">RAMSOR</a>
+      <a href="tccc.html" class="tab-link">TCCC</a>
+      <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
+      <a href="ra763.html" class="tab-link">RA763</a>
+      <a href="app6.html" class="tab-link">APP-6</a>
+      <a href="symbol.html" class="tab-link">SYMBOL</a>
+      <a href="forkort.html" class="tab-link">FÖRKORT</a>
+      <a href="fg.html" class="tab-link">FG</a>
+  </nav>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <!-- 1. AVSTÅND -->
+  <section class="section">
+    <h2>Avstånd <span class="lead">gränsvärden & riktlinjer</span></h2>
+
+    <div class="kv-list">
+      <div class="kv-row"><span class="k">Fästpunkt</span><span class="v">var 200 m</span></div>
+      <div class="kv-row"><span class="k">Stödpunkt</span><span class="v">var 50 m</span></div>
+      <div class="kv-row"><span class="k">Max nedhäng mellan stödpunkter</span><span class="v">1 m</span></div>
+    </div>
+
+    <div style="font-size:0.78rem;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;font-weight:600;margin-top:14px;margin-bottom:6px">Linje parallellt med</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Objekt</th><th class="num">Håll avstånd</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Väg / framryckningsspår</td><td class="num">50 m</td></tr>
+          <tr><td>Kraftledning</td><td class="num">100 m</td></tr>
+          <tr><td>Elektrifierad järnväg</td><td class="num">100 m</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="font-size:0.78rem;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;font-weight:600;margin-top:14px;margin-bottom:6px">Linje korsar / går till</div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>Objekt</th><th>Tänk på</th></tr>
+        </thead>
+        <tbody>
+          <tr><td class="label">Väg</td><td>Vanlig väg 6 m, flygplansväg 9 m. Lämna 10 m kabel i "reserv" vid ena fästpunkten.</td></tr>
+          <tr><td class="label">Kraftledning</td><td>Korsa med markledning, 25 m marginal på båda sidor. Korsa vinkelrätt invid en mast, ca 1 m från masten.</td></tr>
+          <tr><td class="label">Befintlig luftlinje</td><td>Korsa redan utbyggd luftlinje med egen marklinje.</td></tr>
+          <tr><td class="label">Grupperingsplats</td><td>Ska vara luftlinje inom 200 m av platsen. Tänk på var fordon åker. Lämna 10 m fri kabelände för anslutning.</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div style="font-size:0.78rem;color:var(--text-muted);letter-spacing:0.06em;text-transform:uppercase;font-weight:600;margin-top:14px;margin-bottom:6px">Linjebyggnadspatrull — 2–4 soldater</div>
+    <div class="role-list">
+      <div class="role-item"><span class="role-num">1.</span><div class="role-body"><div class="role-name">Patrullchef</div><div class="role-desc">Rekognoserar och leder linjebyggnad. Provar och skarvar förbindelsen.</div></div></div>
+      <div class="role-item"><span class="role-num">2.</span><div class="role-body"><div class="role-name">Utrullare</div><div class="role-desc">Bär kabelmesen och rullar ut kabeln. Kan kombineras med patrullchef.</div></div></div>
+      <div class="role-item"><span class="role-num">3.</span><div class="role-body"><div class="role-name">Uppläggare</div><div class="role-desc">Lägger kabeln med linjestång, gör fäst- och stödpunkter.</div></div></div>
+      <div class="role-item"><span class="role-num">4.</span><div class="role-body"><div class="role-name">Avsynare</div><div class="role-desc">Kontrollerar kabeln och tillhörande gränsvärden. Kan kombineras med uppläggare.</div></div></div>
+    </div>
+  </section>
+
+  <!-- 2. UTRUSTNING -->
+  <section class="section">
+    <h2>Utrustning <span class="lead">linjebyggnadspatrull — checklista</span></h2>
+
+    <div class="progress-row">
+      <span class="progress-label">Packad</span>
+      <span class="progress-num" id="progNum">0 / 9</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progFill" style="width:0%"></div></div>
+
+    <div id="utrItems"></div>
+
+    <div class="actions">
+      <button class="btn btn-danger" type="button" id="resetUtr">Nollställ</button>
+    </div>
+    <p class="hint">Status sparas bara i sessionen — rensas när du stänger fliken.</p>
+  </section>
+
+  <!-- 3. SKARVNING - DUM PIL -->
+  <section class="section">
+    <h2>Skarvning <span class="lead">DUM PIL — så ska en skarv vara</span></h2>
+
+    <div class="dumpil-list">
+      <div class="dumpil-row">
+        <span class="dumpil-letter">D</span>
+        <div class="dumpil-body"><div class="dumpil-name">Dragavlastad</div><div class="dumpil-desc">Skarven är dragavlastad — drag i kabeln tas upp av en knut eller fäste, inte av själva ledarna.</div></div>
+      </div>
+      <div class="dumpil-row">
+        <span class="dumpil-letter">U</span>
+        <div class="dumpil-body"><div class="dumpil-name">Utmärkt</div><div class="dumpil-desc">Skarven är utmärkt på karta eller skiss så den går att hitta för felsökning.</div></div>
+      </div>
+      <div class="dumpil-row">
+        <span class="dumpil-letter">M</span>
+        <div class="dumpil-body"><div class="dumpil-name">Maskerad</div><div class="dumpil-desc">Skarven är maskerad — döljs mot insyn och röjning från egen och fientlig sida.</div></div>
+      </div>
+      <div class="dumpil-row">
+        <span class="dumpil-letter">P</span>
+        <div class="dumpil-body"><div class="dumpil-name">Provad</div><div class="dumpil-desc">Förbindelsen är funktionsprovad i båda riktningar och fungerar.</div></div>
+      </div>
+      <div class="dumpil-row">
+        <span class="dumpil-letter">I</span>
+        <div class="dumpil-body"><div class="dumpil-name">Isolerad</div><div class="dumpil-desc">Skarven är isolerad från väta med tejp.</div></div>
+      </div>
+      <div class="dumpil-row">
+        <span class="dumpil-letter">L</span>
+        <div class="dumpil-body">
+          <div class="dumpil-name">Littrerad</div>
+          <div class="dumpil-desc">Skarven är littrerad med:
+            <ul>
+              <li>Förbindelsens löpnummer</li>
+              <li>Förbindelsens riktnummer och telefonnummer (om finns)</li>
+              <li>Förband som byggt fältlinjen</li>
+              <li>Till vilket par i anslutningsplint som fältlinjen anslutits</li>
+              <li>Mellan vilka linjen går</li>
+              <li>När linjen byggts</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4. SKARVAR -->
+  <section class="section">
+    <h2>Skarvar <span class="lead">lämpliga skarvsätt för DL-tråd</span></h2>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>DL-typ</th><th>Skarvtång + skarvhylsa</th><th>Knop</th><th>Tvinning</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="label">DL1000 ↕ DL1000</td>
+            <td><span class="suit-cell suit-1"><span class="suit-dot"></span>1</span></td>
+            <td><span class="suit-cell suit-2"><span class="suit-dot"></span>2</span></td>
+            <td><span class="suit-cell suit-3"><span class="suit-dot"></span>3</span></td>
+          </tr>
+          <tr>
+            <td class="label">DL1000 ↕ DL50</td>
+            <td><span class="suit-cell suit-3"><span class="suit-dot"></span>3</span></td>
+            <td><span class="suit-cell suit-4"><span class="suit-dot"></span>4</span></td>
+            <td><span class="suit-cell suit-1"><span class="suit-dot"></span>1</span></td>
+          </tr>
+          <tr>
+            <td class="label">DL50 ↕ DL50</td>
+            <td><span class="suit-cell suit-3"><span class="suit-dot"></span>3</span></td>
+            <td><span class="suit-cell suit-4"><span class="suit-dot"></span>4</span></td>
+            <td><span class="suit-cell suit-1"><span class="suit-dot"></span>1</span></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="suit-legend">
+      <span><span class="suit-dot" style="background:var(--suit-1)"></span><strong style="color:var(--suit-1)">1</strong> Eftersträvansvärt</span>
+      <span><span class="suit-dot" style="background:var(--suit-2)"></span><strong style="color:var(--suit-2)">2</strong> Genomförbart</span>
+      <span><span class="suit-dot" style="background:var(--suit-3)"></span><strong style="color:var(--suit-3)">3</strong> Olämpligt</span>
+      <span><span class="suit-dot" style="background:var(--suit-4)"></span><strong style="color:var(--suit-4)">4</strong> Undviks</span>
+    </div>
+  </section>
+
+  <p class="hint">Källa: FRO-minneskort "Linjebyggnad v2.0" av Lukas Tonneman (fro.se). Återgivet som lärtjänligt sammandrag — kontrollera mot ditt förbands gällande instruktioner.</p>
+</div>
+
+<script>
+(function () {
+  const SK = 'linje_utr_state';
+  const ITEMS = [
+    { id:'karta',  title:'Karta, kompass',           qty:'' },
+    { id:'dl',     title:'DL-kabel',                  qty:'efter behov' },
+    { id:'mes',    title:'Kabelmesar',                qty:'efter behov' },
+    { id:'stang',  title:'Linjestänger',              qty:'2 st' },
+    { id:'tfn',    title:'Tfnapp M/37',               qty:'2 st' },
+    { id:'batt',   title:'Batterier till tfnapp M/37',qty:'' },
+    { id:'vaska',  title:'Linjeväskor',               qty:'2 st' },
+    { id:'skarv',  title:'Skarvutrustning + littreringsbrickor', qty:'' },
+    { id:'stege',  title:'Stege',                     qty:'7 steg' }
+  ];
+
+  let state = loadState();
+
+  function loadState() {
+    try { return JSON.parse(sessionStorage.getItem(SK) || '{}'); } catch (_) { return {}; }
+  }
+  function saveState() { sessionStorage.setItem(SK, JSON.stringify(state)); }
+
+  function render() {
+    const $items = document.getElementById('utrItems');
+    $items.innerHTML = '';
+    let done = 0;
+    ITEMS.forEach(item => {
+      const isDone = !!state[item.id];
+      if (isDone) done++;
+      const el = document.createElement('div');
+      el.className = 'item' + (isDone ? ' done' : '');
+      el.innerHTML =
+        '<div class="checkbox" aria-checked="' + isDone + '"></div>' +
+        '<div class="item-title">' + escapeHtml(item.title) + '</div>' +
+        (item.qty ? '<div class="item-qty">' + escapeHtml(item.qty) + '</div>' : '');
+      el.addEventListener('click', () => {
+        state[item.id] = !state[item.id];
+        saveState();
+        render();
+      });
+      $items.appendChild(el);
+    });
+    document.getElementById('progNum').textContent = done + ' / ' + ITEMS.length;
+    document.getElementById('progFill').style.width = (done / ITEMS.length * 100) + '%';
+  }
+
+  document.getElementById('resetUtr').addEventListener('click', () => {
+    state = {};
+    sessionStorage.removeItem(SK);
+    render();
+  });
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  }
+
+  render();
+})();
+</script>
+
+<script src="pwa.js" defer></script>
+</body>
+</html>

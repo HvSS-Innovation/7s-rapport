@@ -77,6 +77,7 @@ const FILES = [
   './un.html',
   './saekr.html',
   './patl.html',
+  './linje.html',
   './roadmap.html',
   './roadmap-data.js',
   './ortnamn.json',
