@@ -215,21 +215,35 @@ const SYMBOLS = {
         dashArray: '6 4'
     },
 
-    // Linje — oppen polyline. Anvands for patrullstig (style='pilad'),
-    // snubbeltrad (style='streckad') och fri annotation (style='heldragen').
-    // Stilen valjs i edit-popupen efter ritning. Min 2 noder, dubbelklick
-    // avslutar.
+    // Linje — oppen polyline. Stilen (heldragen/streckad) + pilar-toggle
+    // valjs i edit-popupen efter ritning. Min 2 noder, dubbelklick avslutar.
     linje: {
         label: 'Linje',
         category: 'polyline',
+        draw: 'click',
         svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
             '<path d="M2 19 L9 11 L15 15 L22 5" fill="none" ' +
                 'stroke="' + SK_INK + '" stroke-width="2" ' +
                 'stroke-linecap="round" stroke-linejoin="round"/>' +
-            '<polygon points="22,5 18,5 21,8" fill="' + SK_INK + '"/>' +
         '</svg>',
         stroke: SK_INK,
-        defaultStyle: 'pilad'
+        defaultStyle: 'heldragen'
+    },
+
+    // Frihandsritning — samma datatyp som linje (polyline) men pekare hales
+    // istallet for att klickas. Punkter samplas med min avstand ~6 px sa
+    // path inte blir overdrivet ten. Edit-popup identisk med linje.
+    frihand: {
+        label: 'Frihand',
+        category: 'polyline',
+        draw: 'freehand',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+            '<path d="M2 19 Q5 9 9 13 T15 11 T22 5" fill="none" ' +
+                'stroke="' + SK_INK + '" stroke-width="2" ' +
+                'stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>',
+        stroke: SK_INK,
+        defaultStyle: 'heldragen'
     }
 };
 
@@ -239,7 +253,7 @@ const SYMBOL_GROUPS = [
     { title: 'Larmmina',            ids: ['larmmina'] },
     { title: 'Luftburna sensorer',  ids: ['rpas'] },
     { title: 'Poster',              ids: ['enkelpost', 'dubbelpost', 'infart'] },
-    { title: 'Områden & linjer',    ids: ['sensoromrade', 'linje'] }
+    { title: 'Områden & linjer',    ids: ['sensoromrade', 'linje', 'frihand'] }
 ];
 
 // Symboler där rotation/riktningslinje gäller (directional).
@@ -256,12 +270,10 @@ const POST_UTRUSTNING = [
 ];
 const POST_TYPES = new Set(['enkelpost', 'dubbelpost', 'infart']);
 
-// Linje-stilar. Visas i edit-popupen som dropdown. 'pilad' = patrullstig
-// (heldragen + pilspetsar), 'streckad' = snubbeltrad/markering, 'heldragen'
-// = generisk linje/annotation.
+// Linje-stilar. Visas i edit-popupen som dropdown. Pilar ar en separat
+// toggle (obj.arrows) som kan kombineras med bada stilar.
 const LINJE_STILAR = [
-    { id: 'pilad',     label: 'Patrullstig (pilar)' },
-    { id: 'streckad',  label: 'Streckad (snubbeltråd)' },
+    { id: 'streckad',  label: 'Streckad' },
     { id: 'heldragen', label: 'Heldragen' }
 ];
 

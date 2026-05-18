@@ -292,6 +292,23 @@
             width: 18px; height: 18px; display: block;
             filter: drop-shadow(0 0 1.2px #fff) drop-shadow(0 0 1px #fff);
         }
+        /* Drag-bar text-marker ovanfor en linje (visar obj.anteckning). */
+        .sk-line-label { background: transparent !important; border: none !important; cursor: grab; }
+        .sk-line-label.leaflet-marker-draggable.leaflet-drag-target { cursor: grabbing; }
+        .sk-line-label .sk-line-label-text {
+            display: inline-block;
+            font: 600 11px Inter, sans-serif;
+            background: rgba(255, 255, 255, 0.92);
+            color: #0d1f0d;
+            border: 1px solid #4caf50;
+            border-radius: 3px;
+            padding: 1px 5px;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.45);
+            white-space: pre-wrap;
+            max-width: 220px;
+            user-select: none;
+            -webkit-user-select: none;
+        }
 
         .leaflet-tooltip.sk-label {
             font: 600 11px Inter, sans-serif;
@@ -1160,8 +1177,90 @@ function bearingBetween(lat1, lng1, lat2, lng2) {
     return (toDeg(Math.atan2(y, x)) + 360) % 360;
 }
 
-// Pilspetsar pa varje segment-midpunkt for patrullstig-stil. Pilen ritas
-// som L.divIcon med roterad SVG. Lagras som obj.id + '_arr_' + i.
+// Drag-bar text-marker for polyline-anteckning. Default-position: linjens
+// midpunkt skjuten ~25 px norrut. Om en annan point-symbol ligger inom
+// ~30 px, prova hela varv av offsets (N/NO/O/SO/S/SV/V/NV i en spiral)
+// tills en kollisionsfri position hittas. Anvandaren kan dra-flytta efterat;
+// positionen lagras pa obj.labelLat/labelLng.
+function addLineLabelMarker(obj) {
+    if (!obj.path || obj.path.length < 2) return;
+    // Hitta midpunkten via path-langd (sa text hamnar mitt pa linjen
+    // aven for snabba ojamna segment).
+    const midIdx = Math.floor(obj.path.length / 2);
+    const mid = obj.path[midIdx];
+    if (obj.labelLat == null || obj.labelLng == null) {
+        const pos = pickLineLabelPosition(obj, mid.lat, mid.lng);
+        obj.labelLat = pos.lat;
+        obj.labelLng = pos.lng;
+    }
+    const lblIcon = L.divIcon({
+        className: 'sk-line-label',
+        html: '<span class="sk-line-label-text">' + escapeHtml(obj.anteckning) + '</span>',
+        iconSize: null,
+        iconAnchor: [0, 0]
+    });
+    const lbl = L.marker([obj.labelLat, obj.labelLng], {
+        icon: lblIcon,
+        draggable: true,
+        keyboard: false,
+        zIndexOffset: 200
+    });
+    lbl.on('dragend', () => {
+        pushUndo();
+        const ll = lbl.getLatLng();
+        obj.labelLat = ll.lat;
+        obj.labelLng = ll.lng;
+    });
+    lbl.on('click', e => {
+        if (activeTool) return;
+        if (L.DomEvent) L.DomEvent.stopPropagation(e);
+        const mainLayer = state.layers[obj.id];
+        if (mainLayer) openEditPopup(obj, mainLayer, e);
+    });
+    lbl.addTo(map);
+    state.layers[obj.id + '_lbl'] = lbl;
+}
+
+// Hitta en initial position for linjens textetikett som inte krockar med
+// existerande punkt-symboler. Provar 8 riktningar runt midpunkten pa ett
+// avstand ~25 px. Faller tillbaka till "N" om alla krockar.
+function pickLineLabelPosition(obj, midLat, midLng) {
+    if (!map) return { lat: midLat, lng: midLng };
+    const midPx = map.latLngToContainerPoint([midLat, midLng]);
+    // Riktningar: N, NO, O, SO, S, SV, V, NV. N (uppat) prioriteras.
+    const dirs = [
+        [0, -25], [18, -18], [25, 0], [18, 18],
+        [0, 25], [-18, 18], [-25, 0], [-18, -18]
+    ];
+    for (let i = 0; i < dirs.length; i++) {
+        const cand = midPx.add(L.point(dirs[i][0], dirs[i][1]));
+        const ll = map.containerPointToLatLng(cand);
+        if (!collidesWithObjects(ll.lat, ll.lng, obj.id)) {
+            return { lat: ll.lat, lng: ll.lng };
+        }
+    }
+    // Fallback: skjut langre upp (50 px).
+    const fb = map.containerPointToLatLng(midPx.add(L.point(0, -50)));
+    return { lat: fb.lat, lng: fb.lng };
+}
+
+function collidesWithObjects(lat, lng, ignoreId) {
+    if (!map) return false;
+    const px = map.latLngToContainerPoint([lat, lng]);
+    const THRESHOLD = 30;
+    for (const o of state.objects) {
+        if (o.id === ignoreId) continue;
+        if (o.lat == null || o.lng == null) continue;
+        const op = map.latLngToContainerPoint([o.lat, o.lng]);
+        if (Math.abs(op.x - px.x) < THRESHOLD && Math.abs(op.y - px.y) < THRESHOLD) {
+            return true;
+        }
+    }
+    return false;
+}
+
+// Pilspetsar pa varje segment-midpunkt for polyline med obj.arrows=true.
+// Pilen ritas som L.divIcon med roterad SVG. Lagras som obj.id + '_arr_' + i.
 function addLineArrows(obj) {
     if (!obj.path || obj.path.length < 2) return;
     for (let i = 0; i < obj.path.length - 1; i++) {
@@ -1246,15 +1345,16 @@ function renderObject(obj) {
         };
         if (style === 'streckad') opts.dashArray = '6 4';
         layer = L.polyline(obj.path.map(p => [p.lat, p.lng]), opts);
-        if (obj.antalText) {
-            layer.bindTooltip(obj.antalText, {
-                permanent: true, direction: 'center', className: 'sk-label'
-            });
-        }
         layer.addTo(map);
         state.layers[obj.id] = layer;
-        // Pilad stil: lagg pilspetsar pa varje segment-midpunkt.
-        if (style === 'pilad') addLineArrows(obj);
+        // Pilar pa segment-midpunkter om obj.arrows ar pa (oberoende av stil).
+        if (obj.arrows) addLineArrows(obj);
+        // Anteckning visas som drag-bar text-marker vid linjens midpunkt,
+        // med initial offset utfor symbolen + enkel kollisionsundvikande
+        // (skjuts undan om andra punkt-symboler ar inom ~30 px).
+        if (obj.anteckning && obj.anteckning.trim()) {
+            addLineLabelMarker(obj);
+        }
     }
     if (!layer) return;
 
@@ -1376,9 +1476,11 @@ function openEditPopup(obj, layer, evt) {
             html += '<option value="' + s.id + '"' + (s.id === cur ? ' selected' : '') + '>' + escapeHtml(s.label) + '</option>';
         });
         html += '</select>';
-        html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Text (visas på kartan)</label>';
-        html += '<input type="text" id="skfAntal" value="' + escapeHtml(obj.antalText || '') +
-            '" placeholder="t.ex. Patrullstig, Snubbeltråd" style="width:100%;padding:4px 6px;font:400 12px Inter,sans-serif;border:1px solid #888;border-radius:3px;margin-bottom:8px">';
+        const hasArrows = !!obj.arrows;
+        html += '<label style="display:flex;align-items:center;gap:6px;font-size:11px;color:#0d1f0d;margin-bottom:8px;text-transform:none;letter-spacing:0;font-weight:500">' +
+            '<input type="checkbox" id="skfArrows"' + (hasArrows ? ' checked' : '') + ' style="width:14px;height:14px;margin:0">' +
+            'Pilar längs linjen</label>';
+        html += '<div style="font-size:10px;color:#666;margin:-4px 0 8px 0">Anteckningen nedan visas som text längs linjen.</div>';
     }
 
     html += '<label style="display:block;font-size:10px;color:#444;margin-bottom:2px">Anteckning</label>';
@@ -1559,6 +1661,8 @@ function openEditPopup(obj, layer, evt) {
             }
             const styleSel = document.getElementById('skfStyle');
             if (styleSel) obj.style = styleSel.value;
+            const arrowsEl = document.getElementById('skfArrows');
+            if (arrowsEl) obj.arrows = !!arrowsEl.checked;
             const ant = document.getElementById('skfAntal');
             if (ant) obj.antalText = ant.value.trim();
             const note = document.getElementById('skfNote');
@@ -1647,6 +1751,87 @@ function polyDraftCancel() {
     polyDraft.markers.forEach(m => { try { map.removeLayer(m); } catch (_) {} });
     if (polyDraft.line) try { map.removeLayer(polyDraft.line); } catch (_) {}
     polyDraft = null;
+}
+
+// ── Frihandsritning (verktyget "Frihand") ─────────────────────────────────
+// Pointer-events: tryck + dra ritar en kontinuerlig polyline med ~6 px
+// punktsampling. Map.dragging avaktiveras tillfalligt sa kartan inte
+// panoreras. Resultatet sparas som ett polyline-objekt (typ 'frihand') med
+// samma edit-popup som linje (stil, pilar, anteckning).
+let freehandState = null;
+function attachFreehandHandlers() {
+    if (!map) return;
+    const container = map.getContainer();
+    const minDistPx = 6;
+
+    container.addEventListener('pointerdown', (e) => {
+        if (activeTool !== 'frihand') return;
+        if (e.pointerType === 'mouse' && e.button !== 0) return;
+        if (freehandState) return;
+        const ll = map.mouseEventToLatLng(e);
+        const wasDragEnabled = map.dragging.enabled();
+        map.dragging.disable();
+        if (map.scrollWheelZoom) map.scrollWheelZoom.disable();
+        const line = L.polyline([[ll.lat, ll.lng]], {
+            color: '#000', weight: 2.5, opacity: 0.85
+        }).addTo(map);
+        freehandState = {
+            path: [{ lat: ll.lat, lng: ll.lng }],
+            line: line,
+            wasDragEnabled: wasDragEnabled,
+            pointerId: e.pointerId
+        };
+        try { container.setPointerCapture(e.pointerId); } catch (_) {}
+        e.preventDefault();
+    }, { passive: false });
+
+    container.addEventListener('pointermove', (e) => {
+        if (!freehandState) return;
+        const ll = map.mouseEventToLatLng(e);
+        const last = freehandState.path[freehandState.path.length - 1];
+        const lp = map.latLngToContainerPoint([last.lat, last.lng]);
+        const cp = map.latLngToContainerPoint([ll.lat, ll.lng]);
+        if (Math.hypot(cp.x - lp.x, cp.y - lp.y) < minDistPx) return;
+        freehandState.path.push({ lat: ll.lat, lng: ll.lng });
+        freehandState.line.setLatLngs(freehandState.path.map(p => [p.lat, p.lng]));
+    });
+
+    const finalize = (e) => {
+        if (!freehandState) return;
+        const st = freehandState;
+        freehandState = null;
+        try { container.releasePointerCapture(st.pointerId); } catch (_) {}
+        try { map.removeLayer(st.line); } catch (_) {}
+        if (st.wasDragEnabled) map.dragging.enable();
+        if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
+        if (st.path.length < 2) {
+            return;  // For kort - inget objekt.
+        }
+        const obj = {
+            id: uid(), typ: 'frihand',
+            path: st.path,
+            style: 'heldragen',
+            arrows: false,
+            anteckning: ''
+        };
+        addObject(obj);
+        setActiveTool(null);
+        setTimeout(() => {
+            const layer = state.layers[obj.id];
+            if (layer) openEditPopup(obj, layer, null);
+        }, 50);
+    };
+
+    container.addEventListener('pointerup', finalize);
+    container.addEventListener('pointercancel', () => {
+        if (!freehandState) return;
+        const st = freehandState;
+        freehandState = null;
+        try { container.releasePointerCapture(st.pointerId); } catch (_) {}
+        try { map.removeLayer(st.line); } catch (_) {}
+        if (st.wasDragEnabled) map.dragging.enable();
+        if (map.scrollWheelZoom) map.scrollWheelZoom.enable();
+    });
 }
 
 // ── Aktivt verktyg + paletten ─────────────────────────────────────────────
@@ -1896,10 +2081,12 @@ function attachMapDrawHandlers() {
             // Auto-öppna popup för redigering
             const layer = state.layers[obj.id];
             if (layer) setTimeout(() => openEditPopup(obj, layer, null), 50);
-        } else if (sym.category === 'polygon' || sym.category === 'polyline') {
+        } else if (sym.category === 'polygon' ||
+                   (sym.category === 'polyline' && sym.draw !== 'freehand')) {
             if (!polyDraft) polyDraftStart(activeTool);
             polyDraftAdd(e.latlng);
         }
+        // Frihand hanteras separat via attachFreehandHandlers() (pointer-events).
     });
     map.on('dblclick', e => {
         if (polyDraft) {
@@ -2558,7 +2745,7 @@ const SENSOR_GROUPS_PROTO = {
     luftburna:  ['rpas'],
     poster:     ['enkelpost', 'dubbelpost', 'infart'],
     omraden:    ['sensoromrade'],
-    linjer:     ['linje']
+    linjer:     ['linje', 'frihand']
 };
 
 function zuluNow() {
@@ -2667,8 +2854,8 @@ function generateProtocolText() {
         lines.push('');
     }
 
-    // Linjer (patrullstigar, snubbeltradar, fri annotation).
-    const linjer = state.objects.filter(o => o.typ === 'linje');
+    // Linjer + frihand (snubbeltradar, patrullstigar, fri annotation).
+    const linjer = state.objects.filter(o => SENSOR_GROUPS_PROTO.linjer.includes(o.typ));
     if (linjer.length) {
         lines.push('Linjer:');
         const stilLbl = (id) => {
@@ -2676,12 +2863,11 @@ function generateProtocolText() {
             return s ? s.label : id;
         };
         linjer.forEach((o, i) => {
-            const stil = stilLbl(o.style || 'heldragen');
-            const t = o.antalText || '';
+            const typLbl = (o.typ === 'frihand') ? 'Frihand' : 'Linje';
+            const stil = stilLbl(o.style || 'heldragen') + (o.arrows ? ' + pilar' : '');
             const note = o.anteckning ? ' "' + o.anteckning.replace(/\n/g, ' ') + '"' : '';
             const segments = (o.path ? o.path.length - 1 : 0);
-            lines.push('  Linje ' + (i + 1) + ' [' + stil + ', ' + segments + ' segment]: ' +
-                t + note);
+            lines.push('  ' + typLbl + ' ' + (i + 1) + ' [' + stil + ', ' + segments + ' segment]:' + note);
         });
         lines.push('');
     }
@@ -2785,6 +2971,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     attachPaletteToolbar();
     renderMapControls();
     attachMapDrawHandlers();
+    attachFreehandHandlers();
     rebuildLayers();
     renderBsp();
     attachBspActions();

@@ -372,8 +372,8 @@
                 projected.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
                 ctx.stroke();
                 ctx.setLineDash([]);
-                // Pilspetsar pa segment-midpunkter for patrullstig-stil.
-                if (style === 'pilad') {
+                // Pilspetsar pa segment-midpunkter om obj.arrows ar pa.
+                if (o.arrows) {
                     for (let i = 0; i < projected.length - 1; i++) {
                         const p1 = projected[i], p2 = projected[i + 1];
                         const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
@@ -389,21 +389,18 @@
                         ctx.restore();
                     }
                 }
-                // Linje-text vid midpunkten.
-                if (o.antalText && projected.length >= 2) {
-                    const midIdx = Math.floor(projected.length / 2);
-                    const mid = projected[midIdx];
-                    ctx.save();
-                    ctx.font = '700 13px Inter, sans-serif';
-                    ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
-                    ctx.lineJoin = 'round';
-                    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
-                    ctx.lineWidth = 4;
-                    ctx.strokeText(o.antalText, mid.x, mid.y - 10);
-                    ctx.fillStyle = '#000';
-                    ctx.fillText(o.antalText, mid.x, mid.y - 10);
-                    ctx.restore();
+                // Anteckning-text vid drag-bar labelLat/labelLng om satt,
+                // annars vid linjens midpunkt med default-offset.
+                const noteText = (o.anteckning || '').trim();
+                if (noteText) {
+                    let labelP;
+                    if (o.labelLat != null && o.labelLng != null) {
+                        labelP = project(o.labelLat, o.labelLng);
+                    } else {
+                        const midIdx = Math.floor(projected.length / 2);
+                        labelP = { x: projected[midIdx].x, y: projected[midIdx].y - 14 };
+                    }
+                    drawLineNote(ctx, labelP.x, labelP.y, noteText);
                 }
                 ctx.restore();
             }
@@ -455,6 +452,35 @@
 
         const blob = await new Promise(res => canvas.toBlob(res, 'image/png', 0.95));
         return { blob, width: canvas.width, height: canvas.height, zoom: z, bbox };
+    }
+
+    // Linje-anteckning: vit badge med gron kant. Stoder flerradig text.
+    function drawLineNote(ctx, cx, cy, text) {
+        const fontPx = 12;
+        ctx.save();
+        ctx.font = '600 ' + fontPx + 'px Inter, sans-serif';
+        ctx.textBaseline = 'top';
+        const lines = String(text).split(/\n/);
+        const padX = 5, padY = 2, lineGap = 2;
+        let maxW = 0;
+        lines.forEach(l => { const w = ctx.measureText(l).width; if (w > maxW) maxW = w; });
+        const bw = maxW + padX * 2;
+        const bh = (fontPx + lineGap) * lines.length - lineGap + padY * 2;
+        const x = cx - bw / 2;
+        const y = cy - bh / 2;
+        ctx.fillStyle = 'rgba(255,255,255,0.94)';
+        ctx.fillRect(x, y, bw, bh);
+        ctx.strokeStyle = '#4caf50';
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x + 0.5, y + 0.5, bw - 1, bh - 1);
+        ctx.fillStyle = '#0d1f0d';
+        ctx.textAlign = 'center';
+        lines.forEach((l, i) => {
+            ctx.fillText(l, cx, y + padY + i * (fontPx + lineGap));
+        });
+        ctx.textAlign = 'start';
+        ctx.textBaseline = 'alphabetic';
+        ctx.restore();
     }
 
     function drawNameBadge(ctx, cx, cy, text, opts) {
