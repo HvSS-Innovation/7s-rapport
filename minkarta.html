@@ -2611,6 +2611,22 @@ function openEditPopup(obj, layer, e) {
         commitFn.popup = popup;
         _activeEditCommit = commitFn;
 
+        // Enter submittar (samma som klick på Spara) så användaren slipper
+        // nå musen. Shift+Enter ger vanlig ny rad i textarea. Modifiers
+        // (Ctrl/Alt/Cmd) ignoreras helt. SELECT-element får behålla sin
+        // standard-funktion (dropdown).
+        const popupEl = popup.getElement ? popup.getElement() : null;
+        if (popupEl) {
+            popupEl.addEventListener('keydown', (ev) => {
+                if (ev.key !== 'Enter') return;
+                if (ev.shiftKey || ev.ctrlKey || ev.metaKey || ev.altKey) return;
+                const tag = (ev.target && ev.target.tagName) || '';
+                if (tag === 'SELECT') return;
+                ev.preventDefault();
+                if (edSaveBtn) edSaveBtn.click();
+            });
+        }
+
         edSaveBtn.addEventListener('click', () => {
             // Validera UPK-nummer om tillämpligt
             if (isUpk && nrInput) {
