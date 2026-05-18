@@ -1259,15 +1259,49 @@ function collidesWithObjects(lat, lng, ignoreId) {
     return false;
 }
 
-// Pilspetsar pa varje segment-midpunkt for polyline med obj.arrows=true.
-// Pilen ritas som L.divIcon med roterad SVG. Lagras som obj.id + '_arr_' + i.
+// Pilspetsar langs polylinens kurva med ~ARROW_SPACING_PX mellan varje
+// pil (i pixel-utrymme vid nuvarande zoom). Funkar bade for klick-ritade
+// linjer (fa segment) och frihandsritning (manga ten-spaced segment) sa
+// glesheten blir likadan visuellt. Re-renderas vid zoomend.
+const ARROW_SPACING_PX = 70;
 function addLineArrows(obj) {
-    if (!obj.path || obj.path.length < 2) return;
-    for (let i = 0; i < obj.path.length - 1; i++) {
-        const p1 = obj.path[i], p2 = obj.path[i + 1];
-        const midLat = (p1.lat + p2.lat) / 2;
-        const midLng = (p1.lng + p2.lng) / 2;
-        const bear = bearingBetween(p1.lat, p1.lng, p2.lat, p2.lng);
+    if (!obj.path || obj.path.length < 2 || !map) return;
+    const pts = obj.path.map(p => map.latLngToContainerPoint([p.lat, p.lng]));
+    // Total kurvlangd i pixlar.
+    let totalLen = 0;
+    const segLens = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+        const len = Math.hypot(pts[i+1].x - pts[i].x, pts[i+1].y - pts[i].y);
+        segLens.push(len);
+        totalLen += len;
+    }
+    if (totalLen < 8) return;
+    // For sma linjer (< 1 spacing): rita en pil pa midpunkten.
+    // Annars: borja vid spacing/2 och placera var ARROW_SPACING_PX.
+    const positions = [];
+    if (totalLen < ARROW_SPACING_PX) {
+        positions.push(totalLen / 2);
+    } else {
+        for (let d = ARROW_SPACING_PX / 2; d <= totalLen; d += ARROW_SPACING_PX) {
+            positions.push(d);
+        }
+    }
+    let arrowIdx = 0;
+    let segIdx = 0;
+    let accSeg = 0;
+    for (const targetD of positions) {
+        // Walk forward to find which segment targetD lies in.
+        while (segIdx < segLens.length - 1 && accSeg + segLens[segIdx] < targetD) {
+            accSeg += segLens[segIdx];
+            segIdx++;
+        }
+        const segLen = segLens[segIdx];
+        if (segLen < 0.5) continue;
+        const t = (targetD - accSeg) / segLen;
+        const p1ll = obj.path[segIdx], p2ll = obj.path[segIdx + 1];
+        const lat = p1ll.lat + (p2ll.lat - p1ll.lat) * t;
+        const lng = p1ll.lng + (p2ll.lng - p1ll.lng) * t;
+        const bear = bearingBetween(p1ll.lat, p1ll.lng, p2ll.lat, p2ll.lng);
         const icon = L.divIcon({
             className: 'sk-line-arrow',
             html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" ' +
@@ -1277,12 +1311,27 @@ function addLineArrows(obj) {
             iconSize: [18, 18],
             iconAnchor: [9, 9]
         });
-        const m = L.marker([midLat, midLng], {
+        const m = L.marker([lat, lng], {
             icon: icon, interactive: false, keyboard: false
         });
         m.addTo(map);
-        state.layers[obj.id + '_arr_' + i] = m;
+        state.layers[obj.id + '_arr_' + (arrowIdx++)] = m;
     }
+}
+
+// Re-rendera pilar pa alla polyline-objekt med obj.arrows=true nar kartan
+// zoomar, sa glesheten passar nya zoom-nivan.
+function refreshAllLineArrows() {
+    state.objects.forEach(o => {
+        if ((o.typ !== 'linje' && o.typ !== 'frihand') || !o.arrows) return;
+        Object.keys(state.layers).forEach(k => {
+            if (k.startsWith(o.id + '_arr_')) {
+                try { map.removeLayer(state.layers[k]); } catch (_) {}
+                delete state.layers[k];
+            }
+        });
+        addLineArrows(o);
+    });
 }
 
 // ── Rendering av enskilt objekt ───────────────────────────────────────────
@@ -1643,6 +1692,22 @@ function openEditPopup(obj, layer, evt) {
         const commitFn = () => { if (save) save.click(); };
         commitFn.popup = popup;
         _activeEditCommit = commitFn;
+
+        // Enter-tangent submittar (samma som klick pa Spara) sa anvandaren
+        // slipper na musen. Shift+Enter ger vanlig ny rad i textarea.
+        // Modifiers (Ctrl/Alt/Cmd) ignoreras helt. Select-elementet far
+        // behalla sin standard-funktion (dropdown).
+        const popupEl = popup.getElement ? popup.getElement() : null;
+        if (popupEl) {
+            popupEl.addEventListener('keydown', (e) => {
+                if (e.key !== 'Enter') return;
+                if (e.shiftKey || e.ctrlKey || e.metaKey || e.altKey) return;
+                const tag = (e.target && e.target.tagName) || '';
+                if (tag === 'SELECT') return;
+                e.preventDefault();
+                if (save) save.click();
+            });
+        }
         if (save) save.addEventListener('click', () => {
             rotCommitted = true;
             sectorCommitted = true;
@@ -2973,6 +3038,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     attachMapDrawHandlers();
     attachFreehandHandlers();
     rebuildLayers();
+    if (map) map.on('zoomend', refreshAllLineArrows);
     renderBsp();
     attachBspActions();
     attachProtocolActions();

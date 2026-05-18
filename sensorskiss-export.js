@@ -372,11 +372,43 @@
                 projected.forEach((p, i) => { if (i === 0) ctx.moveTo(p.x, p.y); else ctx.lineTo(p.x, p.y); });
                 ctx.stroke();
                 ctx.setLineDash([]);
-                // Pilspetsar pa segment-midpunkter om obj.arrows ar pa.
+                // Pilspetsar langs kurvan med ~ARROW_SPACING_PX mellan varje
+                // (samma logik som live-kartan, sa frihandsritning far inte
+                // hopt med pilar per ten segment).
                 if (o.arrows) {
+                    const ARROW_SPACING_PX = 70;
+                    const segLens = [];
+                    let totalLen = 0;
                     for (let i = 0; i < projected.length - 1; i++) {
-                        const p1 = projected[i], p2 = projected[i + 1];
-                        const mx = (p1.x + p2.x) / 2, my = (p1.y + p2.y) / 2;
+                        const len = Math.hypot(
+                            projected[i+1].x - projected[i].x,
+                            projected[i+1].y - projected[i].y
+                        );
+                        segLens.push(len);
+                        totalLen += len;
+                    }
+                    const arrowPositions = [];
+                    if (totalLen >= 8) {
+                        if (totalLen < ARROW_SPACING_PX) {
+                            arrowPositions.push(totalLen / 2);
+                        } else {
+                            for (let d = ARROW_SPACING_PX / 2; d <= totalLen; d += ARROW_SPACING_PX) {
+                                arrowPositions.push(d);
+                            }
+                        }
+                    }
+                    let segIdx = 0, accSeg = 0;
+                    for (const targetD of arrowPositions) {
+                        while (segIdx < segLens.length - 1 && accSeg + segLens[segIdx] < targetD) {
+                            accSeg += segLens[segIdx];
+                            segIdx++;
+                        }
+                        const segLen = segLens[segIdx];
+                        if (segLen < 0.5) continue;
+                        const t = (targetD - accSeg) / segLen;
+                        const p1 = projected[segIdx], p2 = projected[segIdx + 1];
+                        const mx = p1.x + (p2.x - p1.x) * t;
+                        const my = p1.y + (p2.y - p1.y) * t;
                         const ang = Math.atan2(p2.y - p1.y, p2.x - p1.x);
                         ctx.save();
                         ctx.translate(mx, my);
