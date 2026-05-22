@@ -1,0 +1,240 @@
+/* lib/nav.css — drawer-navigering (hamburger + slide-in panel).
+   Z-stack: burger 9500, overlay 9600, drawer 9700. Modaler ligger 9999+. */
+
+/* ── Hamburger-knapp (alltid synlig, fixed top-left) ── */
+.hv-nav-burger {
+  position: fixed;
+  top: calc(8px + env(safe-area-inset-top));
+  left: calc(8px + env(safe-area-inset-left));
+  z-index: 9500;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  background: var(--bg-secondary, #152815);
+  border: 1px solid var(--border, #2d4a2d);
+  color: var(--text-secondary, #a8c2a8);
+  border-radius: var(--radius-sm, 6px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s, border-color .15s, background .15s;
+}
+.hv-nav-burger:hover,
+.hv-nav-burger:focus-visible {
+  color: var(--accent, #4caf50);
+  border-color: var(--accent-dim, #2d6a30);
+  outline: none;
+}
+.hv-nav-burger svg {
+  width: 22px;
+  height: 22px;
+}
+
+/* ── Overlay bakom drawer ── */
+.hv-nav-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 9600;
+  opacity: 0;
+  transition: opacity .22s ease;
+}
+.hv-nav-overlay.is-open {
+  opacity: 1;
+}
+
+/* ── Drawer ── */
+.hv-nav-drawer {
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  width: min(320px, 88vw);
+  background: var(--bg-primary, #0d1f0d);
+  border-right: 1px solid var(--border, #2d4a2d);
+  z-index: 9700;
+  transform: translateX(-100%);
+  transition: transform .22s cubic-bezier(.4, 0, .2, 1);
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding-top: env(safe-area-inset-top);
+  padding-bottom: env(safe-area-inset-bottom);
+  -webkit-overflow-scrolling: touch;
+}
+.hv-nav-drawer.is-open {
+  transform: translateX(0);
+}
+
+/* Lås body-scroll när drawer är öppen. */
+body.hv-nav-locked {
+  overflow: hidden;
+}
+
+/* ── Drawer-header ── */
+.hv-nav-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border, #2d4a2d);
+  flex-shrink: 0;
+}
+.hv-nav-header h2 {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--accent, #4caf50);
+  text-transform: uppercase;
+  margin: 0;
+}
+.hv-nav-close {
+  background: none;
+  border: none;
+  color: var(--text-muted, #6a8a6a);
+  font-size: 1.8rem;
+  cursor: pointer;
+  padding: 4px 10px;
+  line-height: 1;
+  min-width: 44px;
+  min-height: 44px;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s;
+}
+.hv-nav-close:hover,
+.hv-nav-close:focus-visible {
+  color: var(--text-primary, #e8f0e8);
+  outline: none;
+}
+
+/* ── Grupper ── */
+.hv-nav-list {
+  flex: 1;
+  padding: 8px 0;
+}
+.hv-nav-group {
+  padding: 8px 0;
+}
+.hv-nav-group-title {
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  color: var(--text-muted, #6a8a6a);
+  text-transform: uppercase;
+  padding: 6px 16px;
+  margin: 0;
+}
+.hv-nav-group ul,
+.hv-nav-list-ul,
+.hv-nav-children {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+/* ── Items ── */
+.hv-nav-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 11px 16px;
+  min-height: 44px;
+  color: var(--text-primary, #e8f0e8);
+  text-decoration: none;
+  font-size: 0.95rem;
+  -webkit-tap-highlight-color: transparent;
+  transition: background .12s, color .12s;
+}
+.hv-nav-item:hover {
+  background: var(--bg-secondary, #152815);
+}
+.hv-nav-item:focus-visible {
+  outline: 2px solid var(--accent, #4caf50);
+  outline-offset: -2px;
+}
+.hv-nav-item.is-active {
+  background: var(--accent-dim, #2d6a30);
+  color: var(--accent, #4caf50);
+  font-weight: 700;
+}
+
+/* ── Badge (BETA m.m.) ── */
+.hv-nav-badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  background: var(--accent-dim, #2d6a30);
+  color: var(--accent, #4caf50);
+  padding: 2px 6px;
+  border-radius: 3px;
+  border: 1px solid var(--accent, #4caf50);
+  text-transform: uppercase;
+  flex-shrink: 0;
+}
+
+/* ── HIDDEN-gruppen: dold som default, visas via .show-hidden ── */
+.hv-nav-group[data-group="HIDDEN"] {
+  display: none;
+}
+.hv-nav-drawer.show-hidden .hv-nav-group[data-group="HIDDEN"] {
+  display: block;
+}
+.hv-nav-group[data-group="HIDDEN"] .hv-nav-group-title {
+  color: var(--text-muted, #6a8a6a);
+  font-style: italic;
+}
+
+/* ── Footer (Visa dolda-toggle) ── */
+.hv-nav-footer {
+  border-top: 1px solid var(--border, #2d4a2d);
+  padding: 10px 16px;
+  flex-shrink: 0;
+}
+.hv-nav-hidden-toggle {
+  width: 100%;
+  min-height: 40px;
+  background: var(--bg-secondary, #152815);
+  color: var(--text-secondary, #a8c2a8);
+  border: 1px solid var(--border, #2d4a2d);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.82rem;
+  letter-spacing: 0.04em;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s, border-color .15s;
+}
+.hv-nav-hidden-toggle:hover,
+.hv-nav-hidden-toggle:focus-visible {
+  color: var(--accent, #4caf50);
+  border-color: var(--accent-dim, #2d6a30);
+  outline: none;
+}
+.hv-nav-hidden-toggle[aria-pressed="true"] {
+  color: var(--accent, #4caf50);
+}
+
+/* ── Reduced motion ── */
+@media (prefers-reduced-motion: reduce) {
+  .hv-nav-drawer,
+  .hv-nav-overlay,
+  .hv-nav-burger,
+  .hv-nav-item,
+  .hv-nav-close,
+  .hv-nav-hidden-toggle {
+    transition: none;
+  }
+}
+
+/* ── Print: dölj allt nav ── */
+@media print {
+  .hv-nav-burger,
+  .hv-nav-overlay,
+  .hv-nav-drawer {
+    display: none !important;
+  }
+}

@@ -39,32 +39,17 @@
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="minkarta-symbols.js" defer></script>
     <script src="minkarta-export.js" defer></script>
+    <script src="lib/geo-export.js" defer></script>
     <script src="minkarta-tutorial.js" defer></script>
     <script src="countries.js" defer></script>
     <script src="offline-tiles.js" defer></script>
     <script type="module" src="pmtiles-layer.js"></script>
     <script type="module" src="topo-overlay.js"></script>
+    <link rel="stylesheet" href="ui/theme.css">
+    <link rel="stylesheet" href="lib/nav.css">
     <style>
         :root {
-            --bg-primary: #0d1f0d;
-            --bg-secondary: #152815;
-            --bg-card: #1a321a;
-            --bg-input: #0f240f;
-            --border: #2d4a2d;
-            --border-focus: #4a7c4a;
-            --text-primary: #e8f0e8;
-            --text-secondary: #8aaa8a;
-            --text-muted: #5a7a5a;
-            --accent: #4caf50;
-            --accent-hover: #66bb6a;
-            --accent-dim: #1e3d1e;
-            --danger: #c62828;
-            --danger-hover: #e53935;
-            --info: #1565c0;
-            --info-hover: #1976d2;
             --warn: #e65100;
-            --radius: 8px;
-            --radius-sm: 4px;
 
             /* Knapp-tokens — designsystem v1 (Fas 1).
                Anvanda av .btn + dess varianter. Centraliserade har sa
@@ -638,43 +623,8 @@
 
     <header><h1>MINKARTA <span style="color:var(--accent-hover);font-weight:500;letter-spacing:0.04em">(BETA)</span></h1><p>Minläggningskarta &amp; minprotokoll</p></header>
 
-    <nav class="tab-nav">
-        <a href="index.html" class="tab-link">7S</a>
-        <a href="what.html" class="tab-link">WHAT</a>
-        <a href="scrim.html" class="tab-link">SCRIM</a>
-        <a href="weft.html" class="tab-link">WEFT</a>
-        <a href="ah.html" class="tab-link">A–H</a>
-    </nav>
-    <nav class="tab-nav-sub">
-        <a href="minkarta.html" class="tab-link active">MINKARTA</a>
-        <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
-        <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
-        <a href="fors.html" class="tab-link">FORS</a>
-        <a href="pedars.html" class="tab-link">PEDARS</a>
-        <a href="eobusare.html" class="tab-link">EOBUSARE</a>
-        <a href="obo.html" class="tab-link">OBO</a>
-        <a href="rassoika.html" class="tab-link">RASSOIKA</a>
-        <a href="vader.html" class="tab-link">VÄDER</a>
-        <a href="matt.html" class="tab-link">MÅTT</a>
-        <a href="postschema.html" class="tab-link">SCHEMA</a>
-        <a href="saekr.html" class="tab-link">SÄKR</a>
-        <a href="patl.html" class="tab-link">PATL</a>
-        <a href="un.html" class="tab-link">UN</a>
-      <a href="linje.html" class="tab-link">LINJE</a>
-    </nav>
-    <nav class="tab-nav-sub">
-        <a href="skyttebok.html" class="tab-link">SKYTTE</a>
-        <a href="ramsor.html" class="tab-link">RAMSOR</a>
-        <a href="tccc.html" class="tab-link">TCCC</a>
-        <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
-        <a href="ra763.html" class="tab-link">RA763</a>
-        <a href="app6.html" class="tab-link">APP-6</a>
-        <a href="symbol.html" class="tab-link">SYMBOL</a>
-        <a href="forkort.html" class="tab-link">FÖRKORT</a>
-        <a href="fg.html" class="tab-link">FG</a>
-    </nav>
 
-    <main>
+<main>
         <div class="search-row">
             <input type="text" id="mgrsSearch" placeholder="MGRS / lat,lon — klistra in eller skriv" autocomplete="off">
             <button class="btn btn-sm btn-accent" id="goBtn">Gå</button>
@@ -1705,7 +1655,7 @@ function renderMapControls() {
     //   4. pannar kartan till landets center+zoom så vyn inte stannar i Sverige
     //
     // Disabled tills landets pmtiles-fil är byggd + uppladdad — se
-    // verktyg/build-grannlander-pmtiles.md. countries.js exponerar isReady(code).
+    // tools/build-grannlander-pmtiles.md. countries.js exponerar isReady(code).
     if (window.HVCountries && window.MK_HARDENING) {
         renderCountryPmtilesButtons(row3);
     } else {
@@ -1763,7 +1713,7 @@ function renderCountryPmtilesButtons(row) {
                 'Klick aktiverar och pannar till landet.';
         } else {
             btn.disabled = true;
-            btn.title = preset.label + ' — pmtiles-fil ej byggd än. Se verktyg/build-grannlander-pmtiles.md.';
+            btn.title = preset.label + ' — pmtiles-fil ej byggd än. Se tools/build-grannlander-pmtiles.md.';
         }
         btn.setAttribute('aria-pressed', 'false');
         btn.addEventListener('click', () => {
@@ -1796,7 +1746,7 @@ async function activateCountryPmtiles(code) {
     if (!preset || !preset.pmtiles || !preset.pmtiles.url) {
         window.alert('PMTiles-fil för ' + (preset ? preset.label : code) +
             ' är inte byggd och uppladdad än.\n\n' +
-            'Se verktyg/build-grannlander-pmtiles.md för bygginstruktioner.');
+            'Se tools/build-grannlander-pmtiles.md för bygginstruktioner.');
         return;
     }
     try {
@@ -3166,6 +3116,22 @@ function attachToolbarActions() {
     exportBtn.addEventListener('click', exportPng);
     tb.appendChild(exportBtn);
 
+    const gpxBtn = document.createElement('button');
+    gpxBtn.type = 'button';
+    gpxBtn.className = 'btn btn-sm btn-ghost';
+    gpxBtn.textContent = 'GPX';
+    gpxBtn.title = 'Exportera till GPX (waypoints + tracks, WGS84)';
+    gpxBtn.addEventListener('click', exportGpx);
+    tb.appendChild(gpxBtn);
+
+    const kmzBtn = document.createElement('button');
+    kmzBtn.type = 'button';
+    kmzBtn.className = 'btn btn-sm btn-ghost';
+    kmzBtn.textContent = 'KMZ';
+    kmzBtn.title = 'Exportera till KMZ (Google Earth / OsmAnd)';
+    kmzBtn.addEventListener('click', exportKmz);
+    tb.appendChild(kmzBtn);
+
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
     clearBtn.className = 'btn btn-sm';
@@ -3308,6 +3274,95 @@ async function exportPng() {
         toast('Fel vid export: ' + (e.message || 'okänt'), 3500);
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+    }
+}
+
+// ── GPX / KMZ-export ────────────────────────────────────────────────────────
+// Översätter state.objects[] till GEO_EXPORT:s generiska item-format. Yttergräns-
+// markörer hoppas över — de är bbox-hjälpare för PNG-exporten, inte operativa
+// objekt som ska följa med ut i GPS-mottagaren.
+function mkObjectsToGeoItems() {
+    const items = [];
+    const SYMS = window.MK_SYMBOLS || {};
+    for (const o of state.objects) {
+        if (o.typ === 'ytter') continue;
+        const sym = SYMS[o.typ] || {};
+        const labelBase = sym.label || o.typ;
+        const nameBits = [];
+        if (o.nr) nameBits.push(labelBase + ' #' + String(o.nr).padStart(3, '0'));
+        else nameBits.push(labelBase);
+        if (o.label && o.label !== nameBits[0]) nameBits.push(o.label);
+        if (o.etikett) nameBits.push(o.etikett);
+        if (o.antal) nameBits.push('×' + o.antal);
+        const name = nameBits.join(' · ');
+
+        const descBits = [];
+        if (o.modell) descBits.push('Modell: ' + o.modell);
+        if (o.plats) descBits.push('Plats: ' + o.plats);
+        if (o.text) descBits.push(o.text);
+        if (o.rotation != null && (sym.category !== 'polygon')) descBits.push('Rotation: ' + Math.round(o.rotation) + '°');
+        if (o.range) descBits.push('Räckvidd: ' + o.range + ' m');
+        if (o.spread) descBits.push('Öppningsvinkel: ' + o.spread + '°');
+        try {
+            const lat = o.lat != null ? o.lat : (o.path && o.path[0] && o.path[0].lat);
+            const lng = o.lng != null ? o.lng : (o.path && o.path[0] && o.path[0].lng);
+            if (typeof MGRS !== 'undefined' && lat != null && lng != null) {
+                descBits.push('MGRS: ' + MGRS.forward(lat, lng));
+            }
+        } catch (_) {}
+        const desc = descBits.join('\n');
+
+        const color = sym.stroke || '#000000';
+        const fillColor = sym.fill || color;
+        const fillOpacity = sym.fillOpacity != null ? sym.fillOpacity : 0.15;
+
+        if (Array.isArray(o.path) && o.path.length >= 2) {
+            const coords = o.path.map(p => [p.lat, p.lng]);
+            const isPolygon = sym.category === 'polygon';
+            if (isPolygon) {
+                items.push({ kind: 'polygon', coords, name, desc, color, fillColor, fillOpacity });
+            } else {
+                items.push({ kind: 'line', coords, name, desc, color, dashed: !!sym.dashArray, type: o.typ });
+            }
+        } else if (o.lat != null && o.lng != null) {
+            items.push({ kind: 'point', lat: o.lat, lng: o.lng, name, desc, sym: o.typ, type: o.typ, color });
+        }
+    }
+    return items;
+}
+
+function exportGpx() {
+    if (!state.objects.length) { toast('Ingenting att exportera.'); return; }
+    if (!window.GEO_EXPORT) { toast('Export-modulen är inte laddad.'); return; }
+    try {
+        const title = window.__minkartaTitle || 'Minkarta';
+        const items = mkObjectsToGeoItems();
+        if (!items.length) { toast('Inga exporterbara objekt (yttergränser räknas inte).'); return; }
+        const gpx = window.GEO_EXPORT.toGpx({ name: title, items });
+        const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+        const filename = window.GEO_EXPORT.stampFilename('minkarta', 'gpx');
+        window.GEO_EXPORT.downloadBlob(blob, filename);
+        toast('Sparad: ' + filename, 2400);
+    } catch (e) {
+        console.error(e);
+        toast('Fel vid GPX-export: ' + (e.message || 'okänt'), 3500);
+    }
+}
+
+async function exportKmz() {
+    if (!state.objects.length) { toast('Ingenting att exportera.'); return; }
+    if (!window.GEO_EXPORT) { toast('Export-modulen är inte laddad.'); return; }
+    try {
+        const title = window.__minkartaTitle || 'Minkarta';
+        const items = mkObjectsToGeoItems();
+        if (!items.length) { toast('Inga exporterbara objekt (yttergränser räknas inte).'); return; }
+        const blob = await window.GEO_EXPORT.toKmz({ name: title, items });
+        const filename = window.GEO_EXPORT.stampFilename('minkarta', 'kmz');
+        window.GEO_EXPORT.downloadBlob(blob, filename);
+        toast('Sparad: ' + filename, 2400);
+    } catch (e) {
+        console.error(e);
+        toast('Fel vid KMZ-export: ' + (e.message || 'okänt'), 3500);
     }
 }
 
@@ -3758,8 +3813,9 @@ document.addEventListener('DOMContentLoaded', () => {
 </script>
 <script src="opsec.js"></script>
 <script src="pwa.js"></script>
-<script>window.FORM_ID = { title: 'MINKARTA' };</script>
+<script>window.FORM_ID = { title: 'MINKARTA' }; window.HV_PAGE = 'MINKARTA';</script>
 <script src="footer.js"></script>
+<script src="lib/nav.js"></script>
 <script src="version.js"></script>
 </body>
 </html>

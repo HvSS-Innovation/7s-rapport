@@ -39,6 +39,7 @@
     <script src="vendor/leaflet/leaflet.js"></script>
     <script src="sensorskiss-symbols.js" defer></script>
     <script src="sensorskiss-export.js" defer></script>
+    <script src="lib/geo-export.js" defer></script>
     <script src="sensorskiss-tutorial.js" defer></script>
     <script src="offline-tiles.js" defer></script>
     <script type="module" src="pmtiles-layer.js"></script>
@@ -521,6 +522,7 @@
         .sk-modal-actions button { flex: 1; }
         .sk-modal-actions button:disabled { opacity: 0.5; cursor: not-allowed; }
     </style>
+    <link rel="stylesheet" href="lib/nav.css">
 </head>
 <body>
 <noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Verktyget kräver JavaScript. Aktivera i webbläsarens inställningar och ladda om sidan.</div></noscript>
@@ -528,43 +530,8 @@
 
     <header><h1>SENSORSKISS <span style="color:var(--accent-hover);font-weight:500;letter-spacing:0.04em">(BETA)</span></h1><p>Sensoruppsättning &amp; beslutsstödsplan</p></header>
 
-    <nav class="tab-nav">
-        <a href="index.html" class="tab-link">7S</a>
-        <a href="what.html" class="tab-link">WHAT</a>
-        <a href="scrim.html" class="tab-link">SCRIM</a>
-        <a href="weft.html" class="tab-link">WEFT</a>
-        <a href="ah.html" class="tab-link">A–H</a>
-    </nav>
-    <nav class="tab-nav-sub">
-        <a href="minkarta.html" class="tab-link">MINKARTA</a>
-        <a href="sensorskiss.html" class="tab-link active">SENSORSKISS</a>
-        <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
-        <a href="fors.html" class="tab-link">FORS</a>
-        <a href="pedars.html" class="tab-link">PEDARS</a>
-        <a href="eobusare.html" class="tab-link">EOBUSARE</a>
-        <a href="obo.html" class="tab-link">OBO</a>
-        <a href="rassoika.html" class="tab-link">RASSOIKA</a>
-        <a href="vader.html" class="tab-link">VÄDER</a>
-        <a href="matt.html" class="tab-link">MÅTT</a>
-        <a href="postschema.html" class="tab-link">SCHEMA</a>
-        <a href="saekr.html" class="tab-link">SÄKR</a>
-        <a href="patl.html" class="tab-link">PATL</a>
-        <a href="un.html" class="tab-link">UN</a>
-      <a href="linje.html" class="tab-link">LINJE</a>
-    </nav>
-    <nav class="tab-nav-sub">
-        <a href="skyttebok.html" class="tab-link">SKYTTE</a>
-        <a href="ramsor.html" class="tab-link">RAMSOR</a>
-        <a href="tccc.html" class="tab-link">TCCC</a>
-        <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
-        <a href="ra763.html" class="tab-link">RA763</a>
-        <a href="app6.html" class="tab-link">APP-6</a>
-        <a href="symbol.html" class="tab-link">SYMBOL</a>
-        <a href="forkort.html" class="tab-link">FÖRKORT</a>
-        <a href="fg.html" class="tab-link">FG</a>
-    </nav>
 
-    <main>
+<main>
         <div class="search-row">
             <input type="text" id="mgrsSearch" placeholder="MGRS / lat,lon — klistra in eller skriv" autocomplete="off">
             <button class="btn btn-sm btn-accent" id="goBtn">Gå</button>
@@ -2232,6 +2199,22 @@ function attachPaletteToolbar() {
     exportBtn.addEventListener('click', exportPng);
     tb.appendChild(exportBtn);
 
+    const gpxBtn = document.createElement('button');
+    gpxBtn.type = 'button';
+    gpxBtn.className = 'btn btn-sm btn-ghost';
+    gpxBtn.textContent = 'GPX';
+    gpxBtn.title = 'Exportera till GPX (waypoints + tracks, WGS84)';
+    gpxBtn.addEventListener('click', exportGpx);
+    tb.appendChild(gpxBtn);
+
+    const kmzBtn = document.createElement('button');
+    kmzBtn.type = 'button';
+    kmzBtn.className = 'btn btn-sm btn-ghost';
+    kmzBtn.textContent = 'KMZ';
+    kmzBtn.title = 'Exportera till KMZ (Google Earth / OsmAnd)';
+    kmzBtn.addEventListener('click', exportKmz);
+    tb.appendChild(kmzBtn);
+
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
     clearBtn.className = 'btn btn-sm';
@@ -2294,6 +2277,88 @@ async function exportPng(e) {
         toast('Fel vid export: ' + (err.message || 'okänt'), 3500);
     } finally {
         if (btn) { btn.disabled = false; btn.textContent = originalLabel; }
+    }
+}
+
+// ── GPX / KMZ-export ────────────────────────────────────────────────────────
+// Översätter state.objects[] till GEO_EXPORT:s generiska item-format.
+// Linje/frihand → line, sensoromrade → polygon, övriga → point.
+function skObjectsToGeoItems() {
+    const items = [];
+    const SYMS = window.SK_SYMBOLS || {};
+    for (const o of state.objects) {
+        const sym = SYMS[o.typ] || {};
+        const labelBase = sym.label || o.typ;
+        const name = o.numLabel ? (labelBase + ' ' + o.numLabel) : labelBase;
+
+        const descBits = [];
+        if (o.anteckning) descBits.push(o.anteckning);
+        if (o.rotation != null && (sym.category === 'point')) descBits.push('Riktning: ' + Math.round(o.rotation) + '°');
+        if (o.sectorAngle) descBits.push('Sektor: ' + o.sectorAngle + '° / ' + (o.sectorRange || 0) + ' m');
+        if (Array.isArray(o.utrustning) && o.utrustning.length) descBits.push('Utrustning: ' + o.utrustning.join(', '));
+        if (o.patrull) descBits.push('Patrullerande');
+        if (o.antalText) descBits.push('Antal: ' + o.antalText);
+        const desc = descBits.join('\n');
+
+        const color = sym.stroke || '#000000';
+        const fillColor = sym.fill || color;
+        const fillOpacity = sym.fillOpacity != null ? sym.fillOpacity : 0.15;
+
+        if (o.typ === 'linje' || o.typ === 'frihand') {
+            if (Array.isArray(o.path) && o.path.length >= 2) {
+                items.push({
+                    kind: 'line',
+                    coords: o.path.map(p => [p.lat, p.lng]),
+                    name, desc, color,
+                    dashed: o.style === 'streckad',
+                    type: o.typ
+                });
+            }
+        } else if (sym.category === 'polygon' || o.typ === 'sensoromrade') {
+            if (Array.isArray(o.path) && o.path.length >= 3) {
+                items.push({
+                    kind: 'polygon',
+                    coords: o.path.map(p => [p.lat, p.lng]),
+                    name, desc, color, fillColor, fillOpacity
+                });
+            }
+        } else if (o.lat != null && o.lng != null) {
+            items.push({ kind: 'point', lat: o.lat, lng: o.lng, name, desc, sym: o.typ, type: o.typ, color });
+        }
+    }
+    return items;
+}
+
+function exportGpx() {
+    if (!state.objects.length) { toast('Inget att exportera.'); return; }
+    if (!window.GEO_EXPORT) { toast('Export-modulen är inte laddad.'); return; }
+    try {
+        const items = skObjectsToGeoItems();
+        if (!items.length) { toast('Inga exporterbara objekt.'); return; }
+        const gpx = window.GEO_EXPORT.toGpx({ name: 'Sensorskiss', items });
+        const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+        const filename = window.GEO_EXPORT.stampFilename('sensorskiss', 'gpx');
+        window.GEO_EXPORT.downloadBlob(blob, filename);
+        toast('Sparad: ' + filename, 2400);
+    } catch (err) {
+        console.error(err);
+        toast('Fel vid GPX-export: ' + (err.message || 'okänt'), 3500);
+    }
+}
+
+async function exportKmz() {
+    if (!state.objects.length) { toast('Inget att exportera.'); return; }
+    if (!window.GEO_EXPORT) { toast('Export-modulen är inte laddad.'); return; }
+    try {
+        const items = skObjectsToGeoItems();
+        if (!items.length) { toast('Inga exporterbara objekt.'); return; }
+        const blob = await window.GEO_EXPORT.toKmz({ name: 'Sensorskiss', items });
+        const filename = window.GEO_EXPORT.stampFilename('sensorskiss', 'kmz');
+        window.GEO_EXPORT.downloadBlob(blob, filename);
+        toast('Sparad: ' + filename, 2400);
+    } catch (err) {
+        console.error(err);
+        toast('Fel vid KMZ-export: ' + (err.message || 'okänt'), 3500);
     }
 }
 
@@ -3059,8 +3124,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 </script>
 <script src="opsec.js"></script>
-<script>window.FORM_ID = { title: 'SENSORSKISS' };</script>
+<script>window.FORM_ID = { title: 'SENSORSKISS' }; window.HV_PAGE = 'SENSORSKISS';</script>
 <script src="footer.js"></script>
+<script src="lib/nav.js"></script>
 <script src="version.js"></script>
 </body>
 </html>
