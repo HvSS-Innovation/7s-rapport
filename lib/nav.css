@@ -91,23 +91,59 @@ body.hv-nav-locked {
   text-transform: uppercase;
   margin: 0;
 }
-.hv-nav-close {
+.hv-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+.hv-nav-close,
+.hv-nav-pin {
   background: none;
   border: none;
   color: var(--text-muted, #6a8a6a);
-  font-size: 1.8rem;
   cursor: pointer;
-  padding: 4px 10px;
   line-height: 1;
   min-width: 44px;
   min-height: 44px;
   -webkit-tap-highlight-color: transparent;
   transition: color .15s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+}
+.hv-nav-close {
+  font-size: 1.8rem;
+}
+.hv-nav-pin svg {
+  width: 18px;
+  height: 18px;
+  transform: rotate(-30deg);
+  transition: transform .15s, color .15s;
+}
+.hv-nav-pin[aria-pressed="true"] {
+  color: var(--accent, #4caf50);
+}
+.hv-nav-pin[aria-pressed="true"] svg {
+  transform: rotate(0deg);
 }
 .hv-nav-close:hover,
-.hv-nav-close:focus-visible {
+.hv-nav-close:focus-visible,
+.hv-nav-pin:hover,
+.hv-nav-pin:focus-visible {
   color: var(--text-primary, #e8f0e8);
   outline: none;
+}
+.hv-nav-pin[aria-pressed="true"]:hover {
+  color: var(--accent, #4caf50);
+  opacity: 0.8;
+}
+
+/* Pin är desktop-only — dölj knappen på mobil. */
+@media (max-width: 1023px) {
+  .hv-nav-pin {
+    display: none;
+  }
 }
 
 /* ── Grupper ── */
@@ -227,6 +263,24 @@ body.hv-nav-locked {
   .hv-nav-close,
   .hv-nav-hidden-toggle {
     transition: none;
+  }
+}
+
+/* ── Pinned-läge (desktop ≥1024px) ── */
+/* Drawer är alltid synlig, ingen overlay, body skjuts höger så formuläret
+   ligger bredvid utan dimning. */
+@media (min-width: 1024px) {
+  body.hv-nav-pinned {
+    padding-left: min(320px, 88vw);
+  }
+  body.hv-nav-pinned .hv-nav-burger,
+  body.hv-nav-pinned .hv-nav-overlay {
+    display: none !important;
+  }
+  .hv-nav-drawer.is-pinned {
+    transform: translateX(0) !important;
+    transition: none;
+    box-shadow: 2px 0 8px rgba(0, 0, 0, 0.3);
   }
 }
 
