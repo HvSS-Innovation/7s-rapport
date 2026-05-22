@@ -85,49 +85,15 @@
         input[type="text"]:focus { border-color: var(--border-focus); }
         input[type="text"]::placeholder { color: var(--text-muted); }
     </style>
+    <link rel="stylesheet" href="lib/nav.css">
 </head>
 <body>
 <noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Verktyget kräver JavaScript. Aktivera i webbläsarens inställningar och ladda om sidan.</div></noscript>
 <div class="container">
     <header><h1>VÄDER</h1><p>Meteorologisk prognos – militärt format</p></header>
 
-    <nav class="tab-nav">
-        <a href="index.html" class="tab-link">7S</a>
-        <a href="what.html" class="tab-link">WHAT</a>
-        <a href="scrim.html" class="tab-link">SCRIM</a>
-        <a href="weft.html" class="tab-link">WEFT</a>
-        <a href="ah.html" class="tab-link">A–H</a>
-    </nav>
-    <nav class="tab-nav-sub">
-        <a href="minkarta.html" class="tab-link">MINKARTA</a>
-        <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
-        <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
-        <a href="fors.html" class="tab-link">FORS</a>
-        <a href="pedars.html" class="tab-link">PEDARS</a>
-        <a href="eobusare.html" class="tab-link">EOBUSARE</a>
-        <a href="obo.html" class="tab-link">OBO</a>
-        <a href="rassoika.html" class="tab-link">RASSOIKA</a>
-        <a href="vader.html" class="tab-link active">VÄDER</a>
-        <a href="matt.html" class="tab-link">MÅTT</a>
-        <a href="postschema.html" class="tab-link">SCHEMA</a>
-        <a href="saekr.html" class="tab-link">SÄKR</a>
-        <a href="patl.html" class="tab-link">PATL</a>
-        <a href="un.html" class="tab-link">UN</a>
-      <a href="linje.html" class="tab-link">LINJE</a>
-    </nav>
-    <nav class="tab-nav-sub">
-        <a href="skyttebok.html" class="tab-link">SKYTTE</a>
-        <a href="ramsor.html" class="tab-link">RAMSOR</a>
-        <a href="tccc.html" class="tab-link">TCCC</a>
-        <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
-        <a href="ra763.html" class="tab-link">RA763</a>
-        <a href="app6.html" class="tab-link">APP-6</a>
-        <a href="symbol.html" class="tab-link">SYMBOL</a>
-        <a href="forkort.html" class="tab-link">FÖRKORT</a>
-        <a href="fg.html" class="tab-link">FG</a>
-    </nav>
 
-    <main>
+<main>
     <div class="form-view" id="formView">
 
         <div class="status-box">
@@ -556,8 +522,9 @@ function wxAnimate() {
 </script>
 <script src="opsec.js"></script>
 <script src="pwa.js"></script>
-<script>window.FORM_ID = { title: 'VADER' };</script>
+<script>window.FORM_ID = { title: 'VADER' }; window.HV_PAGE = 'VADER';</script>
 <script src="footer.js"></script>
+<script src="lib/nav.js"></script>
 <script src="version.js"></script>
 </body>
 </html>

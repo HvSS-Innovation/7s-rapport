@@ -20,6 +20,8 @@
     <title>7S Rapport</title>
     <link rel="manifest" href="manifest.json">
     <link rel="stylesheet" href="fonts/inter.css">
+    <link rel="stylesheet" href="ui/theme.css">
+    <link rel="stylesheet" href="lib/nav.css">
     <script src="vendor/exifr/full.umd.js"></script>
     <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
     <script src="vendor/leaflet/leaflet.js"></script>
@@ -27,26 +29,6 @@
     <script type="module" src="pmtiles-layer.js"></script>
     <script src="shared/map-hardat-modal.js" defer></script>
     <style>
-        :root {
-            --bg-primary: #0d1f0d;
-            --bg-secondary: #152815;
-            --bg-card: #1a321a;
-            --bg-input: #0f240f;
-            --border: #2d4a2d;
-            --border-focus: #4a7c4a;
-            --text-primary: #e8f0e8;
-            --text-secondary: #8aaa8a;
-            --text-muted: #5a7a5a;
-            --accent: #4caf50;
-            --accent-hover: #66bb6a;
-            --accent-dim: #1e3d1e;
-            --danger: #c62828;
-            --danger-hover: #e53935;
-            --info: #1565c0;
-            --info-hover: #1976d2;
-            --radius: 8px;
-            --radius-sm: 4px;
-        }
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body {
             font-family: 'Inter', system-ui, sans-serif;
@@ -258,6 +240,12 @@
         .map-confirm-btn:disabled { opacity:0.4; cursor:default; }
         .field-clear { background:none; border:none; color:var(--text-muted); font-size:0.72rem; font-weight:600; letter-spacing:0.05em; cursor:pointer; padding:2px 0; text-transform:uppercase; }
         .field-clear:hover { color:var(--danger); }
+        /* Mini-karta (thumbnail) under STÄLLE-fältet — fjärdedel så stor som full
+           modal-karta. Klick öppnar full modal. Visar marker när stalle har giltig
+           koord, annars centrerad över Sverige som hint. */
+        .stalle-mini-map { width:100%; height:120px; margin-top:6px; border-radius:var(--radius-sm); overflow:hidden; cursor:pointer; position:relative; border:1px solid var(--border); background:var(--bg-secondary); }
+        .stalle-mini-map .leaflet-container { background:#1e1e1e; cursor:pointer !important; }
+        .stalle-mini-map-hint { position:absolute; left:8px; top:8px; z-index:500; background:rgba(0,0,0,0.7); color:#fff; padding:2px 7px; border-radius:3px; font-size:0.66rem; letter-spacing:0.05em; text-transform:uppercase; pointer-events:none; }
     </style>
 </head>
 <body>
@@ -268,41 +256,6 @@
         <p>Fältrapporteringsverktyg</p>
         <p style="font-size:0.68rem;color:var(--text-muted);letter-spacing:0.04em;margin-top:6px;line-height:1.5;max-width:420px;margin-left:auto;margin-right:auto;opacity:0.85">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
     </header>
-    <nav class="tab-nav">
-        <a href="index.html" class="tab-link active">7S</a>
-        <a href="what.html" class="tab-link">WHAT</a>
-        <a href="scrim.html" class="tab-link">SCRIM</a>
-        <a href="weft.html" class="tab-link">WEFT</a>
-        <a href="ah.html" class="tab-link">A–H</a>
-    </nav>
-    <nav class="tab-nav-sub">
-        <a href="minkarta.html" class="tab-link">MINKARTA</a>
-        <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
-        <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
-        <a href="fors.html" class="tab-link">FORS</a>
-        <a href="pedars.html" class="tab-link">PEDARS</a>
-        <a href="eobusare.html" class="tab-link">EOBUSARE</a>
-        <a href="obo.html" class="tab-link">OBO</a>
-        <a href="rassoika.html" class="tab-link">RASSOIKA</a>
-        <a href="vader.html" class="tab-link">VÄDER</a>
-        <a href="matt.html" class="tab-link">MÅTT</a>
-        <a href="postschema.html" class="tab-link">SCHEMA</a>
-        <a href="saekr.html" class="tab-link">SÄKR</a>
-        <a href="patl.html" class="tab-link">PATL</a>
-        <a href="un.html" class="tab-link">UN</a>
-      <a href="linje.html" class="tab-link">LINJE</a>
-    </nav>
-    <nav class="tab-nav-sub">
-        <a href="skyttebok.html" class="tab-link">SKYTTE</a>
-        <a href="ramsor.html" class="tab-link">RAMSOR</a>
-        <a href="tccc.html" class="tab-link">TCCC</a>
-        <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
-        <a href="ra763.html" class="tab-link">RA763</a>
-        <a href="app6.html" class="tab-link">APP-6</a>
-        <a href="symbol.html" class="tab-link">SYMBOL</a>
-        <a href="forkort.html" class="tab-link">FÖRKORT</a>
-        <a href="fg.html" class="tab-link">FG</a>
-    </nav>
     <main>
         <div class="form-view" id="formView">
 
@@ -355,6 +308,11 @@
                 <div class="input-row">
                     <input type="text" id="stalle" placeholder="Plats / koordinater" autocomplete="off">
                     <button class="btn btn-sm btn-time" tabindex="-1" onclick="openMapModal()">Karta</button>
+                </div>
+                <div id="stalleMiniMap" class="stalle-mini-map" onclick="openMapModal()" role="button" tabindex="0"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMapModal();}"
+                     aria-label="Öppna karta för att välja position">
+                    <span class="stalle-mini-map-hint">Tryck för att välja på kartan</span>
                 </div>
                 <div class="saved-items" id="savedStalle"></div>
             </div>
@@ -541,6 +499,9 @@
         <div class="confirm-dialog">
             <h3>Publicera rapport</h3>
             <div class="confirm-info" id="publishInfo"></div>
+            <label for="signalGruppInp" style="display:block;margin-top:10px;font-size:0.85rem;opacity:0.85">Förvald Signal-grupp (sparas lokalt, visas som påminnelse)</label>
+            <input id="signalGruppInp" type="text" placeholder="t.ex. Pluton 1" autocomplete="off"
+                   style="width:100%;margin-top:4px;padding:8px 10px;border-radius:3px;border:1px solid var(--border, #555);background:var(--bg-input, #1e1e1e);color:inherit;font:inherit">
             <div class="confirm-btns">
                 <button class="btn btn-secondary" onclick="closePublishDialog()">Avbryt</button>
                 <button class="btn btn-primary" onclick="executePublish()" style="margin-top:0">Bekräfta</button>
@@ -1072,8 +1033,103 @@ function confirmMapSelection() {
     field.value = mapSelectedAddress ? mapSelectedMgrs + ', ' + mapSelectedAddress : mapSelectedMgrs;
     // Om geocoding fortfarande pågår — flagga för bakgrundsuppdatering
     mapConfirmed = !mapSelectedAddress;
+    // Spegla val i mini-thumbnail
+    try {
+        const ll = MGRS.inverse(mapSelectedMgrs);
+        if (ll && isFinite(ll.lat) && isFinite(ll.lon)) updateStalleMiniMap(ll.lat, ll.lon);
+    } catch (_) {}
     closeMapModal();
 }
+
+// ── Mini-karta: thumbnail under STÄLLE-fältet ──────────────────────────────
+// En liten Leaflet-instans som spegelvisar vald koord. Klick öppnar full
+// modal-karta via openMapModal(). Initieras lazy vid första uppdatering;
+// fram tills dess visas placeholdern (rendered i HTML).
+let stalleMiniMap = null;
+let stalleMiniMarker = null;
+
+function ensureStalleMiniMap() {
+    if (stalleMiniMap) return stalleMiniMap;
+    const el = document.getElementById('stalleMiniMap');
+    if (!el || typeof L === 'undefined') return null;
+    // Ta bort placeholder-hint innan Leaflet tar över divern
+    const hint = el.querySelector('.stalle-mini-map-hint');
+    if (hint) hint.remove();
+    stalleMiniMap = L.map(el, {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        touchZoom: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        tap: false
+    }).setView([62.5, 15.5], 4);
+    L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17, crossOrigin: true
+    }).addTo(stalleMiniMap);
+    return stalleMiniMap;
+}
+
+function updateStalleMiniMap(lat, lng) {
+    const m = ensureStalleMiniMap();
+    if (!m) return;
+    if (stalleMiniMarker) {
+        stalleMiniMarker.setLatLng([lat, lng]);
+    } else {
+        stalleMiniMarker = L.circleMarker([lat, lng], {
+            radius: 7, color: '#c8a24e', fillColor: '#c8a24e', fillOpacity: 0.9, weight: 2
+        }).addTo(m);
+    }
+    m.setView([lat, lng], 13);
+}
+
+// Synka mini-kartan när stalle-fältet ändras (klistra in, manuell inmatning).
+// Försök tolka som MGRS först, sen lat/lng-par.
+function syncStalleMiniFromField() {
+    const el = document.getElementById('stalle');
+    if (!el) return;
+    const v = el.value.trim();
+    if (!v) return;
+    // MGRS: t.ex. "33VWF1234567890"
+    const mgrsMatch = v.match(/\b(\d{1,2}[C-X])\s*([A-HJ-NP-Z]{2})\s*(\d{1,5})\s*(\d{1,5})\b/i);
+    if (mgrsMatch) {
+        try {
+            const ll = MGRS.inverse(mgrsMatch[0].replace(/\s+/g, ''));
+            if (ll && isFinite(ll.lat) && isFinite(ll.lon)) {
+                updateStalleMiniMap(ll.lat, ll.lon);
+                return;
+            }
+        } catch (_) {}
+    }
+    // Decimal: 59.32, 18.07 eller 59.32 N 18.07 E
+    const ddMatch = v.match(/(-?\d+\.\d+)[°\s,NS]+(-?\d+\.\d+)/);
+    if (ddMatch) {
+        const lat = parseFloat(ddMatch[1]), lng = parseFloat(ddMatch[2]);
+        if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) updateStalleMiniMap(lat, lng);
+    }
+}
+
+// Anslut input-listener när DOM är klar (script ligger inline efter form i HTML).
+(function attachStalleMiniSync() {
+    function attach() {
+        const el = document.getElementById('stalle');
+        if (!el) return;
+        el.addEventListener('input', () => {
+            clearTimeout(attach._t);
+            attach._t = setTimeout(syncStalleMiniFromField, 350);
+        });
+        el.addEventListener('change', syncStalleMiniFromField);
+        // Försök synka direkt om fältet redan har värde (t.ex. återställd session)
+        setTimeout(syncStalleMiniFromField, 100);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attach);
+    } else {
+        attach();
+    }
+})();
 
 // ── +/- för Styrka ─────────────────────────────────────────────────────────
 function changeCount(delta) {
@@ -1316,14 +1372,32 @@ function showCotFeedback(msg) {
 }
 
 // ── Publicera till TAK + dela via Signal ─────────────────────────────────────
+const SIGNAL_GROUP_KEY = '7s.signalGroup';
+function getSignalGroup() {
+    try { return (localStorage.getItem(SIGNAL_GROUP_KEY) || '').trim(); } catch (_) { return ''; }
+}
+function saveSignalGroup(name) {
+    try {
+        const t = (name || '').trim();
+        if (t) localStorage.setItem(SIGNAL_GROUP_KEY, t);
+        else localStorage.removeItem(SIGNAL_GROUP_KEY);
+    } catch (_) {}
+}
+
 function showPublishDialog() {
     const v = id => document.getElementById(id).value.trim();
     const stalle = v('stalle') || '-';
     const info = document.getElementById('publishInfo');
+    const grupp = getSignalGroup();
+    const signalRad = grupp
+        ? `<span class="label">Signal:</span> Textrapport delas → ${grupp}`
+        : `<span class="label">Signal:</span> Textrapport delas`;
     info.innerHTML =
         `<span class="label">Position:</span> ${stalle}\n` +
         `<span class="label">TAK:</span> .cot-fil delas till ATAK\n` +
-        `<span class="label">Signal:</span> Textrapport delas`;
+        signalRad;
+    const inp = document.getElementById('signalGruppInp');
+    if (inp) inp.value = grupp;
     document.getElementById('publishOverlay').classList.add('open');
 }
 
@@ -1332,6 +1406,9 @@ function closePublishDialog() {
 }
 
 function executePublish() {
+    // Spara förvald Signal-grupp innan dialogen stängs — nästa rapport förifylls.
+    const inp = document.getElementById('signalGruppInp');
+    if (inp) saveSignalGroup(inp.value);
     closePublishDialog();
     const text = document.getElementById('reportOutput').textContent;
     const xml = generateCoTXML();
@@ -1342,11 +1419,14 @@ function executePublish() {
     const files = [dpFile];
     if (lastFotoFile) files.push(lastFotoFile);
 
+    const grupp = getSignalGroup();
+    const grupphint = grupp ? ' → ' + grupp : '';
+
     if (navigator.share) {
         const shareData = { text, files };
         if (navigator.canShare?.(shareData)) {
             navigator.share(shareData).then(() => {
-                showCotFeedback('Rapport delad');
+                showCotFeedback('Rapport delad' + grupphint);
             }).catch(() => {
                 fallbackDownloadCoT(xml);
                 shareTextOnly(text);
@@ -1358,7 +1438,7 @@ function executePublish() {
     } else {
         fallbackDownloadCoT(xml);
         if (navigator.clipboard?.writeText) {
-            navigator.clipboard.writeText(text).then(() => showCotFeedback('Data Package nedladdad + text kopierad'));
+            navigator.clipboard.writeText(text).then(() => showCotFeedback('Nedladdad + text kopierad' + grupphint));
         }
     }
 }
@@ -1491,8 +1571,9 @@ document.addEventListener('DOMContentLoaded', () => { loadSavedItems(); loadLast
 </script>
 <script src="opsec.js"></script>
 <script src="pwa.js"></script>
-<script>window.FORM_ID = { title: '7S' };</script>
+<script>window.FORM_ID = { title: '7S' }; window.HV_PAGE = '7S';</script>
 <script src="footer.js"></script>
+<script src="lib/nav.js"></script>
 <script src="version.js"></script>
 </body>
 </html>

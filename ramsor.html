@@ -35,15 +35,9 @@
 <link rel="stylesheet" href="shared/theme-toggle.css">
 <script src="shared/theme-toggle.js" defer></script>
 <link rel="stylesheet" href="fonts/inter.css">
+<link rel="stylesheet" href="ui/theme.css">
+    <link rel="stylesheet" href="lib/nav.css">
 <style>
-  :root {
-    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
-    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
-    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
-    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
-    --danger:#c62828; --danger-hover:#e53935;
-    --radius:8px; --radius-sm:4px;
-  }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; }
   .container { max-width:680px; margin:0 auto; }
@@ -131,43 +125,8 @@
     <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
   </header>
 
-  <nav class="tab-nav">
-    <a href="index.html" class="tab-link">7S</a>
-    <a href="what.html" class="tab-link">WHAT</a>
-    <a href="scrim.html" class="tab-link">SCRIM</a>
-    <a href="weft.html" class="tab-link">WEFT</a>
-    <a href="ah.html" class="tab-link">A–H</a>
-  </nav>
-  <nav class="tab-nav-sub">
-      <a href="minkarta.html" class="tab-link">MINKARTA</a>
-      <a href="sensorskiss.html" class="tab-link">SENSORSKISS</a>
-      <a href="obslosa.html" class="tab-link">OBSLÖSA</a>
-      <a href="fors.html" class="tab-link">FORS</a>
-      <a href="pedars.html" class="tab-link">PEDARS</a>
-      <a href="eobusare.html" class="tab-link">EOBUSARE</a>
-      <a href="obo.html" class="tab-link">OBO</a>
-      <a href="rassoika.html" class="tab-link">RASSOIKA</a>
-      <a href="vader.html" class="tab-link">VÄDER</a>
-      <a href="matt.html" class="tab-link">MÅTT</a>
-      <a href="postschema.html" class="tab-link">SCHEMA</a>
-      <a href="saekr.html" class="tab-link">SÄKR</a>
-      <a href="patl.html" class="tab-link">PATL</a>
-      <a href="un.html" class="tab-link">UN</a>
-      <a href="linje.html" class="tab-link">LINJE</a>
-  </nav>
-  <nav class="tab-nav-sub">
-      <a href="skyttebok.html" class="tab-link">SKYTTE</a>
-      <a href="ramsor.html" class="tab-link active">RAMSOR</a>
-      <a href="tccc.html" class="tab-link">TCCC</a>
-      <a href="sigskydd.html" class="tab-link">SIGSKYDD</a>
-      <a href="ra763.html" class="tab-link">RA763</a>
-      <a href="app6.html" class="tab-link">APP-6</a>
-      <a href="symbol.html" class="tab-link">SYMBOL</a>
-      <a href="forkort.html" class="tab-link">FÖRKORT</a>
-      <a href="fg.html" class="tab-link">FG</a>
-  </nav>
 
-  <a href="index.html" class="back-link">Tillbaka</a>
+<a href="index.html" class="back-link">Tillbaka</a>
 
   <!-- Roll-väljare (visas både i öppet och kompakt läge) -->
   <div id="roleSection"></div>
@@ -482,7 +441,8 @@
   render();
 })();
 </script>
-<script>window.FORM_ID = { title: 'RAMSOR' };</script>
+<script>window.FORM_ID = { title: 'RAMSOR' }; window.HV_PAGE = 'RAMSOR';</script>
 <script src="footer.js"></script>
+<script src="lib/nav.js"></script>
 </body>
 </html>

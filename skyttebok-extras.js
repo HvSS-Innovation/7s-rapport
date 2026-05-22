@@ -106,8 +106,9 @@
             var qr;
             // qrcode-generator: typeNumber=0 låter biblioteket auto-välja
             // version (storlek) baserat på data och error-correction.
-            // Level 'M' = 15 % redundans → bra balans utomhus.
-            qr = window.qrcode(0, 'M');
+            // Level 'L' = 7 % redundans → färre moduler, grövre rutor,
+            // lättare att scanna med mobilkamera utomhus.
+            qr = window.qrcode(0, 'L');
             qr.addData(payloadStr, 'Byte');
             qr.make();
             // SVG-rendering — skalbar, integrerar med tema utan pixlering.

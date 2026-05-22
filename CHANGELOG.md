@@ -3,6 +3,21 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.4 — 2026-05-22 — Lager-system + IMPEX i MINKARTA & SENSORSKISS
+
+- **Lager-system (Photoshop-style):** ny delad modul `lib/layers.js` — max 10 baslager per app, kollapsbar panel under kartan, klick på lagerrad = aktivt lager (nya objekt hamnar där), ögon-toggle för synlighet, upp/ner-pilar för sortering (drag-and-drop kommer i v0.2). Översta lagret i listan ritas framför de undre via Leaflet-panes med dynamisk z-index.
+- **Composites (Sammanfoga/Dela):** kryssa i 2+ lager → "Sammanfoga"-knapp skapar gruppläger som *refererar* källagren (objekten flyttas aldrig). "Dela"-knapp på composite återställer källagren med alla objekt på plats. Composites räknas inte mot 10-cappen — obegränsat med kompani/pluton-grupper ovanpå baslagren.
+- **Tangent-bindning per lager:** integrerad i befintlig `shortcutMap` — klick på tangent-rutan i panelen öppnar samma "tryck en tangent"-dialog som dubbelklick på symbol. Användaren binder fritt, ingen hårdkodad 1-0.
+- **Edit-popup:** "Lager"-dropdown om minst 2 baslager finns — flytta objekt mellan lager utan att dra på kartan.
+- **IMPEX (lossy v0.1):** ny `lib/geo-import.js` — importera GPX/KMZ/KML som nytt lager med filnamnet. KMZ-unzip stödjer STORE + DEFLATE (via DecompressionStream). Items → generiska objekt; symbol-typ återanvänds där `sym`-fältet matchar en känd typ, annars fallback (`enkelpost`/`linje`/`sensoromrade` i sensorskiss, `text`/`frihand`/`minomrade` i minkarta). Roundtrip-bevarande extensions kommer i v0.2.
+- **Per-lager-export:** GPX/KMZ-knapparna öppnar dialog med checkbox per lager — en separat fil per markerat lager, filnamn slugifierat från lagernamnet.
+- **Sensorskiss frihand-defaults:** ändrad till `streckad` + `arrows: true` (Joel-feedback).
+- **Migration:** befintliga objekt utan `layerId` tilldelas tyst till "Lager 1" första gången appen öppnas. Undo-snapshot i minkarta hanterar både gamla (array) och nya (object med layerState) format.
+- **Intern history-logg** för create/rename/reorder/merge/split/delete (synlig panel kommer i v0.3-polish).
+- **Antaganden:** A=4, B=4, C=4, D=4 (composites obegränsade, checkbox+knapp, intern history, strukturella ops), 1=3, 2=3, 3=3 (details-panel, aktivt lager, tyst migration), 4=default (per-app separata lager-set), E=4 (lossy först, roundtrip v0.2), F=4+förfining (nytt lager med filnamn, per-lager-export = N filer), G=4 (GPX+KMZ+KML).
+- **Nya filer i FILES:** `lib/layers.js`, `lib/geo-import.js`.
+- Service worker auto-bumpas.
+
 ## v0.3.3 — 2026-05-15 — Tab-nav uppdelad i Fält + Övning
 
 - **Tab-nav-sub** tidigare 23-länkar i ett block — nu uppdelad i två logiska rader:

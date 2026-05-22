@@ -357,16 +357,36 @@ const SYMBOLS = {
     // ── Fri-rita-penna ───────────────────────────────────────────────────────
     // Frihandsritad polyline. Ritas via mousedown→mousemove→mouseup i
     // minkarta.html (inte vanlig click-flow), men sparas som vilken linje
-    // som helst (category 'line') så att render, drag-handtag, persistens
-    // och PNG-export ärver befintlig kod.
+    // som helst (category 'line'). v2 (2026-05-22, issue #65): porterat
+    // sensorskiss-feature-set — style ('heldragen'/'streckad') + arrows
+    // + anteckning sätts via edit-popup. Defaults vid skapande: streckad +
+    // arrows=true (matchar sensorskiss-frihand).
     frihand: {
-        label: 'Fri-rita',
+        label: 'Frihand',
         category: 'line',
         svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
-            '<path d="M3.2 18.5l1.3-3.6 11-11 3.3 3.3-11 11L4 19.8z" fill="' + MK_INK + '" stroke="' + MK_HALO + '" stroke-width="0.7" paint-order="stroke" stroke-linejoin="round"/>' +
-            '<path d="M14.5 3.9l3.3 3.3" stroke="' + MK_HALO + '" stroke-width="0.6"/>' +
+            '<path d="M2 19 Q5 9 9 13 T15 11 T22 5" fill="none" ' +
+                'stroke="' + MK_INK + '" stroke-width="2" ' +
+                'stroke-linecap="round" stroke-linejoin="round"/>' +
         '</svg>',
-        stroke: MK_INK, weight: 5, dashArray: null
+        stroke: MK_INK, weight: 5, dashArray: null,
+        defaultStyle: 'streckad', defaultArrows: true
+    },
+
+    // ── Linje (sensorskiss-style click-baserad polyline) ─────────────────────
+    // Porterat från sensorskiss (issue #65). Click-add-noder, dubbelklick
+    // avslutar. Style/arrows/anteckning i edit-popup. Defaults: heldragen,
+    // arrows=false (matchar sensorskiss-linje).
+    linje: {
+        label: 'Linje',
+        category: 'line',
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+            '<path d="M2 19 L9 11 L15 15 L22 5" fill="none" ' +
+                'stroke="' + MK_INK + '" stroke-width="2" ' +
+                'stroke-linecap="round" stroke-linejoin="round"/>' +
+        '</svg>',
+        stroke: MK_INK, weight: 4, dashArray: null,
+        defaultStyle: 'heldragen', defaultArrows: false
     }
 
     // BORTTAGNA v3-nycklar (ingen motsvarighet i nya SVG-paketet från
@@ -382,7 +402,7 @@ const SYMBOLS = {
 // Rad 3: linjer & ytor (Block B).
 // Rad 4: förstöring & spärr (Block C).
 const SYMBOL_GROUPS = [
-    { title: 'Referenser & annotering', ids: ['upk', 'ytter', 'frihand', 'text'] },
+    { title: 'Referenser & annotering', ids: ['upk', 'ytter', 'linje', 'frihand', 'text'] },
     { title: 'Mineringar',         ids: [
         'strv_tryck', 'fordonsmina', 'fordon_sid', 'tramp', 'forsvar',
         'omr_verkan', 'larm'
