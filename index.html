@@ -1072,9 +1072,8 @@ function ensureStalleMiniMap() {
     if (stalleMiniMap) return stalleMiniMap;
     const el = document.getElementById('stalleMiniMap');
     if (!el || typeof L === 'undefined') return null;
-    // Ta bort placeholder-hint innan Leaflet tar över divern
-    const hint = el.querySelector('.stalle-mini-map-hint');
-    if (hint) hint.remove();
+    // Behåll hint-texten som overlay (z-index:500) ovanpå kartan så användaren
+    // ser både en sample av kartbakgrunden och vet att man kan trycka.
     stalleMiniMap = L.map(el, {
         zoomControl: false,
         attributionControl: false,
@@ -1090,6 +1089,13 @@ function ensureStalleMiniMap() {
         maxZoom: 17, crossOrigin: true
     }).addTo(stalleMiniMap);
     return stalleMiniMap;
+}
+
+// Initiera mini-kartan direkt vid sidladdning — visar Sverige-översikt som
+// sample av kartbakgrunden istället för svart ruta. Hint-texten ligger kvar
+// som overlay. Kallas via samma attachStalleMiniSync() nedan.
+function initStalleMiniMapPreview() {
+    ensureStalleMiniMap();
 }
 
 function updateStalleMiniMap(lat, lng) {
@@ -1141,7 +1147,9 @@ function syncStalleMiniFromField() {
             attach._t = setTimeout(syncStalleMiniFromField, 350);
         });
         el.addEventListener('change', syncStalleMiniFromField);
-        // Försök synka direkt om fältet redan har värde (t.ex. återställd session)
+        // Visa mini-kartan som sample direkt (innan användaren skrivit något),
+        // sedan synka om fältet redan har värde (t.ex. återställd session).
+        initStalleMiniMapPreview();
         setTimeout(syncStalleMiniFromField, 100);
     }
     if (document.readyState === 'loading') {
