@@ -40,6 +40,8 @@
     <script src="minkarta-symbols.js" defer></script>
     <script src="minkarta-export.js" defer></script>
     <script src="lib/geo-export.js" defer></script>
+    <script src="lib/geo-import.js" defer></script>
+    <script src="lib/layers.js" defer></script>
     <script src="minkarta-tutorial.js" defer></script>
     <script src="countries.js" defer></script>
     <script src="offline-tiles.js" defer></script>
@@ -643,6 +645,8 @@
         <!-- Genvägsrad (v4): Namn-etiketter + Pan-läge direkt under kartan -->
         <div class="map-controls" id="mapControls"></div>
 
+        <div id="layersPanelHost"></div>
+
         <!-- Symbolpalett -->
         <section class="palette" id="paletteRoot">
             <div class="palette-head">
@@ -1122,6 +1126,11 @@ function shortcutForTool(toolId) {
 }
 function labelForTool(toolId) {
     if (toolId === FULLMAP_PSEUDO) return FULLMAP_LABEL;
+    if (typeof toolId === 'string' && toolId.indexOf('__layer:') === 0) {
+        const lid = toolId.slice('__layer:'.length);
+        const l = state.layerMgr && state.layerMgr.layers[lid];
+        return l ? ('Lager: ' + l.name) : 'Lager (borttaget)';
+    }
     const sym = window.MK_SYMBOLS && window.MK_SYMBOLS[toolId];
     return sym ? sym.label : toolId;
 }
@@ -1129,13 +1138,14 @@ function labelForTool(toolId) {
 // Öppna mapping-dialog för en symbol (toolId = MK_SYMBOLS-id eller pseudo).
 // Stänger befintlig dialog om en sådan finns. Esc / Avbryt = ingen ändring.
 let _activeMappingDialog = null;
-function openShortcutDialog(toolId) {
+function openShortcutDialog(toolId, extra) {
     if (_activeMappingDialog) _activeMappingDialog.close();
 
     const overlay = document.createElement('div');
     overlay.className = 'mk-modal-overlay';
-    const sym = (toolId === FULLMAP_PSEUDO) ? null : window.MK_SYMBOLS[toolId];
-    const titleSvg = sym && sym.svg ? sym.svg : '';
+    const isLayerTarget = typeof toolId === 'string' && toolId.indexOf('__layer:') === 0;
+    const sym = (toolId === FULLMAP_PSEUDO || isLayerTarget) ? null : window.MK_SYMBOLS[toolId];
+    const titleSvg = sym && sym.svg ? sym.svg : (isLayerTarget ? '<span style="font-size:18px;margin-right:4px">⛁</span>' : '');
     const titleLbl = labelForTool(toolId);
     const currentKey = shortcutForTool(toolId);
 
@@ -1214,6 +1224,7 @@ function openShortcutDialog(toolId) {
             saveShortcuts();
             renderPalette();
             renderMapControls();
+            if (state.layerMgr) state.layerMgr.renderPanel();
         }
         close();
     });
@@ -1229,6 +1240,7 @@ function openShortcutDialog(toolId) {
         saveShortcuts();
         renderPalette();
         renderMapControls();
+        if (state.layerMgr) state.layerMgr.renderPanel();
         close();
     });
 }
@@ -1813,6 +1825,7 @@ const LAYERS_KEY = 'minkarta.layers';
 const state = {
     objects: [],
     layers: {},       // id -> Leaflet layer
+    layerMgr: null,   // window.LAYERS-manager (Photoshop-style lager-system)
     draft: null,      // pågående linje/polygon i uppritning
     draftLayer: null,
     showLabels: (function(){
@@ -1841,7 +1854,21 @@ const redoStack = [];
 const UNDO_LIMIT = 50;
 
 function snapshot() {
-    return JSON.stringify(state.objects);
+    return JSON.stringify({
+        objects: state.objects,
+        layerState: state.layerMgr ? state.layerMgr.serialize() : null
+    });
+}
+// Bakåtkompat: undo-snapshot kan vara antingen en ren array (gammal) eller
+// ett objekt med {objects, layerState} (nytt). Avgör vid restore.
+function parseSnapshot(snap) {
+    try {
+        const parsed = JSON.parse(snap);
+        if (Array.isArray(parsed)) return { objects: parsed, layerState: null };
+        return { objects: parsed.objects || [], layerState: parsed.layerState || null };
+    } catch (_) {
+        return { objects: [], layerState: null };
+    }
 }
 function pushUndo() {
     undoStack.push(snapshot());
@@ -1852,9 +1879,11 @@ function pushUndo() {
 function undo() {
     if (undoStack.length < 1) return;
     redoStack.push(snapshot());
-    const prev = undoStack.pop();
-    state.objects = JSON.parse(prev);
+    const prev = parseSnapshot(undoStack.pop());
+    state.objects = prev.objects;
+    if (state.layerMgr && prev.layerState) state.layerMgr.deserialize(prev.layerState);
     rebuildLayers();
+    if (state.layerMgr) state.layerMgr.renderPanel();
     // UPK-rader och reglementsvarningen härleds ur state.objects — utan
     // detta blir protokollets textarea och varningen ur synk efter undo
     // av en UPK-radering eller -ändring.
@@ -1864,9 +1893,11 @@ function undo() {
 function redoAction() {
     if (redoStack.length < 1) return;
     undoStack.push(snapshot());
-    const next = redoStack.pop();
-    state.objects = JSON.parse(next);
+    const next = parseSnapshot(redoStack.pop());
+    state.objects = next.objects;
+    if (state.layerMgr && next.layerState) state.layerMgr.deserialize(next.layerState);
     rebuildLayers();
+    if (state.layerMgr) state.layerMgr.renderPanel();
     syncUpTextarea();
     scheduleAutosave();
 }
@@ -1883,8 +1914,10 @@ function escapeHtml(s) {
 
 function addObject(obj) {
     pushUndo();
+    if (state.layerMgr && !obj.layerId) obj.layerId = state.layerMgr.activeId;
     state.objects.push(obj);
     renderObject(obj);
+    if (state.layerMgr) state.layerMgr.renderPanel();
 }
 
 // Öppnar edit-popupen direkt på ett nyskapat objekt så användaren kan fylla i
@@ -1917,6 +1950,7 @@ function removeObject(id) {
         syncUpTextarea();
         rebuildLayers();
     }
+    if (state.layerMgr) state.layerMgr.renderPanel();
 }
 
 // Soft-delete: tar bort utan confirm() och visar en flytande Ångra-knapp.
@@ -2217,17 +2251,22 @@ function addVerkansRangeMarkers(obj) {
 function renderObject(obj) {
     const sym = window.MK_SYMBOLS[obj.typ];
     if (!sym) return;
+    // Lager-synlighet: hoppa över rendering om lagret är osynligt
+    if (state.layerMgr && obj.layerId && !state.layerMgr.isVisible(obj.layerId)) return;
+    const pane = obj.layerId ? ensureLayerPane(obj.layerId) : undefined;
     let layer;
 
     if (obj.typ === 'verkansomrade') {
         // Specialfall: ritas som sektor-polygon i stället för punktmarker.
         const path = sectorPath(obj.lat, obj.lng,
             obj.range || 200, obj.spread || 60, obj.rotation || 0);
-        layer = L.polygon(path, {
+        const vOpts = {
             color: '#000', weight: 2,
             fillColor: '#000', fillOpacity: 0.10,
             dashArray: '6 4'
-        });
+        };
+        if (pane) vOpts.pane = pane;
+        layer = L.polygon(path, vOpts);
         if (obj.etikett || obj.antal) {
             layer.bindTooltip((obj.etikett || sym.label) + (obj.antal ? ' ' + obj.antal : ''), {
                 permanent: true, direction: 'center', className: 'mk-label'
@@ -2246,11 +2285,13 @@ function renderObject(obj) {
                 iconAnchor: [0, 0]
             })
             : window.mkMakeIcon(obj.typ, obj);
-        layer = L.marker([obj.lat, obj.lng], {
+        const mOpts = {
             icon,
             title: sym.label,
             draggable: true
-        });
+        };
+        if (pane) mOpts.pane = pane;
+        layer = L.marker([obj.lat, obj.lng], mOpts);
         layer.on('dragend', () => {
             pushUndo();
             const ll = layer.getLatLng();
@@ -2268,19 +2309,23 @@ function renderObject(obj) {
             });
         }
     } else if (sym.category === 'line') {
-        layer = L.polyline(obj.path.map(p => [p.lat, p.lng]), {
+        const lnOpts = {
             color: sym.stroke, weight: sym.weight || 3, dashArray: sym.dashArray || null
-        });
+        };
+        if (pane) lnOpts.pane = pane;
+        layer = L.polyline(obj.path.map(p => [p.lat, p.lng]), lnOpts);
         if (obj.etikett || obj.antal) {
             layer.bindTooltip((obj.etikett || '') + (obj.antal ? ' ' + obj.antal : ''), {
                 permanent: true, direction: 'center', className: 'mk-label'
             });
         }
     } else if (sym.category === 'polygon') {
-        layer = L.polygon(obj.path.map(p => [p.lat, p.lng]), {
+        const pgOpts = {
             color: sym.stroke, weight: 2, fillColor: sym.fill, fillOpacity: sym.fillOpacity || 0.3,
             dashArray: sym.dashArray || null
-        });
+        };
+        if (pane) pgOpts.pane = pane;
+        layer = L.polygon(obj.path.map(p => [p.lat, p.lng]), pgOpts);
         if (obj.etikett) {
             layer.bindTooltip(obj.etikett + (obj.antal ? ' ' + obj.antal : ''), {
                 permanent: true, direction: 'center', className: 'mk-label'
@@ -2412,6 +2457,21 @@ function openEditPopup(obj, layer, e) {
     }
     html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Anteckning</label>';
     html += '<input id="edNote" type="text" value="' + escAttr(obj.anteckning) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+    // Flytta till lager (om minst 2 baslager finns)
+    if (state.layerMgr) {
+        const _singles = Object.keys(state.layerMgr.layers)
+            .filter(id => state.layerMgr.layers[id].type === 'single')
+            .map(id => state.layerMgr.layers[id]);
+        if (_singles.length >= 2) {
+            const curLid = obj.layerId || state.layerMgr.activeId;
+            html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Lager</label>';
+            html += '<select id="edLayer" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+            _singles.forEach(l => {
+                html += '<option value="' + escAttr(l.id) + '"' + (l.id === curLid ? ' selected' : '') + '>' + escapeHtml(l.name) + '</option>';
+            });
+            html += '</select>';
+        }
+    }
     html += '<div style="display:flex;gap:6px;margin-top:8px">';
     html += '<button id="edSave" style="flex:1;padding:6px;background:#4caf50;border:none;color:#fff;border-radius:4px;font-family:inherit;cursor:pointer">Spara</button>';
     html += '<button id="edDel" style="padding:6px 10px;background:#c62828;border:none;color:#fff;border-radius:4px;font-family:inherit;cursor:pointer">Ta bort</button>';
@@ -2617,6 +2677,11 @@ function openEditPopup(obj, layer, e) {
             if (spreadInput) obj.spread = Math.max(5, Math.min(360, parseInt(spreadInput.value, 10) || 60));
             if (rotSlider) obj.rotation = Math.max(0, Math.min(359, parseInt(rotSlider.value, 10) || 0));
             obj.anteckning = wrap.querySelector('#edNote').value || '';
+            const layerSel = wrap.querySelector('#edLayer');
+            if (layerSel && layerSel.value && layerSel.value !== obj.layerId) {
+                obj.layerId = layerSel.value;
+                if (state.layerMgr) state.layerMgr.renderPanel();
+            }
             rotCommitted = true;
             rangeCommitted = true;
             spreadCommitted = true;
@@ -2641,6 +2706,7 @@ function rebuildLayers() {
     Object.values(state.layers).forEach(l => map.removeLayer(l));
     state.layers = {};
     state.objects.forEach(renderObject);
+    restackPanes();
 }
 
 // ── Ritning av linje/polygon (draft-läge) ───────────────────────────────────
@@ -3040,14 +3106,20 @@ function scheduleAutosave() {
     if (_saveTimer) return;
     _saveTimer = setTimeout(() => {
         _saveTimer = null;
-        dbPut(DB_KEY, { objects: state.objects, savedAt: Date.now() }).catch(() => {});
+        dbPut(DB_KEY, {
+            objects: state.objects,
+            layerState: state.layerMgr ? state.layerMgr.serialize() : null,
+            savedAt: Date.now()
+        }).catch(() => {});
     }, 400);
 }
+let _pendingLayerState = null;
 async function loadPersisted() {
     try {
         const saved = await dbGet(DB_KEY);
         if (saved && Array.isArray(saved.objects)) {
             state.objects = saved.objects;
+            _pendingLayerState = saved.layerState || null;
 
             // v3 → v4-migration: borttagna symboltyper filtreras bort.
             // Ingen motsvarighet i nya SVG-paketet från 2026-04-26.
@@ -3084,12 +3156,125 @@ async function loadPersisted() {
                 console.log('MINKARTA v3: migrerade ' + migrated + ' UP → UPK med slumpnummer');
                 scheduleAutosave();
             }
+            initLayerManager();
             rebuildLayers();
             // Kör alltid syncUpTextarea — den rensar även eventuella SP-rader
             // från gammalt state vars 'sp'-objekt just filtrerats bort ovan.
             syncUpTextarea();
+        } else {
+            // Inget sparat state — initiera bara lager-systemet med default
+            initLayerManager();
         }
-    } catch (_) { /* ignorera */ }
+    } catch (_) {
+        // Säkerhetsnät: even on load-error, initiera lager-systemet
+        try { initLayerManager(); } catch (_) {}
+    }
+}
+
+// ── Lager-system (LayerManager) ───────────────────────────────────────────
+// Photoshop-style baslager (max 10) + composites. Återanvänder lib/layers.js.
+// Aktivt lager indikerar vart nya objekt hamnar; synlighet styr rendering.
+function initLayerManager() {
+    if (!window.LAYERS) return;
+    if (state.layerMgr) return; // idempotent
+    state.layerMgr = window.LAYERS.create({
+        labelDefault: 'Lager',
+        panelHost: document.getElementById('layersPanelHost'),
+        onChange: () => {
+            rebuildLayers();
+            scheduleAutosave();
+        },
+        onActiveChange: () => {
+            scheduleAutosave();
+        },
+        getShortcutMap: () => shortcutMap,
+        saveShortcutMap: () => saveShortcuts(),
+        openShortcutDialog: (target, opts2) => openShortcutDialog(target, opts2),
+        countObjectsInLayer: (layerId) => state.objects.filter(o => o.layerId === layerId).length,
+        confirmDelete: (layerId, doDelete) => {
+            const l = state.layerMgr.layers[layerId];
+            if (!l) return;
+            const baseIds = state.layerMgr.descendantsOf(layerId);
+            const objCount = state.objects.filter(o => baseIds.indexOf(o.layerId) >= 0).length;
+            if (objCount === 0) {
+                if (confirm('Ta bort lagret "' + l.name + '"?')) doDelete();
+                return;
+            }
+            const others = Object.keys(state.layerMgr.layers)
+                .filter(id => state.layerMgr.layers[id].type === 'single' && baseIds.indexOf(id) < 0)
+                .map(id => state.layerMgr.layers[id]);
+            let msg = 'Lagret "' + l.name + '" innehåller ' + objCount + ' objekt.\n\n';
+            msg += 'OK = flytta objekten till ett annat lager\nAvbryt = ta bort lagret OCH objekten';
+            const flytta = confirm(msg);
+            if (flytta) {
+                let targetName = '';
+                if (others.length === 1) {
+                    targetName = others[0].name;
+                } else {
+                    const list = others.map((o, i) => (i + 1) + '. ' + o.name).join('\n');
+                    const pick = prompt('Flytta till lager (skriv numret):\n' + list, '1');
+                    const idx = parseInt(pick, 10) - 1;
+                    if (!(idx >= 0 && idx < others.length)) return;
+                    targetName = others[idx].name;
+                }
+                const target = others.find(o => o.name === targetName);
+                if (!target) return;
+                pushUndo();
+                state.objects.forEach(o => {
+                    if (baseIds.indexOf(o.layerId) >= 0) o.layerId = target.id;
+                });
+                doDelete();
+            } else {
+                if (!confirm('Ta bort lagret OCH ' + objCount + ' objekt? Detta kan inte ångras (mer än via Ångra-knappen).')) return;
+                pushUndo();
+                state.objects = state.objects.filter(o => baseIds.indexOf(o.layerId) < 0);
+                doDelete();
+            }
+        }
+    });
+
+    if (_pendingLayerState) {
+        state.layerMgr.deserialize(_pendingLayerState);
+        _pendingLayerState = null;
+    }
+    state.layerMgr.ensureDefault();
+    // Migration: alla objekt utan layerId hamnar i aktivt (default = första) lager
+    let migrated = 0;
+    state.objects.forEach(o => {
+        if (!o.layerId || !state.layerMgr.layers[o.layerId]) {
+            o.layerId = state.layerMgr.activeId;
+            migrated++;
+        }
+    });
+    if (migrated > 0) scheduleAutosave();
+    state.layerMgr.renderPanel();
+}
+
+// Leaflet pane per baslager för z-ordering. Översta lagret i listan → högst z.
+function ensureLayerPane(layerId) {
+    if (!map || !state.layerMgr) return null;
+    const paneName = 'lyr-' + layerId;
+    let pane = map.getPane(paneName);
+    if (!pane) {
+        pane = map.createPane(paneName);
+        pane.style.zIndex = computePaneZIndex(layerId);
+    }
+    return paneName;
+}
+function computePaneZIndex(layerId) {
+    if (!state.layerMgr) return 410;
+    const topId = state.layerMgr.topLevelOf(layerId);
+    const idx = state.layerMgr.order.indexOf(topId);
+    if (idx < 0) return 410;
+    return 600 - idx * 10;
+}
+function restackPanes() {
+    if (!map || !state.layerMgr) return;
+    Object.keys(state.layerMgr.layers).forEach(lid => {
+        const paneName = 'lyr-' + lid;
+        const pane = map.getPane(paneName);
+        if (pane) pane.style.zIndex = computePaneZIndex(lid);
+    });
 }
 
 // ── Verktygsrad-knappar (Undo/Redo/Rensa) ───────────────────────────────────
@@ -3132,6 +3317,14 @@ function attachToolbarActions() {
     kmzBtn.addEventListener('click', exportKmz);
     tb.appendChild(kmzBtn);
 
+    const importBtn = document.createElement('button');
+    importBtn.type = 'button';
+    importBtn.className = 'btn btn-sm btn-ghost';
+    importBtn.textContent = 'Importera';
+    importBtn.title = 'Importera GPX/KMZ/KML som nytt lager';
+    importBtn.addEventListener('click', triggerImport);
+    tb.appendChild(importBtn);
+
     const clearBtn = document.createElement('button');
     clearBtn.type = 'button';
     clearBtn.className = 'btn btn-sm';
@@ -3144,6 +3337,7 @@ function attachToolbarActions() {
         pushUndo();
         state.objects = [];
         rebuildLayers();
+        if (state.layerMgr) state.layerMgr.renderPanel();
         // v4: rensa även hela protokoll-panelen + PNG-cachen
         resetProtocolPanel();
         _lastExport = null;
@@ -3281,11 +3475,12 @@ async function exportPng() {
 // Översätter state.objects[] till GEO_EXPORT:s generiska item-format. Yttergräns-
 // markörer hoppas över — de är bbox-hjälpare för PNG-exporten, inte operativa
 // objekt som ska följa med ut i GPS-mottagaren.
-function mkObjectsToGeoItems() {
+function mkObjectsToGeoItems(layerFilter) {
     const items = [];
     const SYMS = window.MK_SYMBOLS || {};
     for (const o of state.objects) {
         if (o.typ === 'ytter') continue;
+        if (layerFilter && !layerFilter.has(o.layerId)) continue;
         const sym = SYMS[o.typ] || {};
         const labelBase = sym.label || o.typ;
         const nameBits = [];
@@ -3331,39 +3526,176 @@ function mkObjectsToGeoItems() {
     return items;
 }
 
-function exportGpx() {
-    if (!state.objects.length) { toast('Ingenting att exportera.'); return; }
-    if (!window.GEO_EXPORT) { toast('Export-modulen är inte laddad.'); return; }
-    try {
-        const title = window.__minkartaTitle || 'Minkarta';
-        const items = mkObjectsToGeoItems();
-        if (!items.length) { toast('Inga exporterbara objekt (yttergränser räknas inte).'); return; }
-        const gpx = window.GEO_EXPORT.toGpx({ name: title, items });
-        const blob = new Blob([gpx], { type: 'application/gpx+xml' });
-        const filename = window.GEO_EXPORT.stampFilename('minkarta', 'gpx');
-        window.GEO_EXPORT.downloadBlob(blob, filename);
-        toast('Sparad: ' + filename, 2400);
-    } catch (e) {
-        console.error(e);
-        toast('Fel vid GPX-export: ' + (e.message || 'okänt'), 3500);
-    }
+function exportGpx() { showLayerExportDialog('gpx'); }
+async function exportKmz() { showLayerExportDialog('kmz'); }
+
+function mkSlugifyName(s) {
+    return String(s || 'lager').toLowerCase()
+        .replace(/[åä]/g, 'a').replace(/ö/g, 'o')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'lager';
 }
 
-async function exportKmz() {
+function showLayerExportDialog(format) {
     if (!state.objects.length) { toast('Ingenting att exportera.'); return; }
     if (!window.GEO_EXPORT) { toast('Export-modulen är inte laddad.'); return; }
-    try {
-        const title = window.__minkartaTitle || 'Minkarta';
-        const items = mkObjectsToGeoItems();
-        if (!items.length) { toast('Inga exporterbara objekt (yttergränser räknas inte).'); return; }
-        const blob = await window.GEO_EXPORT.toKmz({ name: title, items });
-        const filename = window.GEO_EXPORT.stampFilename('minkarta', 'kmz');
-        window.GEO_EXPORT.downloadBlob(blob, filename);
-        toast('Sparad: ' + filename, 2400);
-    } catch (e) {
-        console.error(e);
-        toast('Fel vid KMZ-export: ' + (e.message || 'okänt'), 3500);
+
+    if (!state.layerMgr || !state.layerMgr.order.length) {
+        doExportLayer(format, null, 'minkarta', null);
+        return;
     }
+
+    const overlay = document.createElement('div');
+    overlay.className = 'mk-modal-overlay';
+    let html = '<div class="mk-modal" role="dialog" aria-modal="true" style="min-width:280px">';
+    html += '<div class="mk-modal-title"><span>Exportera till ' + format.toUpperCase() + '</span></div>';
+    html += '<div class="mk-modal-prompt">Kryssa i vilka lager som ska exporteras. En fil per markerat lager.</div>';
+    html += '<div style="max-height:240px;overflow:auto;margin:6px 0;border:1px solid var(--border);border-radius:3px">';
+    state.layerMgr.order.forEach(id => {
+        const l = state.layerMgr.layers[id];
+        if (!l) return;
+        const baseIds = state.layerMgr.descendantsOf(id);
+        const cnt = state.objects.filter(o => baseIds.indexOf(o.layerId) >= 0 && o.typ !== 'ytter').length;
+        html += '<label style="display:flex;align-items:center;gap:8px;padding:6px 8px;border-bottom:1px solid var(--border);cursor:pointer">';
+        html += '<input type="checkbox" class="lyrx" data-id="' + id + '" checked' + (cnt === 0 ? ' disabled' : '') + '>';
+        html += '<span style="flex:1">' + escapeHtml(l.name) + '</span>';
+        html += '<span style="color:var(--text-muted);font-size:0.78rem">' + cnt + ' objekt</span>';
+        html += '</label>';
+    });
+    html += '</div>';
+    html += '<div class="mk-modal-actions">';
+    html += '<button type="button" class="btn btn-sm btn-ghost" id="lyrxCancel">Avbryt</button>';
+    html += '<button type="button" class="btn btn-sm btn-accent" id="lyrxOk">Exportera</button>';
+    html += '</div></div>';
+    overlay.innerHTML = html;
+    document.body.appendChild(overlay);
+
+    const close = () => { try { overlay.remove(); } catch (_) {} };
+    overlay.querySelector('#lyrxCancel').addEventListener('click', close);
+    overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+    overlay.querySelector('#lyrxOk').addEventListener('click', async () => {
+        const cks = Array.from(overlay.querySelectorAll('.lyrx:checked'));
+        if (!cks.length) { close(); return; }
+        close();
+        let exported = 0;
+        for (const cb of cks) {
+            const id = cb.dataset.id;
+            const l = state.layerMgr.layers[id];
+            if (!l) continue;
+            const baseIds = new Set(state.layerMgr.descendantsOf(id));
+            const slug = mkSlugifyName(l.name);
+            try {
+                await doExportLayer(format, l.name, slug, baseIds);
+                exported++;
+            } catch (err) {
+                console.error(err);
+                toast('Fel: ' + (err.message || 'okänt'), 3500);
+            }
+        }
+        if (exported > 1) toast('Exporterade ' + exported + ' filer.', 2400);
+    });
+}
+
+async function doExportLayer(format, layerName, slug, baseIdsSet) {
+    const title = window.__minkartaTitle || 'Minkarta';
+    const items = mkObjectsToGeoItems(baseIdsSet);
+    if (!items.length) { toast('Inga objekt i "' + (layerName || title) + '".', 2400); return; }
+    const exportName = layerName || title;
+    const stamp = window.GEO_EXPORT.stampFilename('minkarta-' + slug, format);
+    if (format === 'gpx') {
+        const gpx = window.GEO_EXPORT.toGpx({ name: exportName, items });
+        const blob = new Blob([gpx], { type: 'application/gpx+xml' });
+        window.GEO_EXPORT.downloadBlob(blob, stamp);
+    } else if (format === 'kmz') {
+        const blob = await window.GEO_EXPORT.toKmz({ name: exportName, items });
+        window.GEO_EXPORT.downloadBlob(blob, stamp);
+    }
+    toast('Sparad: ' + stamp, 2000);
+}
+
+// ── Import: GPX/KMZ/KML → nytt lager ────────────────────────────────────────
+function triggerImport() {
+    if (!window.GEO_IMPORT) { toast('Import-modulen är inte laddad.'); return; }
+    if (!state.layerMgr) { toast('Lager-systemet är inte initierat.'); return; }
+    const inp = document.createElement('input');
+    inp.type = 'file';
+    inp.accept = '.gpx,.kml,.kmz';
+    inp.style.display = 'none';
+    inp.addEventListener('change', async () => {
+        const file = inp.files && inp.files[0];
+        if (!file) return;
+        try {
+            const r = await window.GEO_IMPORT.importFile(file);
+            if (!r.items || !r.items.length) {
+                toast('Inga objekt i filen.', 2400);
+                return;
+            }
+            if (state.layerMgr.countSingles() >= window.LAYERS.CAP) {
+                alert('Du har redan ' + window.LAYERS.CAP + ' baslager (max). Ta bort ett först.');
+                return;
+            }
+            const layerId = state.layerMgr.createLayer(r.name);
+            if (!layerId) { toast('Kunde inte skapa lager.'); return; }
+            pushUndo();
+            let added = 0;
+            r.items.forEach(it => {
+                const obj = mkItemToObject(it, layerId);
+                if (obj) { state.objects.push(obj); added++; }
+            });
+            state.layerMgr.setActive(layerId);
+            rebuildLayers();
+            state.layerMgr.renderPanel();
+            scheduleAutosave();
+            toast('Importerade ' + added + ' objekt till "' + r.name + '"', 2800);
+        } catch (err) {
+            console.error(err);
+            toast('Fel vid import: ' + (err.message || 'okänt'), 3500);
+        } finally {
+            try { inp.remove(); } catch (_) {}
+        }
+    });
+    document.body.appendChild(inp);
+    inp.click();
+}
+
+// Lossy konvertering: import-items[] → minkarta-objekt.
+// Försöker använda symbol-typ från item.sym/item.type om den finns i MK_SYMBOLS,
+// faller annars tillbaka till 'text' (point), 'frihand' (line), 'minomrade' (polygon).
+function mkItemToObject(it, layerId) {
+    const SYMS = window.MK_SYMBOLS || {};
+    if (it.kind === 'point') {
+        let typ = null;
+        if (it.sym && SYMS[it.sym] && (SYMS[it.sym].category === 'point' || SYMS[it.sym].category === 'meta')) typ = it.sym;
+        else if (it.type && SYMS[it.type] && (SYMS[it.type].category === 'point' || SYMS[it.type].category === 'meta')) typ = it.type;
+        if (!typ) typ = 'text';
+        const obj = {
+            id: uid(), typ, layerId,
+            lat: it.lat, lng: it.lng,
+            created: Date.now()
+        };
+        if (typ === 'text') obj.text = it.name || it.desc || '';
+        else { obj.etikett = it.name || ''; if (it.desc) obj.note = it.desc; }
+        return obj;
+    } else if (it.kind === 'line') {
+        let typ = 'frihand';
+        if (it.type && SYMS[it.type] && SYMS[it.type].category === 'line') typ = it.type;
+        return {
+            id: uid(), typ, layerId,
+            path: it.coords.map(c => ({ lat: c[0], lng: c[1] })),
+            created: Date.now(),
+            etikett: it.name || ''
+        };
+    } else if (it.kind === 'polygon') {
+        let typ = 'minomrade';
+        if (it.type && SYMS[it.type] && SYMS[it.type].category === 'polygon') typ = it.type;
+        return {
+            id: uid(), typ, layerId,
+            path: it.coords.map(c => ({ lat: c[0], lng: c[1] })),
+            created: Date.now(),
+            etikett: it.name || ''
+        };
+    }
+    return null;
 }
 
 // Tangentbord: Ctrl+Z / Ctrl+Y / Esc
@@ -3403,6 +3735,8 @@ function attachKeyboard() {
                 e.preventDefault();
                 if (target === FULLMAP_PSEUDO) {
                     toggleFullmap();
+                } else if (typeof target === 'string' && target.indexOf('__layer:') === 0) {
+                    if (state.layerMgr) state.layerMgr.handleKey(k);
                 } else if (window.MK_SYMBOLS && window.MK_SYMBOLS[target]) {
                     setActiveTool(activeTool === target ? null : target);
                 }

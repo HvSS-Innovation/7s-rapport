@@ -243,7 +243,8 @@ const SYMBOLS = {
                 'stroke-linecap="round" stroke-linejoin="round"/>' +
         '</svg>',
         stroke: SK_INK,
-        defaultStyle: 'heldragen'
+        defaultStyle: 'streckad',
+        defaultArrows: true
     }
 };
 

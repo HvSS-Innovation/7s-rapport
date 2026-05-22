@@ -25,6 +25,8 @@ const FILES = [
   './hjalm24.html',
   './index.html',
   './lib/geo-export.js',
+  './lib/geo-import.js',
+  './lib/layers.js',
   './lib/nav.css',
   './lib/nav.js',
   './linje.html',
