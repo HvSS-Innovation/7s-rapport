@@ -172,11 +172,12 @@ body.hv-nav-locked {
 }
 
 /* ── Items ── */
+/* Layout: label | (badge) | icon — label tar all extra plats så ikon
+   alltid hamnar längst till höger. Badge sitter mellan, om den finns. */
 .hv-nav-item {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   padding: 11px 16px;
   min-height: 44px;
   color: var(--text-primary, #e8f0e8);
@@ -184,6 +185,26 @@ body.hv-nav-locked {
   font-size: 0.95rem;
   -webkit-tap-highlight-color: transparent;
   transition: background .12s, color .12s;
+}
+.hv-nav-label {
+  flex: 1;
+  min-width: 0;
+}
+.hv-nav-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  opacity: 0.55;
+  transition: opacity .15s;
+}
+.hv-nav-icon svg {
+  width: 18px;
+  height: 18px;
+}
+.hv-nav-item:hover .hv-nav-icon,
+.hv-nav-item.is-active .hv-nav-icon {
+  opacity: 0.9;
 }
 .hv-nav-item:hover {
   background: var(--bg-secondary, #152815);
