@@ -1921,10 +1921,11 @@ function addObject(obj) {
 }
 
 // Öppnar edit-popupen direkt på ett nyskapat objekt så användaren kan fylla i
-// etikett/antal/anteckning utan ett extra klick. Frihand och fri-text hoppas
-// över: frihand har inga editbara fält, fri-text har redan egen inline-input.
+// etikett/antal/anteckning utan ett extra klick. Fri-text hoppas över: den
+// har redan egen inline-input. Frihand fick edibara fält i issue #65 (style/
+// arrows/anteckning) och öppnar därför numera popupen som vilken linje som helst.
 function autoOpenEditor(obj) {
-    if (!obj || obj.typ === 'frihand' || obj.typ === 'text') return;
+    if (!obj || obj.typ === 'text') return;
     const layer = state.layers[obj.id];
     if (!layer) return;
     openEditPopup(obj, layer, null);
@@ -2309,8 +2310,15 @@ function renderObject(obj) {
             });
         }
     } else if (sym.category === 'line') {
+        // obj.style ('heldragen'/'streckad') överrider symbolens defaultArray.
+        // Gäller bara för linje/frihand som har style-toggle i edit-popup —
+        // övriga linjer (minlinje, avsparrning) faller tillbaka till sym.dashArray.
+        let dashArr = sym.dashArray || null;
+        if (obj.typ === 'linje' || obj.typ === 'frihand') {
+            dashArr = (obj.style === 'streckad') ? '6 4' : null;
+        }
         const lnOpts = {
-            color: sym.stroke, weight: sym.weight || 3, dashArray: sym.dashArray || null
+            color: sym.stroke, weight: sym.weight || 3, dashArray: dashArr
         };
         if (pane) lnOpts.pane = pane;
         layer = L.polyline(obj.path.map(p => [p.lat, p.lng]), lnOpts);
@@ -2318,6 +2326,11 @@ function renderObject(obj) {
             layer.bindTooltip((obj.etikett || '') + (obj.antal ? ' ' + obj.antal : ''), {
                 permanent: true, direction: 'center', className: 'mk-label'
             });
+        }
+        // Pilar på segment-midpunkter om obj.arrows är på.
+        if (obj.arrows && (obj.typ === 'linje' || obj.typ === 'frihand')) {
+            // Defer tills renderObject klar; arrows-helper läser map-coords.
+            setTimeout(() => addLineArrows(obj), 0);
         }
     } else if (sym.category === 'polygon') {
         const pgOpts = {
@@ -2454,6 +2467,19 @@ function openEditPopup(obj, layer, e) {
         html += '<input id="edRot" type="range" min="0" max="359" step="1" value="' + (obj.rotation || 0) + '" style="flex:1">';
         html += '<input id="edRotN" type="number" min="0" max="359" step="1" value="' + (obj.rotation || 0) + '" style="width:64px;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
         html += '</div>';
+    }
+    // Linje/frihand: style (heldragen/streckad) + pilar-checkbox (issue #65)
+    if (obj.typ === 'linje' || obj.typ === 'frihand') {
+        const curStyle = obj.style || (sym.defaultStyle || 'heldragen');
+        html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Linje-stil</label>';
+        html += '<select id="edLineStyle" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
+        html += '<option value="heldragen"' + (curStyle === 'heldragen' ? ' selected' : '') + '>Heldragen</option>';
+        html += '<option value="streckad"'  + (curStyle === 'streckad'  ? ' selected' : '') + '>Streckad</option>';
+        html += '</select>';
+        const arrowsOn = obj.arrows == null ? !!(sym.defaultArrows) : !!obj.arrows;
+        html += '<label style="display:flex;align-items:center;gap:6px;margin-top:6px;font-size:0.78rem;color:#e8f0e8;cursor:pointer">';
+        html += '<input id="edLineArrows" type="checkbox"' + (arrowsOn ? ' checked' : '') + '> Pilar längs linjen';
+        html += '</label>';
     }
     html += '<label style="font-size:0.68rem;color:#8aaa8a;display:block;margin-top:6px">Anteckning</label>';
     html += '<input id="edNote" type="text" value="' + escAttr(obj.anteckning) + '" style="width:100%;padding:4px;background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d">';
@@ -2677,6 +2703,11 @@ function openEditPopup(obj, layer, e) {
             if (spreadInput) obj.spread = Math.max(5, Math.min(360, parseInt(spreadInput.value, 10) || 60));
             if (rotSlider) obj.rotation = Math.max(0, Math.min(359, parseInt(rotSlider.value, 10) || 0));
             obj.anteckning = wrap.querySelector('#edNote').value || '';
+            // Linje/frihand: style + arrows (issue #65)
+            const styleSel = wrap.querySelector('#edLineStyle');
+            if (styleSel) obj.style = styleSel.value === 'streckad' ? 'streckad' : 'heldragen';
+            const arrowsBox = wrap.querySelector('#edLineArrows');
+            if (arrowsBox) obj.arrows = arrowsBox.checked;
             const layerSel = wrap.querySelector('#edLayer');
             if (layerSel && layerSel.value && layerSel.value !== obj.layerId) {
                 obj.layerId = layerSel.value;
@@ -2709,6 +2740,83 @@ function rebuildLayers() {
     restackPanes();
 }
 
+// ── Pilar längs polyline (för linje/frihand) ────────────────────────────────
+// Porterat från sensorskiss (issue #65). Räknar pixel-baserad gleshet så att
+// glesheten ser likadan ut oavsett om linjen är 3 noder lång eller 600 (RDP-
+// simplifierad frihand). Re-renderas vid zoomend via refreshAllLineArrows.
+const ARROW_SPACING_PX = 70;
+function bearingBetween(lat1, lng1, lat2, lng2) {
+    const toRad = d => d * Math.PI / 180;
+    const toDeg = r => r * 180 / Math.PI;
+    const dLng = toRad(lng2 - lng1);
+    const y = Math.sin(dLng) * Math.cos(toRad(lat2));
+    const x = Math.cos(toRad(lat1)) * Math.sin(toRad(lat2)) -
+              Math.sin(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.cos(dLng);
+    return (toDeg(Math.atan2(y, x)) + 360) % 360;
+}
+function addLineArrows(obj) {
+    if (!obj.path || obj.path.length < 2 || !map) return;
+    const pts = obj.path.map(p => map.latLngToContainerPoint([p.lat, p.lng]));
+    let totalLen = 0;
+    const segLens = [];
+    for (let i = 0; i < pts.length - 1; i++) {
+        const len = Math.hypot(pts[i+1].x - pts[i].x, pts[i+1].y - pts[i].y);
+        segLens.push(len);
+        totalLen += len;
+    }
+    if (totalLen < 8) return;
+    const positions = [];
+    if (totalLen < ARROW_SPACING_PX) {
+        positions.push(totalLen / 2);
+    } else {
+        for (let d = ARROW_SPACING_PX / 2; d <= totalLen; d += ARROW_SPACING_PX) {
+            positions.push(d);
+        }
+    }
+    let arrowIdx = 0;
+    let segIdx = 0;
+    let accSeg = 0;
+    for (const targetD of positions) {
+        while (segIdx < segLens.length - 1 && accSeg + segLens[segIdx] < targetD) {
+            accSeg += segLens[segIdx];
+            segIdx++;
+        }
+        const segLen = segLens[segIdx];
+        if (segLen < 0.5) continue;
+        const t = (targetD - accSeg) / segLen;
+        const p1ll = obj.path[segIdx], p2ll = obj.path[segIdx + 1];
+        const lat = p1ll.lat + (p2ll.lat - p1ll.lat) * t;
+        const lng = p1ll.lng + (p2ll.lng - p1ll.lng) * t;
+        const bear = bearingBetween(p1ll.lat, p1ll.lng, p2ll.lat, p2ll.lng);
+        const icon = L.divIcon({
+            className: 'mk-line-arrow',
+            html: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" ' +
+                  'style="transform:rotate(' + bear + 'deg)">' +
+                  '<polygon points="12,3 6,15 12,12 18,15" fill="#000"/>' +
+                  '</svg>',
+            iconSize: [18, 18],
+            iconAnchor: [9, 9]
+        });
+        const m = L.marker([lat, lng], {
+            icon: icon, interactive: false, keyboard: false
+        });
+        m.addTo(map);
+        state.layers[obj.id + '_arr_' + (arrowIdx++)] = m;
+    }
+}
+function refreshAllLineArrows() {
+    state.objects.forEach(o => {
+        if ((o.typ !== 'linje' && o.typ !== 'frihand') || !o.arrows) return;
+        Object.keys(state.layers).forEach(k => {
+            if (k.startsWith(o.id + '_arr_')) {
+                try { map.removeLayer(state.layers[k]); } catch (_) {}
+                delete state.layers[k];
+            }
+        });
+        addLineArrows(o);
+    });
+}
+
 // ── Ritning av linje/polygon (draft-läge) ───────────────────────────────────
 function beginDraft(typ, firstLatLng) {
     const sym = window.MK_SYMBOLS[typ];
@@ -2731,6 +2839,12 @@ function finishDraft() {
     if (d.path.length < 2) { cancelDraft(); return; }
     const obj = { id: d.id, typ: d.typ, path: d.path.map(p => ({ lat: p.lat, lng: p.lng })), created: Date.now() };
     if (d.category === 'polygon' && obj.path.length < 3) { cancelDraft(); return; }
+    // Sensorskiss-style defaults för linje/frihand (issue #65)
+    const sym = window.MK_SYMBOLS[d.typ];
+    if (sym && (sym.defaultStyle || sym.defaultArrows != null)) {
+        obj.style = sym.defaultStyle || 'heldragen';
+        obj.arrows = !!sym.defaultArrows;
+    }
     map.removeLayer(state.draftLayer);
     state.draft = null; state.draftLayer = null;
     addObject(obj);
@@ -2782,7 +2896,13 @@ function onFrihandEnd() {
     // (mousemove vid 60 fps). Förenkla under skärm-pixelnivån så IndexedDB,
     // undoStack och PNG-rendering inte sväller utan synlig kvalitetsförlust.
     const simplified = simplifyPath(d.path, pixelEpsilonInDegrees());
-    addObject({ id: d.id, typ: 'frihand', path: simplified, created: Date.now() });
+    // Sensorskiss-defaults: streckad + arrows=true (issue #65)
+    const sym = window.MK_SYMBOLS.frihand;
+    addObject({
+        id: d.id, typ: 'frihand', path: simplified, created: Date.now(),
+        style: (sym && sym.defaultStyle) || 'streckad',
+        arrows: sym ? !!sym.defaultArrows : true
+    });
 }
 
 // Touch-stöd: Leaflet 1.9.x syntetiserar inte pointermove till mousemove,
@@ -3939,7 +4059,8 @@ function generateProtocolText() {
             avsparrning:       'Avspärrning',
             ytter:             'Yttergränsmarkör',
             upk:               'UPK-markör',
-            frihand:           'Fri-rita',
+            linje:             'Linje',
+            frihand:           'Frihand',
             text:              'Text'
         });
         let idx = 0;
@@ -4141,6 +4262,9 @@ document.addEventListener('DOMContentLoaded', () => {
         map.on('click', handleMapClick);
         map.on('dblclick', handleMapDblClick);
         map.doubleClickZoom.disable();             // annars stjäl den dubbelklicket
+        // Re-rendera pilar längs linje/frihand vid zoom så glesheten matchar
+        // den nya skalan (porterat från sensorskiss, issue #65).
+        map.on('zoomend', refreshAllLineArrows);
         // Fri-rita: mus via Leaflets event-system, touch via DOM-lyssnare
         // (passive:false krävs för att preventDefault() ska fungera i Chrome).
         map.on('mousedown', onFrihandStart);
