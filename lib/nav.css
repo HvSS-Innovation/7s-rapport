@@ -75,15 +75,18 @@ body.hv-nav-locked {
 }
 
 /* ── Drawer-header ── */
+/* Grid med 1fr / auto / 1fr: h2 vänster, pin centrerad, × höger.
+   När pin är display:none (mobil) kollapsar mittenkolumnen till 0. */
 .hv-nav-header {
-  display: flex;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  justify-content: space-between;
   padding: 14px 16px;
   border-bottom: 1px solid var(--border, #2d4a2d);
   flex-shrink: 0;
 }
 .hv-nav-header h2 {
+  justify-self: start;
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.08em;
@@ -91,10 +94,11 @@ body.hv-nav-locked {
   text-transform: uppercase;
   margin: 0;
 }
-.hv-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 2px;
+.hv-nav-pin {
+  justify-self: center;
+}
+.hv-nav-close {
+  justify-self: end;
 }
 .hv-nav-close,
 .hv-nav-pin {
@@ -116,16 +120,12 @@ body.hv-nav-locked {
   font-size: 1.8rem;
 }
 .hv-nav-pin svg {
-  width: 18px;
-  height: 18px;
-  transform: rotate(-30deg);
-  transition: transform .15s, color .15s;
+  width: 22px;
+  height: 22px;
+  transition: color .15s;
 }
 .hv-nav-pin[aria-pressed="true"] {
   color: var(--accent, #4caf50);
-}
-.hv-nav-pin[aria-pressed="true"] svg {
-  transform: rotate(0deg);
 }
 .hv-nav-close:hover,
 .hv-nav-close:focus-visible,
