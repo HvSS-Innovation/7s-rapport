@@ -155,6 +155,10 @@
         .gantt-track { flex: 1; position: relative; background: var(--bg-card); }
         .gantt-bar { position: absolute; top: 4px; bottom: 4px; border-radius: 3px; display: flex; align-items: center; justify-content: center; font-size: 0.62rem; font-weight: 700; color: #fff; overflow: hidden; white-space: nowrap; padding: 0 4px; box-shadow: 0 1px 3px rgba(0,0,0,0.4); }
 
+        .summary-table td { font-size: .78rem; }
+        .summary-table td.summary-bad { color: var(--danger-hover); font-weight: 700; }
+        .summary-table td.summary-warn { color: #ffa726; font-weight: 600; }
+
     </style>
     <link rel="stylesheet" href="lib/nav.css">
 </head>
@@ -263,6 +267,8 @@
         <div id="specialControls"></div>
 
         <div id="ganttContainer"></div>
+
+        <div id="summaryContainer"></div>
 
         <button class="btn btn-copy" onclick="kopieraSchema()" style="margin-top:12px">Kopiera schema</button>
         <div class="copy-feedback" id="copyFeedback">Kopierat</div>
@@ -475,9 +481,12 @@ function genererSchema() {
     soldater.forEach(sol => { lastFinished[sol] = -Infinity; });
     // Spåra senaste sluttid i ms per soldat PER POST (för tidbaserat vilokrav per post)
     const lastFinishedPostMs = {};
+    // Räkna antal pass per soldat × post — används som rättvise-tiebreaker
+    const postCount = {};
     soldater.forEach(sol => {
         lastFinishedPostMs[sol] = {};
-        poster.forEach(p => { lastFinishedPostMs[sol][p] = -Infinity; });
+        postCount[sol] = {};
+        poster.forEach(p => { lastFinishedPostMs[sol][p] = -Infinity; postCount[sol][p] = 0; });
     });
 
     // Initialisera pipeline
@@ -520,12 +529,19 @@ function genererSchema() {
                 }
                 return true;
             });
+            const ingangsPost = poster[0];
             candidates.sort((a, b) => {
                 const la = lastFinished[a], lb = lastFinished[b];
-                if (la === lb) return activePool.indexOf(a) - activePool.indexOf(b);
-                if (la === -Infinity) return -1;
-                if (lb === -Infinity) return 1;
-                return la - lb;
+                if (la !== lb) {
+                    if (la === -Infinity) return -1;
+                    if (lb === -Infinity) return 1;
+                    return la - lb;
+                }
+                // Tie-breaker: minst pass på ingångsposten (där soldaten hamnar nu)
+                const ca = postCount[a]?.[ingangsPost] || 0;
+                const cb = postCount[b]?.[ingangsPost] || 0;
+                if (ca !== cb) return ca - cb;
+                return activePool.indexOf(a) - activePool.indexOf(b);
             });
             // Fallback: ignorera vilokrav om inga kandidater finns (undviker låsning)
             const fallback = activePool.filter(sol => !busyNow.has(sol))
@@ -552,6 +568,7 @@ function genererSchema() {
         poster.forEach((post, pi) => {
             const soldatNamn = pi === 0 ? nyPerson : (pipeline[pi - 1] || nyPerson);
             lastFinishedPostMs[soldatNamn][post] = currentMs + passMs;
+            if (postCount[soldatNamn]) postCount[soldatNamn][post] = (postCount[soldatNamn][post] || 0) + 1;
         });
         pipeline.unshift(nyPerson);
         if (pipeline.length > N) pipeline.length = N;
@@ -610,6 +627,78 @@ function renderSchema() {
     }
 
     renderGantt();
+    renderSummary();
+}
+
+// Räkna vilo-statistik per soldat baserat på faktiska pass.
+// Returnerar { passCount, longest (h), totalRest (h), nightLongest (h), mode }
+// mode: '6h' om sammanhängande vila ≥ 6h, '3+5' om split med natt-tyngd, annars '<6h'
+function calcRestStats(soldatPass, totalStartMs, totalEndMs) {
+    const pass = [...soldatPass].sort((a, b) => a.startMs - b.startMs);
+    const gaps = [];
+    if (pass.length === 0) {
+        gaps.push({ start: totalStartMs, end: totalEndMs });
+    } else {
+        if (pass[0].startMs > totalStartMs) gaps.push({ start: totalStartMs, end: pass[0].startMs });
+        for (let i = 0; i < pass.length - 1; i++) {
+            if (pass[i + 1].startMs > pass[i].endMs) gaps.push({ start: pass[i].endMs, end: pass[i + 1].startMs });
+        }
+        if (pass[pass.length - 1].endMs < totalEndMs) gaps.push({ start: pass[pass.length - 1].endMs, end: totalEndMs });
+    }
+    const gapH = gaps.map(g => (g.end - g.start) / 3600000);
+    const longest = gapH.length ? Math.max(...gapH) : 0;
+    const totalRest = gapH.reduce((a, b) => a + b, 0);
+    // Nattvila 22-08: längsta sammanhängande nattfragment över alla gaps
+    let nightLongest = 0;
+    const stepMs = 5 * 60000;
+    gaps.forEach(g => {
+        let cur = 0, max = 0;
+        for (let t = g.start; t < g.end; t += stepMs) {
+            const h = new Date(t).getHours();
+            if (h >= 22 || h < 8) { cur += stepMs / 3600000; if (cur > max) max = cur; }
+            else cur = 0;
+        }
+        if (max > nightLongest) nightLongest = max;
+    });
+    const sorted = [...gapH].sort((a, b) => b - a);
+    const second = sorted[1] || 0;
+    let mode;
+    if (longest >= 6) mode = '6h';
+    else if (sorted[0] >= 5 && second >= 3 && nightLongest >= 3) mode = '3+5';
+    else mode = '<6h';
+    return { passCount: pass.length, longest, totalRest, nightLongest, mode };
+}
+
+function renderSummary() {
+    const container = document.getElementById('summaryContainer');
+    if (!schema.length || !soldater.length) { container.innerHTML = ''; return; }
+    const startMs = Math.min(...schema.map(s => s.startMs));
+    const endMs   = Math.max(...schema.map(s => s.endMs));
+
+    const passPerSol = {}, postCountSol = {};
+    soldater.forEach(sol => { passPerSol[sol] = []; postCountSol[sol] = {}; poster.forEach(p => { postCountSol[sol][p] = 0; }); });
+    schema.forEach(e => {
+        if (passPerSol[e.soldat]) passPerSol[e.soldat].push({ startMs: e.startMs, endMs: e.endMs });
+        if (postCountSol[e.soldat]) postCountSol[e.soldat][e.post] = (postCountSol[e.soldat][e.post] || 0) + 1;
+    });
+    const fmtH = h => (Math.round(h * 10) / 10).toString().replace(/\.0$/, '') + 'h';
+
+    let html = '<div class="gantt-title">PERSONÖVERSIKT</div><div class="schema-wrap"><table class="schema-table summary-table"><thead><tr>';
+    html += '<th>Namn</th><th>Pass</th><th>Längsta vila</th><th>Total vila</th><th>Nattvila</th><th>Mode</th><th>Status</th>';
+    html += '</tr></thead><tbody>';
+    soldater.forEach(sol => {
+        const st = calcRestStats(passPerSol[sol] || [], startMs, endMs);
+        const minVila = soldatMinVila[sol] || 0;
+        const ok = minVila === 0 || st.longest >= minVila;
+        let statusTxt, statusCls = '';
+        if (minVila > 0) { statusTxt = ok ? 'OK' : `Fel (krav ${minVila}h)`; statusCls = ok ? '' : 'summary-bad'; }
+        else { statusTxt = st.mode === '<6h' ? 'Kort vila' : 'OK'; statusCls = st.mode === '<6h' ? 'summary-warn' : ''; }
+        const perPost = poster.map(p => `${p}: ${postCountSol[sol][p]}`).join(' · ');
+        html += `<tr title="${perPost}"><td>${displayNamn(sol)}</td><td>${st.passCount}</td><td>${fmtH(st.longest)}</td><td>${fmtH(st.totalRest)}</td><td>${fmtH(st.nightLongest)}</td><td>${st.mode}</td><td class="${statusCls}">${statusTxt}</td></tr>`;
+    });
+    html += '</tbody></table></div>';
+    html += '<div class="field-hint" style="margin-top:6px">Hovra över raden för fördelning per post. <strong>Mode</strong>: 6h = sammanhängande vila ≥ 6h. 3+5 = split med nattvila. &lt;6h = kort vila.</div>';
+    container.innerHTML = html;
 }
 
 function toggleSpecialPos(namn) {
@@ -751,6 +840,9 @@ function nollstall() {
     document.getElementById('posterLista').innerHTML = '';
     document.getElementById('soldatLista').innerHTML = '';
     document.getElementById('schemaContainer').innerHTML = '';
+    document.getElementById('ganttContainer').innerHTML = '';
+    document.getElementById('summaryContainer').innerHTML = '';
+    document.getElementById('specialControls').innerHTML = '';
 
     addPost('Värnpost', false); addPost('Eldvakt', false);
     addSoldat('', false); addSoldat('', false); addSoldat('', false); addSoldat('', false);
