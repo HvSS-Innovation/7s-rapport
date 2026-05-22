@@ -2380,9 +2380,17 @@ function attachPaletteToolbar() {
     kmzBtn.type = 'button';
     kmzBtn.className = 'btn btn-sm btn-ghost';
     kmzBtn.textContent = 'KMZ';
-    kmzBtn.title = 'Exportera till KMZ (Google Earth / OsmAnd)';
+    kmzBtn.title = 'Exportera till KMZ med inbäddade symboler (Google Earth / OsmAnd)';
     kmzBtn.addEventListener('click', exportKmz);
     tb.appendChild(kmzBtn);
+
+    const geojsonBtn = document.createElement('button');
+    geojsonBtn.type = 'button';
+    geojsonBtn.className = 'btn btn-sm btn-ghost';
+    geojsonBtn.textContent = 'GeoJSON';
+    geojsonBtn.title = 'Exportera till GeoJSON (FeatureCollection, WGS84)';
+    geojsonBtn.addEventListener('click', exportGeoJson);
+    tb.appendChild(geojsonBtn);
 
     const importBtn = document.createElement('button');
     importBtn.type = 'button';
@@ -2511,6 +2519,28 @@ function skObjectsToGeoItems(layerFilter) {
 
 function exportGpx() { showLayerExportDialog('gpx'); }
 async function exportKmz() { showLayerExportDialog('kmz'); }
+function exportGeoJson() { showLayerExportDialog('geojson'); }
+
+// Rasterisera SK_SYMBOLS-SVG:er till PNG-bytes för inbäddning i KMZ. Endast
+// punkt-typer (sensorer) som faktiskt förekommer i `items` rasteriseras.
+async function skBuildIconsByType(items) {
+    if (!window.GEO_EXPORT || !window.GEO_EXPORT.svgToPngBytes) return null;
+    const SYMS = window.SK_SYMBOLS || {};
+    const needed = new Set();
+    for (const it of items) {
+        if (it.kind === 'point' && it.sym && SYMS[it.sym] && SYMS[it.sym].svg) needed.add(it.sym);
+    }
+    if (!needed.size) return null;
+    const out = {};
+    for (const typ of needed) {
+        try {
+            out[typ] = await window.GEO_EXPORT.svgToPngBytes(SYMS[typ].svg, 64);
+        } catch (err) {
+            console.warn('Kunde inte rasterisera ' + typ + ':', err);
+        }
+    }
+    return out;
+}
 
 // Slugify för filnamn (lagernamn → fil-säker form)
 function slugifyName(s) {
@@ -2592,7 +2622,12 @@ async function doExportLayer(format, layerName, slug, baseIdsSet) {
         const blob = new Blob([gpx], { type: 'application/gpx+xml' });
         window.GEO_EXPORT.downloadBlob(blob, stamp);
     } else if (format === 'kmz') {
-        const blob = await window.GEO_EXPORT.toKmz({ name: exportName, items });
+        const iconsByType = await skBuildIconsByType(items);
+        const blob = await window.GEO_EXPORT.toKmz({ name: exportName, items, iconsByType });
+        window.GEO_EXPORT.downloadBlob(blob, stamp);
+    } else if (format === 'geojson') {
+        const fc = window.GEO_EXPORT.toGeoJson({ name: exportName, items });
+        const blob = new Blob([JSON.stringify(fc, null, 2)], { type: 'application/geo+json' });
         window.GEO_EXPORT.downloadBlob(blob, stamp);
     }
     toast('Sparad: ' + stamp, 2000);
