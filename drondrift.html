@@ -17,7 +17,7 @@
 <link rel="alternate icon" href="favicon.ico">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="DRÖNDRIFT">
-<title>DRÖNDRIFT — Avdrift vid fritt fall (Anafi USA)</title>
+<title>DRÖNDRIFT — Säkerhetszon vid fall (Anafi USA)</title>
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="shared/theme-toggle.css">
 <script src="shared/theme-toggle.js" defer></script>
@@ -29,109 +29,143 @@
     --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
     --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
     --danger:#c62828;
-    --warn-bg:#3e2a00; --warn-border:#c8a24e; --warn-text:#e8c068;
+    /* Zon-färger */
+    --zone-green-bg:#1e3d1e;  --zone-green-bd:#4caf50;  --zone-green-tx:#a5e0a8;
+    --zone-amber-bg:#3e3a14;  --zone-amber-bd:#d4b53b;  --zone-amber-tx:#f5e68a;
+    --zone-orange-bg:#4a2d10; --zone-orange-bd:#e08a30; --zone-orange-tx:#ffc080;
+    --zone-red-bg:#4a1818;    --zone-red-bd:#e05050;    --zone-red-tx:#ff9080;
     --radius:8px; --radius-sm:4px;
   }
   * { box-sizing:border-box; margin:0; padding:0; }
-  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:14px 14px 24px; -webkit-font-smoothing:antialiased; }
   .container { max-width:560px; margin:0 auto; }
-  header { text-align:center; padding:20px 0 16px; }
-  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
-  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
-  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.9; line-height:1.55; max-width:480px; margin:6px auto 0; }
+  header { text-align:center; padding:14px 0 12px; }
+  header h1 { font-size:1.3rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.7rem; color:var(--text-muted); letter-spacing:0.05em; margin-top:2px; }
 
-  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.86rem; font-weight:600; padding:8px 0 4px; min-height:40px; }
   .back-link::before { content:'←'; font-size:1.1rem; }
 
-  .section { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; margin-bottom:12px; }
-  .section h2 { font-size:0.9rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:10px; padding-bottom:8px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:8px; }
-  .section h2 .lead { font-size:0.7rem; color:var(--text-muted); letter-spacing:0.04em; text-transform:none; font-weight:500; opacity:0.85; }
+  /* RESULTAT — det viktigaste på sidan, dominerar layouten */
+  .result-card {
+    border-radius:var(--radius); padding:16px 16px 18px; margin-bottom:14px;
+    border:2px solid var(--zone-green-bd); background:var(--zone-green-bg); color:var(--zone-green-tx);
+    transition:background 0.2s, border-color 0.2s, color 0.2s;
+  }
+  .result-card.zone-amber  { border-color:var(--zone-amber-bd);  background:var(--zone-amber-bg);  color:var(--zone-amber-tx); }
+  .result-card.zone-orange { border-color:var(--zone-orange-bd); background:var(--zone-orange-bg); color:var(--zone-orange-tx); }
+  .result-card.zone-red    { border-color:var(--zone-red-bd);    background:var(--zone-red-bg);    color:var(--zone-red-tx); }
+  .result-card.idle        { border-color:var(--border); background:var(--bg-card); color:var(--text-muted); }
 
-  /* Inputs */
-  .field { margin-bottom:12px; }
-  .field:last-child { margin-bottom:0; }
-  label { font-weight:600; font-size:0.78rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-secondary); display:block; margin-bottom:6px; }
-  label .sub { font-size:0.7rem; font-weight:500; color:var(--text-muted); text-transform:none; letter-spacing:0.02em; margin-left:6px; }
-  .input-suffix { position:relative; }
-  .input-suffix .suffix { position:absolute; right:14px; top:50%; transform:translateY(-50%); color:var(--text-muted); font-size:0.92rem; pointer-events:none; }
-  input[type="number"] {
-    width:100%; background:var(--bg-input); border:1px solid var(--border);
+  .result-label { font-size:0.72rem; letter-spacing:0.1em; text-transform:uppercase; opacity:0.85; text-align:center; }
+  .result-big {
+    font-size:4.2rem; font-weight:800; letter-spacing:-0.01em; line-height:1; text-align:center;
+    font-family:ui-monospace,'Courier New',monospace; margin:8px 0 4px;
+  }
+  .result-big .unit { font-size:1.6rem; font-weight:700; opacity:0.85; margin-left:6px; font-family:inherit; }
+  .result-dir { text-align:center; font-size:1.15rem; font-weight:700; letter-spacing:0.06em; margin-bottom:8px; }
+  .result-dir .dir-deg { font-size:0.85rem; opacity:0.7; font-weight:500; margin-left:6px; }
+
+  .result-split {
+    display:grid; grid-template-columns:1fr 1fr; gap:10px;
+    margin-top:10px; padding-top:10px; border-top:1px solid currentColor;
+    opacity:0.92;
+  }
+  .result-split > div { text-align:center; }
+  .split-label { font-size:0.66rem; letter-spacing:0.06em; text-transform:uppercase; opacity:0.75; margin-bottom:3px; }
+  .split-value { font-size:1.15rem; font-weight:700; font-family:ui-monospace,monospace; }
+  .split-value.is-driver { text-decoration:underline; text-decoration-thickness:2px; text-underline-offset:3px; }
+  .split-foot { font-size:0.72rem; text-align:center; margin-top:8px; opacity:0.8; line-height:1.45; }
+
+  .result-card.idle .result-big { font-size:2.4rem; opacity:0.6; }
+  .result-card.idle .result-dir { display:none; }
+  .result-card.idle .result-split { display:none; }
+  .result-card.idle .split-foot { display:none; }
+  .result-card.idle .result-prompt { display:block; text-align:center; font-size:0.88rem; margin-top:8px; opacity:0.85; }
+  .result-card .result-prompt { display:none; }
+
+  /* INPUT-block */
+  .input-block { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px 14px; margin-bottom:10px; }
+  .input-block .h { font-size:0.74rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
+  .input-block .h .sub { font-size:0.68rem; color:var(--text-muted); font-weight:500; text-transform:none; letter-spacing:0.02em; opacity:0.85; }
+
+  /* Snabbval-knappar — STORA, lätta att träffa */
+  .quick-row { display:grid; grid-template-columns:repeat(4,1fr); gap:6px; }
+  .quick-btn {
+    background:var(--bg-input); border:1.5px solid var(--border);
+    color:var(--text-primary); border-radius:var(--radius-sm);
+    padding:12px 4px; font-family:'Courier New',monospace;
+    font-size:1.05rem; font-weight:700; letter-spacing:0.02em;
+    cursor:pointer; min-height:54px;
+    -webkit-tap-highlight-color:transparent;
+    transition:background 0.1s, border-color 0.1s, color 0.1s;
+  }
+  .quick-btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .quick-btn:active { transform:scale(0.97); }
+  .quick-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
+  .quick-btn .qb-unit { font-size:0.7rem; opacity:0.7; margin-left:3px; font-weight:600; }
+
+  /* 8-grid för vindriktning, två rader */
+  .quick-row.compass8 { grid-template-columns:repeat(4,1fr); }
+  .quick-row.compass8 .quick-btn { font-size:0.92rem; min-height:48px; padding:10px 2px; }
+  .quick-row.compass8 .quick-btn .qb-deg { display:block; font-size:0.66rem; opacity:0.65; margin-top:2px; font-weight:500; }
+
+  /* "Annat värde" — diskret kollapsbar */
+  .custom-row { margin-top:8px; display:flex; align-items:center; gap:8px; }
+  .custom-row label { font-size:0.7rem; color:var(--text-muted); letter-spacing:0.03em; flex-shrink:0; }
+  .custom-row input[type="number"] {
+    flex:1; min-width:0; background:var(--bg-input); border:1px solid var(--border);
     border-radius:var(--radius-sm); color:var(--text-primary);
-    font-family:inherit; font-size:1.05rem; padding:12px 56px 12px 14px;
-    outline:none; transition:border-color 0.15s; -webkit-appearance:none; appearance:none;
-    min-height:48px;
+    font-family:inherit; font-size:0.95rem; padding:8px 10px;
+    outline:none; -webkit-appearance:none; appearance:none;
+    min-height:38px;
   }
-  input[type="number"]:focus { border-color:var(--accent); }
-  .field-hint { font-size:0.72rem; color:var(--text-muted); margin-top:4px; line-height:1.4; }
+  .custom-row input[type="number"]:focus { border-color:var(--accent); }
+  .custom-row .unit-tag { font-size:0.78rem; color:var(--text-muted); font-family:ui-monospace,monospace; }
 
-  /* Kompass-väljare */
-  .compass-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-top:6px; }
-  .compass-btn {
-    background:var(--bg-input); border:1px solid var(--border); color:var(--text-secondary);
-    border-radius:var(--radius-sm); padding:9px 4px; font-family:'Courier New',monospace;
-    font-size:0.82rem; font-weight:700; letter-spacing:0.04em; cursor:pointer;
-    -webkit-tap-highlight-color:transparent; min-height:38px;
-    transition:background 0.12s, border-color 0.12s, color 0.12s;
-  }
-  .compass-btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); color:var(--text-primary); }
-  .compass-btn.active { background:var(--accent-dim); border-color:var(--accent); color:var(--accent); }
-
-  /* Resultat-kort */
-  .result-hero {
-    background:linear-gradient(180deg, var(--accent-dim) 0%, var(--bg-card) 100%);
-    border:1px solid var(--accent); border-radius:var(--radius);
-    padding:18px 18px 20px; text-align:center; margin-bottom:12px;
-  }
-  .result-hero .result-label { font-size:0.7rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--text-secondary); margin-bottom:6px; }
-  .result-hero .result-size { font-size:2.6rem; font-weight:800; color:var(--accent); letter-spacing:0.02em; line-height:1; font-family:ui-monospace,monospace; }
-  .result-hero .result-size .unit { font-size:1.1rem; color:var(--text-secondary); margin-left:6px; font-weight:600; font-family:inherit; }
-  .result-hero .result-meta { color:var(--text-secondary); font-size:0.88rem; margin-top:10px; line-height:1.55; }
-  .result-hero .result-meta strong { color:var(--text-primary); }
-
-  /* Kompassvy med drift */
-  .compass-svg { display:block; width:100%; max-width:340px; height:auto; margin:14px auto 4px; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); }
+  /* Kompass-SVG (kvar, men kompaktare) */
+  .compass-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:10px 14px 12px; margin-bottom:10px; }
+  .compass-svg { display:block; width:100%; max-width:300px; height:auto; margin:0 auto; }
   .compass-svg .ring-outer { fill:none; stroke:var(--border-focus); stroke-width:1.4; }
   .compass-svg .ring-grid  { fill:none; stroke:var(--border); stroke-width:1; stroke-dasharray:3 3; }
-  .compass-svg .axis       { stroke:var(--border-focus); stroke-width:1; }
+  .compass-svg .ring-safety { fill:none; stroke-width:1.6; stroke-dasharray:5 4; opacity:0.9; }
+  .compass-svg .axis        { stroke:var(--border-focus); stroke-width:1; }
   .compass-svg .label-cardinal { font-family:'Courier New',monospace; font-size:13px; font-weight:700; fill:var(--text-secondary); }
   .compass-svg .start-dot  { fill:var(--text-secondary); stroke:var(--text-primary); stroke-width:1.4; }
-  .compass-svg .land-dot   { fill:var(--accent); stroke:var(--accent-hover); stroke-width:2; }
-  .compass-svg .drift-line { stroke:var(--accent); stroke-width:2; stroke-dasharray:4 3; fill:none; }
+  .compass-svg .land-dot   { stroke-width:2; }
+  .compass-svg .drift-line { stroke-width:2; stroke-dasharray:4 3; fill:none; }
   .compass-svg .wind-arrow { stroke:#e09320; stroke-width:2.2; fill:none; }
   .compass-svg .wind-head  { fill:#e09320; }
-  .compass-svg .label-land { font-family:ui-monospace,monospace; font-size:10px; font-weight:700; fill:var(--accent); }
-  .compass-svg .label-wind { font-family:ui-monospace,monospace; font-size:10px; font-weight:700; fill:#e09320; }
   .compass-svg .scale-text { font-family:ui-monospace,monospace; font-size:9.5px; fill:var(--text-muted); }
 
-  .legend { display:flex; flex-wrap:wrap; gap:14px; justify-content:center; font-size:0.72rem; color:var(--text-muted); margin-top:6px; }
-  .legend > span { display:inline-flex; align-items:center; gap:6px; }
-  .legend .sw { display:inline-block; width:10px; height:10px; border-radius:50%; flex-shrink:0; }
+  .legend { display:flex; flex-wrap:wrap; gap:12px; justify-content:center; font-size:0.7rem; color:var(--text-muted); margin-top:8px; }
+  .legend > span { display:inline-flex; align-items:center; gap:5px; }
+  .legend .sw { display:inline-block; width:9px; height:9px; border-radius:50%; flex-shrink:0; }
 
-  /* Varning vid stora drifter */
-  .result-warn {
-    background:var(--warn-bg); border:1px solid var(--warn-border);
-    color:var(--warn-text); border-radius:var(--radius);
-    padding:12px 14px; margin-top:12px; font-size:0.86rem; line-height:1.55;
+  /* Kollapsbar info */
+  details.info { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:10px; }
+  details.info > summary {
+    cursor:pointer; padding:12px 14px; min-height:44px;
+    color:var(--text-secondary); font-weight:600; font-size:0.86rem;
+    letter-spacing:0.04em; list-style:none;
+    -webkit-tap-highlight-color:transparent;
+    display:flex; align-items:center; gap:8px;
   }
+  details.info > summary::-webkit-details-marker { display:none; }
+  details.info > summary::before { content:'▸'; display:inline-block; font-size:0.85rem; color:var(--accent); transition:transform 0.15s; }
+  details.info[open] > summary::before { transform:rotate(90deg); }
+  details.info > .info-body { padding:0 14px 14px; color:var(--text-secondary); font-size:0.85rem; line-height:1.55; }
+  details.info > .info-body p + p { margin-top:8px; }
+  details.info > .info-body strong { color:var(--text-primary); }
+  details.info > .info-body .kv-row { display:flex; gap:10px; padding:5px 0; border-bottom:1px solid var(--border); font-size:0.82rem; }
+  details.info > .info-body .kv-row:last-child { border-bottom:none; }
+  details.info > .info-body .kv-row .k { color:var(--text-secondary); flex:1; }
+  details.info > .info-body .kv-row .v { color:var(--accent); font-family:ui-monospace,monospace; font-weight:700; }
+  details.info > .info-body .formula { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:9px 12px; font-family:ui-monospace,monospace; font-size:0.82rem; color:var(--text-primary); margin-top:10px; line-height:1.6; }
 
-  /* KV-list för förutsättningar */
-  .kv-list { display:flex; flex-direction:column; gap:4px; }
-  .kv-row { display:flex; gap:10px; align-items:baseline; padding:6px 0; font-size:0.88rem; }
-  .kv-row + .kv-row { border-top:1px solid var(--border); }
-  .kv-row .k { color:var(--text-secondary); flex:1; min-width:0; line-height:1.45; }
-  .kv-row .v { color:var(--accent); font-weight:700; font-family:ui-monospace,monospace; min-width:90px; text-align:right; flex-shrink:0; font-size:0.92rem; }
-
-  .formula { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px 12px; font-family:ui-monospace,monospace; font-size:0.85rem; color:var(--text-primary); margin-top:10px; line-height:1.6; overflow-x:auto; }
-  .formula .sub { color:var(--text-muted); font-size:0.78rem; }
-
-  .body-text { font-size:0.9rem; line-height:1.55; color:var(--text-secondary); }
-  .body-text strong { color:var(--text-primary); }
-  .body-text + .body-text { margin-top:8px; }
-
-  .hint { font-size:0.74rem; color:var(--text-muted); margin-top:10px; line-height:1.5; }
-
-  .actions { display:flex; gap:8px; margin-top:12px; flex-wrap:wrap; }
-  .btn { flex:1; padding:11px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:0.86rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; min-height:44px; }
+  /* Actions */
+  .actions { display:flex; gap:8px; margin-top:8px; flex-wrap:wrap; }
+  .btn { flex:1; padding:11px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:0.84rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; min-height:42px; }
   .btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
   .btn-primary { background:var(--accent); color:#0c1a0c; border-color:var(--accent); }
   .btn-primary:hover { background:var(--accent-hover); border-color:var(--accent-hover); }
@@ -150,171 +184,178 @@
   .toast.show { opacity:1; transform:translateX(-50%) translateY(0); }
   @media (prefers-reduced-motion: reduce) { .toast { transition:none; } }
 
-  /* Print */
+  .disclaimer { font-size:0.66rem; color:var(--text-muted); text-align:center; margin-top:8px; padding:0 8px; line-height:1.55; opacity:0.85; }
+
   @media print {
     body { background:#fff; color:#000; padding:0; }
-    .back-link, .actions, header .disclaimer, .compass-grid, .toast { display:none; }
-    .section { background:#fff; border:1px solid #000; break-inside:avoid; }
-    .section h2 { color:#000; border-color:#000; }
-    .result-hero { background:#fff; border:1px solid #000; }
-    .result-hero .result-size, .kv-row .v { color:#000; }
-    .compass-svg { background:#fff; border:1px solid #000; }
-    .compass-svg .land-dot { fill:#000; }
+    .back-link, .actions, .compass-wrap, .toast, details.info > summary::before { display:none; }
+    .result-card, .input-block, details.info { background:#fff; border:1px solid #000; color:#000; break-inside:avoid; }
+    .result-card .result-big { color:#000; }
+    details.info[open] > .info-body { display:block; }
   }
 </style>
     <link rel="stylesheet" href="lib/nav.css">
 </head>
 <body>
-<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px;text-align:center">JavaScript krävs för beräkningen.</div></noscript>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px;text-align:center">JavaScript krävs.</div></noscript>
 
 <div class="container">
   <header>
     <h1>DRÖNDRIFT</h1>
-    <p>Avdrift vid fritt fall — Parrot Anafi USA</p>
-    <p class="disclaimer">Privatutvecklat fältverktyg. Uppskattning för planering och säkerhetszon — ersätter inte gällande flygO-instruktioner eller riskbedömning före flygning över trupp/bebyggelse.</p>
+    <p>Säkerhetszon vid motorbortfall — Anafi USA</p>
   </header>
 
   <a href="index.html" class="back-link">Tillbaka</a>
 
-  <!-- 1. INDATA -->
-  <section class="section">
-    <h2>Indata <span class="lead">flyghöjd &amp; vind</span></h2>
-
-    <div class="field">
-      <label for="hojd">Höjd över mark</label>
-      <div class="input-suffix">
-        <input type="number" id="hojd" inputmode="decimal" step="1" min="0" max="500" placeholder="t.ex. 80" autocomplete="off">
-        <span class="suffix">m</span>
+  <!-- RESULTAT — alltid längst upp, dominerar visuellt -->
+  <div class="result-card idle" id="resultCard" role="status" aria-live="polite">
+    <div class="result-label">Säkerhetszon nedvinds</div>
+    <div class="result-big"><span id="resBig">—</span><span class="unit">m</span></div>
+    <div class="result-dir" id="resDir"></div>
+    <div class="result-prompt">Välj höjd, vindstyrka och vindriktning</div>
+    <div class="result-split">
+      <div>
+        <div class="split-label">Modellerad drift</div>
+        <div class="split-value" id="splitBallistic">—</div>
       </div>
-      <div class="field-hint">Anafi USAs flygtak: 4500 m AMSL, men FlygO begränsar normalt till ≤ 120 m AGL.</div>
-    </div>
-
-    <div class="field">
-      <label for="vind">Vindstyrka <span class="sub">på flyghöjden</span></label>
-      <div class="input-suffix">
-        <input type="number" id="vind" inputmode="decimal" step="0.5" min="0" max="30" placeholder="t.ex. 6" autocomplete="off">
-        <span class="suffix">m/s</span>
+      <div>
+        <div class="split-label">1:1-regeln</div>
+        <div class="split-value" id="splitOneOne">—</div>
       </div>
-      <div class="field-hint">1 m/s ≈ 3,6 km/h ≈ 2 knop. Markvinden är oftast svagare än vinden på flyghöjd.</div>
     </div>
+    <div class="split-foot" id="splitFoot"></div>
+  </div>
 
-    <div class="field">
-      <label for="riktning">Vindriktning <span class="sub">varifrån vinden kommer</span></label>
-      <div class="input-suffix">
-        <input type="number" id="riktning" inputmode="numeric" step="1" min="0" max="360" placeholder="0–360" autocomplete="off">
-        <span class="suffix">°</span>
-      </div>
-      <div class="compass-grid" id="compassQuick" role="group" aria-label="Snabbval kompasstreck">
-        <button type="button" class="compass-btn" data-deg="0">N · 0°</button>
-        <button type="button" class="compass-btn" data-deg="45">NÖ · 45°</button>
-        <button type="button" class="compass-btn" data-deg="90">Ö · 90°</button>
-        <button type="button" class="compass-btn" data-deg="135">SÖ · 135°</button>
-        <button type="button" class="compass-btn" data-deg="180">S · 180°</button>
-        <button type="button" class="compass-btn" data-deg="225">SV · 225°</button>
-        <button type="button" class="compass-btn" data-deg="270">V · 270°</button>
-        <button type="button" class="compass-btn" data-deg="315">NV · 315°</button>
-      </div>
-      <div class="field-hint">Meteorologisk konvention: 0° = nordlig vind (blåser FRÅN norr, MOT söder).</div>
+  <!-- HÖJD -->
+  <div class="input-block">
+    <div class="h">Höjd <span class="sub">över mark</span></div>
+    <div class="quick-row" id="hojdQuick">
+      <button type="button" class="quick-btn" data-val="30">30<span class="qb-unit">m</span></button>
+      <button type="button" class="quick-btn" data-val="50">50<span class="qb-unit">m</span></button>
+      <button type="button" class="quick-btn" data-val="80">80<span class="qb-unit">m</span></button>
+      <button type="button" class="quick-btn" data-val="120">120<span class="qb-unit">m</span></button>
     </div>
-  </section>
-
-  <!-- 2. RESULTAT -->
-  <section class="section">
-    <h2>Resultat <span class="lead">trolig fallpunkt vid motorbortfall</span></h2>
-
-    <div class="result-hero">
-      <div class="result-label">Avdriftsavstånd</div>
-      <div class="result-size"><span id="resDist">—</span><span class="unit">m</span></div>
-      <div class="result-meta" id="resMeta">Fyll i höjd, vindstyrka och vindriktning.</div>
+    <div class="custom-row">
+      <label for="hojdCustom">Annan:</label>
+      <input type="number" id="hojdCustom" inputmode="numeric" min="0" max="500" step="1" placeholder="t.ex. 75">
+      <span class="unit-tag">m</span>
     </div>
+  </div>
 
-    <svg class="compass-svg" id="compassSvg" viewBox="0 0 340 340" role="img" aria-labelledby="cmpTitle cmpDesc">
-      <title id="cmpTitle">Kompassvy</title>
-      <desc id="cmpDesc">Visualisering av startpunkt i centrum, vindens riktning och uppskattad landningspunkt.</desc>
+  <!-- VINDSTYRKA -->
+  <div class="input-block">
+    <div class="h">Vindstyrka <span class="sub">på flyghöjd</span></div>
+    <div class="quick-row" id="vindQuick">
+      <button type="button" class="quick-btn" data-val="2">2<span class="qb-unit">m/s</span></button>
+      <button type="button" class="quick-btn" data-val="4">4<span class="qb-unit">m/s</span></button>
+      <button type="button" class="quick-btn" data-val="6">6<span class="qb-unit">m/s</span></button>
+      <button type="button" class="quick-btn" data-val="8">8<span class="qb-unit">m/s</span></button>
+    </div>
+    <div class="custom-row">
+      <label for="vindCustom">Annan:</label>
+      <input type="number" id="vindCustom" inputmode="decimal" min="0" max="30" step="0.5" placeholder="t.ex. 5">
+      <span class="unit-tag">m/s</span>
+    </div>
+  </div>
 
-      <!-- Yttre ring + grid -->
+  <!-- VINDRIKTNING -->
+  <div class="input-block">
+    <div class="h">Vindriktning <span class="sub">varifrån vinden blåser</span></div>
+    <div class="quick-row compass8" id="riktQuick">
+      <button type="button" class="quick-btn" data-val="0">N<span class="qb-deg">0°</span></button>
+      <button type="button" class="quick-btn" data-val="45">NÖ<span class="qb-deg">45°</span></button>
+      <button type="button" class="quick-btn" data-val="90">Ö<span class="qb-deg">90°</span></button>
+      <button type="button" class="quick-btn" data-val="135">SÖ<span class="qb-deg">135°</span></button>
+      <button type="button" class="quick-btn" data-val="180">S<span class="qb-deg">180°</span></button>
+      <button type="button" class="quick-btn" data-val="225">SV<span class="qb-deg">225°</span></button>
+      <button type="button" class="quick-btn" data-val="270">V<span class="qb-deg">270°</span></button>
+      <button type="button" class="quick-btn" data-val="315">NV<span class="qb-deg">315°</span></button>
+    </div>
+    <div class="custom-row">
+      <label for="riktCustom">Annan:</label>
+      <input type="number" id="riktCustom" inputmode="numeric" min="0" max="360" step="1" placeholder="0–360">
+      <span class="unit-tag">°</span>
+    </div>
+  </div>
+
+  <!-- KOMPASSVY -->
+  <div class="compass-wrap">
+    <svg class="compass-svg" id="compassSvg" viewBox="0 0 340 340" role="img" aria-labelledby="cmpTitle">
+      <title id="cmpTitle">Kompassvy med säkerhetszon</title>
       <circle class="ring-outer" cx="170" cy="170" r="150"/>
       <circle class="ring-grid"  cx="170" cy="170" r="100"/>
       <circle class="ring-grid"  cx="170" cy="170" r="50"/>
-
-      <!-- N/S/Ö/V-axlar -->
       <line class="axis" x1="170" y1="20"  x2="170" y2="320"/>
       <line class="axis" x1="20"  y1="170" x2="320" y2="170"/>
-
-      <!-- Kompassrosor-bokstäver -->
       <text class="label-cardinal" x="170" y="14"  text-anchor="middle">N</text>
       <text class="label-cardinal" x="170" y="334" text-anchor="middle">S</text>
       <text class="label-cardinal" x="328" y="174" text-anchor="end">Ö</text>
       <text class="label-cardinal" x="12"  y="174" text-anchor="start">V</text>
-
-      <!-- Skala-text (visar ring-radien i meter) -->
       <text class="scale-text" id="scaleOuter" x="174" y="38">— m</text>
       <text class="scale-text" id="scaleMid"   x="174" y="84">— m</text>
-
-      <!-- Vindpil (orange) — visar vart vinden BLÅSER (mot landningen) -->
+      <!-- Säkerhetszon-cirkel (1:1 eller max) -->
+      <circle class="ring-safety" id="safetyRing" cx="170" cy="170" r="0"/>
+      <!-- Vindpil -->
       <line class="wind-arrow" id="windLine" x1="170" y1="170" x2="170" y2="170"/>
       <polygon class="wind-head" id="windHead" points="0,0 0,0 0,0"/>
-      <text class="label-wind" id="windLabel" x="0" y="0">vind</text>
-
-      <!-- Drift-linje (grön streckad) från start till landning -->
+      <!-- Drift-linje -->
       <line class="drift-line" id="driftLine" x1="170" y1="170" x2="170" y2="170"/>
-
-      <!-- Startpunkt -->
+      <!-- Start + landning -->
       <circle class="start-dot" cx="170" cy="170" r="4"/>
-
-      <!-- Landningspunkt -->
       <circle class="land-dot" id="landDot" cx="170" cy="170" r="6"/>
-      <text class="label-land" id="landLabel" x="0" y="0"></text>
     </svg>
-
     <div class="legend">
-      <span><span class="sw" style="background:var(--text-secondary)"></span>Startpunkt</span>
-      <span><span class="sw" style="background:#e09320"></span>Vindriktning</span>
-      <span><span class="sw" style="background:var(--accent)"></span>Trolig fallpunkt</span>
+      <span><span class="sw" style="background:var(--text-secondary)"></span>Start</span>
+      <span><span class="sw" style="background:#e09320"></span>Vind</span>
+      <span><span class="sw" style="background:#a5e0a8"></span>Modellerad drift</span>
+      <span><span class="sw" style="background:#ff9080"></span>Säkerhetszon</span>
     </div>
+  </div>
 
-    <div class="result-warn" id="resWarn" style="display:none;"></div>
+  <div class="actions">
+    <button class="btn" type="button" id="btnReset">Rensa</button>
+    <button class="btn btn-primary" type="button" id="btnCopy">Kopiera</button>
+  </div>
 
-    <div class="actions">
-      <button class="btn" type="button" id="btnReset">Rensa</button>
-      <button class="btn btn-primary" type="button" id="btnCopy">Kopiera resultat</button>
+  <!-- FÖRKLARING — kollapsad som default -->
+  <details class="info">
+    <summary>Vad är 1:1-regeln?</summary>
+    <div class="info-body">
+      <p><strong>Industristandard från JARUS/EASA SORA.</strong> Säkerhetszonen på marken ska vara minst lika stor som flyghöjden — flyger du på 80 m är zonen minst 80 m horisontellt.</p>
+      <p>Regeln är medvetet konservativ: den fångar att en okontrollerad drönare kan gå i spinn, träffas av vindgradient eller dö i edge-cases som den ballistiska modellen inte täcker.</p>
+      <p>Den här sidan visar <strong>båda</strong> värdena och rekommenderar det <strong>större</strong>. Vid svaga vindar styr alltid 1:1-regeln; vid riktigt hård vind på hög höjd kan ballistisk drift bli större.</p>
     </div>
-  </section>
+  </details>
 
-  <!-- 3. FÖRUTSÄTTNINGAR -->
-  <section class="section">
-    <h2>Förutsättningar &amp; modell</h2>
-
-    <p class="body-text">Beräkningen antar att drönaren tappar styrning på flyghöjd (motorbortfall, batterifel, datalänkfel) och faller fritt med luftmotstånd. <strong>Värdet är en uppskattning</strong> — verkligheten beror på orientering under fallet, vindprofil med höjden och eventuell rotation/spinn.</p>
-
-    <div class="kv-list" style="margin-top:10px;">
-      <div class="kv-row"><span class="k">Plattform</span><span class="v">Anafi USA</span></div>
-      <div class="kv-row"><span class="k">Massa (m)</span><span class="v">0,500 kg</span></div>
-      <div class="kv-row"><span class="k">Projicerad area, platt fall (A)</span><span class="v">≈ 0,06 m²</span></div>
-      <div class="kv-row"><span class="k">Drag-koefficient (C_d)</span><span class="v">≈ 1,0</span></div>
-      <div class="kv-row"><span class="k">Luftdensitet (ρ)</span><span class="v">1,225 kg/m³</span></div>
-      <div class="kv-row"><span class="k">Terminal hastighet (v_t)</span><span class="v">≈ 10 m/s</span></div>
+  <details class="info">
+    <summary>Modellantaganden (Anafi USA)</summary>
+    <div class="info-body">
+      <div class="kv-row"><span class="k">Massa</span><span class="v">0,5 kg</span></div>
+      <div class="kv-row"><span class="k">Mått utfälld</span><span class="v">282×373×84 mm</span></div>
+      <div class="kv-row"><span class="k">Projicerad area (platt)</span><span class="v">≈ 0,06 m²</span></div>
+      <div class="kv-row"><span class="k">Drag-koefficient C_d</span><span class="v">≈ 1,0</span></div>
+      <div class="kv-row"><span class="k">Luftdensitet ρ</span><span class="v">1,225 kg/m³</span></div>
+      <div class="kv-row"><span class="k">Terminalhastighet v_t</span><span class="v">≈ 10 m/s</span></div>
+      <div class="formula">
+        v_t = √( 2·m·g / (ρ·C_d·A) ) ≈ 10 m/s<br>
+        drift = max(0, höjd/v_t − 0,75) × vind<br>
+        1:1-regel = höjd<br>
+        säkerhetszon = max(drift, 1:1)
+      </div>
+      <p>v_t på 10 m/s är konservativt valt (faktiskt ~11–12 m/s vid platt fall). Lägre v_t → längre falltid → större angiven drift → större säkerhetsmarginal. Vid spinn faller drönaren snabbare och hamnar närmre starten.</p>
     </div>
+  </details>
 
-    <div class="formula" aria-label="Formler">
-      v_t = √( 2·m·g / (ρ·C_d·A) ) ≈ 10 m/s<br>
-      <span class="sub">t_fall ≈ höjd / v_t  &nbsp;&nbsp;(förenkling — ignorerar accelerationsfasen ≈ 1,5 s)</span><br>
-      drift ≈ t_fall · vindstyrka<br>
-      <span class="sub">riktning: drönaren landar i den riktning vinden blåser (vindriktning + 180°)</span>
+  <details class="info">
+    <summary>Säkerhetszon — flygO</summary>
+    <div class="info-body">
+      <p>Säkerhetszonen ska vara fri från <strong>egen trupp, allmänhet och bebyggelse</strong>, i den riktning vinden blåser.</p>
+      <p>Vid <strong>≥ 8 m/s</strong> vind på höjd ökar både drift och risken för okontrollerat fall — överväg lägre höjd eller annan tid.</p>
+      <p>Flygning över trupp kräver särskild order. Källa-ramverk: <strong>JARUS SORA Annex F</strong> (ballistisk descent) och 1:1-regeln (EU-default).</p>
     </div>
+  </details>
 
-    <p class="body-text" style="margin-top:10px;">Värdet är medvetet konservativt — vid spinn eller "edge-first" fall blir terminalhastigheten högre (kortare falltid → mindre drift). Använd resultatet för att <strong>sätta en säkerhetszon nedvinds</strong>, inte som en exakt landningsprediktion.</p>
-  </section>
-
-  <!-- 4. SÄKERHETSZON -->
-  <section class="section">
-    <h2>Säkerhetszon <span class="lead">före flygning</span></h2>
-    <p class="body-text">Innan flygning över eller nära <strong>egen trupp, allmänhet eller bebyggelse</strong>: kontrollera att området <strong>nedvinds från flygläget</strong>, ut till minst avdriftsavståndet ovan, är fritt från personer och känsliga objekt.</p>
-    <p class="body-text" style="margin-top:8px;">Vid hård vind (≥ 8 m/s på höjd) ökar både drift och risken för okontrollerat fall — överväg om uppdraget kan flygas på lägre höjd eller skjutas upp.</p>
-    <p class="hint">Flygning över trupp kräver särskild order. Tipsanvändning, allmän flygning och kontroll av Anafi USA: se ordinarie flygO-instruktioner och Parrots säkerhetsmanual.</p>
-  </section>
-
-  <p class="hint" style="text-align:center;padding-bottom:20px;">Idé från RPAS-pilot · återgivet som hjälpverktyg — kontrollera mot ditt förbands gällande instruktioner.</p>
+  <p class="disclaimer">Privatutvecklat fältverktyg. Uppskattning för planering — ersätter inte gällande flygO-instruktioner eller Parrots säkerhetsmanual.</p>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -327,16 +368,10 @@
 'use strict';
 (function () {
 
-  // ── Modell-konstanter ──────────────────────────────────────────────────────
-  // v_t = 10 m/s är härlett från m=0.5, A=0.06, Cd=1.0, ρ=1.225 → ≈ 11.6 m/s.
-  // Vi använder 10 för säkerhetsmarginal: lägre v_t → längre t_fall → större
-  // angiven drift, vilket ger säkrare säkerhetszon nedvinds.
-  var V_TERMINAL = 10;        // m/s, platt fall
-  var ACC_TIME_OFFSET = 1.5;  // s, kompensation för accelerationsfasen
+  var V_TERMINAL = 10;
+  var ACC_TIME_OFFSET = 1.5;
+  var STORAGE_KEY = 'drondrift_state_v2';
 
-  var STORAGE_KEY = 'drondrift_state_v1';
-
-  // ── State ──────────────────────────────────────────────────────────────────
   var state = { hojd: null, vind: null, riktning: null };
 
   function loadState() {
@@ -345,8 +380,8 @@
       if (!raw) return;
       var p = JSON.parse(raw);
       if (p && typeof p === 'object') {
-        if (typeof p.hojd === 'number' && isFinite(p.hojd))     state.hojd = p.hojd;
-        if (typeof p.vind === 'number' && isFinite(p.vind))     state.vind = p.vind;
+        if (typeof p.hojd === 'number' && isFinite(p.hojd))         state.hojd = p.hojd;
+        if (typeof p.vind === 'number' && isFinite(p.vind))         state.vind = p.vind;
         if (typeof p.riktning === 'number' && isFinite(p.riktning)) state.riktning = p.riktning;
       }
     } catch (_) {}
@@ -354,86 +389,85 @@
   function saveState() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (_) {}
   }
-  function clearState() {
-    try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
-    state.hojd = null; state.vind = null; state.riktning = null;
-  }
 
-  // ── Beräkning ──────────────────────────────────────────────────────────────
-  // drift = max(0, höjd/v_t - 0.5*ACC_TIME_OFFSET) * vindstyrka
-  // (drar bort halva acc-tiden eftersom drönaren inte direkt har full hastighet
-  //  horisontellt heller — pragmatisk approximation, ger lägre värden på låg höjd.)
+  // ── Beräkning ─────────────────────────────────────────────────────────────
   function compute() {
     if (state.hojd == null || state.vind == null || state.riktning == null) return null;
-    var t_fall_raw = state.hojd / V_TERMINAL;
-    var t_eff = Math.max(0, t_fall_raw - 0.5 * ACC_TIME_OFFSET);
-    var drift = t_eff * state.vind;
-    var landingDeg = (state.riktning + 180) % 360;  // motsatt vindriktning
+    var tFallRaw = state.hojd / V_TERMINAL;
+    var tEff = Math.max(0, tFallRaw - 0.5 * ACC_TIME_OFFSET);
+    var ballistic = tEff * state.vind;
+    var oneOne = state.hojd;             // 1:1-regeln
+    var zone = Math.max(ballistic, oneOne);
+    var driver = (ballistic > oneOne) ? 'ballistic' : 'oneone';
+    var landingDeg = (state.riktning + 180) % 360;
     return {
-      drift: drift,
-      tFall: t_fall_raw,
-      landingDeg: landingDeg,
-      vTerminal: V_TERMINAL
+      ballistic: ballistic, oneOne: oneOne,
+      zone: zone, driver: driver,
+      landingDeg: landingDeg, tFall: tFallRaw
     };
   }
 
   function degToCompass(deg) {
     var names = ['N','NNÖ','NÖ','ÖNÖ','Ö','ÖSÖ','SÖ','SSÖ','S','SSV','SV','VSV','V','VNV','NV','NNV'];
-    var i = Math.round(deg / 22.5) % 16;
-    return names[i];
+    return names[Math.round(deg / 22.5) % 16];
   }
 
-  // ── Rendering ──────────────────────────────────────────────────────────────
+  function zoneClass(zoneMeters) {
+    if (zoneMeters <= 30)  return 'zone-green';
+    if (zoneMeters <= 80)  return 'zone-amber';
+    if (zoneMeters <= 150) return 'zone-orange';
+    return 'zone-red';
+  }
+
+  // ── Render ────────────────────────────────────────────────────────────────
   function render() {
     var r = compute();
-    var distEl = document.getElementById('resDist');
-    var metaEl = document.getElementById('resMeta');
-    var warnEl = document.getElementById('resWarn');
+    var card = document.getElementById('resultCard');
+    var bigEl = document.getElementById('resBig');
+    var dirEl = document.getElementById('resDir');
+    var splitB = document.getElementById('splitBallistic');
+    var splitO = document.getElementById('splitOneOne');
+    var splitF = document.getElementById('splitFoot');
+
+    // Rensa zon-klasser
+    card.classList.remove('idle','zone-green','zone-amber','zone-orange','zone-red');
 
     if (!r) {
-      distEl.textContent = '—';
-      metaEl.textContent = 'Fyll i höjd, vindstyrka och vindriktning.';
-      warnEl.style.display = 'none';
+      card.classList.add('idle');
+      bigEl.textContent = '—';
+      dirEl.textContent = '';
+      splitB.textContent = '—';
+      splitO.textContent = '—';
+      splitF.textContent = '';
+      splitB.classList.remove('is-driver');
+      splitO.classList.remove('is-driver');
       drawCompass(null);
       return;
     }
 
-    var driftRounded = Math.round(r.drift);
-    distEl.textContent = driftRounded;
+    var zoneRound = Math.ceil(r.zone);
+    var ballRound = Math.round(r.ballistic);
+    var oneRound  = Math.round(r.oneOne);
+    var dirName   = degToCompass(r.landingDeg);
 
-    var landCompass = degToCompass(r.landingDeg);
-    var tFallStr = r.tFall.toFixed(1).replace('.', ',');
+    card.classList.add(zoneClass(r.zone));
+    bigEl.textContent = zoneRound;
+    dirEl.innerHTML = 'åt ' + dirName + ' <span class="dir-deg">(' + Math.round(r.landingDeg) + '°)</span>';
 
-    metaEl.innerHTML =
-      'Vid <strong>' + state.hojd + ' m</strong> höjd och <strong>' + formatNum(state.vind) +
-      ' m/s</strong> vind hamnar drönaren ca <strong>' + driftRounded + ' m åt ' +
-      landCompass + '</strong> (' + Math.round(r.landingDeg) + '°).<br>' +
-      '<span style="font-size:0.78rem;color:var(--text-muted);">Falltid ≈ ' + tFallStr + ' s. ' +
-      'Konservativ uppskattning (v_t = ' + r.vTerminal + ' m/s).</span>';
+    splitB.textContent = ballRound + ' m';
+    splitO.textContent = oneRound + ' m';
+    splitB.classList.toggle('is-driver', r.driver === 'ballistic');
+    splitO.classList.toggle('is-driver', r.driver === 'oneone');
 
-    // Varning vid stora drifter eller hög vind
-    var warnings = [];
-    if (state.vind >= 8) {
-      warnings.push('Vindstyrka ≥ 8 m/s på flyghöjd — överväg om flygning kan skjutas upp eller flygas lägre.');
-    }
-    if (r.drift >= 100) {
-      warnings.push('Stor säkerhetszon (≥ 100 m) krävs nedvinds. Verifiera att området är fritt från trupp/bebyggelse.');
-    }
-    if (warnings.length) {
-      warnEl.style.display = 'block';
-      warnEl.innerHTML = '<strong>OBS:</strong> ' + warnings.join(' ');
-    } else {
-      warnEl.style.display = 'none';
-    }
+    var driverName = r.driver === 'ballistic' ? '1:1-regeln överröstad av modellerad drift' : 'styrs av 1:1-regeln (industristandard)';
+    var warnExtra = '';
+    if (state.vind >= 8) warnExtra = ' · Vind ≥ 8 m/s — överväg lägre höjd.';
+    splitF.textContent = 'Använd större värdet · ' + driverName + warnExtra;
 
     drawCompass(r);
   }
 
-  function formatNum(n) {
-    return (Math.round(n * 10) / 10).toString().replace('.', ',');
-  }
-
-  // ── Kompass-SVG ────────────────────────────────────────────────────────────
+  // ── Kompass ───────────────────────────────────────────────────────────────
   var CX = 170, CY = 170, R_OUTER = 150;
 
   function drawCompass(r) {
@@ -441,50 +475,64 @@
     var driftLine = document.getElementById('driftLine');
     var windLine  = document.getElementById('windLine');
     var windHead  = document.getElementById('windHead');
-    var windLabel = document.getElementById('windLabel');
-    var landLabel = document.getElementById('landLabel');
+    var safetyRing = document.getElementById('safetyRing');
     var scaleOuter = document.getElementById('scaleOuter');
     var scaleMid   = document.getElementById('scaleMid');
 
-    if (!r || r.drift <= 0) {
-      // Centrera allt + dölj etiketter
+    if (!r || r.zone <= 0) {
       landDot.setAttribute('cx', CX); landDot.setAttribute('cy', CY);
       driftLine.setAttribute('x2', CX); driftLine.setAttribute('y2', CY);
       windLine.setAttribute('x2', CX); windLine.setAttribute('y2', CY);
       windHead.setAttribute('points', '0,0 0,0 0,0');
-      windLabel.textContent = '';
-      landLabel.textContent = '';
+      safetyRing.setAttribute('r', 0);
       scaleOuter.textContent = '— m';
       scaleMid.textContent = '— m';
+      // Reset färger
+      landDot.setAttribute('fill', '#8aaa8a');
+      landDot.setAttribute('stroke', '#a5e0a8');
+      driftLine.setAttribute('stroke', '#a5e0a8');
+      safetyRing.setAttribute('stroke', '#5a7a5a');
       return;
     }
 
-    // Skala: yttre ring = max(drift, 20m) avrundat uppåt
-    var scaleRadius = Math.max(20, Math.ceil(r.drift / 10) * 10);
-    var midRadius = scaleRadius / 3 * 2;
+    // Skala: yttre ring = säkerhetszon (det större värdet) avrundat uppåt
+    var scaleRadius = Math.max(20, Math.ceil(r.zone / 10) * 10);
     scaleOuter.textContent = scaleRadius + ' m';
     scaleMid.textContent = Math.round(scaleRadius / 2) + ' m';
 
-    // Landningspunkt: vinkel från norr medurs (kompassmodell)
-    // SVG: x = CX + r*sin(θ), y = CY - r*cos(θ)
+    // Säkerhetszon-cirkel (centrerad på start)
+    var safetyR = (r.zone / scaleRadius) * R_OUTER;
+    safetyRing.setAttribute('r', safetyR);
+
+    // Färg på säkerhetsring + landning beror på zon-storlek
+    var zc = zoneClass(r.zone);
+    var ringColor = '#a5e0a8'; // grön default
+    var dotColor  = '#a5e0a8';
+    if (zc === 'zone-amber')  { ringColor = '#f5e68a'; dotColor = '#f5e68a'; }
+    if (zc === 'zone-orange') { ringColor = '#ffc080'; dotColor = '#ffc080'; }
+    if (zc === 'zone-red')    { ringColor = '#ff9080'; dotColor = '#ff9080'; }
+    safetyRing.setAttribute('stroke', ringColor);
+
+    // Landningspunkt (modellerad drift, inte säkerhetszon)
     var theta = r.landingDeg * Math.PI / 180;
-    var landR = (r.drift / scaleRadius) * R_OUTER;
+    var landR = (r.ballistic / scaleRadius) * R_OUTER;
     var lx = CX + landR * Math.sin(theta);
     var ly = CY - landR * Math.cos(theta);
-
     landDot.setAttribute('cx', lx);
     landDot.setAttribute('cy', ly);
+    landDot.setAttribute('fill', dotColor);
+    landDot.setAttribute('stroke', dotColor);
     driftLine.setAttribute('x2', lx);
     driftLine.setAttribute('y2', ly);
+    driftLine.setAttribute('stroke', dotColor);
 
-    // Vindpil: visa kort pil från CENTRUM mot landning, ca 35% av landR (eller minst 40px),
-    // visualisering: "vinden trycker drönaren ditåt".
+    // Vindpil
     var windLen = Math.max(40, Math.min(landR * 0.45, 80));
+    if (r.ballistic < 5) windLen = 50; // visa pil även när drift är liten
     var wx = CX + windLen * Math.sin(theta);
     var wy = CY - windLen * Math.cos(theta);
     windLine.setAttribute('x1', CX); windLine.setAttribute('y1', CY);
     windLine.setAttribute('x2', wx); windLine.setAttribute('y2', wy);
-    // Pilspets: triangel vid (wx, wy), pekande i theta-riktningen.
     var headSize = 9;
     var hx1 = wx + headSize * Math.sin(theta);
     var hy1 = wy - headSize * Math.cos(theta);
@@ -493,138 +541,109 @@
     var hx3 = wx + headSize * Math.sin(theta - 2.6);
     var hy3 = wy - headSize * Math.cos(theta - 2.6);
     windHead.setAttribute('points', hx1 + ',' + hy1 + ' ' + hx2 + ',' + hy2 + ' ' + hx3 + ',' + hy3);
-    // Vind-label en bit utanför pilspetsen, åt sidan så det inte krockar
-    var labelOffset = 22;
-    var labelTheta = theta + 0.18; // lite åt höger om pilen
-    var wlx = CX + (windLen + labelOffset) * Math.sin(labelTheta);
-    var wly = CY - (windLen + labelOffset) * Math.cos(labelTheta);
-    windLabel.setAttribute('x', wlx);
-    windLabel.setAttribute('y', wly);
-    windLabel.setAttribute('text-anchor', wlx > CX ? 'start' : (wlx < CX ? 'end' : 'middle'));
-    windLabel.textContent = 'vind ' + formatNum(state.vind) + ' m/s';
-
-    // Landnings-label vid pricken, åt utsidan
-    var llOffset = 14;
-    var llx = lx + llOffset * Math.sin(theta);
-    var lly = ly - llOffset * Math.cos(theta);
-    landLabel.setAttribute('x', llx);
-    landLabel.setAttribute('y', lly + 4);
-    landLabel.setAttribute('text-anchor', llx > CX ? 'start' : (llx < CX ? 'end' : 'middle'));
-    landLabel.textContent = Math.round(r.drift) + ' m';
   }
 
-  // ── Input-handlers ─────────────────────────────────────────────────────────
-  function parseField(el, min, max) {
-    var raw = (el.value || '').trim().replace(',', '.');
-    if (raw === '') return null;
-    var n = parseFloat(raw);
-    if (!isFinite(n)) return null;
-    if (n < min) n = min;
-    if (n > max) n = max;
-    return n;
-  }
+  // ── Input ─────────────────────────────────────────────────────────────────
+  function wireQuickRow(rowId, field, customId, min, max) {
+    var row = document.getElementById(rowId);
+    var custom = document.getElementById(customId);
+    var btns = row.querySelectorAll('.quick-btn');
 
-  function hydrate() {
-    if (state.hojd != null)     document.getElementById('hojd').value = state.hojd;
-    if (state.vind != null)     document.getElementById('vind').value = state.vind;
-    if (state.riktning != null) {
-      document.getElementById('riktning').value = state.riktning;
-      highlightCompassBtn(state.riktning);
-    }
-  }
-
-  function highlightCompassBtn(deg) {
-    var btns = document.querySelectorAll('.compass-btn');
-    for (var i = 0; i < btns.length; i++) {
-      var d = parseInt(btns[i].getAttribute('data-deg'), 10);
-      btns[i].classList.toggle('active', d === deg);
-    }
-  }
-
-  function wireEvents() {
-    var hojdEl = document.getElementById('hojd');
-    var vindEl = document.getElementById('vind');
-    var riktEl = document.getElementById('riktning');
-
-    hojdEl.addEventListener('input', function () {
-      state.hojd = parseField(hojdEl, 0, 500);
-      saveState();
-      render();
-    });
-    vindEl.addEventListener('input', function () {
-      state.vind = parseField(vindEl, 0, 30);
-      saveState();
-      render();
-    });
-    riktEl.addEventListener('input', function () {
-      var v = parseField(riktEl, 0, 360);
-      if (v != null) v = ((v % 360) + 360) % 360;
-      state.riktning = v;
-      highlightCompassBtn(v);
-      saveState();
-      render();
-    });
-
-    // Snabbval kompasstreck
-    var btns = document.querySelectorAll('.compass-btn');
-    for (var i = 0; i < btns.length; i++) {
-      btns[i].addEventListener('click', function () {
-        var d = parseInt(this.getAttribute('data-deg'), 10);
-        if (isNaN(d)) return;
-        state.riktning = d;
-        riktEl.value = d;
-        highlightCompassBtn(d);
+    btns.forEach(function (b) {
+      b.addEventListener('click', function () {
+        var v = parseFloat(b.getAttribute('data-val'));
+        state[field] = v;
+        custom.value = '';
+        highlightQuick(rowId, v);
         saveState();
         render();
       });
-    }
-
-    // Rensa
-    document.getElementById('btnReset').addEventListener('click', function () {
-      clearState();
-      hojdEl.value = '';
-      vindEl.value = '';
-      riktEl.value = '';
-      highlightCompassBtn(-1);
-      render();
-      hojdEl.focus();
     });
 
-    // Kopiera
-    document.getElementById('btnCopy').addEventListener('click', function () {
-      var text = buildResultText();
-      if (!text) {
-        toast('Fyll i alla fält först');
+    custom.addEventListener('input', function () {
+      var raw = (custom.value || '').trim().replace(',', '.');
+      if (raw === '') {
+        // Lämna senaste värdet via quick-knapp, eller nollställ
         return;
       }
-      copyText(text);
-    });
-
-    // Enter på sista fältet flyttar fokus bort så tangentbordet stängs på mobilen
-    riktEl.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter') { e.preventDefault(); riktEl.blur(); }
+      var n = parseFloat(raw);
+      if (!isFinite(n)) return;
+      // Wrap vindriktning till 0–360
+      if (field === 'riktning') n = ((n % 360) + 360) % 360;
+      else if (n < min) n = min;
+      else if (n > max) n = max;
+      state[field] = n;
+      highlightQuick(rowId, n);
+      saveState();
+      render();
     });
   }
 
-  function buildResultText() {
-    var r = compute();
-    if (!r) return null;
-    var driftRounded = Math.round(r.drift);
-    var landCompass = degToCompass(r.landingDeg);
-    var lines = [];
-    lines.push('DRÖNDRIFT — Anafi USA');
-    lines.push('Höjd: ' + state.hojd + ' m');
-    lines.push('Vind: ' + formatNum(state.vind) + ' m/s från ' + Math.round(state.riktning) + '° (' + degToCompass(state.riktning) + ')');
-    lines.push('');
-    lines.push('Avdrift: ' + driftRounded + ' m åt ' + landCompass + ' (' + Math.round(r.landingDeg) + '°)');
-    lines.push('Falltid: ' + r.tFall.toFixed(1).replace('.', ',') + ' s');
-    lines.push('Modell: v_t ≈ ' + r.vTerminal + ' m/s, konservativ');
-    lines.push('');
-    lines.push('Uppskattning för säkerhetszon — ersätter inte gällande flygO.');
-    return lines.join('\n');
+  function highlightQuick(rowId, val) {
+    var row = document.getElementById(rowId);
+    var btns = row.querySelectorAll('.quick-btn');
+    btns.forEach(function (b) {
+      var bv = parseFloat(b.getAttribute('data-val'));
+      b.classList.toggle('active', bv === val);
+    });
   }
 
-  // ── Toast & clipboard ──────────────────────────────────────────────────────
+  function hydrate() {
+    if (state.hojd != null) {
+      // Om det matchar en knapp, markera; annars sätt custom-fältet
+      var btnVals = [30, 50, 80, 120];
+      if (btnVals.indexOf(state.hojd) !== -1) highlightQuick('hojdQuick', state.hojd);
+      else document.getElementById('hojdCustom').value = state.hojd;
+    }
+    if (state.vind != null) {
+      var bv = [2, 4, 6, 8];
+      if (bv.indexOf(state.vind) !== -1) highlightQuick('vindQuick', state.vind);
+      else document.getElementById('vindCustom').value = state.vind;
+    }
+    if (state.riktning != null) {
+      var rv = [0, 45, 90, 135, 180, 225, 270, 315];
+      if (rv.indexOf(state.riktning) !== -1) highlightQuick('riktQuick', state.riktning);
+      else document.getElementById('riktCustom').value = state.riktning;
+    }
+  }
+
+  // ── Actions ───────────────────────────────────────────────────────────────
+  function wireActions() {
+    document.getElementById('btnReset').addEventListener('click', function () {
+      state.hojd = null; state.vind = null; state.riktning = null;
+      try { localStorage.removeItem(STORAGE_KEY); } catch (_) {}
+      document.getElementById('hojdCustom').value = '';
+      document.getElementById('vindCustom').value = '';
+      document.getElementById('riktCustom').value = '';
+      ['hojdQuick','vindQuick','riktQuick'].forEach(function (id) {
+        document.getElementById(id).querySelectorAll('.quick-btn').forEach(function (b) {
+          b.classList.remove('active');
+        });
+      });
+      render();
+    });
+
+    document.getElementById('btnCopy').addEventListener('click', function () {
+      var r = compute();
+      if (!r) { toast('Välj höjd, vind och riktning först'); return; }
+      var lines = [];
+      lines.push('DRÖNDRIFT — Anafi USA');
+      lines.push('Höjd: ' + state.hojd + ' m');
+      lines.push('Vind: ' + formatNum(state.vind) + ' m/s från ' + Math.round(state.riktning) + '° (' + degToCompass(state.riktning) + ')');
+      lines.push('');
+      lines.push('SÄKERHETSZON: ' + Math.ceil(r.zone) + ' m åt ' + degToCompass(r.landingDeg));
+      lines.push('  Modellerad drift: ' + Math.round(r.ballistic) + ' m');
+      lines.push('  1:1-regeln:       ' + Math.round(r.oneOne) + ' m');
+      lines.push('  Styrande: ' + (r.driver === 'ballistic' ? 'modellerad drift' : '1:1-regeln'));
+      lines.push('');
+      lines.push('Uppskattning — ersätter inte gällande flygO.');
+      copyText(lines.join('\n'));
+    });
+  }
+
+  function formatNum(n) { return (Math.round(n * 10) / 10).toString().replace('.', ','); }
+
+  // ── Toast & clipboard ─────────────────────────────────────────────────────
   var _toastTimer = null;
   function toast(msg) {
     var t = document.getElementById('toast');
@@ -634,47 +653,35 @@
     if (_toastTimer) clearTimeout(_toastTimer);
     _toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2400);
   }
-
   function copyText(text) {
     function fallback() {
       try {
         var ta = document.createElement('textarea');
-        ta.value = text;
-        ta.setAttribute('readonly', '');
-        ta.style.position = 'fixed';
-        ta.style.left = '-9999px';
-        document.body.appendChild(ta);
-        ta.select();
+        ta.value = text; ta.setAttribute('readonly', '');
+        ta.style.position = 'fixed'; ta.style.left = '-9999px';
+        document.body.appendChild(ta); ta.select();
         document.execCommand('copy');
         document.body.removeChild(ta);
         toast('Kopierat');
-      } catch (e) {
-        toast('Kunde inte kopiera');
-      }
+      } catch (e) { toast('Kunde inte kopiera'); }
     }
     if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(text).then(
-        function () { toast('Kopierat'); },
-        function () { fallback(); }
-      );
-    } else {
-      fallback();
-    }
+      navigator.clipboard.writeText(text).then(function () { toast('Kopierat'); }, fallback);
+    } else { fallback(); }
   }
 
-  // ── Boot ───────────────────────────────────────────────────────────────────
+  // ── Boot ──────────────────────────────────────────────────────────────────
   function init() {
     loadState();
+    wireQuickRow('hojdQuick', 'hojd',     'hojdCustom', 0, 500);
+    wireQuickRow('vindQuick', 'vind',     'vindCustom', 0, 30);
+    wireQuickRow('riktQuick', 'riktning', 'riktCustom', 0, 360);
     hydrate();
-    wireEvents();
+    wireActions();
     render();
   }
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', init);
-  } else {
-    init();
-  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
 })();
 </script>
 
