@@ -207,6 +207,88 @@
 
   .disclaimer { font-size:0.66rem; color:var(--text-muted); text-align:center; margin-top:8px; padding:0 8px; line-height:1.55; opacity:0.85; }
 
+  /* Extern länk-kort — diskret men synlig knapp till uppvisnings-versionen */
+  .ext-link-card {
+    background:var(--bg-card); border:1px solid var(--border);
+    border-radius:var(--radius); padding:14px 14px 16px;
+    margin-bottom:10px; border-left:3px solid #c89240;
+  }
+  .ext-link-card .h {
+    font-size:0.74rem; letter-spacing:0.08em; text-transform:uppercase;
+    color:#f5c870; font-weight:700; margin-bottom:8px;
+    display:flex; align-items:center; gap:8px;
+  }
+  .ext-link-card .h .ext-tag {
+    background:#3e2a00; color:#f5c870;
+    font-family:'Courier New',monospace; font-weight:800;
+    font-size:0.62rem; padding:2px 6px; border-radius:3px;
+    letter-spacing:0.06em;
+  }
+  .ext-link-card p { font-size:0.84rem; color:var(--text-secondary); line-height:1.5; margin-bottom:10px; }
+  .ext-link-card .btn-ext {
+    width:100%; min-height:46px; padding:11px 14px;
+    background:var(--bg-input); border:1.5px solid #c89240;
+    color:#f5c870; font-family:inherit;
+    font-size:0.92rem; font-weight:700; letter-spacing:0.04em;
+    border-radius:var(--radius-sm); cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+    transition:background 0.12s;
+  }
+  .ext-link-card .btn-ext:hover { background:#3e2a00; }
+  .ext-link-card .btn-ext:active { transform:scale(0.98); }
+
+  /* Lager 1 modal — disclaimer innan navigation till extern site */
+  .ext-modal-overlay {
+    position:fixed; inset:0; background:rgba(0,0,0,0.78);
+    display:flex; align-items:center; justify-content:center;
+    padding:14px; z-index:200;
+  }
+  .ext-modal-overlay[hidden] { display:none; }
+  .ext-modal {
+    background:var(--bg-card); border:2px solid #c89240;
+    border-radius:var(--radius); padding:22px 22px 24px;
+    max-width:500px; width:100%;
+    box-shadow:0 8px 32px rgba(0,0,0,0.6);
+  }
+  .ext-modal h2 {
+    color:#f5c870; font-size:1.05rem;
+    letter-spacing:0.1em; text-transform:uppercase;
+    margin-bottom:14px; display:flex; align-items:center; gap:10px;
+  }
+  .ext-modal h2 .badge {
+    background:#c89240; color:#1a1208;
+    font-family:'Courier New',monospace; font-weight:800;
+    font-size:0.7rem; padding:3px 7px; border-radius:3px;
+  }
+  .ext-modal p { color:var(--text-secondary); font-size:0.9rem; line-height:1.6; margin-bottom:10px; }
+  .ext-modal p strong { color:var(--text-primary); }
+  .ext-modal-ack {
+    display:flex; align-items:center; gap:12px;
+    margin:18px 0 0; padding:14px;
+    background:var(--bg-input); border:1px solid var(--border);
+    border-radius:var(--radius-sm); cursor:pointer;
+    -webkit-tap-highlight-color:transparent;
+  }
+  .ext-modal-ack:hover { border-color:var(--border-focus); }
+  .ext-modal-ack input { width:22px; height:22px; accent-color:#c89240; margin:0; flex-shrink:0; cursor:pointer; }
+  .ext-modal-ack span { color:var(--text-primary); font-size:0.9rem; line-height:1.4; }
+  .ext-modal-actions { display:flex; gap:10px; margin-top:14px; }
+  .ext-modal-actions button {
+    flex:1; min-height:48px; padding:12px 14px;
+    border-radius:var(--radius-sm); font-family:inherit;
+    font-size:0.92rem; font-weight:700; letter-spacing:0.04em;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
+  .ext-modal-actions .btn-cancel {
+    background:var(--bg-input); color:var(--text-secondary); border:1px solid var(--border);
+  }
+  .ext-modal-actions .btn-cancel:hover { border-color:var(--border-focus); color:var(--text-primary); }
+  .ext-modal-actions .btn-confirm {
+    background:#c89240; color:#1a1208; border:1px solid #c89240;
+  }
+  .ext-modal-actions .btn-confirm:hover:not(:disabled) { background:#e0a050; }
+  .ext-modal-actions .btn-confirm:disabled { background:var(--bg-input); color:var(--text-muted); cursor:not-allowed; border-color:var(--border); }
+
   @media print {
     body { background:#fff; color:#000; padding:0; }
     .back-link, .actions, .compass-wrap, .toast, details.info > summary::before { display:none; }
@@ -375,7 +457,33 @@
     </div>
   </details>
 
+  <!-- Länk till extern uppvisnings-version med live vinddata -->
+  <div class="ext-link-card">
+    <div class="h"><span class="ext-tag">EXTERN</span> Live vinddata</div>
+    <p>En publik variant av sidan på extern URL hämtar verkliga vinddata från Open-Meteo (din position eller en ort). Lämpligt vid uppvisning eller planering där OPSEC inte är aktuellt.</p>
+    <button type="button" class="btn-ext" id="btnExtVersion">Öppna live-versionen →</button>
+  </div>
+
   <p class="disclaimer">Privatutvecklat fältverktyg. Uppskattning för planering — ersätter inte gällande flygO-instruktioner eller tillverkarens säkerhetsmanual.</p>
+</div>
+
+<!-- Lager 1 disclaimer-modal innan navigation till extern site -->
+<div class="ext-modal-overlay" id="extModal" role="dialog" aria-modal="true" aria-labelledby="extModalTitle" hidden>
+  <div class="ext-modal">
+    <h2 id="extModalTitle"><span class="badge">OBS</span> Du lämnar 7srapport.com</h2>
+    <p>Den externa siten är en <strong>publik webbsida</strong> som inte ingår i den OPSEC-skyddade miljön på 7srapport.com.</p>
+    <p>• Sidan <strong>kontaktar externa servrar</strong> (Open-Meteo, EU) för att hämta verklig vind.<br>
+       • Din ungefärliga position eller skriven ort kan skickas till tredjepart för att hämta vinddata.<br>
+       • Använd <strong>inte</strong> vid skarp planering eller där OPSEC är känsligt.</p>
+    <label class="ext-modal-ack">
+      <input type="checkbox" id="extAckChk">
+      <span>Jag förstår att jag lämnar den skyddade miljön och att datatrafik går till tredje part.</span>
+    </label>
+    <div class="ext-modal-actions">
+      <button type="button" class="btn-cancel" id="extCancelBtn">Stanna kvar</button>
+      <button type="button" class="btn-confirm" id="extConfirmBtn" disabled>Öppna i ny flik</button>
+    </div>
+  </div>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -689,6 +797,43 @@
     } else { fallback(); }
   }
 
+  // ── Extern länk-modal ────────────────────────────────────────────────────
+  var EXT_URL = 'https://hvss-innovation.github.io/drondrift-uppvisning/';
+
+  function wireExtModal() {
+    var openBtn = document.getElementById('btnExtVersion');
+    var modal = document.getElementById('extModal');
+    var chk = document.getElementById('extAckChk');
+    var confirmBtn = document.getElementById('extConfirmBtn');
+    var cancelBtn = document.getElementById('extCancelBtn');
+
+    function closeModal() {
+      modal.hidden = true;
+      chk.checked = false;
+      confirmBtn.disabled = true;
+    }
+
+    openBtn.addEventListener('click', function () {
+      modal.hidden = false;
+      chk.checked = false;
+      confirmBtn.disabled = true;
+    });
+    chk.addEventListener('change', function () { confirmBtn.disabled = !chk.checked; });
+    cancelBtn.addEventListener('click', closeModal);
+    confirmBtn.addEventListener('click', function () {
+      window.open(EXT_URL, '_blank', 'noopener,noreferrer');
+      closeModal();
+    });
+    // ESC stänger modalen
+    document.addEventListener('keydown', function (e) {
+      if (!modal.hidden && e.key === 'Escape') closeModal();
+    });
+    // Klick utanför modal-rutan stänger också
+    modal.addEventListener('click', function (e) {
+      if (e.target === modal) closeModal();
+    });
+  }
+
   // ── Boot ──────────────────────────────────────────────────────────────────
   function init() {
     loadState();
@@ -697,6 +842,7 @@
     wireQuickRow('riktQuick', 'riktning', 'riktCustom', 0, 360);
     hydrate();
     wireActions();
+    wireExtModal();
     render();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
