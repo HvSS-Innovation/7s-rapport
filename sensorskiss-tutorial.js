@@ -119,7 +119,7 @@
             ['kamera',      'EO/IR-kamera. Aktiveras av annan sensor (3–5 s uppstart). Identifierar i gråskala.'],
             ['umra',        'UMRA — seismisk + akustisk. ~50 m radie person, 100–200 m fordon, 5–8 km hkp. Klassificerar.'],
             ['larmmina',    'Larmmina 2B — ljud + ljus. Max 150 m till observatör. Snubbeltrådsutlöst.'],
-            ['rpas',        'UAV06 A/T (Anafi USA GOV SE). 32 min flygtid, 4 km räckvidd, EO/IR.'],
+            ['rpas',        'UAV06 A/T — quadrocopter med EO/IR. 32 min flygtid, 4 km räckvidd.'],
             ['enkelpost',   'Enkelpost — mänsklig sensor. Hög uthållighet men begränsad räckvidd.'],
             ['dubbelpost',  'Dubbelpost / patrull — två soldater eller patrullslinga.'],
             ['infart',      'In/Utfartspost — kontrollerar passage in/ut ur ett område. Riktningen visar passagen.']
