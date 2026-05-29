@@ -365,9 +365,9 @@
     <div class="h">Vindriktning <span class="sub">varifrån vinden blåser</span></div>
     <div class="quick-row compass8" id="riktQuick">
       <button type="button" class="quick-btn" data-val="0">N<span class="qb-deg">0°</span></button>
-      <button type="button" class="quick-btn" data-val="45">NÖ<span class="qb-deg">45°</span></button>
+      <button type="button" class="quick-btn" data-val="45">NO<span class="qb-deg">45°</span></button>
       <button type="button" class="quick-btn" data-val="90">Ö<span class="qb-deg">90°</span></button>
-      <button type="button" class="quick-btn" data-val="135">SÖ<span class="qb-deg">135°</span></button>
+      <button type="button" class="quick-btn" data-val="135">SO<span class="qb-deg">135°</span></button>
       <button type="button" class="quick-btn" data-val="180">S<span class="qb-deg">180°</span></button>
       <button type="button" class="quick-btn" data-val="225">SV<span class="qb-deg">225°</span></button>
       <button type="button" class="quick-btn" data-val="270">V<span class="qb-deg">270°</span></button>
@@ -536,7 +536,8 @@
   }
 
   function degToCompass(deg) {
-    var names = ['N','NNÖ','NÖ','ÖNÖ','Ö','ÖSÖ','SÖ','SSÖ','S','SSV','SV','VSV','V','VNV','NV','NNV'];
+    // Svensk konvention enligt Wikipedia: Ö för rena östan, men O i kombinationer.
+    var names = ['N','NNO','NO','ONO','Ö','OSO','SO','SSO','S','SSV','SV','VSV','V','VNV','NV','NNV'];
     return names[Math.round(deg / 22.5) % 16];
   }
 
