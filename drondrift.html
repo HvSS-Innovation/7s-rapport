@@ -84,6 +84,23 @@
   .result-card.idle .result-prompt { display:block; text-align:center; font-size:0.88rem; margin-top:8px; opacity:0.85; }
   .result-card .result-prompt { display:none; }
 
+  /* OBS-brasklapp — diskret men synlig */
+  .obs-note {
+    display:flex; align-items:flex-start; gap:8px;
+    background:var(--zone-amber-bg); border:1px solid var(--zone-amber-bd);
+    color:var(--zone-amber-tx); border-radius:var(--radius-sm);
+    padding:8px 10px; margin-bottom:10px;
+    font-size:0.78rem; line-height:1.45;
+  }
+  .obs-tag {
+    flex-shrink:0; font-family:'Courier New',monospace;
+    font-size:0.7rem; font-weight:800; letter-spacing:0.08em;
+    background:var(--zone-amber-bd); color:#1a1208;
+    padding:2px 6px; border-radius:3px;
+    margin-top:1px;
+  }
+  .obs-text { flex:1; }
+
   /* INPUT-block */
   .input-block { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px 14px; margin-bottom:10px; }
   .input-block .h { font-size:0.74rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-secondary); font-weight:700; margin-bottom:8px; display:flex; align-items:center; gap:8px; }
@@ -224,6 +241,12 @@
       </div>
     </div>
     <div class="split-foot" id="splitFoot"></div>
+  </div>
+
+  <!-- OBS-brasklapp — liten men synlig direkt under resultatet -->
+  <div class="obs-note" role="note">
+    <span class="obs-tag">OBS</span>
+    <span class="obs-text">Räknar inte med drönarens egen hastighet vid motorbortfallet — den varierar och kan flytta fallpunkten.</span>
   </div>
 
   <!-- HÖJD -->
