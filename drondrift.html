@@ -17,7 +17,7 @@
 <link rel="alternate icon" href="favicon.ico">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="DRÖNDRIFT">
-<title>DRÖNDRIFT — Säkerhetszon vid fall (Anafi USA)</title>
+<title>DRÖNDRIFT — Säkerhetszon vid fall (UAV06A)</title>
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="shared/theme-toggle.css">
 <script src="shared/theme-toggle.js" defer></script>
@@ -202,7 +202,7 @@
 <div class="container">
   <header>
     <h1>DRÖNDRIFT</h1>
-    <p>Säkerhetszon vid motorbortfall — Anafi USA</p>
+    <p>Säkerhetszon vid motorbortfall — UAV06A</p>
   </header>
 
   <a href="index.html" class="back-link">Tillbaka</a>
@@ -328,7 +328,7 @@
   </details>
 
   <details class="info">
-    <summary>Modellantaganden (Anafi USA)</summary>
+    <summary>Modellantaganden (UAV06A)</summary>
     <div class="info-body">
       <div class="kv-row"><span class="k">Massa</span><span class="v">0,5 kg</span></div>
       <div class="kv-row"><span class="k">Mått utfälld</span><span class="v">282×373×84 mm</span></div>
@@ -355,7 +355,7 @@
     </div>
   </details>
 
-  <p class="disclaimer">Privatutvecklat fältverktyg. Uppskattning för planering — ersätter inte gällande flygO-instruktioner eller Parrots säkerhetsmanual.</p>
+  <p class="disclaimer">Privatutvecklat fältverktyg. Uppskattning för planering — ersätter inte gällande flygO-instruktioner eller tillverkarens säkerhetsmanual.</p>
 </div>
 
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
@@ -627,7 +627,7 @@
       var r = compute();
       if (!r) { toast('Välj höjd, vind och riktning först'); return; }
       var lines = [];
-      lines.push('DRÖNDRIFT — Anafi USA');
+      lines.push('DRÖNDRIFT — UAV06A');
       lines.push('Höjd: ' + state.hojd + ' m');
       lines.push('Vind: ' + formatNum(state.vind) + ' m/s från ' + Math.round(state.riktning) + '° (' + degToCompass(state.riktning) + ')');
       lines.push('');
