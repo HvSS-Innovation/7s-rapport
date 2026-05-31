@@ -693,7 +693,15 @@
 
     custom.addEventListener('input', function () {
       var raw = (custom.value || '').trim().replace(',', '.');
-      if (raw === '') return;
+      if (raw === '') {
+        // Backspace till tomt → nollställ state så resultatkortet inte
+        // visar gamla beräkningen. Annars: panik-vänligheten bryter.
+        state[field] = null;
+        if (row) highlightQuick(rowId, null);
+        saveState();
+        render();
+        return;
+      }
       var n = parseFloat(raw);
       if (!isFinite(n)) return;
       if (field === 'riktning') n = ((n % 360) + 360) % 360;
