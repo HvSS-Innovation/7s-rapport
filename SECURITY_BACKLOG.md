@@ -95,7 +95,7 @@ ligger i `opsec.html`) har sorterats bort.
 
 #### MEDIUM
 
-5. **15 sidor har bara `upgrade-insecure-requests` som CSP**
+5. ✅ **15 sidor har bara `upgrade-insecure-requests` som CSP**
    - Sidor med svag CSP: `ah, data, eobusare, fors, index, minkarta,
      obo, obslosa, pedars, postschema, rassoika, scrim, sensorskiss,
      skyttebok, skyttebok-info, vader, weft, what`.
@@ -116,8 +116,15 @@ ligger i `opsec.html`) har sorterats bort.
      listan är komplett — `vader.html` behöver `https://nominatim.openstreetmap.org
      https://api.open-meteo.com https://api.smhi.se`, `minkarta.html` +
      `sensorskiss.html` behöver tile-hosts + R2-bucket-URL etc.
+   - **Åtgärdat 2026-06-02:** Utrullad i tre grupper. 5a (9 pure-form-
+     sidor) får samma strikta CSP som drondrift. 5b (6 kart-modal +
+     2 full-map = 8 sidor) får tile-hosts + Nominatim + Overpass +
+     R2-bucket i img-src/connect-src; TODO-kommentaren om CSP-utrullning
+     borttagen samtidigt. 5d (vader) får Nominatim + Open-Meteo +
+     `www.smhi.se`. Hela appen nu på strikt `default-src 'self'` —
+     `upgrade-insecure-requests` används inte längre någonstans.
 
-6. **`tipsa.html:6` + `tavla.html:6` — `connect-src https://*.workers.dev`**
+6. ✅ **`tipsa.html:6` + `tavla.html:6` — `connect-src https://*.workers.dev`**
    - Wildcard tillåter vilken som helst Cloudflare Workers-subdomän, inte
      bara den faktiska tipsa-workern.
    - **Risk:** Om en XSS skulle smyga in på dessa två sidor (osannolikt
@@ -125,8 +132,10 @@ ligger i `opsec.html`) har sorterats bort.
      vilken Workers-subdomän som helst. Liten risk i praktiken.
    - **Fix:** Snäva till exakt URL, t.ex.
      `connect-src 'self' https://7srapport-tipsa.<konto>.workers.dev`.
+   - **Åtgärdat 2026-06-02:** Wildcard ersatt med exakt
+     `https://dawn-star-7fc5.nijoda.workers.dev`.
 
-7. **`opsec.html:188–190` — hårdkodad Safari IDB-fallback**
+7. ✅ **`opsec.html:188–190` — hårdkodad Safari IDB-fallback**
    - `const known = ['minkarta', 'sensorskiss'];` används som fallback
      när `indexedDB.databases()` inte finns (Safari).
    - **Risk:** Om någon ny IndexedDB-databas läggs till (t.ex. ny
@@ -137,8 +146,13 @@ ligger i `opsec.html`) har sorterats bort.
      1. Behåll listan + lägg en konstant centralt + lint som varnar.
      2. Sätt ett sentinel-värde via `localStorage.setItem('hv_known_idbs', JSON.stringify([...]))`
         vid varje IDB-open, läs den vid wipe.
+   - **Åtgärdat 2026-06-02:** Alternativ 1. `KNOWN_IDB_DATABASES` är nu
+     en topp-konstant med sökmönster-kommentar. Två nya varningar i
+     wipe-loggen: Safari-användare ser att fallbacken kör + vilka namn
+     som testas; på Chrome/FF: om runtime-listan innehåller DB:er som
+     saknas i konstanten loggas tydlig varning så devs ser glömda namn.
 
-8. **`sensorskiss-export.js:208–211` — tysta tile-fel i PNG-export**
+8. ✅ **`sensorskiss-export.js:208–211` — tysta tile-fel i PNG-export**
    - Misslyckade tiles ritas som mörkgrön rektangel (`#152815`) utan
      varning, både i UI och i den genererade PNG:n.
    - **Risk:** Offline eller dåligt nät → operatören delar en sensor-
@@ -148,8 +162,11 @@ ligger i `opsec.html`) har sorterats bort.
    - **Fix:** Räkna misslyckade tiles i `tiles`-arrayen; om
      `> 10 %` (eller `>= 1`?) → throw, eller åtminstone visa
      toast/varning innan share-action.
+   - **Åtgärdat 2026-06-02:** Räknar failures innan ritning. Om
+     `failedTiles/total > 0.1` kastas tydligt fel — sensorskiss.html
+     fångar redan med try/catch och visar toast med meddelandet.
 
-9. **`postschema.html:549` — schedulering kan välja "busy" soldat som
+9. ✅ **`postschema.html:549` — schedulering kan välja "busy" soldat som
    absolut sista fallback**
    - `nyPerson = candidates[0] || fallback[0] || activePool[0];`
      Sista falback ignorerar både vilokrav och `busyNow`-check.
@@ -158,6 +175,9 @@ ligger i `opsec.html`) har sorterats bort.
      varning. Edge case, men ingen synlig fel-toast.
    - **Fix:** Kasta tydligt fel: `if (!nyPerson) { alert('Schemat går
      inte att lösa med givna soldater/vilokrav.'); return; }`
+   - **Åtgärdat 2026-06-02:** Sista fallback `|| activePool[0]` borttagen.
+     Om både `candidates` och `fallback` är tomma visas alert och
+     `schema = []; return;` bryter genereringen.
 
 #### LOW
 
