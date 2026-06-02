@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<!-- Strikt CSP med explicit Google Fonts-whitelist. Sidan laddar tre
+     display-fonter från CDN istället för att self-hostas under fonts/.
+     TODO: ladda ner WOFF2 för Stardos Stencil + Special Elite + JetBrains
+     Mono och flytta hit, byt sedan CSP till den strikta varianten utan
+     fonts.googleapis.com / fonts.gstatic.com (samma som opsec.html). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta name="referrer" content="strict-origin">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HV — Smakprov</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Stardos+Stencil:wght@400;700&family=Special+Elite&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #e8e4d8;
+    --card: #f3efe3;
+    --ink: #2c2a24;
+    --ink-soft: #5a564b;
+    --olive: #4a5239;
+    --border: #8a8170;
+    --rule: #b8b09c;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Special Elite', 'Courier New', monospace;
+    min-height: 100vh;
+    padding: 2.5rem 1.5rem 3rem;
+    /* svag pappersrastrering */
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0, transparent 23px, rgba(74,82,57,0.045) 23px, rgba(74,82,57,0.045) 24px);
+  }
+
+  .page { max-width: 960px; margin: 0 auto; }
+
+  /* ---- masthead ---- */
+  header.masthead {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 0.8rem;
+  }
+
+  .crest {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+  }
+
+  .crest-badge {
+    width: 36px; height: 36px;
+    border: 2px solid var(--ink);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Stardos Stencil', sans-serif;
+    font-weight: 700;
+    font-size: 0.85rem;
+    letter-spacing: 0.05em;
+  }
+
+  h1.title {
+    font-family: 'Stardos Stencil', sans-serif;
+    font-weight: 700;
+    font-size: 1.55rem;
+    letter-spacing: 0.22em;
+    margin: 0;
+  }
+
+  .blanket-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.78rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.06em;
+  }
+
+  .substrip {
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    padding: 0.55rem 0 0;
+  }
+
+  /* ---- subtitle ---- */
+  .subtitle {
+    text-align: center;
+    font-family: 'Stardos Stencil', sans-serif;
+    font-weight: 400;
+    font-size: 1.05rem;
+    letter-spacing: 0.35em;
+    color: var(--olive);
+    margin: 3.5rem 0 3rem;
+  }
+
+  /* ---- grid ---- */
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-bottom: 4rem;
+  }
+
+  @media (max-width: 720px) {
+    .grid { grid-template-columns: 1fr; max-width: 380px; margin-left:auto; margin-right:auto; }
+  }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 1rem 1.2rem 1.5rem;
+    position: relative;
+    box-shadow: 2px 2px 0 rgba(0,0,0,0.05);
+  }
+
+  .card-id {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    letter-spacing: 0.1em;
+    border-bottom: 1px dashed var(--rule);
+    padding-bottom: 0.55rem;
+    margin-bottom: 1rem;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .card-icon {
+    height: 120px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0.3rem 0 1.2rem;
+  }
+  .card-icon svg {
+    width: 100%; max-width: 140px; height: 100%;
+    color: var(--ink);
+  }
+
+  .card-label {
+    font-family: 'Stardos Stencil', sans-serif;
+    font-weight: 700;
+    font-size: 1.3rem;
+    letter-spacing: 0.25em;
+    text-align: center;
+    margin: 0 0 0.6rem;
+    color: var(--ink);
+  }
+
+  .card-desc {
+    font-size: 0.88rem;
+    line-height: 1.5;
+    text-align: center;
+    color: var(--ink-soft);
+    margin: 0;
+  }
+
+  .card-stamp {
+    position: absolute;
+    top: 14px;
+    right: 14px;
+    transform: rotate(-9deg);
+    font-family: 'Stardos Stencil', sans-serif;
+    font-size: 0.58rem;
+    letter-spacing: 0.18em;
+    color: var(--olive);
+    border: 1.4px solid var(--olive);
+    padding: 2px 6px;
+    opacity: 0.55;
+  }
+
+  /* ---- footer ---- */
+  footer.coda {
+    border-top: 1px solid var(--ink);
+    padding-top: 0.65rem;
+    display: flex;
+    justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--ink-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header class="masthead">
+    <div class="crest">
+      <div class="crest-badge">HV</div>
+      <h1 class="title">HEMVÄRNET</h1>
+    </div>
+    <span class="blanket-id">Bl 0001 &middot; 2026</span>
+  </header>
+
+  <div class="substrip">
+    <span>För enskilt bruk</span>
+    <span>Sektion A &middot; Översikt</span>
+  </div>
+
+  <p class="subtitle">V E R K T Y G &nbsp;&middot;&nbsp; F Ö R &nbsp;&middot;&nbsp; D E N &nbsp; E N S K I L D E</p>
+
+  <div class="grid">
+
+    <!-- ============ KIKARE ============ -->
+    <div class="card">
+      <div class="card-id">
+        <span>Bl 401-A</span>
+        <span>&sect; 1</span>
+      </div>
+      <div class="card-icon">
+        <!-- ersätt med kikare.png när du laddat ner den genererade bilden -->
+        <svg viewBox="0 0 140 100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="14" y="28" width="42" height="56" rx="8"/>
+          <circle cx="35" cy="68" r="11"/>
+          <rect x="84" y="28" width="42" height="56" rx="8"/>
+          <circle cx="105" cy="68" r="11"/>
+          <rect x="20" y="18" width="32" height="14" rx="3"/>
+          <rect x="88" y="18" width="32" height="14" rx="3"/>
+          <line x1="56" y1="40" x2="84" y2="40"/>
+          <line x1="56" y1="54" x2="84" y2="54"/>
+          <circle cx="70" cy="47" r="3.5"/>
+        </svg>
+      </div>
+      <h2 class="card-label">I FÄLT</h2>
+      <p class="card-desc">Observation, 7‑sekundersregeln, terräng­orientering, sensor­skiss.</p>
+      <span class="card-stamp">FÄLT</span>
+    </div>
+
+    <!-- ============ KAFFEKOPP ============ -->
+    <div class="card">
+      <div class="card-id">
+        <span>Bl 402-B</span>
+        <span>&sect; 2</span>
+      </div>
+      <div class="card-icon">
+        <!-- ersätt med kaffekopp.png när du laddat ner den genererade bilden -->
+        <svg viewBox="0 0 140 100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M58 14 Q63 22 58 30 Q53 38 58 46"/>
+          <path d="M72 10 Q77 18 72 26 Q67 34 72 42"/>
+          <path d="M38 44 L42 78 Q42 84 48 84 L86 84 Q92 84 92 78 L96 44 Z"/>
+          <path d="M96 52 Q112 54 112 64 Q112 74 96 72"/>
+          <ellipse cx="67" cy="89" rx="38" ry="4.5"/>
+        </svg>
+      </div>
+      <h2 class="card-label">PAUS</h2>
+      <p class="card-desc">Min karta, pedars, rast­platser &mdash; allt som hör till tid utan moment.</p>
+      <span class="card-stamp">PAUS</span>
+    </div>
+
+    <!-- ============ KLIPPBORD ============ -->
+    <div class="card">
+      <div class="card-id">
+        <span>Bl 403-C</span>
+        <span>&sect; 3</span>
+      </div>
+      <div class="card-icon">
+        <!-- ersätt med klippbord.png när du laddat ner den genererade bilden -->
+        <svg viewBox="0 0 140 100" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="60" y="6" width="20" height="9" rx="2"/>
+          <rect x="34" y="13" width="72" height="80" rx="3"/>
+          <rect x="44" y="28" width="9" height="9"/>
+          <path d="M45 32 L48 35.5 L53 27.5"/>
+          <line x1="58" y1="32.5" x2="96" y2="32.5"/>
+          <rect x="44" y="46" width="9" height="9"/>
+          <path d="M45 50 L48 53.5 L53 45.5"/>
+          <line x1="58" y1="50.5" x2="96" y2="50.5"/>
+          <rect x="44" y="64" width="9" height="9"/>
+          <line x1="58" y1="68.5" x2="96" y2="68.5"/>
+        </svg>
+      </div>
+      <h2 class="card-label">KANSLI</h2>
+      <p class="card-desc">Skytte­protokoll, mått och persedlar, freds­administrativa rutiner.</p>
+      <span class="card-stamp">ADMIN</span>
+    </div>
+
+  </div>
+
+  <footer class="coda">
+    <span>Ej tjänstedokument</span>
+    <span>v2026.05 &middot; Smakprov</span>
+  </footer>
+
+</div>
+</body>
+</html>
