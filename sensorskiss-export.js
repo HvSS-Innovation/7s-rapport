@@ -205,6 +205,15 @@
             }
         }
         const tiles = await runThrottled(tileJobs, 4);
+        // Räkna tile-fel innan vi börjar rita. Om för många misslyckats ger
+        // exporten en karta full av mörkgröna rutor som ser ut som
+        // omarkerad terräng — bättre att bryta och be operatören försöka
+        // igen än att låta hen dela en bild som ser vettig ut men inte är det.
+        const failedTiles = tiles.filter(t => !t.img).length;
+        if (failedTiles > 0 && failedTiles / tiles.length > 0.1) {
+            throw new Error('Kunde inte ladda ' + failedTiles + ' av ' + tiles.length
+                + ' kart-tiles. Kontrollera nätverket eller försök igen.');
+        }
         for (const t of tiles) {
             if (t.img) ctx.drawImage(t.img, t.dx, t.dy);
             else { ctx.fillStyle = '#152815'; ctx.fillRect(t.dx, t.dy, TILE_SIZE, TILE_SIZE); }
