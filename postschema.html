@@ -550,7 +550,17 @@ function genererSchema() {
             // Fallback: ignorera vilokrav om inga kandidater finns (undviker låsning)
             const fallback = activePool.filter(sol => !busyNow.has(sol))
                 .sort((a, b) => (lastFinished[a] ?? 0) - (lastFinished[b] ?? 0));
-            nyPerson = candidates[0] || fallback[0] || activePool[0];
+            nyPerson = candidates[0] || fallback[0];
+            if (!nyPerson) {
+                // Sista utvägen tidigare var activePool[0], men då tilldelades en
+                // soldat som redan stod på en post i pipelinen — silent
+                // dubbel-bokning. Bryt schema-genereringen istället så
+                // användaren ser att konfigurationen inte går ihop.
+                alert('Kan inte schemalägga: alla soldater är upptagna i nuvarande skift. '
+                    + 'Lägg till fler soldater, minska antal poster eller sänk vilokrav.');
+                schema = [];
+                return;
+            }
             passMinuter = passLangdMin; // Använder användarens inställda passlängd
         }
 
@@ -848,7 +858,7 @@ function nollstall() {
     document.getElementById('summaryContainer').innerHTML = '';
     document.getElementById('specialControls').innerHTML = '';
 
-    addPost('Värnpost', false); addPost('Eldvakt', false);
+    addPost('Värnpost', false); addPost('Eldpost', false);
     addSoldat('', false); addSoldat('', false); addSoldat('', false); addSoldat('', false);
     document.getElementById('steg2').style.display = 'none';
     document.getElementById('steg1').style.display = 'block';
@@ -861,7 +871,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const last = localStorage.getItem('sch_lastSagesman');
     if (last) document.getElementById('sagesman').value = last;
     setNow();
-    addPost('Värnpost', false); addPost('Eldvakt', false);
+    addPost('Värnpost', false); addPost('Eldpost', false);
     addSoldat('', false); addSoldat('', false); addSoldat('', false); addSoldat('', false);
 });
 
