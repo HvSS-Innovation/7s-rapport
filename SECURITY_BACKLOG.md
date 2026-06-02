@@ -57,8 +57,13 @@ ligger i `opsec.html`) har sorterats bort.
      `Special Elite`, `JetBrains Mono`) under `fonts/` precis som Inter,
      eller acceptera CDN och dokumentera explicit i README + lägg minst
      en strikt CSP-meta som matchar (det andra alternativet är värre).
+   - **Delvis åtgärdat 2026-06-02:** Strikt CSP tillagd med explicit
+     whitelist för `https://fonts.googleapis.com` (style-src) och
+     `https://fonts.gstatic.com` (font-src). Allt annat utgående är
+     blockerat. Kvar: ladda ner WOFF2-filerna och self-hosta så
+     whitelisten kan tas bort helt.
 
-4. **`service-worker.js:495–509` — PMTiles-prefetch håller hela filen i
+4. ✅ **`service-worker.js:495–509` — PMTiles-prefetch håller hela filen i
    RAM**
    - `runPmtilesJob` läser via `reader.read()` och pushar varje chunk till
      `blobChunks.push(new Blob([value]))`, sedan `new Blob(blobChunks, …)`
@@ -82,6 +87,11 @@ ligger i `opsec.html`) har sorterats bort.
      `blobChunks.push(value)` (Uint8Array, inte Blob), sätt
      `new Blob(blobChunks)` precis innan put så Vi8U inte ligger kvar
      i shadow-Blob:ar.
+   - **Åtgärdat 2026-06-02:** Bytte till `TransformStream`-pipe —
+     `resp.body.pipeThrough(progressStream)` strömmar direkt från
+     fetch-stream till `cache.put`, ingen ackumulering i RAM alls.
+     Progress observeras chunk-vis i transformen. Abort/fel propageras
+     via stream-error → cache.put rejectar → ingen partiell cache-post.
 
 #### MEDIUM
 
