@@ -199,6 +199,20 @@
         .role-btn-title { font-size: 0.95rem; font-weight: 700; color: var(--accent); letter-spacing: 0.02em; }
         .role-btn-hint { font-size: 0.74rem; font-weight: 500; color: var(--text-muted); line-height: 1.4; text-transform: none; letter-spacing: 0; }
 
+        /* Onboarding-kort ("Kom igång") — front door överst i main.
+           Renderas av skyttebokRenderOnboarding(). Visas tills roll är
+           vald OCH första passet loggats (eller hjälpen dismissats).
+           Återanvänder accent-tokens → ljust/mörkt läge utan extra regler. */
+        .onboard-card { background: var(--bg-card); border: 1px solid var(--accent); border-radius: var(--radius); padding: 16px 16px 18px; margin-bottom: 14px; }
+        .onboard-card[hidden] { display: none; }
+        .onboard-title { font-size: 1.05rem; font-weight: 700; color: var(--text-primary); letter-spacing: 0.01em; margin-bottom: 4px; }
+        .onboard-lead { font-size: 0.82rem; color: var(--text-secondary); line-height: 1.5; margin-bottom: 14px; }
+        .onboard-q { font-size: 0.78rem; font-weight: 700; color: var(--text-secondary); letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 8px; }
+        .onboard-foot { font-size: 0.74rem; color: var(--text-muted); line-height: 1.45; margin-top: 12px; }
+        .onboard-steps { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 9px; }
+        .onboard-steps li { display: flex; gap: 10px; align-items: flex-start; font-size: 0.88rem; color: var(--text-primary); line-height: 1.4; }
+        .onboard-step-num { display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; flex-shrink: 0; border-radius: 999px; background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent); font-size: 0.72rem; font-weight: 700; font-family: 'Courier New', monospace; }
+
         /* Bakåtkompat-banner (Skiva F) — visas för användare som hade
            data innan rollvalet fanns. Förslår en gissning baserat på
            skyttebok_keys_self. Försvinner när användaren bekräftar
@@ -329,6 +343,23 @@
 
         /* Tom-state */
         .empty-state { text-align: center; padding: 24px 16px; color: var(--text-muted); font-size: 0.85rem; line-height: 1.5; }
+
+        /* Sök/hoppa-till övning (v0.2a). Alla färger via CSS-variabler →
+           fungerar i både ljust och mörkt läge utan extra regler. */
+        .search-wrap { position: relative; margin-bottom: 14px; }
+        .search-input { width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-family: inherit; font-size: 0.95rem; padding: 12px 78px 12px 14px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; appearance: none; }
+        .search-input:focus { border-color: var(--border-focus); }
+        .search-input::placeholder { color: var(--text-muted); }
+        .search-clear { position: absolute; top: 50%; right: 6px; transform: translateY(-50%); min-height: 44px; min-width: 44px; padding: 0 8px; display: inline-flex; align-items: center; justify-content: center; background: none; border: none; color: var(--text-muted); font-family: inherit; font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; cursor: pointer; -webkit-tap-highlight-color: transparent; }
+        .search-clear:hover { color: var(--danger-hover); }
+        /* Explicit — skyttebok.html saknar global [hidden]-reset, så utan
+           denna skulle display:inline-flex överköra hidden-attributet. */
+        .search-clear[hidden] { display: none; }
+
+        /* Tomtillstånds-CTA i sammanfattningskortet (v0.2a) */
+        .summary-cta { grid-column: 1 / -1; margin-top: 6px; min-height: 44px; padding: 8px 12px; display: flex; align-items: center; justify-content: center; background: none; border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--accent); font-family: inherit; font-size: 0.82rem; font-weight: 600; line-height: 1.35; text-align: center; cursor: pointer; -webkit-tap-highlight-color: transparent; transition: border-color 0.15s, color 0.15s; }
+        .summary-cta:hover { border-color: var(--accent); color: var(--accent-hover); }
+        .summary-cta[hidden] { display: none; }
 
         /* Settings export/import */
         .settings-actions { display: flex; gap: 8px; margin-top: 6px; }
@@ -589,6 +620,11 @@
 
 
 <main>
+        <!-- Onboarding / "Kom igång" — front door. Renderas av JS
+             (skyttebokRenderOnboarding) utifrån roll + om pass finns.
+             Döljs helt när roll är vald och första passet loggats. -->
+        <div class="onboard-card" id="onboardingCard" hidden></div>
+
         <!-- Sammanfattning (totalt) -->
         <div class="summary-card" id="summaryCard">
             <div class="summary-stat">
@@ -603,6 +639,11 @@
                 <div class="summary-stat-value" id="statTraff">0%</div>
                 <div class="summary-stat-label">Träffkvot</div>
             </div>
+            <!-- Actionable tomtillstånd — visas av JS bara vid 0 pass och
+                 när onboarding-kortet inte redan täcker behovet. -->
+            <button class="summary-cta" id="summaryCta" type="button" hidden>
+                Logga ditt första skjutpass — öppna en övning nedan och tryck Spara
+            </button>
         </div>
 
         <!-- Inställningar — Skiva C: steg-numrerad struktur.
@@ -707,9 +748,24 @@
             <button type="button" data-filter="tillagg" onclick="skyttebokSetFilter('tillagg')">TILLÄGG · 41–129</button>
             <button type="button" data-filter="bada" onclick="skyttebokSetFilter('bada')">Båda</button>
         </div>
+        <p class="field-hint" style="margin:-8px 2px 14px;line-height:1.45">
+            <strong>BAS</strong> = grundutbildning: övning 1–40 + kompetensprov &amp; säkerhetsprov.
+            <strong>TILLÄGG</strong> = vidareutbildning, övning 41–129.
+        </p>
 
         <!-- Säkerhetsprov BAS-kort, renderas av JS -->
         <div id="sakerhetsprovRoot"></div>
+
+        <!-- Sök/hoppa-till övning (v0.2a). Statisk — överlever render() så
+             värde/fokus/caret och öppna kort bevaras (sök filtrerar via
+             hidden, anropar aldrig render()). -->
+        <div class="search-wrap" id="ovningSearchWrap">
+            <input id="ovningSearch" class="search-input" type="text" inputmode="search"
+                   enterkeyhint="search" placeholder="Sök övning, nummer eller delmoment…"
+                   autocomplete="off" spellcheck="false" aria-label="Sök övning">
+            <button class="search-clear" id="ovningSearchClear" type="button"
+                    tabindex="-1" hidden aria-label="Rensa sökning">RENSA ×</button>
+        </div>
 
         <!-- Övningslista, renderas av JS -->
         <div id="ovningarRoot"></div>
