@@ -483,12 +483,20 @@ function generateReport() {
 // ============================================================
 function copyReport() {
     const text = document.getElementById('reportOutput').textContent;
-    navigator.clipboard.writeText(text).then(() => {
+    const done = () => {
         const fb = document.getElementById('copyFeedback');
         fb.classList.add('show');
         setTimeout(() => fb.classList.remove('show'), 2000);
         if (navigator.share) navigator.share({ text }).catch(() => {});
-    });
+    };
+    const fallback = () => {
+        const ta = document.createElement('textarea'); ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (_) { alert('Kunde inte kopiera.'); }
+        document.body.removeChild(ta);
+    };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done).catch(fallback);
+    else fallback();
 }
 
 function goBack() {

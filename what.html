@@ -596,7 +596,7 @@ function generateCoTXML() {
 }
 function copyCoT() {
     const xml = generateCoTXML();
-    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat')); }
+    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat')).catch(() => showCotFeedback('Kunde inte kopiera')); }
     else { const ta = document.createElement('textarea'); ta.value = xml; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showCotFeedback('CoT XML kopierat'); } catch(e) { alert('Kunde inte kopiera.'); } document.body.removeChild(ta); }
 }
 // ── Minimal ZIP-generator (ATAK Data Package) ──────────────────────────────

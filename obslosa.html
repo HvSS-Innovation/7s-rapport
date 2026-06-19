@@ -674,7 +674,7 @@ function backToEdit() {
 }
 function resetForm() {
     if (!confirm('Nollställ formuläret?')) return;
-    ['o_terrang','o_fiende','o_egna','o_civil','b_vad','b_grans_v','b_grans_h',
+    ['till','fran','o_terrang','o_fiende','o_egna','o_civil','b_vad','b_grans_v','b_grans_h',
      'b_obs','s_tillkalla','l_ord1','l_ord2','o_eld','s_stall','s_utr','a_avlosning',
      'plats','tnr'].forEach(id => document.getElementById(id).value = '');
     backToEdit();
