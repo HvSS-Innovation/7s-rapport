@@ -8,6 +8,62 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### 2026-06-19 — Adversariellt korrekthetssvep, rapportfamiljen (11 sidor)
+
+11 template-klonade rapportsidor (ah, eobusare, index, fors, obo, obslosa,
+pedars, rassoika, scrim, weft, what) svepta med en finder per sida +
+adversariell verifiering: 33 kandidater → 20 verifierade. Grundorsak: rapport-,
+TNR-, reset- och clipboard-logiken är inlinead per sida (copy-paste), så samma
+bugg återkommer i flera sidor. Delade `lib/`-moduler skulle eliminera
+buggklasserna (se arkitektur-review, `lib/tnr.js`).
+
+#### Åtgärdat (commit `bb5529f`)
+
+- **Reset-komplett:** eobusare/obslosa/scrim rensar nu `till`/`fran`; pedars
+  rensar elverks-/lampor/ved-listor + räknare (elvId/lampId/vedId); scrim
+  nollställer `lastFotoFilename`. Kvarvarande taktisk data läckte annars in i
+  nästa rapport.
+- **Clipboard:** obo + rassoika `copyReport` fick feature-detect + `.catch` +
+  textarea-fallback (kraschade när `navigator.clipboard` saknades, tyst vid
+  nekad behörighet). scrim + what `copyCoT` fick `.catch`.
+- **fors:** extra blanksteg i "Från:" bröt monospace-justeringen i huvudet.
+
+#### Öppet — kräver beslut (OPSEC / design)
+
+13. **localStorage-chips rensas inte vid "Nollställ" (ah, weft m.fl.)**
+    - `7s_sagesman`/`7s_places`/`7s_lastSagesman` (sägesman-namnkod = PII) ligger
+      kvar efter Nollställ och auto-fylls vid nästa sidladdning.
+    - **Detta är avsiktlig "senast använd"-chips-funktion** — opsec.html är den
+      tänkta wipe-mekanismen, inte per-rapport-Nollställ. Därför EJ ändrat.
+    - **Beslut:** (a) lämna chips orörda (nuläge, bekvämt), (b) Nollställ rensar
+      även chips/PII, (c) separat "rensa sparade"-knapp. **Rek: (c).**
+
+14. **what.html:690 — foto-fil delas aldrig till TAK (`lastFotoFile` odefinierad)**
+    - `typeof lastFotoFile !== 'undefined'` är alltid falskt; foto-File:n hamnar
+      aldrig i share-payloaden.
+    - **OPSEC-känsligt:** auto-bifoga foto = skicka EXIF/GPS. EJ fixat tills
+      beslut: (a) ta bort den döda referensen (foto delas aldrig) eller
+      (b) bifoga MEN strippa EXIF först. **Rek: (a)** om foto-delning ej behövs.
+
+15. **rassoika.html:605 — lösen accepterar partiell ifyllnad** → "Lösen: ORDET - "
+    (tomt svar). Kan vara avsiktligt (bara fråga noterad). Bedömning behövs.
+
+16. **scrim.html:623 — CoT-event-UID ≠ data-package-manifest-UID** (olika
+    `Date.now()`). Spårbarhet i ATAK. Designval: matcha UID:erna?
+
+17. **what.html:497 — readFoto skriver alltid långt TNR-format** oavsett
+    `tnrLong`-toggle (`stund` är annars kort). Format-/UX-inkonsekvens.
+
+18. **what.html:694 — executePublish dubbelanropar `navigator.share()`** i
+    fallback. Redundant men tyst (LOW).
+
+19. **pedars/ah/weft — copy-feedback använder `void offsetWidth`-reflow-tricket**
+    (replay av CSS-animation). Sannolikt korrekt, INTE en bugg — men verifiera
+    att `.show`-CSS:en är `@keyframes` (self-fade), inte en transition som
+    fastnar på `opacity:1`.
+
+---
+
 ### 2026-05-29 — Audit-sweep på `arkitektur-review`-grenen
 
 Genomgång av OPSEC-kontrakt + logikbuggar i kalkylpages. Tre parallella
