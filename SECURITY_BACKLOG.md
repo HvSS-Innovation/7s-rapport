@@ -30,20 +30,27 @@ buggklasserna (se arkitektur-review, `lib/tnr.js`).
 
 #### Öppet — kräver beslut (OPSEC / design)
 
-13. **localStorage-chips rensas inte vid "Nollställ" (ah, weft m.fl.)**
+13. ✅ **localStorage-chips rensas inte vid "Nollställ" (ah, weft m.fl.)**
     - `7s_sagesman`/`7s_places`/`7s_lastSagesman` (sägesman-namnkod = PII) ligger
       kvar efter Nollställ och auto-fylls vid nästa sidladdning.
     - **Detta är avsiktlig "senast använd"-chips-funktion** — opsec.html är den
       tänkta wipe-mekanismen, inte per-rapport-Nollställ. Därför EJ ändrat.
     - **Beslut:** (a) lämna chips orörda (nuläge, bekvämt), (b) Nollställ rensar
       även chips/PII, (c) separat "rensa sparade"-knapp. **Rek: (c).**
+    - **Åtgärdat (val c, commit `7ce2cfa`):** "Rensa sparade"-knapp under
+      sägesman-chips på alla 6 sidor (index/ah/scrim/weft/what = `7s_*`,
+      postschema = `sch_*`). Rensar chips-listorna + auto-ifyllnaden
+      (`*_lastSagesman` m.fl.) med confirm. Nollställ orört; opsec.html är
+      fortf. full panik-wipe.
 
-14. **what.html:690 — foto-fil delas aldrig till TAK (`lastFotoFile` odefinierad)**
+14. ✅ **what.html:690 — foto-fil delas aldrig till TAK (`lastFotoFile` odefinierad)**
     - `typeof lastFotoFile !== 'undefined'` är alltid falskt; foto-File:n hamnar
       aldrig i share-payloaden.
     - **OPSEC-känsligt:** auto-bifoga foto = skicka EXIF/GPS. EJ fixat tills
       beslut: (a) ta bort den döda referensen (foto delas aldrig) eller
       (b) bifoga MEN strippa EXIF först. **Rek: (a)** om foto-delning ej behövs.
+    - **Åtgärdat (val a, commit `7ce2cfa`):** död referens borttagen helt; inget
+      foto bifogas TAK-share (ingen risk för rå EXIF/GPS-läcka).
 
 15. **rassoika.html:605 — lösen accepterar partiell ifyllnad** → "Lösen: ORDET - "
     (tomt svar). Kan vara avsiktligt (bara fråga noterad). Bedömning behövs.
