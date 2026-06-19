@@ -17,7 +17,7 @@ ligger i `opsec.html`) har sorterats bort.
 
 #### HIGH
 
-1. **`drondrift.html:696` — tom höjd-input nollställer inte state**
+1. ✅ **`drondrift.html:696` — tom höjd-input nollställer inte state**
    - `if (raw === '') return;` returnerar utan att rensa `state[field]`,
      så när användaren backar bort sin angivna höjd visas fortfarande
      gamla beräkningen i resultatkortet.
@@ -27,8 +27,11 @@ ligger i `opsec.html`) har sorterats bort.
    - **Risk i fält:** Operatören tror hen tömt formuläret men ser ändå ett
      "resultat" från förra körningen. Panik-vänligheten bryter.
    - **Fix:** `if (raw === '') { state[field] = null; saveState(); render(); return; }`
+   - **Åtgärdat (commit `8f622d3`):** `wireQuickRow` (drondrift.html:696–703)
+     rensar nu `state[field] = null`, tar bort snabbval-highlight, saveState +
+     render vid tomt fält. Verifierad 2026-06-19.
 
-2. **`postschema.html:373 vs :395` — två olika månadslistor (MAJ vs MAY)**
+2. ✅ **`postschema.html:373 vs :395` — två olika månadslistor (MAJ vs MAY)**
    - `toggleTnrFormat` använder svenska förkortningar (`MAJ`, `OKT`).
    - `setNow` använder engelska (`MAY`, `OCT`).
    - **Repro:** I maj eller oktober: klicka "Nu" → fält fylls med `…MAY…`
@@ -42,6 +45,14 @@ ligger i `opsec.html`) har sorterats bort.
      på en plats i filen, referera från båda funktionerna. Samma mönster
      bör kontrolleras i `obslosa.html`, `rassoika.html` och varje
      formulär med TNR-toggle.
+   - **Åtgärdat (commit `40dcad4`, 2026-06-19):** Grep visade att samma
+     copy-paste-bug fanns i **11 sidor**, inte bara de två som flaggades
+     (ah, eobusare, index, fors, obo, obslosa, pedars, rassoika, scrim,
+     weft, what). postschema var redan fixad i `7c62071`. Alla konvergerade
+     till engelsk lista (MAY/OCT) för att matcha `setNow`/`nowTnr` och NATO
+     DTG — inte svensk som fix-förslaget ovan antydde. Roten: TNR-logiken är
+     inlinead per sida; en delad `lib/tnr.js` skulle eliminera buggklassen
+     (se arkitektur-review).
 
 3. **`landing-smakprov.html:7–9` — Google Fonts CDN + ingen CSP**
    - Filen `preconnect`:ar `fonts.googleapis.com` + `fonts.gstatic.com`
@@ -190,12 +201,20 @@ ligger i `opsec.html`) har sorterats bort.
     - **Fix:** Ta bort `hojdQuick` ur båda referenserna och låt
       `wireQuickRow` antingen kortas eller behållas för just custom-
       input-delen.
+    - **Verifierad ofarlig 2026-06-19 (lämnas):** `wireQuickRow` (rad 849)
+      MÅSTE stå kvar — den wirar höjd-fritextfältet `hojdCustom` inkl.
+      HIGH #1-fixen, inte bara snabbval-raden. Endast `rowId`-argumentet
+      `'hojdQuick'` resolverar till null och no-op:ar via `if (row)`-guarden.
+      Ren kosmetik; rörs inte ("skriv inte om sådant som fungerar").
 
-11. **README §"CSP — status" — föråldrad text**
+11. ✅ **README §"CSP — status" — föråldrad text**
     - Säger "Strikt CSP på plats på opsec.html. Övriga 14 sidor har
       fortfarande den bredare originalvarianten". Verkligheten är att
       17 sidor redan har strikt CSP. Uppdatera så ingen tror sajten
       är svagare än den är.
+    - **Åtgärdat 2026-06-19:** README §"CSP — status" omskriven — alla sidor
+      har strikt CSP, `upgrade-insecure-requests` borttaget överallt, per-sida
+      allowlists dokumenterade.
 
 12. **`drondrift.html:824` — extern länk via `window.open`**
     - `window.open(EXT_URL, '_blank', 'noopener,noreferrer')` är säker.
