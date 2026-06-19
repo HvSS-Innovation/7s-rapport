@@ -572,7 +572,7 @@ function generateCoTXML() {
 }
 function copyCoT() {
     const xml = generateCoTXML();
-    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat')); }
+    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat')).catch(() => showCotFeedback('Kunde inte kopiera')); }
     else { const ta = document.createElement('textarea'); ta.value = xml; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showCotFeedback('CoT XML kopierat'); } catch(e) { alert('Kunde inte kopiera.'); } document.body.removeChild(ta); }
 }
 // ── Minimal ZIP-generator (ATAK Data Package) ──────────────────────────────
@@ -693,7 +693,8 @@ function showCopyFeedback() { const el = document.getElementById('copyFeedback')
 function backToEdit() { document.getElementById('formView').classList.remove('hidden'); document.getElementById('resultView').classList.remove('active'); }
 function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
-    ['stund','stalle','size','colour','registration','identifying','model','sagesman'].forEach(id => document.getElementById(id).value = '');
+    ['till','fran','stund','stalle','size','colour','registration','identifying','model','sagesman'].forEach(id => document.getElementById(id).value = '');
+    lastFotoFilename = '';
     backToEdit();
 }
 
