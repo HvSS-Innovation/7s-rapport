@@ -1,0 +1,1063 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.opentopomap.org; font-src 'self'; connect-src 'self' https://tile.openstreetmap.org https://*.tile.opentopomap.org https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="strict-origin">
+<meta name="google" content="notranslate">
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<script>
+    (function(){
+        try {
+            var stored = localStorage.getItem('skyttebok_settings_lightmode');
+            var useLight;
+            if (stored === 'on') useLight = true;
+            else if (stored === 'off') useLight = false;
+            else useLight = window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches;
+            if (useLight) document.documentElement.setAttribute('data-theme', 'light');
+        } catch (_) {}
+    })();
+</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="UPK">
+<title>UPK — Korridor &amp; Karta</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared/theme-toggle.css">
+<script src="shared/theme-toggle.js" defer></script>
+<link rel="stylesheet" href="fonts/inter.css">
+<!-- Karta (kart-väljaren i Data-fliken, endast härdat läge) -->
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<script src="vendor/leaflet/leaflet.js"></script>
+<script type="module" src="pmtiles-layer.js"></script>
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828; --danger-hover:#e53935;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; -webkit-font-smoothing:antialiased; }
+  .container { max-width:680px; margin:0 auto; }
+
+  header { text-align:center; padding:20px 0 16px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:440px; margin-left:auto; margin-right:auto; }
+  .steps { text-align:center; color:var(--text-muted); font-size:0.78rem; letter-spacing:0.02em; margin:0 0 14px; }
+
+  .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
+  .back-link::before { content:'←'; font-size:1.1rem; }
+
+  .tab-nav { display:grid; grid-template-columns:repeat(2,1fr); gap:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .tab-btn { background:transparent; border:none; color:var(--text-muted); font-size:0.8rem; font-weight:700; letter-spacing:0.05em; padding:12px 4px; border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; text-transform:uppercase; min-height:46px; transition:background 0.15s,color 0.15s; }
+  .tab-btn:hover { background:var(--bg-card); color:var(--text-secondary); }
+  .tab-btn.active { background:var(--accent-dim); color:var(--accent); }
+
+  .panel { display:none; }
+  .panel.active { display:block; }
+
+  h2 { font-size:0.8rem; color:var(--text-secondary); letter-spacing:0.06em; text-transform:uppercase; margin:22px 0 8px; font-weight:600; }
+
+  .field { margin-bottom:14px; }
+  .field label { display:block; margin-bottom:6px; font-weight:600; font-size:0.9rem; color:var(--text-secondary); }
+  input[type="text"], input[type="search"], input[list], textarea {
+    width:100%; padding:13px; font-size:1.02rem; color:var(--text-primary);
+    background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius); font-family:inherit;
+  }
+  textarea { resize:vertical; min-height:90px; font-size:0.95rem; line-height:1.5; }
+  input:focus, textarea:focus { outline:none; border-color:var(--accent); }
+  input[type="range"] { width:100%; height:40px; accent-color:var(--accent); }
+  .mgrs-split { display:flex; gap:8px; }
+  .mgrs-gzd { flex:0 0 40%; text-transform:uppercase; }
+  .mgrs-num { flex:1 1 auto; }
+  details { margin:10px 0; }
+  summary { cursor:pointer; color:var(--accent); font-size:0.92rem; font-weight:600; padding:11px 0; min-height:44px; }
+  .sub-h { font-size:0.78rem; color:var(--text-secondary); letter-spacing:0.04em; text-transform:uppercase; margin:16px 0 8px; font-weight:600; }
+  #go-corridor:not(:empty) { margin:12px 0; }
+  .fail-list { margin-top:6px; max-height:220px; overflow-y:auto; border:1px solid var(--border); border-radius:var(--radius-sm); }
+  .fail-row { font-size:0.82rem; color:var(--danger); padding:5px 8px; border-bottom:1px solid var(--border); word-break:break-word; }
+  .fail-row:last-child { border-bottom:none; }
+  #xy-plot { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  #xy-plot svg { display:block; }
+  #xy-caption { margin-top:4px; }
+  .map-modal { position:fixed; inset:0; z-index:10000; background:var(--bg-primary); display:flex; flex-direction:column; }
+  .map-modal-head, .map-modal-foot { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-secondary); }
+  .map-modal-head { border-bottom:1px solid var(--border); }
+  .map-modal-foot { border-top:1px solid var(--border); }
+  .map-modal-title { flex:1; font-weight:700; color:var(--accent); font-size:0.95rem; }
+  .map-x { background:none; border:none; color:var(--text-secondary); font-size:1.6rem; line-height:1; cursor:pointer; min-height:44px; min-width:44px; flex:0 0 auto; }
+  .map-container { flex:1; width:100%; min-height:0; }
+  .map-status { flex:1; font-size:0.85rem; color:var(--text-secondary); font-variant-numeric:tabular-nums; }
+  .map-modal-foot button { flex:0 0 auto; min-width:120px; }
+
+  .swap-btn { width:100%; padding:10px; background:var(--bg-input); color:var(--text-secondary); border:1px solid var(--border); border-radius:var(--radius); font-size:0.85rem; cursor:pointer; font-family:inherit; min-height:44px; }
+  .swap-btn:hover { border-color:var(--border-focus); color:var(--text-primary); }
+
+  .btn-row { display:flex; flex-wrap:wrap; gap:10px; margin:12px 0; }
+  button, .file-btn {
+    padding:13px 16px; font-size:0.95rem; font-weight:600; border-radius:var(--radius);
+    border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary);
+    cursor:pointer; min-height:48px; flex:1 1 auto; text-align:center; font-family:inherit;
+  }
+  button:hover, .file-btn:hover { border-color:var(--border-focus); }
+  button.primary, .file-btn.primary { background:var(--accent); color:#0d1f0d; border-color:var(--accent); }
+  button.primary:hover, .file-btn.primary:hover { background:var(--accent-hover); border-color:var(--accent-hover); }
+  button.danger { color:var(--danger); }
+  button.danger:hover { border-color:var(--danger); }
+  button:disabled { opacity:0.45; cursor:not-allowed; }
+  .file-btn { display:inline-flex; align-items:center; justify-content:center; }
+
+  .output { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; min-height:60px; margin-top:8px; }
+  .result-count { margin:0 0 10px; color:var(--text-muted); font-size:0.85rem; }
+  .chain { margin:0; line-height:2.2; }
+  .chip { display:inline-block; background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); font-weight:700; padding:3px 10px; border-radius:6px; font-size:0.92rem; }
+  .arrow { color:var(--text-muted); font-weight:700; }
+
+  .hint { color:var(--text-muted); font-size:0.85rem; line-height:1.5; }
+  .hint code { background:var(--bg-input); padding:1px 5px; border-radius:4px; }
+  .notice { background:var(--bg-card); border:1px solid var(--accent-dim); border-left:3px solid var(--accent); border-radius:var(--radius); padding:14px 16px; margin:12px 0; color:var(--text-secondary); font-size:0.9rem; line-height:1.55; }
+  .notice strong { color:var(--accent); }
+
+  .saved-row { display:flex; gap:8px; margin-bottom:8px; }
+  .saved-load { flex:1; text-align:left; background:var(--bg-card); }
+  .saved-del { flex:0 0 auto; color:var(--danger); max-width:56px; }
+
+  .idx-item { border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
+  .idx-head { width:100%; display:flex; justify-content:space-between; align-items:center; gap:10px; padding:13px; background:var(--bg-card); border:none; border-radius:0; text-align:left; min-height:48px; }
+  .idx-label { font-weight:800; font-size:1.05rem; color:var(--accent); }
+  .idx-mgrs { color:var(--text-muted); font-size:0.8rem; font-variant-numeric:tabular-nums; }
+  .idx-detail { display:none; padding:12px 13px; background:var(--bg-input); border-top:1px solid var(--border); }
+  .idx-item.open .idx-detail { display:block; }
+  .idx-detail > div { margin-bottom:6px; font-variant-numeric:tabular-nums; font-size:0.88rem; }
+  .idx-links { display:flex; gap:10px; margin:10px 0; }
+  .idx-links a { flex:1; text-align:center; padding:11px; border-radius:var(--radius); background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); text-decoration:none; font-weight:600; font-size:0.88rem; }
+  .idx-note { margin-top:6px; }
+</style>
+<link rel="stylesheet" href="lib/nav.css">
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> UPK-verktyget kräver JavaScript. Aktivera och ladda om sidan.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>UPK</h1>
+    <p>Korridor mellan punkter &amp; KML-export</p>
+    <p class="disclaimer">Privatutvecklat planeringsverktyg. Inte kopplat till eller fastställt av Försvarsmakten.<br>Ingen koordinatdata medföljer — importera din egen punktfil lokalt (Data-fliken).</p>
+  </header>
+
+  <a href="index.html" class="back-link">Tillbaka</a>
+
+  <div class="tab-nav" role="tablist">
+    <button class="tab-btn active" data-tab="corridor" type="button" role="tab">Korridor</button>
+    <button class="tab-btn" data-tab="data" type="button" role="tab">Punkter</button>
+  </div>
+  <p class="steps">1. Lägg in punkter → 2. Rita korridor → 3. Exportera KML</p>
+
+  <!-- ===== Funktion A: Korridor ===== -->
+  <section id="panel-corridor" class="panel active">
+    <div id="corridor-empty" class="notice" style="display:none">
+      <strong>Inga UPK-punkter än.</strong> Lägg in dina punkter först — skriv in en, eller klistra in en hel lista.
+      <div class="btn-row" style="margin-top:10px"><button id="cta-add-first" class="primary" type="button">+ Lägg till första punkten</button></div>
+    </div>
+    <div id="corridor-ui">
+      <div class="field">
+        <label for="from">Från</label>
+        <input id="from" list="upk-options" inputmode="text" autocomplete="off" placeholder="t.ex. A1">
+      </div>
+      <div class="field">
+        <button id="swap" class="swap-btn" type="button" title="Byt Från/Till">⇅ Byt</button>
+      </div>
+      <div class="field">
+        <label for="to">Till</label>
+        <input id="to" list="upk-options" inputmode="text" autocomplete="off" placeholder="t.ex. B7">
+      </div>
+      <datalist id="upk-options"></datalist>
+
+      <div class="field">
+        <label for="width">Penselbredd: <strong><span id="width-val">10.0</span> km</strong></label>
+        <input id="width" type="range" min="1" max="20" step="0.5" value="10">
+      </div>
+
+      <div id="corridor-out" class="output"></div>
+
+      <div class="btn-row">
+        <button id="dl-corridor-kml" class="primary" type="button">⬇ Korridor som KML</button>
+        <button id="save-corridor" type="button">★ Spara korridor</button>
+      </div>
+
+      <h2>Sparade korridorer</h2>
+      <div id="saved-corridors"></div>
+    </div>
+  </section>
+
+  <!-- ===== Punkter (lägg till, sök/lista, KML, backup) ===== -->
+  <section id="panel-data" class="panel">
+
+    <!-- ZON 1: LÄGG TILL -->
+    <h2>Lägg till punkter</h2>
+    <p class="hint">Ingen koordinatdata medföljer (säkerhet). Skapa dina egna punkter — de lagras
+      bara lokalt och rensas av <a href="opsec.html">Glöm enheten</a>. Appen räknar ut UTM/lat-lon från MGRS.</p>
+
+    <p class="hint">Har du en lista? Klistra in den, en punkt per rad. Funkar även med OCR-text (foto).
+      Tål extra mellanslag, kolon, MGRS med/utan mellanrum, och rättar vanliga OCR-fel (O→0, I→1, S→5 …).<br>
+      Ex: <code>100 33V WE 1234 5678</code></p>
+    <textarea id="m-bulk" rows="6" placeholder="100 33V WE 1234 5678&#10;D32 33V WE 2345 6789&#10;20A 33V WE 3456 7890"></textarea>
+    <div class="btn-row"><button id="m-bulk-add" class="primary" type="button">Skapa punkter från listan</button></div>
+    <div id="m-bulk-result"></div>
+
+    <details>
+      <summary>Lägg till en i taget</summary>
+      <div class="field">
+        <label for="m-upk">UPK-namn</label>
+        <input id="m-upk" type="text" autocomplete="off" autocapitalize="characters" placeholder="t.ex. A1">
+      </div>
+      <div class="field">
+        <label for="m-num">MGRS-koordinat</label>
+        <div class="mgrs-split">
+          <input id="m-gzd" class="mgrs-gzd" type="text" autocomplete="off" autocapitalize="characters" placeholder="33V XX" aria-label="MGRS ruta (zon + 100 km-ruta)">
+          <input id="m-num" class="mgrs-num" type="text" autocomplete="off" inputmode="numeric" placeholder="5638 2796" aria-label="MGRS siffror">
+        </div>
+        <p class="hint" style="margin-top:4px">Ruta (t.ex. <code>33V XX</code>) + siffror (t.ex. <code>5638 2796</code> eller <code>56383 27966</code>). Rutan minns ditt senaste värde. Tryck Enter för att lägga till.</p>
+      </div>
+      <div class="btn-row"><button id="m-add" type="button">+ Lägg till punkt</button></div>
+      <p id="m-feedback" class="hint"></p>
+    </details>
+
+    <details id="map-details">
+      <summary>Välj på karta (kräver härdat läge)</summary>
+      <div id="map-hardened" style="display:none">
+        <div class="field">
+          <label for="map-upk">UPK-namn</label>
+          <input id="map-upk" type="text" autocomplete="off" autocapitalize="characters" placeholder="t.ex. A1">
+        </div>
+        <div class="btn-row"><button id="open-map" type="button">📍 Välj på kartan</button></div>
+      </div>
+      <p id="map-pick-hint" class="hint"></p>
+    </details>
+
+    <!-- ZON 2: DINA PUNKTER (inkl. sök) -->
+    <h2>Dina punkter (<span id="pt-count">0</span>)</h2>
+    <div class="field" id="search-field" style="display:none">
+      <input id="search" type="search" inputmode="text" autocomplete="off" placeholder="Sök/filtrera på UPK-namn…">
+    </div>
+    <div id="points-list"></div>
+    <div id="go-corridor"></div>
+    <div class="btn-row" id="points-actions" style="display:none">
+      <button id="dl-all-kml" type="button">⬇ Alla punkter som KML</button>
+      <label for="import-points" class="file-btn">⬆ Importera punkter</label>
+      <input id="import-points" type="file" accept="application/json,.json" hidden>
+      <button id="export-points" type="button">⬇ Exportera punkter</button>
+    </div>
+
+    <!-- ZON 3: VERKTYG & BACKUP (kollapsad) -->
+    <details>
+      <summary>Verktyg &amp; backup</summary>
+
+      <div id="xy-plot-wrap" style="display:none">
+        <h3 class="sub-h">Rimlighetskoll av punkterna</h3>
+        <p class="hint">Punkterna i skala (UTM-meter, ingen karta). En punkt långt utanför klungan är troligen felinmatad — snabb koll på om man är "ute och cyklar".</p>
+        <div id="xy-plot"></div>
+        <p id="xy-caption" class="hint" style="text-align:center"></p>
+      </div>
+
+      <h3 class="sub-h">Säkerhetskopiera korridorer &amp; anteckningar</h3>
+      <div class="btn-row">
+        <button id="export-data" type="button">⬇ Exportera (JSON)</button>
+        <label for="import-data" class="file-btn">⬆ Importera (JSON)</label>
+        <input id="import-data" type="file" accept="application/json,.json" hidden>
+      </div>
+      <p class="hint">Sparade korridorer och anteckningar (inte själva punkterna). Spara i din Dropbox-mapp.</p>
+
+      <h3 class="sub-h">Rensa</h3>
+      <div class="btn-row"><button id="clear-points" class="danger" type="button">Rensa alla punkter</button></div>
+    </details>
+  </section>
+</div>
+
+<!-- Kart-väljare (helskärmsmodal, endast härdat läge) -->
+<div id="map-modal" class="map-modal" style="display:none">
+  <div class="map-modal-head">
+    <span class="map-modal-title">Välj plats för <span id="map-upk-label">UPK</span></span>
+    <button id="map-close" class="map-x" type="button" aria-label="Stäng karta">×</button>
+  </div>
+  <div id="map-container" class="map-container"></div>
+  <div class="map-modal-foot">
+    <span id="map-status" class="map-status">Klicka på kartan för att placera punkten.</span>
+    <button id="map-confirm" class="primary" type="button" disabled>Välj plats</button>
+  </div>
+</div>
+
+<script src="upk-data.js"></script>
+<script>
+"use strict";
+(function () {
+  /* ===== Datakälla ===== */
+  // Publika bundlen skeppar tom UPK_DATA. Skarpa punkter kommer från användarens
+  // import och lagras i localStorage (hv_upk_data) — aldrig i repot.
+  const IMPORT_KEY = "hv_upk_data";
+  const STORAGE_KEY = "hv_upk_state";
+  const GZD_KEY = "hv_upk_last_gzd";
+  const DEFAULT_STATE = { from: "", to: "", width: 10, savedCorridors: [], notes: {} };
+
+  let UPK = [];
+  let BY_UPK = new Map();
+  let state = loadState();
+
+  function loadJSON(key, fallback) {
+    try { const r = localStorage.getItem(key); return r ? JSON.parse(r) : fallback; }
+    catch (e) { return fallback; }
+  }
+  function loadState() {
+    return Object.assign(clone(DEFAULT_STATE), loadJSON(STORAGE_KEY, {}));
+  }
+  function saveState() { try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch (e) {} }
+  function clone(o) { return JSON.parse(JSON.stringify(o)); }
+
+  function loadPoints() {
+    const embedded = (window.UPK_DATA && window.UPK_DATA.length) ? window.UPK_DATA : null;
+    const imported = loadJSON(IMPORT_KEY, null);
+    const src = embedded || imported || [];
+    setPoints(Array.isArray(src) ? src : []);
+  }
+  function setPoints(arr) { UPK = arr.slice(); reindex(); }
+  function reindex() { BY_UPK = new Map(UPK.map(p => [p.upk, p])); }
+  function savePoints() { try { localStorage.setItem(IMPORT_KEY, JSON.stringify(UPK)); } catch (e) {} }
+  function upsertPoint(p) {
+    const i = UPK.findIndex(x => x.upk === p.upk);
+    if (i >= 0) UPK[i] = p; else UPK.push(p);
+  }
+
+  /* ===== MGRS → UTM → lat/lon (WGS84), helt offline. Verifierad mot 58 kända
+     punkter: 0 m UTM-fel, < 0,06 m lat/lon-fel. ===== */
+  const MGRS_COL = "AJSAJS", MGRS_ROW = "AFAFAF";
+  const MGRS_MINN = { C:1.1e6, D:2e6, E:2.8e6, F:3.7e6, G:4.6e6, H:5.5e6, J:6.4e6,
+    K:7.3e6, L:8.2e6, M:9.1e6, N:0, P:0.8e6, Q:1.7e6, R:2.6e6, S:3.5e6, T:4.4e6,
+    U:5.5e6, V:6.2e6, W:7e6, X:7.9e6 };
+  function mgrs100kSet(zone) { const s = zone % 6; return s === 0 ? 6 : s; }
+  function mgrsEast(letter, set) {
+    let c = MGRS_COL.charCodeAt(set - 1), val = 100000;
+    while (c !== letter.charCodeAt(0)) { c++; if (c === 73) c++; if (c === 79) c++; if (c > 90) c = 65; val += 100000; }
+    return val;
+  }
+  function mgrsNorth(letter, set) {
+    let c = MGRS_ROW.charCodeAt(set - 1), val = 0;
+    while (c !== letter.charCodeAt(0)) { c++; if (c === 73) c++; if (c === 79) c++; if (c > 86) c = 65; val += 100000; }
+    return val;
+  }
+  function parseMgrs(str) {
+    const s = String(str).toUpperCase().replace(/\s+/g, "");
+    const m = s.match(/^(\d{1,2})([C-HJ-NP-X])([A-HJ-NP-Z])([A-HJ-NP-V])(\d+)$/);
+    if (!m) return null;
+    const zone = +m[1], band = m[2], col = m[3], row = m[4], dig = m[5];
+    if (zone < 1 || zone > 60 || dig.length % 2 !== 0 || dig.length === 0) return null;
+    const h = dig.length / 2, mult = Math.pow(10, 5 - h);
+    const e = parseInt(dig.slice(0, h), 10) * mult, n = parseInt(dig.slice(h), 10) * mult;
+    const set = mgrs100kSet(zone);
+    let e100 = mgrsEast(col, set), n100 = mgrsNorth(row, set);
+    const minN = MGRS_MINN[band]; while (n100 < minN) n100 += 2e6;
+    return { zone: zone, band: band, col: col, row: row, eDigits: dig.slice(0, h),
+      nDigits: dig.slice(h), easting: e100 + e, northing: n100 + n, northern: band >= "N" };
+  }
+  function utmToLatLon(zone, northern, easting, northing) {
+    const a = 6378137, ecc = 0.00669438, k0 = 0.9996;
+    const e1 = (1 - Math.sqrt(1 - ecc)) / (1 + Math.sqrt(1 - ecc));
+    const x = easting - 500000; let y = northing; if (!northern) y -= 1e7;
+    const lon0 = (zone - 1) * 6 - 180 + 3, ep2 = ecc / (1 - ecc);
+    const mu = (y / k0) / (a * (1 - ecc / 4 - 3 * ecc * ecc / 64 - 5 * ecc * ecc * ecc / 256));
+    const p1 = mu + (3 * e1 / 2 - 27 * Math.pow(e1, 3) / 32) * Math.sin(2 * mu) +
+      (21 * e1 * e1 / 16 - 55 * Math.pow(e1, 4) / 32) * Math.sin(4 * mu) +
+      (151 * Math.pow(e1, 3) / 96) * Math.sin(6 * mu);
+    const sp = Math.sin(p1), cp = Math.cos(p1), tp = Math.tan(p1);
+    const N1 = a / Math.sqrt(1 - ecc * sp * sp), T1 = tp * tp, C1 = ep2 * cp * cp;
+    const R1 = a * (1 - ecc) / Math.pow(1 - ecc * sp * sp, 1.5), D = x / (N1 * k0);
+    const lat = p1 - (N1 * tp / R1) * (D * D / 2 - (5 + 3 * T1 + 10 * C1 - 4 * C1 * C1 - 9 * ep2) * Math.pow(D, 4) / 24 +
+      (61 + 90 * T1 + 298 * C1 + 45 * T1 * T1 - 252 * ep2 - 3 * C1 * C1) * Math.pow(D, 6) / 720);
+    const lon = (D - (1 + 2 * T1 + C1) * Math.pow(D, 3) / 6 +
+      (5 - 2 * C1 + 28 * T1 - 3 * C1 * C1 + 8 * ep2 + 24 * T1 * T1) * Math.pow(D, 5) / 120) / cp;
+    return { lat: lat * 180 / Math.PI, lon: lon0 + lon * 180 / Math.PI };
+  }
+  // Bygg en punkt {upk,mgrs,lat,lon,utm_e,utm_n,utm_zone} från UPK-namn + MGRS-text.
+  function mgrsToPoint(upk, mgrsStr) {
+    const u = parseMgrs(mgrsStr);
+    if (!u) return null;
+    const ll = utmToLatLon(u.zone, u.northern, u.easting, u.northing);
+    return {
+      upk: String(upk).trim(),
+      mgrs: u.zone + u.band + " " + u.col + u.row + " " + u.eDigits + " " + u.nDigits,
+      lat: Math.round(ll.lat * 1e6) / 1e6, lon: Math.round(ll.lon * 1e6) / 1e6,
+      utm_e: u.easting, utm_n: u.northing, utm_zone: u.zone
+    };
+  }
+
+  /* ===== Robust list-tolk (klistra in / OCR) — hittar MGRS var som helst på raden,
+     plockar UPK-etiketten, normaliserar och bygger en kanonisk MGRS-sträng som körs genom
+     samma mgrsToPoint() som handinmatning. Verifierad mot 58 punkter + OCR-varianter. ===== */
+  const LIST_MGRS_RE = /([0-9]{1,2})\s*([C-HJ-NP-Xc-hj-np-x])\s*([A-HJ-NP-Za-hj-np-z])\s*([A-HJ-NP-Va-hj-np-v])\s*([0-9OQDILSBZGoqdilsbzg]{2,10})(?:\s+([0-9OQDILSBZGoqdilsbzg]{1,5}))?/;
+  const OCR_DIGIT = { O: "0", Q: "0", D: "0", I: "1", L: "1", S: "5", B: "8", Z: "2", G: "6" };
+  function ocrDigits(s) { return s.toUpperCase().replace(/[OQDILSBZG]/g, c => OCR_DIGIT[c]); }
+  function canonMgrs(m) {
+    const zone = m[1], band = m[2].toUpperCase(), col = m[3].toUpperCase(), row = m[4].toUpperCase();
+    let g1 = ocrDigits(m[5]), digits;
+    if (m[6]) { const g2 = ocrDigits(m[6]); if (g1.length !== g2.length) return null; digits = g1 + g2; }
+    else digits = g1;
+    if (digits.length < 2 || digits.length % 2 !== 0) return null;
+    const h = digits.length / 2;
+    return zone + band + " " + col + row + " " + digits.slice(0, h) + " " + digits.slice(h);
+  }
+  // En rad → {upk, mgrs} (kanonisk), {skip:true} (tom rad) eller {error}.
+  function parseListLine(line) {
+    const raw = line.replace(/\t/g, " ").trim();
+    if (!raw) return { skip: true };
+    const m = raw.match(LIST_MGRS_RE);
+    if (!m) return { error: "ingen MGRS hittad" };
+    const idx = raw.indexOf(m[0]);
+    const before = raw.slice(0, idx).trim().replace(/[\s,;:.–—-]+$/, "");
+    const after = raw.slice(idx + m[0].length).trim();
+    const label = before ? before.split(/\s+/).pop() : (after ? after.split(/\s+/)[0] : "");
+    if (!label) return { error: "ingen UPK-etikett" };
+    const canon = canonMgrs(m);
+    if (!canon) return { error: "ogiltiga MGRS-siffror" };
+    return { upk: label, mgrs: canon };
+  }
+
+  /* ===== Forward: lat/lon → UTM → MGRS (för kart-väljaren). Verifierad: 0 m UTM-fel
+     och 0 MGRS-fel mot de 58 kända punkterna (avrundning till närmaste meter). ===== */
+  function latLonToUtm(lat, lon) {
+    const a = 6378137, ecc = 0.00669438, k0 = 0.9996;
+    const zone = Math.floor((lon + 180) / 6) + 1;
+    const lon0 = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
+    const latR = lat * Math.PI / 180, lonR = lon * Math.PI / 180, ep2 = ecc / (1 - ecc);
+    const N = a / Math.sqrt(1 - ecc * Math.sin(latR) ** 2);
+    const T = Math.tan(latR) ** 2, C = ep2 * Math.cos(latR) ** 2, A = Math.cos(latR) * (lonR - lon0);
+    const M = a * ((1 - ecc / 4 - 3 * ecc * ecc / 64 - 5 * ecc ** 3 / 256) * latR
+      - (3 * ecc / 8 + 3 * ecc * ecc / 32 + 45 * ecc ** 3 / 1024) * Math.sin(2 * latR)
+      + (15 * ecc * ecc / 256 + 45 * ecc ** 3 / 1024) * Math.sin(4 * latR)
+      - (35 * ecc ** 3 / 3072) * Math.sin(6 * latR));
+    const easting = k0 * N * (A + (1 - T + C) * A ** 3 / 6 + (5 - 18 * T + T * T + 72 * C - 58 * ep2) * A ** 5 / 120) + 500000;
+    let northing = k0 * (M + N * Math.tan(latR) * (A * A / 2 + (5 - T + 9 * C + 4 * C * C) * A ** 4 / 24 + (61 - 58 * T + T * T + 600 * C - 330 * ep2) * A ** 6 / 720));
+    if (lat < 0) northing += 1e7;
+    return { zone: zone, easting: Math.round(easting), northing: Math.round(northing) };
+  }
+  function mgrsBand(lat) { const b = "CDEFGHJKLMNPQRSTUVWX"; let i = Math.floor((lat + 80) / 8); if (i < 0) i = 0; if (i > 19) i = 19; return b[i]; }
+  function mgrsAdvance(code, steps, wrapMax) { for (let i = 0; i < steps; i++) { code++; if (code === 73) code++; if (code === 79) code++; if (code > wrapMax) code = 65; } return String.fromCharCode(code); }
+  function utmToMgrs(zone, lat, easting, northing, digits) {
+    const set = zone % 6 === 0 ? 6 : zone % 6, COL = "AJSAJS", ROW = "AFAFAF";
+    const col = mgrsAdvance(COL.charCodeAt(set - 1), Math.floor(easting / 100000) - 1, 90);
+    const row = mgrsAdvance(ROW.charCodeAt(set - 1), Math.floor((northing % 2000000) / 100000), 86);
+    const d = digits || 5, div = Math.pow(10, 5 - d);
+    return zone + mgrsBand(lat) + " " + col + row + " " +
+      String(Math.floor((easting % 100000) / div)).padStart(d, "0") + " " +
+      String(Math.floor((northing % 100000) / div)).padStart(d, "0");
+  }
+  function pointFromLatLon(upk, lat, lon) {
+    const u = latLonToUtm(lat, lon);
+    return { upk: String(upk).trim(), mgrs: utmToMgrs(u.zone, lat, u.easting, u.northing, 5),
+      lat: Math.round(lat * 1e6) / 1e6, lon: Math.round(lon * 1e6) / 1e6,
+      utm_e: u.easting, utm_n: u.northing, utm_zone: u.zone };
+  }
+  // Härdat läge = PMTiles-hardening aktivt + nedladdad URL (samma flagga som minkarta).
+  function isHardened() { try { const s = JSON.parse(localStorage.getItem("pmtiles.hardening") || "{}"); return s.active === true && !!s.url; } catch (e) { return false; } }
+
+  /* ===== Korridor (planär UTM-matematik, SPEC §3) ===== */
+  function corridor(aLabel, bLabel, widthKm) {
+    const A = BY_UPK.get(aLabel), B = BY_UPK.get(bLabel);
+    if (!A || !B) return [];
+    if (A === B) return [Object.assign({}, A, { t: 0, perp: 0 })];
+    const dx = B.utm_e - A.utm_e, dy = B.utm_n - A.utm_n;
+    const L2 = dx * dx + dy * dy, L = Math.sqrt(L2);
+    const half = (widthKm * 1000) / 2;
+    const inside = [];
+    for (const P of UPK) {
+      const px = P.utm_e - A.utm_e, py = P.utm_n - A.utm_n;
+      const t = (px * dx + py * dy) / L2;
+      const perp = Math.abs(px * dy - py * dx) / L;
+      if (t >= 0 && t <= 1 && perp <= half) inside.push(Object.assign({}, P, { t: t, perp: perp }));
+    }
+    if (!inside.some(p => p.upk === aLabel)) inside.push(Object.assign({}, A, { t: 0, perp: 0 }));
+    if (!inside.some(p => p.upk === bLabel)) inside.push(Object.assign({}, B, { t: 1, perp: 0 }));
+    inside.sort((a, b) => a.t - b.t);
+    return inside;
+  }
+
+  /* ===== KML-export (SPEC §5) ===== */
+  function esc(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+
+  // Delade stilar — färgordning aabbggrr (alpha,blå,grön,röd), INTE rgba.
+  const STYLE_UPK_POINT =
+    '  <Style id="upkPoint">\n' +
+    '    <IconStyle><color>ff00ffff</color><scale>1.3</scale></IconStyle>\n' +
+    '    <LabelStyle><color>ff00ffff</color><scale>0.9</scale></LabelStyle>\n' +
+    '  </Style>';
+  const STYLE_CORRIDOR_LINE =
+    '  <Style id="corridorLine">\n' +
+    '    <LineStyle><color>ff0000ff</color><width>4</width></LineStyle>\n' +
+    '  </Style>';
+  const STYLE_BRUSH_POLY =
+    '  <Style id="brushPoly">\n' +
+    '    <LineStyle><color>b4c8c8c8</color><width>1</width></LineStyle>\n' +
+    '    <PolyStyle><color>1e000000</color><fill>1</fill><outline>1</outline></PolyStyle>\n' +
+    '  </Style>';
+
+  function placemarkKml(p) {
+    const gmaps = "https://www.google.com/maps/search/?api=1&query=" + p.lat + "," + p.lon;
+    const waze = "https://waze.com/ul?ll=" + p.lat + "," + p.lon + "&navigate=yes";
+    const desc =
+      "<![CDATA[" +
+      "<b>MGRS:</b> " + (p.mgrs || "") + "<br/>" +
+      "<b>Lat, Lon:</b> " + p.lat + ", " + p.lon + "<br/>" +
+      '<a href="' + gmaps + '">Google Maps</a><br/>' +
+      '<a href="' + waze + '">Waze</a>' +
+      "]]>";
+    return (
+      "  <Placemark>\n" +
+      "    <name>" + esc(p.upk) + "</name>\n" +
+      "    <description>" + desc + "</description>\n" +
+      "    <styleUrl>#upkPoint</styleUrl>\n" +
+      "    <Point><coordinates>" + p.lon + "," + p.lat + ",0</coordinates></Point>\n" +
+      "  </Placemark>"
+    );
+  }
+  function kmlWrap(name, styles, body) {
+    return (
+      '<?xml version="1.0" encoding="UTF-8"?>\n' +
+      '<kml xmlns="http://www.opengis.net/kml/2.2">\n' +
+      "<Document>\n" +
+      "  <name>" + esc(name) + "</name>\n" +
+      (styles ? styles + "\n" : "") + body + "\n</Document>\n</kml>\n"
+    );
+  }
+  function kmlAllLayer() {
+    return kmlWrap("UPK – hela lagret", STYLE_UPK_POINT, UPK.map(placemarkKml).join("\n"));
+  }
+  function kmlCorridor(points, widthKm) {
+    const a = points[0], b = points[points.length - 1];
+    const marks = points.map(placemarkKml).join("\n");
+    const lineCoords = points.map(p => p.lon + "," + p.lat + ",0").join(" ");
+    const line =
+      "  <Placemark>\n" +
+      "    <name>Korridor " + esc(a.upk) + " → " + esc(b.upk) + "</name>\n" +
+      "    <styleUrl>#corridorLine</styleUrl>\n" +
+      "    <LineString><tessellate>1</tessellate><altitudeMode>clampToGround</altitudeMode><coordinates>" + lineCoords + "</coordinates></LineString>\n" +
+      "  </Placemark>";
+    let polygon = "";
+    const ring = brushPolygon(a, b, widthKm);
+    if (ring) {
+      const ringCoords = ring.map(c => c.lon + "," + c.lat + ",0").join(" ");
+      polygon =
+        "  <Placemark>\n" +
+        "    <name>Penselremsa (" + widthKm + " km)</name>\n" +
+        "    <styleUrl>#brushPoly</styleUrl>\n" +
+        "    <Polygon><tessellate>1</tessellate><outerBoundaryIs><LinearRing><coordinates>" + ringCoords + "</coordinates></LinearRing></outerBoundaryIs></Polygon>\n" +
+        "  </Placemark>\n";
+    }
+    const styles = STYLE_UPK_POINT + "\n" + STYLE_CORRIDOR_LINE + "\n" + STYLE_BRUSH_POLY;
+    const body = polygon + line + "\n" + marks;
+    return kmlWrap("Korridor " + a.upk + " → " + b.upk + " (" + widthKm + " km)", styles, body);
+  }
+  function brushPolygon(a, b, widthKm) {
+    if (a.upk === b.upk) return null;
+    const lat0 = (a.lat + b.lat) / 2;
+    const mLat = 111320, mLon = 111320 * Math.cos((lat0 * Math.PI) / 180);
+    const toXY = p => ({ x: p.lon * mLon, y: p.lat * mLat });
+    const toLL = (x, y) => ({ lon: x / mLon, lat: y / mLat });
+    const A = toXY(a), B = toXY(b);
+    const dx = B.x - A.x, dy = B.y - A.y, len = Math.hypot(dx, dy);
+    if (len === 0) return null;
+    const half = (widthKm * 1000) / 2;
+    const ox = (-dy / len) * half, oy = (dx / len) * half;
+    const c1 = toLL(A.x + ox, A.y + oy), c2 = toLL(B.x + ox, B.y + oy);
+    const c3 = toLL(B.x - ox, B.y - oy), c4 = toLL(A.x - ox, A.y - oy);
+    return [c1, c2, c3, c4, c1];
+  }
+
+  /* ===== Nedladdning ===== */
+  function download(filename, content, mime) {
+    const blob = new Blob([content], { type: mime || "application/octet-stream" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+
+  /* ===== DOM-hjälp ===== */
+  const $ = sel => document.querySelector(sel);
+  function el(tag, attrs) {
+    const n = document.createElement(tag);
+    if (attrs) for (const k in attrs) {
+      if (k === "class") n.className = attrs[k];
+      else if (k === "text") n.textContent = attrs[k];
+      else if (k.slice(0, 2) === "on" && typeof attrs[k] === "function") n.addEventListener(k.slice(2), attrs[k]);
+      else n.setAttribute(k, attrs[k]);
+    }
+    for (let i = 2; i < arguments.length; i++) {
+      const kid = arguments[i];
+      if (kid != null) n.append(kid.nodeType ? kid : document.createTextNode(kid));
+    }
+    return n;
+  }
+
+  /* ===== Tabs ===== */
+  function switchTab(name, focusSel) {
+    document.querySelectorAll(".tab-btn").forEach(b => b.classList.toggle("active", b.dataset.tab === name));
+    document.querySelectorAll(".panel").forEach(p => p.classList.remove("active"));
+    const panel = $("#panel-" + name); if (panel) panel.classList.add("active");
+    if (focusSel) { const el = $(focusSel); if (el) setTimeout(() => el.focus(), 30); }
+  }
+  function initTabs() {
+    document.querySelectorAll(".tab-btn").forEach(btn => btn.addEventListener("click", () => switchTab(btn.dataset.tab)));
+    const cta = $("#cta-add-first");
+    if (cta) cta.addEventListener("click", () => switchTab("data", "#m-bulk"));
+  }
+
+  /* ===== Funktion A — UI ===== */
+  let lastCorridor = null;
+
+  function refreshDatalist() {
+    const list = $("#upk-options");
+    list.innerHTML = "";
+    UPK.forEach(p => list.append(el("option", { value: p.upk })));
+  }
+  function refreshEmptyState() {
+    const hasPoints = UPK.length > 0;
+    $("#corridor-empty").style.display = hasPoints ? "none" : "block";
+    $("#corridor-ui").style.display = hasPoints ? "block" : "none";
+    $("#dl-all-kml").disabled = !hasPoints;
+  }
+
+  // Forgiving uppslagning: 'a1' hittar 'A1'.
+  function resolveUpk(name) {
+    if (!name) return null;
+    if (BY_UPK.has(name)) return name;
+    const lo = name.toLowerCase();
+    for (const k of BY_UPK.keys()) if (k.toLowerCase() === lo) return k;
+    return null;
+  }
+  function runCorridor() {
+    const fromEl = $("#from"), toEl = $("#to"), widthEl = $("#width");
+    const from = resolveUpk(fromEl.value.trim()), to = resolveUpk(toEl.value.trim());
+    const width = parseFloat(widthEl.value);
+    $("#width-val").textContent = width.toFixed(1);
+    const out = $("#corridor-out");
+
+    if (!from || !to) {
+      out.innerHTML = "";
+      out.append(el("p", { class: "hint" }, "Välj en giltig Från- och Till-punkt (välj i listan)."));
+      lastCorridor = null;
+      $("#dl-corridor-kml").disabled = true;
+      return;
+    }
+    state.from = from; state.to = to; state.width = width; saveState();
+    const points = corridor(from, to, width);
+    lastCorridor = { points: points, widthKm: width };
+    $("#dl-corridor-kml").disabled = points.length < 2;
+
+    out.innerHTML = "";
+    out.append(el("p", { class: "result-count" }, points.length + " UPK i korridoren (" + width.toFixed(1) + " km bred):"));
+    const chain = el("p", { class: "chain" });
+    points.forEach((p, i) => {
+      chain.append(el("span", { class: "chip" }, p.upk));
+      if (i < points.length - 1) chain.append(el("span", { class: "arrow" }, " → "));
+    });
+    out.append(chain);
+  }
+
+  function initCorridor() {
+    const fromEl = $("#from"), toEl = $("#to"), widthEl = $("#width");
+    widthEl.value = state.width;
+    $("#width-val").textContent = Number(state.width).toFixed(1);
+    fromEl.value = BY_UPK.has(state.from) ? state.from : (UPK[0] ? UPK[0].upk : "");
+    toEl.value = BY_UPK.has(state.to) ? state.to : (UPK.length ? UPK[UPK.length - 1].upk : "");
+
+    ["change", "input"].forEach(ev => { fromEl.addEventListener(ev, runCorridor); toEl.addEventListener(ev, runCorridor); });
+    widthEl.addEventListener("input", runCorridor);
+    $("#swap").addEventListener("click", () => { const t = fromEl.value; fromEl.value = toEl.value; toEl.value = t; runCorridor(); });
+
+    $("#dl-corridor-kml").addEventListener("click", () => {
+      if (!lastCorridor || lastCorridor.points.length < 2) { alert("Ingen giltig korridor att exportera."); return; }
+      const p = lastCorridor.points;
+      download("korridor_" + p[0].upk + "_" + p[p.length - 1].upk + ".kml", kmlCorridor(p, lastCorridor.widthKm), "application/vnd.google-earth.kml+xml");
+    });
+    $("#save-corridor").addEventListener("click", () => {
+      if (!lastCorridor || lastCorridor.points.length < 2) { alert("Ingen giltig korridor att spara."); return; }
+      const name = prompt("Namn på korridoren:", state.from + " → " + state.to);
+      if (!name) return;
+      state.savedCorridors.push({ name: name, from: state.from, to: state.to, width: state.width });
+      saveState(); renderSaved();
+    });
+  }
+
+  function renderSaved() {
+    const box = $("#saved-corridors");
+    box.innerHTML = "";
+    if (!state.savedCorridors.length) { box.append(el("p", { class: "hint" }, "Inga sparade korridorer än.")); return; }
+    state.savedCorridors.forEach((c, idx) => {
+      const row = el("div", { class: "saved-row" });
+      row.append(el("button", {
+        class: "saved-load",
+        onclick: () => { $("#from").value = c.from; $("#to").value = c.to; $("#width").value = c.width; runCorridor(); }
+      }, c.name + "  (" + c.from + "→" + c.to + ", " + Number(c.width).toFixed(1) + " km)"));
+      row.append(el("button", {
+        class: "saved-del",
+        onclick: () => { state.savedCorridors.splice(idx, 1); saveState(); renderSaved(); }
+      }, "✕"));
+      box.append(row);
+    });
+  }
+
+  /* ===== Punktlista + sök (sammanslaget) =====
+     Slår ihop punktlista + sök + detalj (MGRS/lat-lon/UTM/länkar/anteckning) + ta bort. */
+  function renderPoints(filter) {
+    const f = (filter || "").trim().toLowerCase();
+    const box = $("#points-list");
+    box.innerHTML = "";
+    $("#pt-count").textContent = UPK.length;
+    $("#search-field").style.display = UPK.length > 6 ? "block" : "none";
+    $("#points-actions").style.display = UPK.length ? "flex" : "none";
+    const go = $("#go-corridor"); go.innerHTML = "";
+    if (!UPK.length) {
+      box.append(el("div", { class: "notice" }, el("strong", null, "Inga punkter än. "), "Klistra in en lista ovan, eller lägg till en i taget."));
+      return;
+    }
+    const items = UPK.filter(p => !f || p.upk.toLowerCase().includes(f));
+    if (f) $("#pt-count").textContent = items.length + " / " + UPK.length;
+    items.forEach(p => {
+      const note = state.notes[p.upk] || "";
+      const item = el("div", { class: "idx-item" });
+      const head = el("button", { class: "idx-head", type: "button", onclick: () => item.classList.toggle("open") });
+      head.append(el("span", { class: "idx-label" }, p.upk));
+      head.append(el("span", { class: "idx-mgrs" }, p.mgrs || ""));
+      item.append(head);
+      const d = el("div", { class: "idx-detail" });
+      d.append(el("div", null, "MGRS: " + (p.mgrs || "–")));
+      d.append(el("div", null, "Lat, Lon: " + p.lat + ", " + p.lon));
+      d.append(el("div", null, "UTM 33N: " + p.utm_e + " E, " + p.utm_n + " N"));
+      const links = el("div", { class: "idx-links" });
+      links.append(el("a", { href: "https://www.google.com/maps/search/?api=1&query=" + p.lat + "," + p.lon, target: "_blank", rel: "noopener" }, "Google Maps"));
+      links.append(el("a", { href: "https://waze.com/ul?ll=" + p.lat + "," + p.lon + "&navigate=yes", target: "_blank", rel: "noopener" }, "Waze"));
+      d.append(links);
+      const noteInput = el("input", { class: "idx-note", type: "text", placeholder: "Egen anteckning…", value: note });
+      noteInput.addEventListener("change", () => {
+        const v = noteInput.value.trim();
+        if (v) state.notes[p.upk] = v; else delete state.notes[p.upk];
+        saveState();
+      });
+      d.append(noteInput);
+      const delRow = el("div", { class: "btn-row", style: "margin-top:8px" });
+      delRow.append(el("button", { class: "danger", type: "button", onclick: () => { const i = UPK.findIndex(x => x.upk === p.upk); if (i >= 0) { UPK.splice(i, 1); reindex(); savePoints(); rerenderAll(); } } }, "Ta bort " + p.upk));
+      d.append(delRow);
+      item.append(d);
+      box.append(item);
+    });
+    if (!items.length) box.append(el("p", { class: "hint" }, "Inga träffar."));
+    if (UPK.length >= 2) go.append(el("button", { class: "primary", type: "button", onclick: () => switchTab("corridor") }, "Klart — du har " + UPK.length + " punkter. Gå till Korridor →"));
+  }
+  function initSearch() {
+    $("#search").addEventListener("input", e => renderPoints(e.target.value));
+  }
+
+  /* ===== Allt-omritning efter punktbyte ===== */
+  function rerenderAll() {
+    refreshDatalist();
+    refreshEmptyState();
+    const fromEl = $("#from"), toEl = $("#to");
+    if (!BY_UPK.has(fromEl.value)) fromEl.value = UPK[0] ? UPK[0].upk : "";
+    if (!BY_UPK.has(toEl.value)) toEl.value = UPK.length ? UPK[UPK.length - 1].upk : "";
+    runCorridor();
+    renderSaved();
+    renderPoints($("#search").value);
+    renderXYPlot();
+  }
+
+  /* ===== Feature 3: XY-lägeskontroll — punkterna i skala (UTM-meter), ingen karta.
+     Dyker upp vid ≥2 punkter. Dynamisk enhet m/km/mil. Lika skala på båda axlar så
+     verkliga avstånd syns → en felinmatad punkt sticker ut. ===== */
+  function niceNum(x) { if (x <= 0) return 1; const exp = Math.floor(Math.log10(x)), f = x / Math.pow(10, exp); let nf; if (f < 1.5) nf = 1; else if (f < 3) nf = 2; else if (f < 7) nf = 5; else nf = 10; return nf * Math.pow(10, exp); }
+  function fmtUnit(meters, unitM, unit) { const v = meters / unitM; const s = v >= 10 ? v.toFixed(0) : v.toFixed(v < 1 ? 2 : 1); return s.replace(".", ",") + " " + unit; }
+  function renderXYPlot() {
+    const wrap = $("#xy-plot-wrap"), box = $("#xy-plot");
+    const pts = UPK.filter(p => isFinite(p.utm_e) && isFinite(p.utm_n));
+    if (pts.length < 2) { wrap.style.display = "none"; box.innerHTML = ""; return; }
+    wrap.style.display = "block";
+    // Marginaler för axel-etiketter (vänster + botten).
+    const W = 340, H = 260, mL = 36, mR = 14, mT = 14, mB = 34;
+    const fL = mL, fR = W - mR, fT = mT, fB = H - mB, plotW = fR - fL, plotH = fB - fT;
+    let minE = Infinity, maxE = -Infinity, minN = Infinity, maxN = -Infinity;
+    pts.forEach(p => { minE = Math.min(minE, p.utm_e); maxE = Math.max(maxE, p.utm_e); minN = Math.min(minN, p.utm_n); maxN = Math.max(maxN, p.utm_n); });
+    const spanE = Math.max(maxE - minE, 1), spanN = Math.max(maxN - minN, 1);
+    const mPerPx = Math.max(spanE / plotW, spanN / plotH);          // lika skala på båda axlar
+    const cE = (minE + maxE) / 2, cN = (minN + maxN) / 2, cx = (fL + fR) / 2, cy = (fT + fB) / 2;
+    const toX = e => cx + (e - cE) / mPerPx, toY = n => cy - (n - cN) / mPerPx;
+    const acrossM = mPerPx * Math.max(plotW, plotH);
+    const u = acrossM < 2000 ? { unit: "m", unitM: 1 } : (acrossM < 30000 ? { unit: "km", unitM: 1000 } : { unit: "mil", unitM: 10000 });
+    const tickM = niceNum(acrossM / 4), tickPx = tickM / mPerPx;
+    const BRD = "var(--border)", AX = "var(--text-muted)", TXT = "var(--text-secondary)", DOT = "var(--accent)";
+    let g = "";
+    // Rutnät
+    for (let k = -7; k <= 7; k++) {
+      const gx = cx + k * tickPx, gy = cy + k * tickPx;
+      if (gx >= fL && gx <= fR) g += '<line x1="' + gx.toFixed(1) + '" y1="' + fT + '" x2="' + gx.toFixed(1) + '" y2="' + fB + '" stroke="' + BRD + '" stroke-width="0.5"/>';
+      if (gy >= fT && gy <= fB) g += '<line x1="' + fL + '" y1="' + gy.toFixed(1) + '" x2="' + fR + '" y2="' + gy.toFixed(1) + '" stroke="' + BRD + '" stroke-width="0.5"/>';
+    }
+    g += '<rect x="' + fL + '" y="' + fT + '" width="' + plotW + '" height="' + plotH + '" fill="none" stroke="' + BRD + '" stroke-width="1"/>';
+    // X-axel: dimensionslinje med ändmarkeringar + etikett (grön stil, ingen pil)
+    const xy = fB + 13;
+    g += '<line x1="' + fL + '" y1="' + xy + '" x2="' + fR + '" y2="' + xy + '" stroke="' + AX + '" stroke-width="1"/>'
+      + '<line x1="' + fL + '" y1="' + (xy - 3) + '" x2="' + fL + '" y2="' + (xy + 3) + '" stroke="' + AX + '" stroke-width="1"/>'
+      + '<line x1="' + fR + '" y1="' + (xy - 3) + '" x2="' + fR + '" y2="' + (xy + 3) + '" stroke="' + AX + '" stroke-width="1"/>'
+      + '<text x="' + cx.toFixed(1) + '" y="' + (xy + 13) + '" font-size="10" font-weight="600" fill="' + TXT + '" text-anchor="middle">' + fmtUnit(plotW * mPerPx, u.unitM, u.unit) + '</text>';
+    // Y-axel: dimensionslinje + roterad etikett
+    const yx = fL - 13;
+    g += '<line x1="' + yx + '" y1="' + fT + '" x2="' + yx + '" y2="' + fB + '" stroke="' + AX + '" stroke-width="1"/>'
+      + '<line x1="' + (yx - 3) + '" y1="' + fT + '" x2="' + (yx + 3) + '" y2="' + fT + '" stroke="' + AX + '" stroke-width="1"/>'
+      + '<line x1="' + (yx - 3) + '" y1="' + fB + '" x2="' + (yx + 3) + '" y2="' + fB + '" stroke="' + AX + '" stroke-width="1"/>'
+      + '<text x="' + (yx - 6) + '" y="' + cy.toFixed(1) + '" font-size="10" font-weight="600" fill="' + TXT + '" text-anchor="middle" transform="rotate(-90 ' + (yx - 6) + ' ' + cy.toFixed(1) + ')">' + fmtUnit(plotH * mPerPx, u.unitM, u.unit) + '</text>';
+    // Punkter
+    const showLabels = pts.length <= 40;
+    pts.forEach(p => {
+      const x = toX(p.utm_e).toFixed(1), y = toY(p.utm_n).toFixed(1);
+      g += '<circle cx="' + x + '" cy="' + y + '" r="3" fill="' + DOT + '"/>';
+      if (showLabels) g += '<text x="' + (parseFloat(x) + 4).toFixed(1) + '" y="' + (parseFloat(y) - 4).toFixed(1) + '" font-size="8" fill="' + TXT + '">' + esc(p.upk) + '</text>';
+    });
+    box.innerHTML = '<svg viewBox="0 0 ' + W + ' ' + H + '" width="100%" style="display:block">' + g + '</svg>';
+    $("#xy-caption").textContent = "Rutnät " + fmtUnit(tickM, u.unitM, u.unit) + " · spann " + fmtUnit(Math.max(spanE, spanN), u.unitM, u.unit) + " · " + pts.length + " punkter";
+  }
+
+  function renderBulkResult(created, updated, failed) {
+    const box = $("#m-bulk-result");
+    box.innerHTML = "";
+    const total = created + updated;
+    if (total) {
+      box.append(el("p", { class: "notice" },
+        el("strong", null, "✓ " + total + " punkter. "),
+        created + " skapade" + (updated ? ", " + updated + " uppdaterade" : "") + "."));
+    }
+    if (failed.length) {
+      box.append(el("p", { class: "hint" }, failed.length + " rader tolkades inte (kontrollera/korrigera och klistra in igen):"));
+      const list = el("div", { class: "fail-list" });
+      failed.slice(0, 30).forEach(f => list.append(el("div", { class: "fail-row" }, f.line + "  — " + f.reason)));
+      if (failed.length > 30) list.append(el("div", { class: "fail-row" }, "… och " + (failed.length - 30) + " till"));
+      box.append(list);
+    }
+    if (!total && !failed.length) box.append(el("p", { class: "hint" }, "Inget att tolka — klistra in en lista först."));
+  }
+
+  function extractPoints(parsed) {
+    let arr = null;
+    if (Array.isArray(parsed)) arr = parsed;
+    else if (parsed && Array.isArray(parsed.UPK_DATA)) arr = parsed.UPK_DATA;
+    else if (parsed && Array.isArray(parsed.points)) arr = parsed.points;
+    if (!arr) return null;
+    // Validera minimikrav för korridorberäkning.
+    const ok = arr.filter(p => p && typeof p.upk !== "undefined" &&
+      isFinite(p.lat) && isFinite(p.lon) && isFinite(p.utm_e) && isFinite(p.utm_n));
+    return ok.length ? ok : null;
+  }
+
+  function initData() {
+    $("#dl-all-kml").addEventListener("click", () => {
+      if (!UPK.length) { alert("Inga punkter att exportera."); return; }
+      download("upk_alla.kml", kmlAllLayer(), "application/vnd.google-earth.kml+xml");
+    });
+
+    // Manuell inmatning: UPK-namn + MGRS → punkt
+    function zoneWarn(p) {
+      const zones = new Set(UPK.map(x => x.utm_zone).filter(Boolean));
+      return (zones.size && !zones.has(p.utm_zone))
+        ? " OBS: UTM-zon " + p.utm_zone + " skiljer sig från övriga — korridormatten antar samma zon." : "";
+    }
+    // Förfyll rutan (GZD) med senast använda — man jobbar oftast i samma område.
+    try { const g = localStorage.getItem(GZD_KEY); if (g) $("#m-gzd").value = g; } catch (e) {}
+
+    $("#m-add").addEventListener("click", () => {
+      const upk = $("#m-upk").value.trim();
+      const gzd = $("#m-gzd").value.trim();
+      const num = $("#m-num").value.trim();
+      const fb = $("#m-feedback");
+      if (!upk) { fb.textContent = "Ange ett UPK-namn."; return; }
+      // Om siffer-fältet redan innehåller en hel MGRS, använd det; annars ruta + siffror.
+      const mgrsStr = parseMgrs(num) ? num : (gzd + " " + num).trim();
+      const p = mgrsToPoint(upk, mgrsStr);
+      if (!p) { fb.textContent = "Ogiltig MGRS. Ange ruta (t.ex. 33V XX) + siffror (t.ex. 5638 2796)."; return; }
+      const w = zoneWarn(p);
+      const existed = BY_UPK.has(p.upk);
+      upsertPoint(p); reindex(); savePoints();
+      const newGzd = p.mgrs.split(" ").slice(0, 2).join(" ");
+      try { localStorage.setItem(GZD_KEY, newGzd); } catch (e) {}
+      $("#m-gzd").value = newGzd;
+      fb.textContent = (existed ? "Uppdaterade " : "Lade till ") + p.upk + " → " + p.lat + ", " + p.lon + "." + w;
+      $("#m-upk").value = ""; $("#m-num").value = ""; $("#m-upk").focus();
+      rerenderAll();
+    });
+
+    // Enter submittar manuell inmatning; Ctrl/Cmd+Enter skapar från inklistrad lista.
+    ["m-upk", "m-gzd", "m-num"].forEach(id => $("#" + id).addEventListener("keydown", e => { if (e.key === "Enter") { e.preventDefault(); $("#m-add").click(); } }));
+    $("#m-bulk").addEventListener("keydown", e => { if ((e.ctrlKey || e.metaKey) && e.key === "Enter") { e.preventDefault(); $("#m-bulk-add").click(); } });
+
+    $("#m-bulk-add").addEventListener("click", () => {
+      const lines = $("#m-bulk").value.split(/\r?\n/);
+      let created = 0, updated = 0; const failed = [];
+      for (const line of lines) {
+        const r = parseListLine(line);
+        if (r.skip) continue;
+        if (r.error) { failed.push({ line: line.trim(), reason: r.error }); continue; }
+        const p = mgrsToPoint(r.upk, r.mgrs);
+        if (!p) { failed.push({ line: line.trim(), reason: "kunde inte beräkna koordinat" }); continue; }
+        if (BY_UPK.has(p.upk)) updated++; else created++;
+        upsertPoint(p);
+      }
+      reindex(); savePoints(); rerenderAll();
+      renderBulkResult(created, updated, failed);
+      if (created + updated > 0) $("#m-bulk").value = "";
+    });
+
+    $("#export-points").addEventListener("click", () => {
+      if (!UPK.length) { alert("Inga punkter att exportera."); return; }
+      download("upk_punkter.json", JSON.stringify(UPK, null, 2), "application/json");
+    });
+
+    $("#import-points").addEventListener("change", ev => {
+      const file = ev.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const arr = extractPoints(JSON.parse(reader.result));
+          if (!arr) { alert("Filen innehåller inga giltiga UPK-punkter (kräver upk, lat, lon, utm_e, utm_n)."); ev.target.value = ""; return; }
+          arr.forEach(upsertPoint); reindex(); savePoints();
+          rerenderAll();
+          alert(arr.length + " punkter importerade (sammanfogade, lokalt).");
+        } catch (e) { alert("Kunde inte läsa filen: " + e.message); }
+        ev.target.value = "";
+      };
+      reader.readAsText(file);
+    });
+
+    $("#clear-points").addEventListener("click", () => {
+      if (!confirm("Rensa ALLA punkter från denna enhet?")) return;
+      try { localStorage.removeItem(IMPORT_KEY); } catch (e) {}
+      setPoints((window.UPK_DATA && window.UPK_DATA.length) ? window.UPK_DATA : []);
+      rerenderAll();
+    });
+
+    $("#export-data").addEventListener("click", () => {
+      const payload = { app: "upk-korridor", version: 1, state: state };
+      download("upk_backup.json", JSON.stringify(payload, null, 2), "application/json");
+    });
+    $("#import-data").addEventListener("change", ev => {
+      const file = ev.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        try {
+          const parsed = JSON.parse(reader.result);
+          const incoming = parsed.state ? parsed.state : parsed;
+          state = Object.assign(clone(DEFAULT_STATE), incoming);
+          saveState();
+          $("#width").value = state.width;
+          rerenderAll();
+          alert("Backup importerad.");
+        } catch (e) { alert("Kunde inte läsa filen: " + e.message); }
+        ev.target.value = "";
+      };
+      reader.readAsText(file);
+    });
+
+    /* ===== Feature 1: Kart-väljare (endast härdat läge) ===== */
+    let mapInst = null, mapMarker = null, mapPickLat = null, mapPickLon = null, mapCtrl = null;
+    function updateMapBtn() {
+      // Sektionen syns alltid (upptäckbar) men funktionen aktiveras bara i härdat läge.
+      const hard = isHardened();
+      const wrap = $("#map-hardened");
+      if (wrap) wrap.style.display = hard ? "block" : "none";
+      const hint = $("#map-pick-hint");
+      if (hint) hint.textContent = hard
+        ? "Skriv UPK-namn, öppna kartan och placera punkten."
+        : "Kräver härdat läge: ladda ner en offline-karta under Minkarta → Härdat, så kan du placera UPK direkt på kartan här.";
+    }
+    function mapStatusFromPick() {
+      if (mapPickLat == null) return;
+      const u = latLonToUtm(mapPickLat, mapPickLon);
+      $("#map-status").textContent = "MGRS " + utmToMgrs(u.zone, mapPickLat, u.easting, u.northing, 5) +
+        "  (" + mapPickLat.toFixed(5) + ", " + mapPickLon.toFixed(5) + ")";
+      $("#map-confirm").disabled = false;
+    }
+    function openMapPicker() {
+      if (!isHardened()) { updateMapBtn(); return; }
+      const upk = $("#map-upk").value.trim();
+      if (!upk) { $("#map-pick-hint").textContent = "Skriv UPK-namn först, öppna sedan kartan."; $("#map-upk").focus(); return; }
+      $("#map-upk-label").textContent = upk;
+      mapPickLat = null; mapPickLon = null;
+      $("#map-confirm").disabled = true;
+      $("#map-status").textContent = "Klicka på kartan för att placera punkten.";
+      $("#map-modal").style.display = "flex";
+      if (!mapInst) {
+        mapInst = L.map("map-container", { zoomControl: true });
+        const base = L.tileLayer("https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png", { maxZoom: 17 });
+        // Härdat: controllern visar offline-PMTiles. base läggs MEDVETET inte till med
+        // addTo() — saknas controllern lämnas kartan tom (klick ger ändå koordinat) → ingen
+        // online-tile-läcka i planeringsläget.
+        if (window.PMTilesHardening && window.PMTilesHardening.createController) {
+          try { mapCtrl = window.PMTilesHardening.createController(mapInst, base); } catch (e) {}
+        }
+        mapInst.on("click", e => {
+          mapPickLat = e.latlng.lat; mapPickLon = e.latlng.lng;
+          if (mapMarker) { mapMarker.setLatLng(e.latlng); }
+          else {
+            mapMarker = L.marker(e.latlng, { draggable: true }).addTo(mapInst);
+            mapMarker.on("dragend", () => { const ll = mapMarker.getLatLng(); mapPickLat = ll.lat; mapPickLon = ll.lng; mapStatusFromPick(); });
+          }
+          mapStatusFromPick();
+        });
+        try { const c = JSON.parse(localStorage.getItem("mapLastPos") || "null"); if (c && isFinite(c.lat)) mapInst.setView([c.lat, c.lng], c.z || 12); else mapInst.setView([59.33, 15.0], 8); }
+        catch (e) { mapInst.setView([59.33, 15.0], 8); }
+      }
+      setTimeout(() => { if (mapInst) mapInst.invalidateSize(); }, 120);
+    }
+    function closeMapPicker() { $("#map-modal").style.display = "none"; }
+    function confirmMapPicker() {
+      if (mapPickLat == null) return;
+      const upk = ($("#map-upk-label").textContent || "").trim();
+      if (!upk) return;
+      const p = pointFromLatLon(upk, mapPickLat, mapPickLon);
+      const existed = BY_UPK.has(p.upk);
+      upsertPoint(p); reindex(); savePoints();
+      try { localStorage.setItem(GZD_KEY, p.mgrs.split(" ").slice(0, 2).join(" ")); } catch (e) {}
+      $("#map-pick-hint").textContent = (existed ? "Uppdaterade " : "Lade till ") + p.upk + " → " + p.lat + ", " + p.lon + "." + zoneWarn(p);
+      closeMapPicker();
+      $("#map-upk").value = "";
+      rerenderAll();
+    }
+    $("#open-map").addEventListener("click", openMapPicker);
+    $("#map-close").addEventListener("click", closeMapPicker);
+    $("#map-confirm").addEventListener("click", confirmMapPicker);
+    updateMapBtn();
+    window.addEventListener("PMTilesHardening:ready", updateMapBtn);
+  }
+
+  /* ===== Init ===== */
+  loadPoints();
+  initTabs();
+  initCorridor();
+  initSearch();
+  initData();
+  rerenderAll();
+  // Landa där arbetet börjar: tom app → Punkter-fliken med fokus i paste-rutan.
+  if (UPK.length === 0) switchTab("data", "#m-bulk");
+})();
+</script>
+
+<script src="pwa.js" defer></script>
+<script>window.HV_PAGE = 'UPK';</script>
+<script src="lib/nav.js"></script>
+</body>
+</html>

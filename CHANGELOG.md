@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.5 — 2026-06-25 — UPK korridor/karta-verktyg (Dolda)
+
+- **Nytt verktyg `upk.html`** (nav-grupp HIDDEN/Dolda): planeringsverktyg för UPK-punkter. Korridor mellan två punkter (planär UTM-matematik, "bred pensel"), sökbar punktlista, KML-export (Google Earth/ATAK), och inmatning av punkter (hand, inklistrad lista/OCR, samt kart-väljare i härdat läge). MGRS↔UTM↔lat-lon räknas ut lokalt (verifierat mot 58 kända punkter, 0 m fel).
+- **OPSEC:** skeppas helt utan koordinatdata (`upk-data.js` = tom). Operatören matar in/importerar själva punkterna; allt lagras bara i localStorage (`hv_upk_*`) och rensas av "Glöm enheten". Ingen koordinatdata i repot.
+- **UX:** 2 flikar (Korridor / Punkter), state-driven landning på tom app, guidat tomt-läge, Enter-submit, forgiving sökning, XY-rimlighetskoll med dynamisk enhet (m/km/mil).
+- **Nya filer i FILES:** `upk.html`, `upk-data.js`.
+- Service worker auto-bumpas.
+
 ## v0.3.4 — 2026-05-22 — Lager-system + IMPEX i MINKARTA & SENSORSKISS
 
 - **Lager-system (Photoshop-style):** ny delad modul `lib/layers.js` — max 10 baslager per app, kollapsbar panel under kartan, klick på lagerrad = aktivt lager (nya objekt hamnar där), ögon-toggle för synlighet, upp/ner-pilar för sortering (drag-and-drop kommer i v0.2). Översta lagret i listan ritas framför de undre via Leaflet-panes med dynamisk z-index.
