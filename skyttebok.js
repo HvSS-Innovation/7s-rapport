@@ -1590,13 +1590,21 @@
         var underkandClass = sp && sp.godkand === false ? ' is-active' : '';
 
         root.innerHTML = '' +
-            '<div class="sp-card ' + cardClass + '" id="spCard">' +
-                '<button class="sp-summary" type="button" onclick="skyttebokToggleSakerhetsprov()">' +
-                    '<div class="sp-titel">Säkerhetsprov BAS<small>Bilaga 1, H SKJUTB AK 2021</small></div>' +
+            '<h2 class="sektion-titel">Prov &amp; krav</h2>' +
+            // Återanvänder .ovning-card-skalet (samma header/toggle/body/pill).
+            // .sp-card-modifiern ger bara den statusberoende vänsterkanten.
+            // Toggle är fortfarande id-baserad (#spCard) — inget data-ovning,
+            // så sök/snapshot/skyttebokToggleOvning rör det aldrig.
+            '<div class="ovning-card sp-card ' + cardClass + '" id="spCard">' +
+                '<button class="ovning-summary" type="button" onclick="skyttebokToggleSakerhetsprov()">' +
+                    '<span class="ovning-nr">SP</span>' +
+                    '<span style="flex:1;min-width:0">' +
+                        '<span class="ovning-titel">Säkerhetsprov BAS<small>Bilaga 1, H SKJUTB AK 2021</small></span>' +
+                    '</span>' +
                     '<span class="sp-status ' + statusClass + '">' + statusText + '</span>' +
-                    '<span class="sp-toggle">›</span>' +
+                    '<span class="ovning-toggle">›</span>' +
                 '</button>' +
-                '<div class="sp-body">' +
+                '<div class="ovning-body">' +
                     '<p class="field-hint" style="margin-top:12px;line-height:1.45">' +
                         'Det muntliga/praktiska provet i vapensäkerhet (15 moment, ' +
                         'se listan längst ner). Logga en status för hela provet här.</p>' +
@@ -2755,7 +2763,7 @@
             var sigPayload = await window.SkyttebokSig.signPass(pass);
             window.SkyttebokSig.writeSig(passId, sigPayload);
             // Re-render för att visa badge. Behåll öppet kort.
-            var openCard = document.querySelector('.ovning-card.open');
+            var openCard = document.querySelector('#ovningarRoot .ovning-card.open');
             var openOvning = openCard ? openCard.getAttribute('data-ovning') : null;
             render();
             if (openOvning) {
@@ -2814,7 +2822,7 @@
             function () {
                 if (!window.SkyttebokSig) return;
                 window.SkyttebokSig.writeSig(passId, null);
-                var openCard = document.querySelector('.ovning-card.open');
+                var openCard = document.querySelector('#ovningarRoot .ovning-card.open');
                 var openOvning = openCard ? openCard.getAttribute('data-ovning') : null;
                 render();
                 if (openOvning) {
