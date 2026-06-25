@@ -305,6 +305,14 @@
         document.getElementById('statGodkanda').textContent = totalGodkand;
         var pct = totalSkott > 0 ? Math.round(100 * totalTraff / totalSkott) : 0;
         document.getElementById('statTraff').textContent = pct + '%';
+
+        // Actionable tomtillstånd: visa CTA bara när inga pass loggats OCH
+        // onboarding-kortet inte redan täcker behovet (undvik dubblering).
+        var cta = document.getElementById('summaryCta');
+        if (cta) {
+            var ob = document.getElementById('onboardingCard');
+            cta.hidden = totalPass !== 0 || !!(ob && !ob.hidden);
+        }
     }
 
     function renderOvningCard(ovningNr, pass) {
@@ -328,7 +336,8 @@
         }
 
         return '' +
-            '<div class="ovning-card' + (hasPass ? ' has-pass' : '') + '" data-ovning="' + ovningNr + '">' +
+            '<div class="ovning-card' + (hasPass ? ' has-pass' : '') + '" data-ovning="' + ovningNr + '"' +
+                ' data-sok="' + escapeHtml((nrLabel + ' ' + titel).toLowerCase()) + '">' +
                 '<button class="ovning-summary" type="button" onclick="skyttebokToggleOvning(\'' + ovningNr + '\')">' +
                     '<span class="ovning-nr">' + nrLabel + '</span>' +
                     '<span style="flex:1;min-width:0">' +
@@ -790,6 +799,18 @@
 
         return '' +
             '<div class="kp-form">' +
+                '<details class="figure-section" style="margin-top:0;margin-bottom:12px">' +
+                    '<summary>Så funkar provet</summary>' +
+                    '<div class="figure-body" style="font-size:0.82rem;color:var(--text-secondary);line-height:1.55">' +
+                        'Tidtaget skjutprov. <strong>1.</strong> Välj avstånd. ' +
+                        '<strong>2.</strong> Tryck START vid första skottet. ' +
+                        '<strong>3.</strong> Tryck SISTA SKOTT när du är klar. ' +
+                        '<strong>4.</strong> Markera varje träff på figuren.<br><br>' +
+                        '<strong>Poängkvot</strong> = poäng ÷ tid i sekunder. De 9 bästa ' +
+                        'träffarna räknas. Godkänt kräver minst 9 träffar <em>och</em> ' +
+                        'poängkvot över kravet (50 m ≥ 1,0 · 30 m ≥ 1,3).' +
+                    '</div>' +
+                '</details>' +
                 '<div class="kp-meta' + forsokClass + '">' + forsokText +
                     (forsok >= 3 ? ' — fler tillåts men dokumenteras enligt regelverk' : '') +
                 '</div>' +
@@ -1279,6 +1300,22 @@
 
         var filter = getFilter();
         var root = document.getElementById('ovningarRoot');
+
+        // Bevara öppna övningskort över rivningen. render() rivs och byggs
+        // om från många flöden (filterbyte, save/delete pass, KP, import,
+        // postRenderVerify efter sig-verifiering). Korten saknar state-
+        // backing — bara CSS-klassen .open — så vi snapshot:ar öppna kort
+        // här och återställer efter innerHTML. Centraliserat här i stället
+        // för per-flöde, så ALLA render()-vägar bevarar öppet läge.
+        var openOvningIds = [];
+        if (root) {
+            var openCards = root.querySelectorAll('.ovning-card.open');
+            for (var oi = 0; oi < openCards.length; oi++) {
+                var oid = openCards[oi].getAttribute('data-ovning');
+                if (oid) openOvningIds.push(oid);
+            }
+        }
+
         var html = '';
         DATA.delmoment.forEach(function (dm) {
             if (!isDelmomentInFilter(dm.nr, filter)) return;
@@ -1289,7 +1326,7 @@
                 passISummering += arr.length;
             });
 
-            html += '<div class="delmoment-group">' +
+            html += '<div class="delmoment-group" data-dm-namn="' + escapeHtml(dm.namn.toLowerCase()) + '">' +
                 '<div class="delmoment-header">' +
                     '<span class="delmoment-nr">DM ' + dm.nr + '</span>' +
                     '<span class="delmoment-namn">' + escapeHtml(dm.namn) + '</span>' +
@@ -1310,6 +1347,16 @@
             html += '</div>';
         });
         root.innerHTML = html;
+        // Återställ tidigare öppna kort (se snapshot ovan) — före applySearch
+        // så att ett kort som råkar vara både öppet och dolt hanteras rätt.
+        for (var ri = 0; ri < openOvningIds.length; ri++) {
+            var rc = root.querySelector(
+                '.ovning-card[data-ovning="' + openOvningIds[ri] + '"]');
+            if (rc) rc.classList.add('open');
+        }
+        // Återapplicera ev. aktivt sökfilter på den nyss ombyggda listan
+        // (render() river #ovningarRoot, så filtret måste sättas om).
+        applySearch();
 
         // Fas 3: kicka igång async verifiering. Reentrancy-säker —
         // om en körning redan pågår väntar vi på den. När verifiering
@@ -1320,6 +1367,107 @@
             Object.keys(sigRenderState.sigsByPassId).length > 0) {
             postRenderVerify();
         }
+    }
+
+    // ── Sök / hoppa-till övning (v0.2a) ─────────────────────────────────
+    // Filtrerar de redan renderade övningskorten via hidden-attribut —
+    // anropar ALDRIG render()/renderAll(), så öppet/stängt kort-tillstånd
+    // (CSS-klassen .open, utan state-backing) och fokus/caret bevaras.
+    // Körs sist i render() (efter att listan byggts om) och på input.
+    // Söker inom det aktiva BAS/TILLÄGG/Båda-filtret (kort utanför filtret
+    // finns inte i DOM). Matchar substring mot nrLabel+titel + delmoment-namn.
+    function applySearch() {
+        var root = document.getElementById('ovningarRoot');
+        if (!root) return;
+        var input = document.getElementById('ovningSearch');
+        var clearBtn = document.getElementById('ovningSearchClear');
+        var q = input ? (input.value || '').trim().toLowerCase() : '';
+        if (clearBtn) clearBtn.hidden = q.length === 0;
+
+        var groups = root.querySelectorAll('.delmoment-group');
+        var totalVisible = 0;
+        for (var g = 0; g < groups.length; g++) {
+            var group = groups[g];
+            var dmNamn = group.getAttribute('data-dm-namn') || '';
+            var cards = group.querySelectorAll('.ovning-card');
+            var visibleInGroup = 0;
+            for (var c = 0; c < cards.length; c++) {
+                // Matcha fälten var för sig (ej konkatenerat) så en sökterm
+                // inte kan träffa över gränsen kort-text↔delmoment-namn.
+                var sok = cards[c].getAttribute('data-sok') || '';
+                var match = q === '' || sok.indexOf(q) !== -1 ||
+                    dmNamn.indexOf(q) !== -1;
+                cards[c].hidden = !match;
+                if (match) visibleInGroup++;
+            }
+            // Dölj gruppen bara vid AKTIV sök med 0 träff. Annars skulle
+            // tomma teori-delmoment (DM utan övningar) försvinna vid load.
+            group.hidden = (q !== '' && visibleInGroup === 0);
+            totalVisible += visibleInGroup;
+        }
+
+        var emptyEl = document.getElementById('ovningSearchEmpty');
+        if (q !== '' && totalVisible === 0) {
+            if (!emptyEl) {
+                emptyEl = document.createElement('div');
+                emptyEl.id = 'ovningSearchEmpty';
+                emptyEl.className = 'empty-state';
+                emptyEl.setAttribute('role', 'status');
+                emptyEl.setAttribute('aria-live', 'polite');
+                root.appendChild(emptyEl);
+            }
+            emptyEl.hidden = false;
+            emptyEl.innerHTML = 'Inga övningar matchar ”' + escapeHtml(q) + '”.';
+        } else if (emptyEl) {
+            emptyEl.hidden = true;
+        }
+    }
+
+    function initOvningSearch() {
+        var input = document.getElementById('ovningSearch');
+        var clearBtn = document.getElementById('ovningSearchClear');
+        if (input) {
+            input.addEventListener('input', applySearch);
+            input.addEventListener('keydown', function (e) {
+                if (e.key === 'Escape') {
+                    input.value = '';
+                    applySearch();
+                } else if (e.key === 'Enter') {
+                    e.preventDefault();
+                    if ((input.value || '').trim() === '') { input.blur(); return; }
+                    var first = document.querySelector(
+                        '#ovningarRoot .ovning-card:not([hidden])');
+                    if (first) {
+                        first.classList.add('open');
+                        first.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                    }
+                    input.blur();
+                }
+            });
+        }
+        if (clearBtn && input) {
+            clearBtn.addEventListener('click', function () {
+                input.value = '';
+                applySearch();
+                input.focus();
+            });
+        }
+    }
+
+    // Tomtillstånds-CTA i sammanfattningskortet: scrolla ned till sök-
+    // /övningslistan så användaren kan logga sitt första pass.
+    function initSummaryCta() {
+        var cta = document.getElementById('summaryCta');
+        if (!cta) return;
+        cta.addEventListener('click', function () {
+            var target = document.getElementById('ovningSearchWrap') ||
+                document.getElementById('ovningarRoot');
+            if (target && target.scrollIntoView) {
+                target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+            var input = document.getElementById('ovningSearch');
+            if (input) { try { input.focus({ preventScroll: true }); } catch (_) {} }
+        });
     }
 
     // ── Säkerhetsprov ───────────────────────────────────────────────────
@@ -1371,8 +1519,12 @@
         // Fas 5: sig-block — visar badge (4 tillstånd som vanliga pass) +
         // signera/ta bort-knapp. "EJ SIGNERAT"-varning om sp.godkand=true
         // men ingen sig finns.
+        // Signatur-UI på säkerhetsprovet visas bara om signaturer faktiskt
+        // är i bruk (instruktör, eget nyckelpar, betrodd nyckel eller redan
+        // signerat) — annars skräms en ren soldat av "EJ SIGNERAT" och
+        // OFFICIELLT-koncept hen aldrig valt att använda.
         var spSigBlock = '';
-        if (sp) {
+        if (sp && (spSig || signaturesInUse())) {
             spSigBlock = '<div class="pass-row-sig" style="margin-top:10px;padding-top:0;justify-content:flex-start">';
             if (spSig) {
                 var sName = (spSig.signer && spSig.signer.name) ? spSig.signer.name : '(utan namn)';
@@ -1438,13 +1590,24 @@
         var underkandClass = sp && sp.godkand === false ? ' is-active' : '';
 
         root.innerHTML = '' +
-            '<div class="sp-card ' + cardClass + '" id="spCard">' +
-                '<button class="sp-summary" type="button" onclick="skyttebokToggleSakerhetsprov()">' +
-                    '<div class="sp-titel">Säkerhetsprov BAS<small>Bilaga 1, H SKJUTB AK 2021</small></div>' +
+            '<h2 class="sektion-titel">Prov &amp; krav</h2>' +
+            // Återanvänder .ovning-card-skalet (samma header/toggle/body/pill).
+            // .sp-card-modifiern ger bara den statusberoende vänsterkanten.
+            // Toggle är fortfarande id-baserad (#spCard) — inget data-ovning,
+            // så sök/snapshot/skyttebokToggleOvning rör det aldrig.
+            '<div class="ovning-card sp-card ' + cardClass + '" id="spCard">' +
+                '<button class="ovning-summary" type="button" onclick="skyttebokToggleSakerhetsprov()">' +
+                    '<span class="ovning-nr">SP</span>' +
+                    '<span style="flex:1;min-width:0">' +
+                        '<span class="ovning-titel">Säkerhetsprov BAS<small>Bilaga 1, H SKJUTB AK 2021</small></span>' +
+                    '</span>' +
                     '<span class="sp-status ' + statusClass + '">' + statusText + '</span>' +
-                    '<span class="sp-toggle">›</span>' +
+                    '<span class="ovning-toggle">›</span>' +
                 '</button>' +
-                '<div class="sp-body">' +
+                '<div class="ovning-body">' +
+                    '<p class="field-hint" style="margin-top:12px;line-height:1.45">' +
+                        'Det muntliga/praktiska provet i vapensäkerhet (15 moment, ' +
+                        'se listan längst ner). Logga en status för hela provet här.</p>' +
                     current +
                     spSigBlock +
                     '<div class="pass-form" style="margin-top:12px">' +
@@ -2600,7 +2763,7 @@
             var sigPayload = await window.SkyttebokSig.signPass(pass);
             window.SkyttebokSig.writeSig(passId, sigPayload);
             // Re-render för att visa badge. Behåll öppet kort.
-            var openCard = document.querySelector('.ovning-card.open');
+            var openCard = document.querySelector('#ovningarRoot .ovning-card.open');
             var openOvning = openCard ? openCard.getAttribute('data-ovning') : null;
             render();
             if (openOvning) {
@@ -2659,7 +2822,7 @@
             function () {
                 if (!window.SkyttebokSig) return;
                 window.SkyttebokSig.writeSig(passId, null);
-                var openCard = document.querySelector('.ovning-card.open');
+                var openCard = document.querySelector('#ovningarRoot .ovning-card.open');
                 var openOvning = openCard ? openCard.getAttribute('data-ovning') : null;
                 render();
                 if (openOvning) {
@@ -2713,11 +2876,106 @@
         return 'soldat';
     }
 
+    // ── Onboarding / "Kom igång" (front door) ───────────────────────────
+    // Visas överst i main tills (a) roll vald OCH (b) första passet loggat
+    // — eller tills användaren dismissar hjälp-steget. Mål: en ny
+    // användare ser rollvalet direkt utan att öppna Inställningar.
+    var ONBOARD_DISMISS_KEY = 'skyttebok_onboard_dismissed';
+
+    function isOnboardDismissed() {
+        try { return localStorage.getItem(ONBOARD_DISMISS_KEY) === '1'; }
+        catch (_) { return false; }
+    }
+
+    // Är någon signatur-funktion "i bruk"? Styr om vi visar signatur-
+    // koncept (badges, EJ SIGNERAT-varning) för icke-instruktörer. En ren
+    // soldat som aldrig importerat nyckel ska slippa kryptojargong.
+    function signaturesInUse() {
+        if (!window.SkyttebokSig) return false;
+        if (getRole() === 'instruktor') return true;
+        try {
+            if (window.SkyttebokSig.getSelf && window.SkyttebokSig.getSelf()) return true;
+            if (window.SkyttebokSig.listTrusted &&
+                window.SkyttebokSig.listTrusted().length) return true;
+            var sigs = window.SkyttebokSig.listAllSigs
+                ? window.SkyttebokSig.listAllSigs() : {};
+            if (sigs && Object.keys(sigs).length) return true;
+        } catch (_) { /* defensivt — faller tillbaka till false */ }
+        return false;
+    }
+
+    window.skyttebokDismissOnboard = function () {
+        try { localStorage.setItem(ONBOARD_DISMISS_KEY, '1'); } catch (_) {}
+        renderOnboarding();
+    };
+
+    function renderOnboarding() {
+        var card = document.getElementById('onboardingCard');
+        if (!card) return;
+        var role = getRole();
+        var hasData = false;
+        try { hasData = loadAllPass().length > 0 || !!loadSakerhetsprov(); }
+        catch (_) { /* defensivt */ }
+
+        // Roll ej vald → välkomst + rollval direkt synligt (front door).
+        if (!role) {
+            card.hidden = false;
+            card.innerHTML =
+                '<div class="onboard-title">Välkommen till Skyttebok 👋</div>' +
+                '<div class="onboard-lead">Digital skjutdokumentation för ' +
+                    'BAS-övningarna. Allt sparas <strong>lokalt på din ' +
+                    'enhet</strong> — inget konto, ingen server.</div>' +
+                '<div class="onboard-q">Först: vad är du?</div>' +
+                '<div class="role-buttons">' +
+                    '<button type="button" class="role-btn" ' +
+                        'aria-label="Välj roll: soldat" ' +
+                        'onclick="skyttebokSetRole(\'soldat\')">' +
+                        '<span class="role-btn-emoji" aria-hidden="true">🎯</span>' +
+                        '<span class="role-btn-title">Soldat</span>' +
+                        '<span class="role-btn-hint">Jag loggar mina egna skjutpass.</span>' +
+                    '</button>' +
+                    '<button type="button" class="role-btn" ' +
+                        'aria-label="Välj roll: instruktör" ' +
+                        'onclick="skyttebokSetRole(\'instruktor\')">' +
+                        '<span class="role-btn-emoji" aria-hidden="true">💻</span>' +
+                        '<span class="role-btn-title">Instruktör</span>' +
+                        '<span class="role-btn-hint">Jag intygar (signerar) andras resultat.</span>' +
+                    '</button>' +
+                '</div>' +
+                '<div class="onboard-foot">Osäker? Välj <strong>Soldat</strong> — ' +
+                    'du kan byta när som helst i Inställningar.</div>';
+            return;
+        }
+
+        // Roll vald men inget pass än + ej dismissad → visa "så loggar du".
+        if (!hasData && !isOnboardDismissed()) {
+            card.hidden = false;
+            card.innerHTML =
+                '<div class="onboard-title">Så loggar du ditt första pass</div>' +
+                '<ol class="onboard-steps">' +
+                    '<li><span class="onboard-step-num">1</span><span>Hitta din ' +
+                        'övning i listan nedan. Stå kvar på <strong>BAS</strong> ' +
+                        'för övning 1–40.</span></li>' +
+                    '<li><span class="onboard-step-num">2</span><span>Tryck på ' +
+                        'övningen för att öppna den, fyll i datum, skott och träff.</span></li>' +
+                    '<li><span class="onboard-step-num">3</span><span>Tryck ' +
+                        '<strong>Spara pass</strong> — det dyker upp under övningen.</span></li>' +
+                '</ol>' +
+                '<button type="button" class="btn btn-sm btn-secondary" ' +
+                    'style="margin-top:12px" ' +
+                    'onclick="skyttebokDismissOnboard()">Uppfattat, dölj</button>';
+            return;
+        }
+
+        // Annars: dolt (roll vald + data finns, eller hjälpen dismissad).
+        card.hidden = true;
+        card.innerHTML = '';
+    }
+
     function renderRoleStep() {
         var area = document.getElementById('roleStepArea');
         if (!area) return;
         var role = getRole();
-        var name = (getSetting('displayname') || '').trim();
 
         if (role) {
             var emoji = role === 'instruktor' ? '💻' : '🎯';
@@ -2769,16 +3027,10 @@
             return;
         }
 
-        // Roll ej vald, ingen data heller: visa prompten bara om namnet
-        // är ifyllt. Annars en mjuk hint (steg-rubriken finns redan i
-        // HTML).
-        if (!name) {
-            area.innerHTML =
-                '<div class="field-hint">Ange visningsnamn ovan så ' +
-                'visas rollvalet här.</div>';
-            return;
-        }
-
+        // Roll ej vald → visa rollvalsknapparna direkt. Tidigare gatades
+        // de bakom ifyllt namn; det dolde valet för nya användare och var
+        // huvudorsaken till "går inte att komma igång". Rollvalet ligger
+        // dessutom nu främst i onboarding-kortet överst (renderOnboarding).
         area.innerHTML =
             '<div class="role-prompt" role="group" aria-label="Välj din roll">' +
                 '<div class="role-prompt-hint">Valet styr vilka signatur-' +
@@ -2813,6 +3065,9 @@
         dismissRoleBanner();
         applyRoleAttr();
         renderRoleStep();
+        // Front door-kortet uppdateras: roll vald → byt till "så loggar
+        // du"-läge eller dölj.
+        renderOnboarding();
         // Sig-blocket har rollberoende knappuppsättningar, måste re-renderas
         // direkt efter rollbyte. Det visuella ordningsbytet är CSS-driven
         // och behöver inget extra här.
@@ -2821,10 +3076,14 @@
         // användaren ser sina nya alternativ. Sätt också tangentbordsfokus
         // på första interaktiva element i sig-grid:en. requestAnimationFrame
         // ger renderern en frame att layouta nya knapparna först.
+        // Hoppar över scroll/fokus om steg 3 inte är synligt (t.ex. när
+        // rollen valdes från onboarding-kortet och Inställningar är hopfällt)
+        // — annars skulle vi yr-scrolla ner i en stängd panel.
         if (typeof requestAnimationFrame === 'function') {
             requestAnimationFrame(function () {
                 var sigStep = document.getElementById('sigStepSection');
-                if (sigStep && typeof sigStep.scrollIntoView === 'function') {
+                if (sigStep && sigStep.offsetParent !== null &&
+                    typeof sigStep.scrollIntoView === 'function') {
                     sigStep.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 }
                 // Hitta första synliga knappen i sig-grid:en. CSS sätter
@@ -2850,6 +3109,8 @@
         setRole(null);
         applyRoleAttr();
         renderRoleStep();
+        // Roll borttagen → front door-kortet visar rollvalet igen.
+        renderOnboarding();
         renderSigUi();
         // Scrolla tillbaka till rollvals-blocket så användaren ser att
         // hen är tillbaka i val-läge. Inget abrupt scroll-hopp om kortet
@@ -3076,6 +3337,7 @@
     function renderAll() {
         syncFilterButtons();
         refreshSigRenderState();
+        renderOnboarding();
         renderSakerhetsprov();
         render();
     }
@@ -3181,6 +3443,9 @@
         initQrInputs();
         renderRoleStep();
         renderSigUi();
+        initOvningSearch();
+        initSummaryCta();
+        // renderOnboarding() körs via renderAll() nedan.
         renderAll();
     });
 })();
