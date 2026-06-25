@@ -586,7 +586,7 @@ function fallbackCopy(text) {
     document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(_){}
     document.body.removeChild(ta);showFeedback();
 }
-function showFeedback(){const el=document.getElementById('copyFeedback');el.classList.remove('show');void el.offsetWidth;el.classList.add('show');}
+function showFeedback(){const el=document.getElementById('copyFeedback');el.classList.remove('show');void el.offsetWidth;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2000);}
 function backToEdit(){document.getElementById('formView').classList.remove('hidden');document.getElementById('resultView').classList.remove('active');}
 function resetForm() {
     if (!confirm('Nollställ hela formuläret?')) return;

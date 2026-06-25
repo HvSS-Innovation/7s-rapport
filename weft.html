@@ -842,7 +842,7 @@ function copyToClipboard() {
     else { fallbackCopy(text); afterCopy(); }
 }
 function fallbackCopy(text) { const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); } catch(e) { alert('Kunde inte kopiera.'); } document.body.removeChild(ta); }
-function showCopyFeedback() { const el = document.getElementById('copyFeedback'); el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); }
+function showCopyFeedback() { const el = document.getElementById('copyFeedback'); el.classList.remove('show'); void el.offsetWidth; el.classList.add('show'); clearTimeout(el._t); el._t = setTimeout(() => el.classList.remove('show'), 2000); }
 function backToEdit() { document.getElementById('formView').classList.remove('hidden'); document.getElementById('resultView').classList.remove('active'); }
 function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
