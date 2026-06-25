@@ -602,7 +602,7 @@ function generateReport() {
     if (v('o_egna')) { lines.push('  Egna: ' + v('o_egna')); o_has = true; }
     if (v('o_uppgift')) { lines.push('  Uppgift/Idé: ' + v('o_uppgift')); o_has = true; }
     if (v('o_inpass')) { lines.push('  In/Utpassering: ' + v('o_inpass')); o_has = true; }
-    if (v('o_los1') || v('o_los2')) { lines.push(`  Lösen: ${v('o_los1').toUpperCase()} - ${v('o_los2').toUpperCase()}`); o_has = true; }
+    if (v('o_los1') || v('o_los2')) { const lA = v('o_los1').toUpperCase(), lB = v('o_los2').toUpperCase(); lines.push('  Lösen: ' + (lA && lB ? `${lA} - ${lB}` : (lA || lB))); o_has = true; }
     if (v('o_samb_tecken')) { lines.push('  Egna tecken: ' + v('o_samb_tecken')); o_has = true; }
     if (v('o_atersaml')) { lines.push('  Återsamlingsplatser: ' + v('o_atersaml')); o_has = true; }
     lines.push('  Visat på: ' + v('o_visat'));

@@ -493,9 +493,14 @@ async function readFoto(input) {
         const dt = exif.DateTimeOriginal || exif.DateTime;
         if (dt) {
             const d = new Date(dt), p = n => String(n).padStart(2,'0');
-            const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-            const tz = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
-            document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}${tz}${months[d.getMonth()]}${d.getFullYear()}`;
+            const base = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
+            if (tnrLong) {
+                const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+                const tz = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
+                document.getElementById('stund').value = base + tz + months[d.getMonth()] + d.getFullYear();
+            } else {
+                document.getElementById('stund').value = base;
+            }
             status.textContent = 'Tid hämtad från foto.';
         } else { status.textContent = 'Ingen tidsstämpel i bilden.'; }
     } catch(e) { status.textContent = 'Kunde inte läsa bilden: ' + e.message; }
@@ -691,7 +696,7 @@ function executePublish() {
     if (navigator.share) {
         const shareData = { text, files };
         if (navigator.canShare?.(shareData)) {
-            navigator.share(shareData).then(() => showCotFeedback('Rapport delad')).catch(() => { fallbackDownloadCoT(xml); shareTextOnly(text); });
+            navigator.share(shareData).then(() => showCotFeedback('Rapport delad')).catch((err) => { if (err?.name !== 'AbortError') { fallbackDownloadCoT(xml); showCotFeedback('Data Package nedladdad'); } });
         } else { fallbackDownloadCoT(xml); shareTextOnly(text); }
     } else {
         fallbackDownloadCoT(xml);
