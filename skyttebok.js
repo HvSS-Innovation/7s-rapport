@@ -3364,53 +3364,68 @@
         }
     };
 
-    window.skyttebokSigImportPubQr = function () {
+    function consumeQrText(text, kind) {
+        var payload;
+        try { payload = JSON.parse(text); }
+        catch (_) {
+            throw new Error('QR-koden innehåller inte giltig JSON.');
+        }
+        var name = kind === 'resp' ? 'sigs-qr.json' : 'pubkey-qr.json';
+        var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
+        var pseudoFile = new File([blob], name, { type: 'application/json' });
+        if (kind === 'resp') importSigResponse(pseudoFile);
+        else importSigFile(pseudoFile, false);
+    }
+
+    // Live-scan först (auto-lock så snart jsQR hittar koden). Vid cancel:
+    // tyst stäng. Vid galleri-knapp eller kamera-fel (permission/no-camera/HTTP):
+    // fall tillbaka på file-pickern med capture="environment".
+    function runQrFlow(kind, opts) {
         if (!window.SkyttebokExtras) return;
-        var input = document.getElementById('sigQrPubFile');
-        if (!input) return;
-        input.value = '';
-        input.click();
+        var inputId = kind === 'resp' ? 'sigQrRespFile' : 'sigQrPubFile';
+        var fileFallback = function () {
+            var input = document.getElementById(inputId);
+            if (!input) return;
+            input.value = '';
+            input.click();
+        };
+        if (typeof window.SkyttebokExtras.scanQrLive !== 'function') {
+            return fileFallback();
+        }
+        window.SkyttebokExtras.scanQrLive({ hint: opts && opts.hint })
+            .then(function (text) {
+                try { consumeQrText(text, kind); }
+                catch (e) { showConfirm('QR-scan misslyckades', escSigErr(e), function () {}); }
+            })
+            .catch(function (err) {
+                var msg = err && err.message;
+                if (msg === 'cancel') return;
+                // 'gallery', NotAllowedError, NotFoundError, ej-HTTPS m.m.
+                // → öppna gamla fil-vägen direkt så användaren ändå kommer fram.
+                fileFallback();
+            });
+    }
+
+    window.skyttebokSigImportPubQr = function () {
+        runQrFlow('pub', { hint: 'Rikta kameran mot publik-nyckel-QR.' });
+    };
+    window.skyttebokSigImportResponseQr = function () {
+        runQrFlow('resp', { hint: 'Rikta kameran mot signatur-svar-QR.' });
     };
 
     function handleQrPubFile(file) {
         if (!window.SkyttebokExtras) return;
         window.SkyttebokExtras.decodeQrFromFile(file)
-            .then(function (text) {
-                var payload;
-                try { payload = JSON.parse(text); }
-                catch (_) {
-                    throw new Error('QR-koden innehåller inte giltig JSON.');
-                }
-                // Återanvänd befintlig fil-import-väg via en syntetisk Blob/File.
-                var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-                var pseudoFile = new File([blob], 'pubkey-qr.json', { type: 'application/json' });
-                importSigFile(pseudoFile, false);
-            })
+            .then(function (text) { consumeQrText(text, 'pub'); })
             .catch(function (e) {
                 showConfirm('QR-scan misslyckades', escSigErr(e), function () {});
             });
     }
 
-    window.skyttebokSigImportResponseQr = function () {
-        var input = document.getElementById('sigQrRespFile');
-        if (!input) return;
-        input.value = '';
-        input.click();
-    };
-
     function handleQrRespFile(file) {
         if (!window.SkyttebokExtras) return;
         window.SkyttebokExtras.decodeQrFromFile(file)
-            .then(function (text) {
-                var payload;
-                try { payload = JSON.parse(text); }
-                catch (_) {
-                    throw new Error('QR-koden innehåller inte giltig JSON.');
-                }
-                var blob = new Blob([JSON.stringify(payload)], { type: 'application/json' });
-                var pseudoFile = new File([blob], 'sigs-qr.json', { type: 'application/json' });
-                importSigResponse(pseudoFile);
-            })
+            .then(function (text) { consumeQrText(text, 'resp'); })
             .catch(function (e) {
                 showConfirm('QR-scan misslyckades', escSigErr(e), function () {});
             });

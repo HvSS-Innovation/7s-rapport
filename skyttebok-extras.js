@@ -195,11 +195,149 @@
         input.click();
     }
 
+    // ── Live-scan via getUserMedia + jsQR ───────────────────────────────
+    // Auto-låser i samma sekund jsQR hittar en kod. Ingen foto-/godkänn-step.
+    // Rejects: Error('cancel') vid avbryt, Error('gallery') vid galleri-fallback,
+    // övriga errors (permission/no-camera/HTTPS) bubblar upp så caller kan fallback.
+
+    var liveStylesInjected = false;
+    function ensureLiveScanStyles() {
+        if (liveStylesInjected) return;
+        liveStylesInjected = true;
+        var css = ''
+            + '.qrlive-overlay{position:fixed;inset:0;z-index:12000;background:#000;display:flex;flex-direction:column;}'
+            + '.qrlive-stage{position:relative;flex:1 1 auto;overflow:hidden;display:flex;align-items:center;justify-content:center;}'
+            + '.qrlive-video{width:100%;height:100%;object-fit:cover;background:#000;}'
+            + '.qrlive-frame{position:absolute;width:min(70vmin,360px);height:min(70vmin,360px);border:2px solid rgba(255,255,255,0.85);border-radius:14px;box-shadow:0 0 0 9999px rgba(0,0,0,0.45);pointer-events:none;}'
+            + '.qrlive-bar{background:rgba(0,0,0,0.88);color:#fff;padding:14px 16px calc(22px + env(safe-area-inset-bottom));display:flex;flex-direction:column;gap:10px;}'
+            + '.qrlive-hint{margin:0;text-align:center;font-size:0.9rem;line-height:1.4;}'
+            + '.qrlive-actions{display:flex;gap:10px;}'
+            + '.qrlive-actions .btn{flex:1;min-height:44px;}';
+        var tag = document.createElement('style');
+        tag.textContent = css;
+        document.head.appendChild(tag);
+    }
+
+    function buildLiveScanOverlay() {
+        var existing = document.getElementById('qrLiveOverlay');
+        if (existing) existing.remove();
+        ensureLiveScanStyles();
+        var overlay = document.createElement('div');
+        overlay.id = 'qrLiveOverlay';
+        overlay.className = 'qrlive-overlay';
+        overlay.innerHTML = ''
+            + '<div class="qrlive-stage">'
+            +   '<video class="qrlive-video" playsinline muted></video>'
+            +   '<div class="qrlive-frame" aria-hidden="true"></div>'
+            + '</div>'
+            + '<div class="qrlive-bar">'
+            +   '<p class="qrlive-hint">Rikta kameran mot QR-koden.</p>'
+            +   '<div class="qrlive-actions">'
+            +     '<button type="button" class="btn btn-secondary qrlive-cancel">Avbryt</button>'
+            +     '<button type="button" class="btn btn-secondary qrlive-gallery">Välj från galleri</button>'
+            +   '</div>'
+            + '</div>';
+        return overlay;
+    }
+
+    function scanQrLive(opts) {
+        opts = opts || {};
+        return new Promise(function (resolve, reject) {
+            if (!window.jsQR) {
+                return reject(new Error('jsQR-biblioteket är inte laddat'));
+            }
+            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+                return reject(new Error('Kameran kräver HTTPS (eller localhost).'));
+            }
+
+            var overlay = buildLiveScanOverlay();
+            var video = overlay.querySelector('.qrlive-video');
+            var hint = overlay.querySelector('.qrlive-hint');
+            var cancelBtn = overlay.querySelector('.qrlive-cancel');
+            var galleryBtn = overlay.querySelector('.qrlive-gallery');
+            if (opts.hint) hint.textContent = opts.hint;
+
+            var stream = null;
+            var rafId = null;
+            var canvas = document.createElement('canvas');
+            var ctx = canvas.getContext('2d', { willReadFrequently: true });
+            var settled = false;
+
+            function cleanup() {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = null;
+                if (stream) {
+                    stream.getTracks().forEach(function (t) { t.stop(); });
+                    stream = null;
+                }
+                try { video.srcObject = null; } catch (_) {}
+                if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            }
+            function finish(data) {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                resolve(data);
+            }
+            function abort(err) {
+                if (settled) return;
+                settled = true;
+                cleanup();
+                reject(err);
+            }
+
+            cancelBtn.addEventListener('click', function () { abort(new Error('cancel')); });
+            galleryBtn.addEventListener('click', function () { abort(new Error('gallery')); });
+
+            function tick() {
+                if (settled) return;
+                if (video.readyState >= 2 && video.videoWidth > 0) {
+                    var maxW = 640;
+                    var scale = Math.min(1, maxW / video.videoWidth);
+                    var w = Math.round(video.videoWidth * scale);
+                    var h = Math.round(video.videoHeight * scale);
+                    if (canvas.width !== w) canvas.width = w;
+                    if (canvas.height !== h) canvas.height = h;
+                    ctx.drawImage(video, 0, 0, w, h);
+                    var imgData = ctx.getImageData(0, 0, w, h);
+                    // dontInvert per frame är ~2x snabbare; en levande kamera
+                    // hinner ändå pröva många frames innan användaren ger upp.
+                    var result = window.jsQR(imgData.data, w, h, {
+                        inversionAttempts: 'dontInvert'
+                    });
+                    if (result && result.data) return finish(result.data);
+                }
+                rafId = requestAnimationFrame(tick);
+            }
+
+            document.body.appendChild(overlay);
+
+            var constraints = {
+                video: { facingMode: { ideal: 'environment' } },
+                audio: false
+            };
+            navigator.mediaDevices.getUserMedia(constraints).then(function (s) {
+                if (settled) {
+                    s.getTracks().forEach(function (t) { t.stop(); });
+                    return null;
+                }
+                stream = s;
+                video.srcObject = s;
+                return video.play();
+            }).then(function () {
+                if (!settled) rafId = requestAnimationFrame(tick);
+            }).catch(function (err) {
+                abort(err);
+            });
+        });
+    }
+
     // ── Public API ──────────────────────────────────────────────────────
     window.SkyttebokExtras = {
         showQrModal: showQrModal,
         closeQrModal: closeQr,
         decodeQrFromFile: decodeQrFromFile,
+        scanQrLive: scanQrLive,
         triggerFilePicker: triggerFilePicker,
         syncThemeIcon: syncThemeIcon,
         isLightTheme: isLight
