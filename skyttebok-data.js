@@ -21,7 +21,6 @@ window.SKYTTEBOK_DATA = {
       "nr": 2,
       "namn": "SAR Stående",
       "ovningar": [
-        1,
         2,
         3
       ]
@@ -326,7 +325,7 @@ window.SKYTTEBOK_DATA = {
   ],
   "ovningar": {
     "1": {
-      "titel": "och 2 belönas med skyttemärke och skyttemedalj. Övning 3 belönas med",
+      "titel": "Målbildsförevisning",
       "avstand": "",
       "mal": "",
       "stallning": "",
