@@ -52,22 +52,33 @@ buggklasserna (se arkitektur-review, `lib/tnr.js`).
     - **Åtgärdat (val a, commit `7ce2cfa`):** död referens borttagen helt; inget
       foto bifogas TAK-share (ingen risk för rå EXIF/GPS-läcka).
 
-15. **rassoika.html:605 — lösen accepterar partiell ifyllnad** → "Lösen: ORDET - "
-    (tomt svar). Kan vara avsiktligt (bara fråga noterad). Bedömning behövs.
+15. ✅ **rassoika.html:605 — lösen accepterar partiell ifyllnad** → "Lösen: ORDET - "
+    - **Åtgärdat (commit `ab7a755`):** visar bara det ifyllda ordet utan
+      häng-streck; fråga-svar-paret formateras med " - " endast när båda finns.
 
-16. **scrim.html:623 — CoT-event-UID ≠ data-package-manifest-UID** (olika
-    `Date.now()`). Spårbarhet i ATAK. Designval: matcha UID:erna?
+16. ℹ️ **scrim.html:623 — CoT-event-UID ≠ data-package-manifest-UID** (olika `Date.now()`)
+    - **Verifierad — ingen åtgärd:** distinkt UID för data-package (manifest)
+      resp. CoT-event är ATAK-standard, inte en bugg. Ev. framtida förbättring:
+      härled package-UID från event-UID för spårbarhet — kräver refaktor av
+      `buildDataPackage`-signaturen i scrim + what och är ej testbart utan
+      TAK-server, så det lämnas tills det finns ett konkret behov.
 
-17. **what.html:497 — readFoto skriver alltid långt TNR-format** oavsett
-    `tnrLong`-toggle (`stund` är annars kort). Format-/UX-inkonsekvens.
+17. ✅ **what.html:497 — readFoto skriver alltid långt TNR-format** oavsett `tnrLong`
+    - **Åtgärdat (commit `ab7a755`):** respekterar nu toggeln (kort = DDHHMM,
+      långt = full DTG) precis som `setCurrentTime`/`nowTnr`.
 
-18. **what.html:694 — executePublish dubbelanropar `navigator.share()`** i
-    fallback. Redundant men tyst (LOW).
+18. ✅ **what.html:694 — executePublish dubbelanropar `navigator.share()`** i fallback
+    - **Åtgärdat (commit `ab7a755`):** `AbortError` (användaren avbröt delningen)
+      respekteras — ingen andra share-dialog. Vid äkta fel laddas Data Package
+      ner med tydlig feedback i stället.
 
-19. **pedars/ah/weft — copy-feedback använder `void offsetWidth`-reflow-tricket**
-    (replay av CSS-animation). Sannolikt korrekt, INTE en bugg — men verifiera
-    att `.show`-CSS:en är `@keyframes` (self-fade), inte en transition som
-    fastnar på `opacity:1`.
+19. ✅ **pedars/ah/weft — copy-feedback "Kopierat" försvann aldrig**
+    - **Verifierad ÄKTA bugg (commit `ab7a755`):** ingen `@keyframes`-fade fanns
+      (bara `mapspin`). `.copy-feedback` har `transition:opacity .2s` +
+      `.show{opacity:1}`, och `showFeedback`/`showCopyFeedback` la till `.show`
+      utan att ta bort den → "Kopierat" tonade in och låg kvar permanent. Lagt
+      timad bortrensning (2 s) + `clearTimeout`-skydd mot race vid snabba
+      upprepade kopieringar (matchar obo/rassoika/scrim).
 
 ---
 
