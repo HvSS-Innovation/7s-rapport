@@ -102,12 +102,41 @@ ls -la "$OUT"
 
 ## 3. Ladda upp till R2
 
+**Små filer (≤ 300 MiB) — wrangler** (`wrangler login` en gång först):
+
 ```bash
 for f in ./landskap-pmtiles/*.pmtiles; do
   name=$(basename "$f")
-  wrangler r2 object put "hv-pmtiles/$name" --file="$f" --content-type=application/octet-stream
+  bytes=$(stat -c%s "$f")
+  if [ "$bytes" -le $((300*1024*1024)) ]; then
+    wrangler r2 object put "hv-pmtiles/$name" --file="$f" --content-type=application/octet-stream --remote
+  else
+    echo "SKIP $name (>300 MiB — kräver multipart, se nedan)"
+  fi
 done
 ```
+
+> **OBS — wranglers 300 MiB-gräns:** `wrangler r2 object put` är single-PUT och vägrar filer > 300 MiB (*"Wrangler only supports uploading files up to 300 MiB"*). Cloudflare-dashboardens browser-upload har samma gräns. Vid maxzoom 15 hamnar de stora glesa landskapen över: 2026-06 var Dalarna 313, Jämtland 352, **Lappland 578 MiB**.
+
+**Stora filer (> 300 MiB) — S3 multipart.** Skapa en R2 API-token (dashboard → R2 → *Manage R2 API Tokens* → **Object Read & Write**) → du får Access Key ID + Secret + S3-endpoint `https://<account-id>.r2.cloudflarestorage.com`. Ladda sedan upp med valfri S3-klient som gör multipart automatiskt — t.ex. `rclone`, `aws s3 cp`, eller en liten Node-snutt med `@aws-sdk/lib-storage`:
+
+```js
+// npm i @aws-sdk/client-s3 @aws-sdk/lib-storage
+const { S3Client } = require('@aws-sdk/client-s3');
+const { Upload } = require('@aws-sdk/lib-storage');
+const fs = require('fs');
+const s3 = new S3Client({ region: 'auto',
+  endpoint: 'https://<ACCOUNT_ID>.r2.cloudflarestorage.com',
+  credentials: { accessKeyId: process.env.R2_KEY, secretAccessKey: process.env.R2_SECRET } });
+for (const id of ['dalarna', 'jamtland', 'lappland']) {
+  await new Upload({ client: s3, partSize: 100*1024*1024, queueSize: 4,
+    params: { Bucket: 'hv-pmtiles', Key: id + '.pmtiles',
+      Body: fs.createReadStream('./landskap-pmtiles/' + id + '.pmtiles'),
+      ContentType: 'application/octet-stream' } }).done();
+}
+```
+
+> **Alternativ:** bygg om de stora landskapen med lägre `--maxzoom` (13–14) så de hamnar under 300 MiB och kan gå via wrangler — glesa norra områden tappar nästan ingen fältnytta och filerna blir mindre på telefonen. Radera alltid plaintext-credentials direkt efter uppladdning.
 
 ---
 
