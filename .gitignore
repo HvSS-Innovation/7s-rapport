@@ -1,6 +1,12 @@
 verktyg/obsidian/
 verktyg/m_blankett/
 verktyg/parmrobot/
+
+# tools/ = lokalt arbets-/referensmaterial (kamera-experiment, m_blankett-
+# nested repo, PDF:er). Reorg verktyg/→tools/ är parkerad på restructuring-wip;
+# tills den ev. landar spåras tools/ inte på main.
+tools/
+
 stab/*
 !stab/Ny mapp/
 
