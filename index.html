@@ -344,10 +344,29 @@
                     <label for="handelse">Händelse</label>
                     <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoHandelse')" aria-label="Info om Händelse">i</button>
                 </div>
-                <div class="info-text" id="infoHandelse">Beskriv i fritext vad som hände — skriv naturligt, t.ex. "Såg två killar cykla förbi, svartklädda, med ryggsäckar". Försök få med de fyra S:en så rapporten kan bearbetas: <strong>Styrka</strong> (antal), <strong>Slag</strong> (typ av fiende/objekt), <strong>Sysselsättning</strong> (vad de gör) och <strong>Symbol</strong> (märkning, färg, tecken).</div>
-                <textarea id="handelse" rows="4" placeholder="Ex: Såg två killar cykla förbi, svartklädda, med ryggsäckar"></textarea>
-                <div class="field-hint">Kom ihåg de fyra S:en: <strong>S</strong>tyrka · <strong>S</strong>lag · <strong>S</strong>ysselsättning · <strong>S</strong>ymbol</div>
-                <div class="field-hint" style="margin-top:10px">Identifieringshjälp — fyll i och klistra in i Händelse:</div>
+                <div class="info-text" id="infoHandelse">Beskriv i fritext vad som hände — skriv naturligt, t.ex. "Såg två killar cykla förbi, med ryggsäckar". Försök få med de tre S:en så rapporten kan bearbetas: <strong>Styrka</strong> (antal), <strong>Slag</strong> (typ av fiende/objekt) och <strong>Sysselsättning</strong> (vad de gör). Märkning, färg och tecken läggs i Symbol nedan.</div>
+                <textarea id="handelse" rows="4" placeholder="Ex: Såg två killar cykla förbi, med ryggsäckar"></textarea>
+                <div class="field-hint">Kom ihåg de tre S:en: <strong>S</strong>tyrka · <strong>S</strong>lag · <strong>S</strong>ysselsättning</div>
+            </div>
+
+            <!-- SYMBOL -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="symbol">Symbol</label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSymbol')" aria-label="Info om Symbol">i</button>
+                </div>
+                <div class="info-text" id="infoSymbol">Märkning, siffror, förbandstecken, färg på fordon/uniformer.</div>
+                <textarea id="symbol" rows="2" placeholder="Märkning, färg, tecken"></textarea>
+                <div class="chip-group">
+                    <button class="chip" onclick="appendChip('symbol','Grön')"><span class="chip-dot" style="background:#4caf50"></span>Grön</button>
+                    <button class="chip" onclick="appendChip('symbol','Röd')"><span class="chip-dot" style="background:#e53935"></span>Röd</button>
+                    <button class="chip" onclick="appendChip('symbol','Svart')"><span class="chip-dot" style="background:#555;border:1px solid #888"></span>Svart</button>
+                    <button class="chip" onclick="appendChip('symbol','Vit')"><span class="chip-dot" style="background:#eee;border:1px solid #888"></span>Vit</button>
+                    <button class="chip" onclick="appendChip('symbol','Gul')"><span class="chip-dot" style="background:#fdd835"></span>Gul</button>
+                    <button class="chip" onclick="appendChip('symbol','Blå')"><span class="chip-dot" style="background:#1565c0"></span>Blå</button>
+                    <button class="chip" onclick="appendChip('symbol','Kamouflage')">Kamouflage</button>
+                </div>
+                <div class="field-hint" style="margin-top:10px">Identifieringshjälp — fyll i och klistra in i Symbol:</div>
                 <div class="symbol-format-group" style="margin-top:6px">
                     <button class="symbol-format-btn" onclick="openSymbolEmbed('scrim.html','SCRIM')">SCRIM</button>
                     <button class="symbol-format-btn" onclick="openSymbolEmbed('what.html','WHAT')">WHAT</button>
@@ -356,11 +375,11 @@
                 </div>
             </div>
 
-            <!-- Identifierings-embed modal (SCRIM/WHAT/WEFT/A-H → Händelse) -->
+            <!-- Symbol-embed modal (SCRIM/WHAT/WEFT/A-H → Symbol) -->
             <div class="embed-modal-overlay" id="symbolModal">
                 <div class="embed-modal">
                     <div class="embed-modal-header">
-                        <span class="embed-modal-title" id="symbolModalTitle">IDENTIFIERING</span>
+                        <span class="embed-modal-title" id="symbolModalTitle">SYMBOL</span>
                         <button class="embed-modal-close" onclick="closeSymbolEmbed()">×</button>
                     </div>
                     <iframe id="symbolIframe" sandbox="allow-scripts allow-same-origin"></iframe>
@@ -674,7 +693,7 @@ function appendChip(fieldId, value) {
 
 // ── Symbol embed (SCRIM/WHAT/WEFT/A-H i modal) ──────────────────────────────
 function openSymbolEmbed(file, label) {
-    document.getElementById('symbolModalTitle').textContent = 'Fyll i via ' + label;
+    document.getElementById('symbolModalTitle').textContent = 'Symbol: Fyll i via ' + label;
     document.getElementById('symbolIframe').src = file + '?mode=embed';
     document.getElementById('symbolModal').classList.add('open');
 }
@@ -684,7 +703,7 @@ function closeSymbolEmbed() {
 }
 window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'symbol-fill') {
-        const el = document.getElementById('handelse');
+        const el = document.getElementById('symbol');
         const prefix = el.value.trim();
         const formatted = `(${e.data.format})\n${e.data.text}`;
         el.value = prefix ? prefix + '\n' + formatted : formatted;
@@ -1103,6 +1122,7 @@ function generateReport() {
         `Stund: ${v('stund') || '-'}`,
         `Ställe: ${v('stalle') || '-'}`,
         `Händelse: ${v('handelse') || '-'}`,
+        `Symbol: ${v('symbol') || '-'}`,
         lastFotoFilename ? `Foto: ${lastFotoFilename}` : null,
         `Sagesman: ${v('sagesman') || '-'}`,
         `Sedan: ${v('sedan') || '-'}`,
@@ -1146,6 +1166,7 @@ function generateCoTXML() {
 
     const remarks = [
         v('handelse') ? `Händelse: ${v('handelse')}` : null,
+        v('symbol') ? `Symbol: ${v('symbol')}` : null,
         v('sedan') ? `Sedan: ${v('sedan')}` : null,
         v('sagesman') ? `Sagesman: ${v('sagesman')}` : null,
     ].filter(Boolean).join('; ');
@@ -1391,7 +1412,7 @@ function backToEdit() {
 }
 function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
-    ['stund','stalle','handelse','sedan','sagesman'].forEach(id =>
+    ['stund','stalle','handelse','symbol','sedan','sagesman'].forEach(id =>
         document.getElementById(id).value = '');
     lastFotoFilename = ''; lastFotoFile = null;
     document.getElementById('fotoStatus').textContent = '';
