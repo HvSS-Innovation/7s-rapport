@@ -1,38 +1,47 @@
-verktyg/obsidian/
-verktyg/m_blankett/
-verktyg/parmrobot/
+# ─── Externa/lokala underprojekt i tools/ — egna git-repon eller stora vaults ───
+tools/obsidian/
+tools/m_blankett/
+tools/parmrobot/
+
+# ─── stab/ — separat Python+Docker-app, bara symbol-paketet versioneras ───
 stab/*
 !stab/Ny mapp/
 
-# Lokala screenshots och tmp-bilder i repo-roten — hör inte till prod
+# ─── Lokala screenshots och tmp-bilder i repo-roten ───
 /Screenshot_*.png
 /[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]_[0-9]*.png
 /*.tmp
 /*.bak
 
-# OS-skräp
+# ─── OS-skräp ───
 .DS_Store
 Thumbs.db
 desktop.ini
 
-# Lokala roadmap-anteckningar (innehåller lokal Dropbox-sökväg, ej för publik repo)
+# ─── Lokala roadmap-anteckningar i root (innehåller lokal Dropbox-sökväg) ───
+# Trackade roadmaps har flyttats till docs/roadmaps/. Detta pattern fångar
+# resterande lokala drafts som ligger i root.
 /roadmap-*.md
 
-# Claude Code lokal config (permissions, hooks – per maskin, ej för publik repo)
+# ─── Claude Code lokal config (permissions, hooks – per maskin) ───
 .claude/
 
-# Råa data-källor i repo-roten (parse-input — outputs som ortnamn.json
-# versioneras, men källorna är stora och ändras sällan).
+# ─── Råa data-källor i repo-roten (parse-input för byggskript i scripts/build/) ───
+# Outputs (ortnamn.json) versioneras, källorna är stora och ändras sällan.
 raw/
 /kriterier.xml
 /sjöar.xml
 /öar.xml
 
-# Kamera/webcam-experiment i verktyg/ — test-bilder, ad-hoc scripts och
-# loggar. Inte del av prod-appen. Om du vill committa en enskild fil:
+# ─── Kamera/webcam-experiment i tools/ — test-bilder, ad-hoc scripts, loggar ───
+# Inte del av prod-appen. Vill du committa en enskild fil:
 # använd `git add -f path` eller lägg ett !undantag nedan.
-verktyg/*.png
-verktyg/*.jpg
-verktyg/*.txt
-verktyg/*.pdf
-verktyg/*.py
+tools/*.png
+tools/*.jpg
+tools/*.txt
+tools/*.pdf
+tools/*.py
+
+# ─── PDF-pool och screenshots under tools/Ny mapp/ — växande, untracked ───
+# Källmaterial (reglemente). Bestäm: committa under docs/reglemente/ eller låt vara.
+tools/Ny mapp/

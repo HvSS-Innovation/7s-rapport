@@ -8,7 +8,7 @@
 //
 //  Datakälla: samma som sverige.pmtiles — extract från Protomaps daily build
 //  via `pmtiles extract --bbox=... --maxzoom=15`. Bygg-pipeline: se
-//  verktyg/build-grannlander-pmtiles.md.
+//  tools/build-grannlander-pmtiles.md.
 //
 //  Status (2026-05-05): pmtiles-filerna är INTE byggda + uppladdade än.
 //  Knapparna visas men är disabled tills url + bytes + sha256 fyllts i
@@ -41,7 +41,7 @@
             code: 'DK', label: 'Danmark', flag: '🇩🇰',
             bbox: { west: 8.0, south: 54.5, east: 15.5, north: 58.0 },
             center: [56.0, 11.5], zoom: 7,
-            // TODO: Bygg + ladda upp till R2. Se verktyg/build-grannlander-pmtiles.md.
+            // TODO: Bygg + ladda upp till R2. Se tools/build-grannlander-pmtiles.md.
             //   1. pmtiles extract <protomaps-daily>.pmtiles danmark.pmtiles --bbox=8.0,54.5,15.5,58.0 --maxzoom=15
             //   2. wrangler r2 object put hv-pmtiles/danmark.pmtiles --file=danmark.pmtiles
             //   3. sha256sum danmark.pmtiles

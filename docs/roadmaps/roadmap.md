@@ -230,7 +230,7 @@ Fördelarna med ett eget repo:
   `postschema.html`, `eobusare.html`, `obo.html`, `rassoika.html`, `vader.html`
 
 ### POSTSCHEMA
-- [x] Byt standardnamn på poster: "POST 1" → "Värnpost", "POST 2" → "Eldvakt" (`postschema.html`, funktionerna `resetForm` och `DOMContentLoaded`)
+- [x] Byt standardnamn på poster: "POST 1" → "Värnpost", "POST 2" → "Eldpost" (`postschema.html`, funktionerna `resetForm` och `DOMContentLoaded`)
 - [x] Klona knappen "+ Lägg till soldat" så att den visas både **ovanför** och **under** soldatlistan (idag finns den bara under). Samma sak bör gälla "+ Lägg till post" om listan växer.
 - [x] Soldatfälten ska ha löpande nummer som defaultvärde (1, 2, 3 … i steg med listan). När man klickar i fältet markeras siffran automatiskt (`input.select()` på `focus`-event) så att man direkt kan skriva ett namn utan att radera först. Samma princip bör gälla namnfälten för poster.
 
@@ -303,7 +303,7 @@ Fördelarna med ett eget repo:
 ### POSTSCHEMA – Fixa tidsberäkning
 - [x] Schema ska starta exakt på TNR-tiden (t.ex. TNR 292300 → schema börjar 2300, inte 2303)
 - [x] Varje pass slumpas oberoende: reguljär 50/60/70 min, Grpc 60 min, Förare/RPAS 60/70 min
-- [x] Eldvakten väcker den nya värnvakten 10 minuter innan avlösningen ska ske
+- [x] Eldposten väcker den nya värnvakten 10 minuter innan avlösningen ska ske
 - [x] Grpc har exakt 1 timme per pass
 - [x] Förare och RPAS har alltid minst 1 timme och max 1 timme 10 minuter per pass
 - [x] Avlösningsordning: Vakt 9 (eld) väcker vakt 2 → vakt 2 går till vakt 1 (värn) och avlöser → vakt 1 går till vakt 9 (eld) och avlöser

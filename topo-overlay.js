@@ -23,7 +23,7 @@
 //   - Fas 1 demo: Mt Whitney USGS hillshade WebP (publik, 1.9 MB) — låter
 //     mekanismen testas omedelbart.
 //   - Fas 2: sverige-hillshade.pmtiles byggd från Copernicus DEM GLO-30
-//     (CC-BY 4.0). Pipeline: verktyg/build-sverige-hillshade.md.
+//     (CC-BY 4.0). Pipeline: tools/build-sverige-hillshade.md.
 //   - Fas 4: Lantmäteriets WMS för svenska höjdkurvor när konto finns.
 // ─────────────────────────────────────────────────────────────────────────────
 

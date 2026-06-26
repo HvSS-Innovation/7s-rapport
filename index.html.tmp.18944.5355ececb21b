@@ -1,0 +1,1610 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.opentopomap.org; font-src 'self'; connect-src 'self' https://tile.openstreetmap.org https://*.tile.opentopomap.org https://nominatim.openstreetmap.org https://overpass-api.de https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+    <meta name="referrer" content="strict-origin">
+    <meta name="google" content="notranslate">
+    <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d1f0d">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="alternate icon" href="favicon.ico">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="7S Rapport">
+    <title>7S Rapport</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="fonts/inter.css">
+    <link rel="stylesheet" href="ui/theme.css">
+    <link rel="stylesheet" href="lib/nav.css">
+    <script src="vendor/exifr/full.umd.js"></script>
+    <link rel="stylesheet" href="vendor/leaflet/leaflet.css" />
+    <script src="vendor/leaflet/leaflet.js"></script>
+    <script src="offline-tiles.js" defer></script>
+    <script type="module" src="pmtiles-layer.js"></script>
+    <script src="shared/map-hardat-modal.js" defer></script>
+    <style>
+        :root {
+            --bg-primary: #0d1f0d;
+            --bg-secondary: #152815;
+            --bg-card: #1a321a;
+            --bg-input: #0f240f;
+            --border: #2d4a2d;
+            --border-focus: #4a7c4a;
+            --text-primary: #e8f0e8;
+            --text-secondary: #8aaa8a;
+            --text-muted: #5a7a5a;
+            --accent: #4caf50;
+            --accent-hover: #66bb6a;
+            --accent-dim: #1e3d1e;
+            --danger: #c62828;
+            --danger-hover: #e53935;
+            --info: #1565c0;
+            --info-hover: #1976d2;
+            --radius: 8px;
+            --radius-sm: 4px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            padding: 16px;
+        }
+        .container { max-width: 560px; margin: 0 auto; }
+        header { text-align: center; padding: 20px 0 16px; }
+        header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+        header p { font-size: 0.72rem; color: var(--text-muted); letter-spacing: 0.06em; margin-top: 2px; }
+
+        .form-group {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 14px 16px;
+            margin-bottom: 10px;
+        }
+        .label-row {
+            display: flex; align-items: center;
+            justify-content: space-between; margin-bottom: 8px;
+        }
+        label {
+            font-weight: 600; font-size: 0.85rem;
+            letter-spacing: 0.06em; text-transform: uppercase;
+            color: var(--text-secondary);
+        }
+        .info-btn {
+            width: 22px; height: 22px; border-radius: 50%;
+            border: 1px solid var(--border); background: var(--bg-secondary);
+            color: var(--text-muted); font-size: 0.7rem; font-weight: 700;
+            cursor: pointer; display: flex; align-items: center; justify-content: center;
+            flex-shrink: 0; transition: border-color 0.15s, color 0.15s;
+        }
+        .info-btn:hover { border-color: var(--accent); color: var(--accent); }
+        .info-text {
+            display: none; font-size: 0.8rem; color: var(--text-muted);
+            background: var(--bg-secondary); border-left: 2px solid var(--accent-dim);
+            padding: 8px 10px; border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            margin-bottom: 8px; line-height: 1.5;
+        }
+        .info-text.show { display: block; }
+        .field-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 5px; opacity: 0.75; }
+
+        input[type="text"], textarea {
+            width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); color: var(--text-primary);
+            font-family: inherit; font-size: 1rem; padding: 12px 14px;
+            outline: none; transition: border-color 0.15s; -webkit-appearance: none; appearance: none;
+        }
+        input[type="text"]:focus, textarea:focus { border-color: var(--border-focus); }
+        textarea { resize: vertical; min-height: 72px; }
+
+        .input-row { display: flex; gap: 8px; }
+        .input-row input { flex: 1; min-width: 0; }
+
+        /* Compass */
+        .compass { display:grid; grid-template-columns:40px 40px 40px; grid-template-rows:40px 40px 40px; gap:4px; justify-content:center; margin-top:8px; margin-bottom:4px; }
+        .compass-btn { display:flex; align-items:center; justify-content:center; background:#1e2d45; border:1px solid #2e4a70; color:#90b8e8; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.75rem; font-weight:700; transition:all .15s; -webkit-tap-highlight-color:transparent; padding:0; }
+        .compass-btn:hover { background:#2a4a7a; border-color:#4a80c0; color:#c8e0f8; }
+        .compass-btn:active { transform:scale(0.92); }
+        .compass-btn.active { background:#4caf50; border-color:#4caf50; color:#0d1f0d; }
+        .compass-btn svg { width:18px; height:18px; }
+        .compass-center { background:var(--bg-input); border:1px solid var(--border); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); cursor:pointer; }
+        .compass-center:hover { border-color:var(--danger); color:var(--danger); }
+        /* Chip buttons */
+        .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .chip {
+            background: #1e2d45; border: 1px solid #2e4a70;
+            color: #90b8e8; font-size: 0.82rem; padding: 5px 12px;
+            border-radius: 20px; cursor: pointer; font-family: inherit;
+            transition: all 0.15s; min-height: 32px; white-space: nowrap; font-weight: 500;
+        }
+        .chip:hover { background: #2a4a7a; border-color: #4a80c0; color: #c8e0f8; }
+        .chip:active { transform: scale(0.95); }
+        .chip-dot {
+            display: inline-block; width: 8px; height: 8px;
+            border-radius: 50%; margin-right: 5px; vertical-align: middle;
+        }
+
+        /* Saved items */
+        .saved-items { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+        .saved-item {
+            display: inline-flex; align-items: center; gap: 4px;
+            background: var(--accent-dim); color: var(--text-secondary);
+            font-size: 0.78rem; padding: 4px 8px; border-radius: 20px;
+            cursor: pointer; transition: background 0.15s, color 0.15s;
+        }
+        .saved-item:hover { background: var(--border-focus); color: var(--text-primary); }
+        .saved-item .delete { color: var(--text-muted); font-size: 1rem; line-height: 1; padding: 0 2px; }
+        .saved-item .delete:hover { color: var(--danger-hover); }
+        #savedTill .saved-item, #savedFran .saved-item { min-width: 120px; justify-content: center; padding: 8px 12px; }
+
+        /* Buttons */
+        .btn {
+            display: inline-flex; align-items: center; justify-content: center;
+            min-height: 48px; padding: 12px 20px; border: none; border-radius: var(--radius);
+            font-family: inherit; font-size: 0.95rem; font-weight: 600;
+            letter-spacing: 0.04em; cursor: pointer; transition: background 0.15s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .btn:active { transform: scale(0.97); }
+        .btn-primary { width: 100%; background: var(--accent); color: #fff; margin-top: 8px; font-size: 1rem; }
+        .btn-primary:hover { background: var(--accent-hover); }
+        .btn-sm {
+            min-height: 40px; padding: 8px 14px; border-radius: var(--radius-sm);
+            font-size: 0.85rem; white-space: nowrap; flex-shrink: 0;
+        }
+        .btn-gps { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-dim); }
+        .btn-gps:hover { background: var(--border-focus); border-color: var(--border-focus); }
+        .btn-gps:disabled { opacity: 0.5; cursor: not-allowed; }
+        .btn-count { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); font-size: 1.2rem; padding: 12px 16px; }
+        .btn-count:hover { background: var(--bg-card); color: var(--text-primary); }
+        .btn-time { background: var(--accent-dim); color: var(--accent); font-size: 0.85rem; min-height: 48px; padding: 12px 16px; border-radius: var(--radius-sm); white-space: nowrap; }
+        .btn-time:hover { background: var(--border-focus); }
+        /* ── TNR Toggle Switch ─── */
+        .tnr-switch{position:relative;display:inline-flex;align-items:center;width:110px;height:36px;background:var(--accent-dim);border:1px solid var(--border);border-radius:18px;cursor:pointer;transition:border-color .2s;-webkit-tap-highlight-color:transparent;user-select:none;flex-shrink:0}
+        .tnr-switch:hover{border-color:var(--border-focus)}
+        .tnr-switch-thumb{position:absolute;top:3px;left:3px;width:50px;height:28px;background:var(--accent);border-radius:14px;transition:transform .25s cubic-bezier(.4,0,.2,1);pointer-events:none}
+        .tnr-switch.is-long .tnr-switch-thumb{transform:translateX(54px)}
+        .tnr-switch-labels{position:absolute;inset:0;display:flex;pointer-events:none}
+        .tnr-switch-label{flex:1;display:flex;align-items:center;justify-content:center;font-size:0.7rem;font-weight:700;letter-spacing:.05em;transition:color .2s}
+        .tnr-switch .lbl-kort{color:var(--bg-primary)}
+        .tnr-switch .lbl-lang{color:var(--text-muted)}
+        .tnr-switch.is-long .lbl-kort{color:var(--text-muted)}
+        .tnr-switch.is-long .lbl-lang{color:var(--bg-primary)}
+        .btn-copy { width: 100%; background: var(--info); color: #fff; margin-bottom: 12px; }
+        .btn-copy:hover { background: var(--info-hover); }
+        .btn-cot { width: 100%; background: var(--bg-secondary); color: var(--text-secondary); border: 1px dashed var(--border); margin-bottom: 8px; font-size: 0.85rem; }
+        .btn-cot:hover { background: var(--bg-card); color: var(--text-primary); border-color: var(--accent); }
+        .cot-group { margin-top: 4px; }
+        .btn-tak { width: 100%; background: var(--bg-secondary); color: var(--accent); border: 1px solid var(--accent-dim); margin-bottom: 8px; font-size: 0.9rem; }
+        .btn-tak:hover { background: var(--accent-dim); border-color: var(--accent); }
+        /* Bekräftelsedialog */
+        .confirm-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.75); z-index:11000; align-items:center; justify-content:center; padding:16px; }
+        .confirm-overlay.open { display:flex; }
+        .confirm-dialog { width:100%; max-width:400px; background:var(--bg-primary); border:1px solid var(--accent); border-radius:var(--radius); padding:24px; }
+        .confirm-dialog h3 { color:var(--accent); font-size:1rem; margin-bottom:16px; letter-spacing:0.04em; }
+        .confirm-dialog .confirm-info { font-family:'Courier New',monospace; font-size:0.85rem; background:var(--bg-secondary); padding:12px; border-radius:var(--radius-sm); margin-bottom:16px; line-height:1.6; }
+        .confirm-dialog .confirm-info .label { color:var(--text-muted); }
+        .confirm-dialog .confirm-btns { display:flex; gap:10px; }
+        .confirm-dialog .confirm-btns button { flex:1; }
+
+        .btn-secondary { flex: 1; background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); }
+        .btn-secondary:hover { background: var(--bg-card); color: var(--text-primary); }
+        .btn-danger { flex: 1; background: var(--danger); color: #fff; }
+        .btn-danger:hover { background: var(--danger-hover); }
+        .button-group { display: flex; gap: 10px; }
+
+        .divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+        .result-view { display: none; }
+        .result-view.active { display: block; }
+        .form-view.hidden { display: none; }
+        .result-header {
+            font-size: 0.8rem; font-weight: 600; letter-spacing: 0.1em;
+            text-transform: uppercase; color: var(--accent); text-align: center; margin-bottom: 12px;
+        }
+        .report-output {
+            background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius);
+            padding: 16px; font-family: 'Courier New', monospace; font-size: 0.95rem;
+            line-height: 1.8; white-space: pre-wrap; color: var(--text-primary); margin-bottom: 14px;
+        }
+        .copy-feedback {
+            text-align: center; color: var(--accent); font-size: 0.85rem; font-weight: 600;
+            height: 24px; opacity: 0; transition: opacity 0.2s; margin-bottom: 12px;
+        }
+        .copy-feedback.show { opacity: 1; }
+
+        /* Navigering */
+        .tab-nav { display: flex; gap: 4px; margin-bottom: 4px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-link { flex: 1; text-align: center; padding: 9px 2px; border-radius: var(--radius-sm); color: var(--text-muted); text-decoration: none; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.05em; transition: background 0.15s, color 0.15s; -webkit-tap-highlight-color: transparent; }
+        .tab-link:hover { background: var(--bg-card); color: var(--text-secondary); }
+        .tab-link.active { background: var(--accent-dim); color: var(--accent); }
+        .tab-nav-sub { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; margin-top: 4px; margin-bottom: 16px; background: var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--radius); padding: 4px; }
+        .tab-nav-sub .tab-link { font-size: 0.75rem; padding: 9px 2px; letter-spacing: 0.05em; }
+        /* Symbol embed modal */
+        .embed-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.7); z-index:9999; align-items:center; justify-content:center; padding:12px; }
+        .embed-modal-overlay.open { display:flex; }
+        .embed-modal { width:100%; max-width:580px; height:85vh; background:var(--bg-primary); border:1px solid var(--border); border-radius:var(--radius); overflow:hidden; display:flex; flex-direction:column; }
+        .embed-modal-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border); }
+        .embed-modal-title { font-size:0.82rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); }
+        .embed-modal-close { background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:4px 8px; border-radius:var(--radius-sm); transition:color 0.15s; }
+        .embed-modal-close:hover { color:var(--text-primary); }
+        .embed-modal iframe { flex:1; border:none; width:100%; }
+        .symbol-format-group { display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; }
+        .symbol-format-btn { background:var(--accent-dim); border:1px dashed var(--accent); color:var(--accent); font-size:0.78rem; font-weight:600; padding:5px 12px; border-radius:20px; cursor:pointer; font-family:inherit; transition:background 0.15s; }
+        .symbol-format-btn:hover { background:var(--border-focus); }
+        /* Kartmodal */
+        .map-modal-overlay { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10000; flex-direction:column; }
+        .map-modal-overlay.open { display:flex; }
+        .map-modal-header { display:flex; align-items:center; justify-content:space-between; padding:10px 14px; background:var(--bg-secondary); border-bottom:1px solid var(--border); flex-shrink:0; }
+        .map-modal-title { font-size:0.82rem; font-weight:700; letter-spacing:0.08em; text-transform:uppercase; color:var(--accent); }
+        .map-modal-close { background:none; border:none; color:var(--text-muted); font-size:1.4rem; cursor:pointer; padding:4px 8px; }
+        .map-modal-close:hover { color:var(--text-primary); }
+        #mapContainer { flex:1; width:100%; position:relative; }
+        .map-spinner { position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--bg-primary); z-index:1000; transition:opacity 0.3s; }
+        .map-spinner.hidden { opacity:0; pointer-events:none; }
+        .map-spinner::after { content:''; width:36px; height:36px; border:3px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:mapspin 0.8s linear infinite; }
+        .geo-spinner { display:inline-block; width:10px; height:10px; border:2px solid var(--border); border-top-color:var(--accent); border-radius:50%; animation:mapspin 0.8s linear infinite; margin-left:0; vertical-align:-1px; }
+        .geo-spinner.hidden { display:none; }
+        @keyframes mapspin { to { transform:rotate(360deg); } }
+        .map-modal-footer { display:flex; align-items:center; gap:10px; padding:10px 14px; background:var(--bg-secondary); border-top:1px solid var(--border); flex-shrink:0; }
+        .map-mgrs-display { flex:1; font-family:'Courier New',monospace; font-size:0.9rem; font-weight:700; color:var(--accent); letter-spacing:0.06em; }
+        .map-confirm-btn { min-height:40px; padding:8px 18px; border:none; border-radius:var(--radius-sm); background:var(--accent); color:#fff; font-family:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; white-space:nowrap; }
+        .map-confirm-btn:hover { background:var(--accent-hover); }
+        .map-confirm-btn:disabled { opacity:0.4; cursor:default; }
+        .field-clear { background:none; border:none; color:var(--text-muted); font-size:0.72rem; font-weight:600; letter-spacing:0.05em; cursor:pointer; padding:2px 0; text-transform:uppercase; }
+        .field-clear:hover { color:var(--danger); }
+        /* Mini-karta (thumbnail) under STÄLLE-fältet — fjärdedel så stor som full
+           modal-karta. Klick öppnar full modal. Visar marker när stalle har giltig
+           koord, annars centrerad över Sverige som hint. */
+        .stalle-mini-map { width:100%; height:120px; margin-top:6px; border-radius:var(--radius-sm); overflow:hidden; cursor:pointer; position:relative; border:1px solid var(--border); background:var(--bg-secondary); }
+        .stalle-mini-map .leaflet-container { background:#1e1e1e; cursor:pointer !important; }
+        .stalle-mini-map-hint { position:absolute; left:8px; top:8px; z-index:500; background:rgba(0,0,0,0.7); color:#fff; padding:2px 7px; border-radius:3px; font-size:0.66rem; letter-spacing:0.05em; text-transform:uppercase; pointer-events:none; }
+    </style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Verktyget kräver JavaScript. Aktivera i webbläsarens inställningar och ladda om sidan.</div></noscript>
+<div class="container">
+    <header>
+        <h1>7S Rapport</h1>
+        <p>Fältrapporteringsverktyg</p>
+        <p style="font-size:0.68rem;color:var(--text-muted);letter-spacing:0.04em;margin-top:6px;line-height:1.5;max-width:420px;margin-left:auto;margin-right:auto;opacity:0.85">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
+    </header>
+    <main>
+        <div class="form-view" id="formView">
+
+            <!-- FOTO -->
+            <div class="form-group" style="border-style:dashed;">
+                <input type="file" id="fotoInput" accept="image/*" style="display:none" onchange="readFoto(this)">
+                <button class="btn btn-primary" style="margin-top:0" onclick="document.getElementById('fotoInput').click()">Hämta tid från sparat foto</button>
+                <div style="font-size:0.72rem;color:var(--text-muted);margin-top:6px;text-align:center">Välj ett redan taget foto ur galleriet — tid läses från bildens metadata.</div>
+                <div id="fotoStatus" style="font-size:0.8rem;color:var(--text-muted);margin-top:8px;text-align:center"></div>
+            </div>
+
+            <!-- FRÅN / TILL -->
+            <div class="form-group">
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+                    <div>
+                        <label for="till" style="margin-bottom:6px">Till</label>
+                        <input type="text" id="till" placeholder="Ex: 1a plut" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
+                        <div class="saved-items" id="savedTill"></div>
+                    </div>
+                    <div>
+                        <label for="fran" style="margin-bottom:6px">Fr&aring;n</label>
+                        <input type="text" id="fran" placeholder="Ex: AQ / 2a grp" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
+                        <div class="saved-items" id="savedFran"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- STUND -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="stund">Stund</label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStund')" aria-label="Info om Stund">i</button>
+                </div>
+                <div class="info-text" id="infoStund">Tidpunkt när det hände. Format: DDHHMM eller DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
+                <div class="input-row">
+                    <input type="text" id="stund" maxlength="15" placeholder="DDHHMMZMånÅÅÅÅ" pattern="([0-9]{6}|[0-9]{6}[AB][A-Z]{3}[0-9]{4})" autocomplete="off">
+                    <button class="btn btn-sm btn-time" tabindex="-1" onclick="setCurrentTime()">Nu</button>
+                    <div class="tnr-switch" id="tnrSwitch" onclick="toggleTnrFormat()" role="switch" aria-checked="false" tabindex="0"><div class="tnr-switch-thumb"></div><div class="tnr-switch-labels"><span class="tnr-switch-label lbl-kort">Kort</span><span class="tnr-switch-label lbl-lang">Långt</span></div></div>
+                </div>
+            </div>
+
+            <!-- STÄLLE -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="stalle">STÄLLE - Målets position</label>
+                    <button class="field-clear" tabindex="-1" onclick="document.getElementById('stalle').value=''">RENSA ×</button>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStalle')" aria-label="Info om STÄLLE - Målets position">i</button>
+                </div>
+                <div class="info-text" id="infoStalle">Var observationen/händelsen är — <strong>INTE din egen position</strong>. MGRS-koordinater, platsnamn eller beskrivning.</div>
+                <div class="input-row">
+                    <input type="text" id="stalle" placeholder="Plats / koordinater" autocomplete="off">
+                    <button class="btn btn-sm btn-time" tabindex="-1" onclick="openMapModal()">Karta</button>
+                </div>
+                <div id="stalleMiniMap" class="stalle-mini-map" onclick="openMapModal()" role="button" tabindex="0"
+                     onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openMapModal();}"
+                     aria-label="Öppna karta för att välja position">
+                    <span class="stalle-mini-map-hint">Tryck för att välja på kartan</span>
+                </div>
+                <div class="saved-items" id="savedStalle"></div>
+            </div>
+
+            <!-- Kartmodal för STÄLLE -->
+            <div class="map-modal-overlay" id="mapModal">
+                <div class="map-modal-header">
+                    <span class="map-modal-title">Välj plats på kartan</span>
+                    <button class="map-modal-close" onclick="closeMapModal()">×</button>
+                </div>
+                <div id="mapExtTileWarning" style="background:#2a1a0a;border-bottom:1px solid #c8a24e;padding:8px 14px;font-size:0.72rem;color:#c8a24e;line-height:1.4;text-align:center">OBS: Kartbakgrunden laddas från extern server som ser IP och visat område. Undvik i skarpt läge.</div>
+                <div id="mapContainer"><div class="map-spinner" id="mapSpinner"></div></div>
+                <div class="map-modal-footer">
+                    <span class="map-mgrs-display" id="mapMgrsDisplay">Tryck på kartan</span><span class="geo-spinner hidden" id="geoSpinner"></span>
+                    <button class="map-confirm-btn" id="mapConfirmBtn" disabled onclick="confirmMapSelection()">Välj plats</button>
+                </div>
+            </div>
+
+            <!-- STYRKA -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="styrka">Styrka</label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStyrka')" aria-label="Info om Styrka">i</button>
+                </div>
+                <div class="info-text" id="infoStyrka">Antal observerade fiender, fordon eller objekt.</div>
+                <div class="input-row">
+                    <button class="btn btn-sm btn-count" tabindex="-1" onclick="changeCount(-1)">−</button>
+                    <input type="text" id="styrka" placeholder="Antal" inputmode="numeric" autocomplete="off">
+                    <button class="btn btn-sm btn-count" tabindex="-1" onclick="changeCount(1)">+</button>
+                </div>
+            </div>
+
+            <!-- SLAG -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="slag">Slag</label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSlag')" aria-label="Info om Slag">i</button>
+                </div>
+                <div class="info-text" id="infoSlag">Typ av fiender eller objekt. T.ex. stridsvagn, infanteri, lastbil.</div>
+                <textarea id="slag" rows="2" placeholder="Typ av fiende/objekt"></textarea>
+                <div class="chip-group">
+                    <button class="chip" onclick="appendChip('slag','Infanteri')">Infanteri</button>
+                    <button class="chip" onclick="appendChip('slag','Civila')">Civila</button>
+                    <button class="chip" onclick="appendChip('slag','Personbil')">Personbil</button>
+                    <button class="chip" onclick="appendChip('slag','MC')">MC</button>
+                    <button class="chip" onclick="appendChip('slag','Moped')">Moped</button>
+                    <button class="chip" onclick="appendChip('slag','VOI')">VOI</button>
+                    <button class="chip" onclick="appendChip('slag','Cykel')">Cykel</button>
+                    <button class="chip" onclick="appendChip('slag','Lastbil')">Lastbil</button>
+                    <button class="chip" onclick="appendChip('slag','Drönare')">Drönare</button>
+                    <button class="chip" onclick="appendChip('slag','Stridsvagn')">Stridsvagn</button>
+                    <button class="chip" onclick="appendChip('slag','Helikopter')">Helikopter</button>
+                </div>
+            </div>
+
+            <!-- SYSSELSÄTTNING -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="sysselsattning">Sysselsättning</label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSyssel')" aria-label="Info om Sysselsättning">i</button>
+                </div>
+                <div class="info-text" id="infoSyssel">Fiendens verksamhet. Vad gör de? Rörelser, gruppering, etc.</div>
+                <textarea id="sysselsattning" rows="2" placeholder="Vad gör fienden?"></textarea>
+                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
+                    <div class="compass">
+                        <span></span>
+                        <button class="compass-btn" data-dir="N" onclick="toggleDir(this)">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2 L13 10 L10 7 L7 10Z"/><text x="10" y="18" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">N</text></svg>
+                        </button>
+                        <span></span>
+                        <button class="compass-btn" data-dir="V" onclick="toggleDir(this)">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 10 L10 7 L7 10 L10 13Z"/><text x="16" y="13" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">V</text></svg>
+                        </button>
+                        <button class="compass-center" onclick="clearDirs()" title="Rensa riktning">
+                            <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><line x1="10" y1="3" x2="10" y2="6"/><line x1="10" y1="14" x2="10" y2="17"/><line x1="3" y1="10" x2="6" y2="10"/><line x1="14" y1="10" x2="17" y2="10"/></svg>
+                        </button>
+                        <button class="compass-btn" data-dir="Ö" onclick="toggleDir(this)">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M18 10 L10 7 L13 10 L10 13Z"/><text x="5" y="13" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">Ö</text></svg>
+                        </button>
+                        <span></span>
+                        <button class="compass-btn" data-dir="S" onclick="toggleDir(this)">
+                            <svg viewBox="0 0 20 20" fill="currentColor"><text x="10" y="7" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">S</text><path d="M10 18 L7 10 L10 13 L13 10Z"/></svg>
+                        </button>
+                        <span></span>
+                    </div>
+                    <div class="chip-group" style="margin-top:0">
+                        <button class="chip" onclick="appendChip('sysselsattning','Spanar')">Spanar</button>
+                        <button class="chip" onclick="appendChip('sysselsattning','Saboterar')">Saboterar</button>
+                        <button class="chip" onclick="appendChip('sysselsattning','Patrull')">Patrull</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SYMBOL -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="symbol">Symbol</label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSymbol')" aria-label="Info om Symbol">i</button>
+                </div>
+                <div class="info-text" id="infoSymbol">Märkning, siffror, förbandstecken, färg på fordon/uniformer.</div>
+                <textarea id="symbol" rows="2" placeholder="Märkning, färg, tecken"></textarea>
+                <div class="chip-group">
+                    <button class="chip" onclick="appendChip('symbol','Grön')"><span class="chip-dot" style="background:#4caf50"></span>Grön</button>
+                    <button class="chip" onclick="appendChip('symbol','Röd')"><span class="chip-dot" style="background:#e53935"></span>Röd</button>
+                    <button class="chip" onclick="appendChip('symbol','Svart')"><span class="chip-dot" style="background:#555;border:1px solid #888"></span>Svart</button>
+                    <button class="chip" onclick="appendChip('symbol','Vit')"><span class="chip-dot" style="background:#eee;border:1px solid #888"></span>Vit</button>
+                    <button class="chip" onclick="appendChip('symbol','Gul')"><span class="chip-dot" style="background:#fdd835"></span>Gul</button>
+                    <button class="chip" onclick="appendChip('symbol','Blå')"><span class="chip-dot" style="background:#1565c0"></span>Blå</button>
+                    <button class="chip" onclick="appendChip('symbol','Kamouflage')">Kamouflage</button>
+                </div>
+                <div class="symbol-format-group">
+                    <button class="symbol-format-btn" onclick="openSymbolEmbed('scrim.html','SCRIM')">SCRIM</button>
+                    <button class="symbol-format-btn" onclick="openSymbolEmbed('what.html','WHAT')">WHAT</button>
+                    <button class="symbol-format-btn" onclick="openSymbolEmbed('weft.html','WEFT')">WEFT</button>
+                    <button class="symbol-format-btn" onclick="openSymbolEmbed('ah.html','A-H')">A-H</button>
+                </div>
+            </div>
+
+            <!-- Symbol embed modal -->
+            <div class="embed-modal-overlay" id="symbolModal">
+                <div class="embed-modal">
+                    <div class="embed-modal-header">
+                        <span class="embed-modal-title" id="symbolModalTitle">SYMBOL</span>
+                        <button class="embed-modal-close" onclick="closeSymbolEmbed()">×</button>
+                    </div>
+                    <iframe id="symbolIframe" sandbox="allow-scripts allow-same-origin"></iframe>
+                </div>
+            </div>
+
+            <!-- SAGESMAN -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="sagesman">Sagesman</label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSagesman')" aria-label="Info om Sagesman">i</button>
+                </div>
+                <div class="info-text" id="infoSagesman">Format: NIN 111. 1a p, 2a grp. För- och Efternamn<br><u>Gu</u>nnarsson, <u>D</u>aniel → GUD</div>
+                <input type="text" id="sagesman" placeholder="GUD 111. 3e p, 2a grp." autocomplete="off" oninput="this.value = this.value.toUpperCase()">
+                <div class="field-hint">(Namnkod = de två första bokstäverna i efternamnet + första bokstaven i förnamnet)</div>
+                <div class="saved-items" id="savedSagesman"></div>
+            </div>
+
+            <!-- SEDAN -->
+            <div class="form-group">
+                <div class="label-row">
+                    <label for="sedan">Sedan <span style="font-size:0.75rem;opacity:0.6;font-weight:normal;">(frivillig)</span></label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSedan')" aria-label="Info om Sedan">i</button>
+                </div>
+                <div class="info-text" id="infoSedan">Vad spaningsgruppen fortsätter med efter observationen. Kan vara avgörande om enheten inte hör av sig igen, eller som underlag för underrättelsebefäl att skicka följdfrågor.</div>
+                <textarea id="sedan" rows="2" placeholder="Vid behov — ange spaningsgruppens fortsatta uppgift"></textarea>
+                <div class="chip-group">
+                    <button class="chip" onclick="appendChip('sedan','Återgår till bas')">Återgår till bas</button>
+                    <button class="chip" onclick="appendChip('sedan','Fortsätter spaning')">Fortsätter spaning</button>
+                    <button class="chip" onclick="appendChip('sedan','Fortsätter post')">Fortsätter post</button>
+                    <button class="chip" onclick="appendChip('sedan','Fortsätter patrull')">Fortsätter patrull</button>
+                    <button class="chip" onclick="appendChip('sedan','Följer efter')">Följer efter</button>
+                    <button class="chip" onclick="appendChip('sedan','Avbryter uppdraget')">Avbryter uppdraget</button>
+                </div>
+            </div>
+
+            <hr class="divider">
+            <button class="btn btn-primary" onclick="generateReport()">Generera rapport</button>
+        </div>
+
+        <!-- Resultatvy -->
+        <div class="result-view" id="resultView">
+            <div class="result-header">Rapport redo att kopieras</div>
+            <div class="report-output" id="reportOutput"></div>
+            <button class="btn btn-copy" onclick="copyToClipboard()">Kopiera till urklipp</button>
+            <div class="copy-feedback" id="copyFeedback">Kopierat</div>
+            <button class="btn btn-tak" onclick="showPublishDialog()">Publicera till TAK + dela via Signal<span style="font-family:ui-monospace,monospace;font-size:0.72em;font-weight:400;opacity:0.55;margin-left:8px;letter-spacing:0.05em;vertical-align:middle">(BETA)</span></button>
+            <div class="cot-group">
+                <button class="btn btn-cot" onclick="copyCoT()">Kopiera CoT XML<span style="font-family:ui-monospace,monospace;font-size:0.72em;font-weight:400;opacity:0.55;margin-left:8px;letter-spacing:0.05em;vertical-align:middle">(BETA)</span></button>
+                <button class="btn btn-cot" onclick="downloadCoT()">Ladda ner .cot-fil<span style="font-family:ui-monospace,monospace;font-size:0.72em;font-weight:400;opacity:0.55;margin-left:8px;letter-spacing:0.05em;vertical-align:middle">(BETA)</span></button>
+            </div>
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="backToEdit()">Redigera</button>
+                <button class="btn btn-danger" onclick="resetForm()">Nollställ</button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Bekräftelsedialog: Publicera till TAK + Signal -->
+    <div class="confirm-overlay" id="publishOverlay" onclick="if(event.target===this)closePublishDialog()">
+        <div class="confirm-dialog">
+            <h3>Publicera rapport</h3>
+            <div class="confirm-info" id="publishInfo"></div>
+            <label for="signalGruppInp" style="display:block;margin-top:10px;font-size:0.85rem;opacity:0.85">Förvald Signal-grupp (sparas lokalt, visas som påminnelse)</label>
+            <input id="signalGruppInp" type="text" placeholder="t.ex. Pluton 1" autocomplete="off"
+                   style="width:100%;margin-top:4px;padding:8px 10px;border-radius:3px;border:1px solid var(--border, #555);background:var(--bg-input, #1e1e1e);color:inherit;font:inherit">
+            <div class="confirm-btns">
+                <button class="btn btn-secondary" onclick="closePublishDialog()">Avbryt</button>
+                <button class="btn btn-primary" onclick="executePublish()" style="margin-top:0">Bekräfta</button>
+            </div>
+        </div>
+    </div>
+
+</div>
+
+<script>
+// ── MGRS Konverterare (inline, WGS84) ───────────────────────────────────────
+const MGRS = (() => {
+    const COL_LETTERS = ['ABCDEFGH','JKLMNPQR','STUVWXYZ','ABCDEFGH','JKLMNPQR','STUVWXYZ'];
+    const ROW_LETTERS = ['ABCDEFGHJKLMNPQRSTUV','FGHJKLMNPQRSTUVABCDE'];
+
+    function zoneLetter(lat) {
+        return 'CDEFGHJKLMNPQRSTUVWX'[Math.floor((lat + 80) / 8)] || '?';
+    }
+    function zoneNumber(lat, lon) {
+        let z = Math.floor((lon + 180) / 6) + 1;
+        if (lat >= 56 && lat < 64 && lon >= 3 && lon < 12) return 32;
+        if (lat >= 72 && lat < 84) {
+            if (lon >= 0  && lon <  9) return 31;
+            if (lon >= 9  && lon < 21) return 33;
+            if (lon >= 21 && lon < 33) return 35;
+            if (lon >= 33 && lon < 42) return 37;
+        }
+        return z;
+    }
+    function toUTM(lat, lon) {
+        const R = Math.PI / 180;
+        const a = 6378137, f = 1/298.257223563, b = a*(1-f);
+        const e2 = (a*a-b*b)/(a*a), ep2 = e2/(1-e2), k0 = 0.9996;
+        const lr = lat*R, lo = lon*R;
+        const zn = zoneNumber(lat, lon);
+        const lo0 = ((zn-1)*6-180+3)*R;
+        const N = a/Math.sqrt(1-e2*Math.sin(lr)**2);
+        const T = Math.tan(lr)**2, C = ep2*Math.cos(lr)**2;
+        const A = Math.cos(lr)*(lo-lo0);
+        const M = a*((1-e2/4-3*e2**2/64-5*e2**3/256)*lr
+            -(3*e2/8+3*e2**2/32+45*e2**3/1024)*Math.sin(2*lr)
+            +(15*e2**2/256+45*e2**3/1024)*Math.sin(4*lr)
+            -(35*e2**3/3072)*Math.sin(6*lr));
+        const E = k0*N*(A+(1-T+C)*A**3/6+(5-18*T+T**2+72*C-58*ep2)*A**5/120)+500000;
+        let Ns = k0*(M+N*Math.tan(lr)*(A**2/2+(5-T+9*C+4*C**2)*A**4/24+(61-58*T+T**2+600*C-330*ep2)*A**6/720));
+        if (lat < 0) Ns += 10000000;
+        return { E, N: Ns, zn, zl: zoneLetter(lat) };
+    }
+    function gridSquare(E, Ns, zn) {
+        const s = (zn-1)%6;
+        const col = Math.floor(E/100000)-1;
+        const row = Math.floor(Ns/100000)%20;
+        return COL_LETTERS[s][col] + ROW_LETTERS[s%2][row];
+    }
+    function forward(lat, lon) {
+        const utm = toUTM(lat, lon);
+        const sq = gridSquare(utm.E, utm.N, utm.zn);
+        const e = String(Math.floor(utm.E%100000)).padStart(5,'0');
+        const n = String(Math.floor(utm.N%100000)).padStart(5,'0');
+        return `${utm.zn}${utm.zl}${sq} ${e} ${n}`;
+    }
+    function inverse(mgrsStr) {
+        const s = mgrsStr.replace(/\s+/g, '');
+        const m = s.match(/^(\d{1,2})([C-X])([A-Z])([A-Z])(\d+)$/i);
+        if (!m) return null;
+        const zn = parseInt(m[1]), band = m[2].toUpperCase();
+        const col = m[3].toUpperCase(), row = m[4].toUpperCase();
+        const nums = m[5], half = nums.length / 2;
+        const easting = parseInt(nums.slice(0, half)) * Math.pow(10, 5 - half);
+        const northing = parseInt(nums.slice(half)) * Math.pow(10, 5 - half);
+        const setIdx = (zn - 1) % 6;
+        const colIdx = COL_LETTERS[setIdx].indexOf(col) + 1;
+        const rowIdx = ROW_LETTERS[setIdx % 2].indexOf(row);
+        const E = colIdx * 100000 + easting;
+        // Approximate northing from band letter
+        const bandIdx = 'CDEFGHJKLMNPQRSTUVWX'.indexOf(band);
+        const bandLat = -80 + bandIdx * 8 + 4;
+        const refN = toUTM(bandLat, (zn - 1) * 6 - 180 + 3).N;
+        let N = Math.floor(refN / 2000000) * 2000000 + rowIdx * 100000 + northing;
+        if (N < refN - 1000000) N += 2000000;
+        if (N > refN + 1000000) N -= 2000000;
+        // UTM to lat/lon
+        const a = 6378137, f = 1/298.257223563, b = a*(1-f);
+        const e2 = (a*a-b*b)/(a*a), ep2 = e2/(1-e2), k0 = 0.9996;
+        const M = N / k0;
+        const mu = M / (a * (1 - e2/4 - 3*e2*e2/64 - 5*e2*e2*e2/256));
+        const e1 = (1 - Math.sqrt(1 - e2)) / (1 + Math.sqrt(1 - e2));
+        const phi1 = mu + (3*e1/2 - 27*e1*e1*e1/32)*Math.sin(2*mu) + (21*e1*e1/16 - 55*e1*e1*e1*e1/32)*Math.sin(4*mu) + (151*e1*e1*e1/96)*Math.sin(6*mu);
+        const N1 = a / Math.sqrt(1 - e2 * Math.sin(phi1)**2);
+        const T1 = Math.tan(phi1)**2, C1 = ep2 * Math.cos(phi1)**2;
+        const R1 = a * (1 - e2) / Math.pow(1 - e2 * Math.sin(phi1)**2, 1.5);
+        const D = (E - 500000) / (N1 * k0);
+        const lat2 = phi1 - (N1 * Math.tan(phi1) / R1) * (D*D/2 - (5+3*T1+10*C1-4*C1*C1-9*ep2)*D*D*D*D/24 + (61+90*T1+298*C1+45*T1*T1-252*ep2-3*C1*C1)*D*D*D*D*D*D/720);
+        const lon2 = ((zn - 1) * 6 - 180 + 3) * Math.PI/180 + (D - (1+2*T1+C1)*D*D*D/6 + (5-2*C1+28*T1-3*C1*C1+8*ep2+24*T1*T1)*D*D*D*D*D/120) / Math.cos(phi1);
+        return [lat2 * 180/Math.PI, lon2 * 180/Math.PI];
+    }
+    return { forward, inverse };
+})();
+
+// ── URL-parameter → förfyll Ställe (ATAK-integration) ───────────────────────
+// Stöder: ?mgrs=32VNJ1234567890  |  ?lat=59.33&lon=18.07
+document.addEventListener('DOMContentLoaded', () => {
+    const field = document.getElementById('stalle');
+    if (!field) return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has('mgrs')) {
+        const coord = extractCoord(params.get('mgrs'));
+        if (coord) { field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 1500); setTimeout(() => showVerifyBtn(coord), 100); }
+    } else if (params.has('lat') && params.has('lon')) {
+        const lat = parseFloat(params.get('lat')), lon = parseFloat(params.get('lon'));
+        if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            try {
+                const coord = MGRS.forward(lat, lon);
+                field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 1500); setTimeout(() => showVerifyBtn(coord), 100);
+            } catch(_) {}
+        }
+    }
+    // ── Klistra in MGRS / lat-lon — auto-extrahering ────────────────────────
+    field.addEventListener('paste', e => {
+        const raw = (e.clipboardData || window.clipboardData).getData('text');
+        const coord = extractCoord(raw);
+        if (coord) { e.preventDefault(); field.value = coord; field.style.outline = '2px solid var(--accent)'; setTimeout(() => field.style.outline = '', 800); showVerifyBtn(coord); }
+    });
+});
+function extractCoord(text) {
+    // 1. MGRS: 34VCJ 56934 85565 / 34VCJ5693485565 / 34V CJ 569 855 etc.
+    const mgrs = text.match(/\d{1,2}\s?[C-X]\s?[A-Z]{2}\s?\d{3,5}\s?\d{3,5}/i);
+    if (mgrs) {
+        const digits = mgrs[0].replace(/\s+/g, '');
+        const m = digits.match(/^(\d{1,2})([C-X])([A-Z]{2})(\d+)$/i);
+        if (m) {
+            const nums = m[4];
+            const half = Math.floor(nums.length / 2);
+            const east = nums.slice(0, half).padEnd(5, '0').slice(0, 5);
+            const north = nums.slice(half).padEnd(5, '0').slice(0, 5);
+            return `${m[1]}${m[2].toUpperCase()}${m[3].toUpperCase()} ${east} ${north}`;
+        }
+    }
+    // 2. Lat/lon decimal degrees: 59.3293, 18.0686 / 59.3293/18.0686
+    const ll = text.match(/(-?\d{1,3}\.\d{2,})\s*[,/;\s]\s*(-?\d{1,3}\.\d{2,})/);
+    if (ll) {
+        const a = parseFloat(ll[1]), b = parseFloat(ll[2]);
+        // Gissa vilken som är lat vs lon (lat < 90)
+        const lat = Math.abs(a) <= 90 ? a : b;
+        const lon = Math.abs(a) <= 90 ? b : a;
+        if (lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+            try { return MGRS.forward(lat, lon); } catch(_) {}
+        }
+    }
+    return null;
+}
+
+// ── Visa på karta — verifiera koordinat ──────────────────────────────────────
+function showVerifyBtn(mgrsStr) {
+    let btn = document.getElementById('verifyMapBtn');
+    if (!btn) {
+        btn = document.createElement('button');
+        btn.id = 'verifyMapBtn';
+        btn.className = 'btn btn-sm btn-time';
+        btn.tabIndex = -1;
+        btn.textContent = 'Visa på karta';
+        btn.style.cssText = 'margin-top:8px;width:100%;padding:14px;font-size:1rem;font-weight:600;background:var(--accent);color:#fff;border:none;border-radius:var(--radius-sm);cursor:pointer';
+        const row = (document.getElementById('stalle') || document.getElementById('plats')).closest('.input-row');
+        row.parentNode.insertBefore(btn, row.nextSibling);
+    }
+    btn.style.display = '';
+    btn.onclick = () => {
+        const ll = MGRS.inverse(mgrsStr);
+        if (!ll) return;
+        openMapModal();
+        const wait = setInterval(() => {
+            if (typeof mapInstance !== 'undefined' && mapInstance) {
+                clearInterval(wait);
+                mapInstance.setView(ll, 14);
+                if (typeof mapMarker !== 'undefined' && mapMarker) mapInstance.removeLayer(mapMarker);
+                mapMarker = L.marker(ll).addTo(mapInstance);
+                mapSelectedMgrs = mgrsStr;
+                const disp = document.getElementById('mapMgrsDisplay');
+                if (disp) disp.textContent = mgrsStr + ' — ';
+                reverseGeocode(ll[0], ll[1]);
+            }
+        }, 100);
+    };
+}
+
+// Visa verify-knapp även vid manuell paste
+(function() {
+    const origPasteHandler = () => {};
+    document.addEventListener('DOMContentLoaded', () => {
+        const field = document.getElementById('stalle') || document.getElementById('plats');
+        if (!field) return;
+        field.addEventListener('input', () => {
+            const coord = extractCoord(field.value);
+            if (coord && coord === field.value) showVerifyBtn(coord);
+        });
+    });
+})();
+
+// ── Foto EXIF ────────────────────────────────────────────────────────────────
+let lastFotoFilename = '';
+let lastFotoFile = null;
+async function readFoto(input) {
+    const file = input.files[0];
+    if (!file) return;
+    lastFotoFilename = file.name;
+    lastFotoFile = file;
+    const status = document.getElementById('fotoStatus');
+    status.textContent = 'Läser metadata...';
+    try {
+        const exif = await exifr.parse(file, { tiff: true, exif: true });
+        if (!exif) { status.textContent = 'Ingen EXIF-data hittades i bilden.'; return; }
+
+        // Stund från DateTimeOriginal — alltid KORT format
+        const dt = exif.DateTimeOriginal || exif.DateTime;
+        if (dt) {
+            const d = new Date(dt), p = n => String(n).padStart(2,'0');
+            document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
+            status.textContent = 'Tid hämtad från foto.';
+        } else {
+            status.textContent = 'Ingen tidsstämpel i bilden.';
+        }
+    } catch(e) {
+        status.textContent = 'Kunde inte läsa bilden: ' + e.message;
+    }
+    input.value = '';
+}
+
+// ── Kompass-riktningsväljare ──────────────────────────────────────────────────
+const compassOrder = ['N','S','Ö','V'];
+const compassOpposite = { N:'S', S:'N', Ö:'V', V:'Ö' };
+function toggleDir(btn) {
+    const dir = btn.dataset.dir;
+    const wasActive = btn.classList.contains('active');
+    if (!wasActive) {
+        const oppBtn = document.querySelector('.compass-btn[data-dir="' + compassOpposite[dir] + '"]');
+        if (oppBtn) oppBtn.classList.remove('active');
+    }
+    btn.classList.toggle('active');
+    const active = [...document.querySelectorAll('.compass-btn.active')].map(b => b.dataset.dir);
+    const field = document.getElementById('sysselsattning');
+    const current = field.value.replace(/Rör sig [NSÖVO]+,?\s*/g, '').trim();
+    if (active.length === 0) {
+        field.value = current;
+        return;
+    }
+    const sorted = active.sort((a, b) => compassOrder.indexOf(a) - compassOrder.indexOf(b));
+    const dirStr = sorted.join('').replace(/Ö/g, 'O');
+    field.value = current ? 'Rör sig ' + dirStr + ', ' + current : 'Rör sig ' + dirStr;
+    scrollFieldToTop(field);
+}
+function clearDirs() {
+    document.querySelectorAll('.compass-btn.active').forEach(b => b.classList.remove('active'));
+    const field = document.getElementById('sysselsattning');
+    field.value = field.value.replace(/Rör sig [NSÖVO]+,?\s*/g, '').trim();
+}
+
+// ── Chip-knappar (appendar till befintligt värde) ─────────────────────────────
+function scrollFieldToTop(el) {
+    const group = el.closest('.form-group') || el;
+    const doScroll = () => {
+        const y = group.getBoundingClientRect().top + window.scrollY - 6;
+        window.scrollTo({ top: y, behavior: 'smooth' });
+    };
+    doScroll();
+    setTimeout(doScroll, 350);
+}
+function appendChip(fieldId, value) {
+    const el = document.getElementById(fieldId);
+    el.value = el.value.trim() ? el.value.trimEnd() + ', ' + value : value;
+    scrollFieldToTop(el);
+    el.focus({ preventScroll: true });
+}
+
+// ── Symbol embed (SCRIM/WHAT/WEFT/A-H i modal) ──────────────────────────────
+function openSymbolEmbed(file, label) {
+    document.getElementById('symbolModalTitle').textContent = 'SYMBOL: Fyll i via ' + label;
+    document.getElementById('symbolIframe').src = file + '?mode=embed';
+    document.getElementById('symbolModal').classList.add('open');
+}
+function closeSymbolEmbed() {
+    document.getElementById('symbolModal').classList.remove('open');
+    document.getElementById('symbolIframe').src = '';
+}
+window.addEventListener('message', function(e) {
+    if (e.data && e.data.type === 'symbol-fill') {
+        const el = document.getElementById('symbol');
+        const prefix = el.value.trim();
+        const formatted = `(${e.data.format})\n${e.data.text}`;
+        el.value = prefix ? prefix + '\n' + formatted : formatted;
+        el.rows = Math.max(4, el.value.split('\n').length + 1);
+        closeSymbolEmbed();
+    }
+});
+
+// ── Interaktiv karta för STÄLLE ──────────────────────────────────────────────
+let mapInstance = null;
+let mapMarker = null;
+let mapSelectedMgrs = '';
+let mapSelectedLat = null;
+let mapSelectedLon = null;
+let mapSelectedAddress = '';
+let mapConfirmed = false;
+let mapViewportRestore = null;
+
+function reverseGeocode(lat, lon) {
+    mapSelectedAddress = '';
+    if (!navigator.onLine) { lmLookup(lat, lon, []); return; }
+    fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=sv&zoom=19`)
+        .then(r => r.json())
+        .then(d => {
+            const a = d.address || {};
+            const mainRoad = a.road || '';
+            const houseNum = a.house_number || '';
+            const local = a.suburb || a.neighbourhood || a.city_district || '';
+            const town = a.village || a.town || a.city || '';
+            const area = (local && town && local !== town) ? local + ', ' + town : (local || town);
+            if (a.island) {
+                const street = mainRoad ? (mainRoad + (houseNum ? ' ' + houseNum : '')) : '';
+                resolveFeaturePosition(lat, lon, a.island, 'island', [street, area].filter(Boolean));
+            } else {
+                overpassLookup(lat, lon, mainRoad, houseNum, area);
+            }
+        })
+        .catch(() => { const sp = document.getElementById('geoSpinner'); if (sp) sp.classList.add('hidden'); });
+}
+
+function overpassLookup(lat, lon, mainRoad, houseNum, area) {
+    const q = `[out:json][timeout:5];(
+        way["natural"="water"]["name"](around:1000,${lat},${lon});
+        relation["natural"="water"]["name"](around:1000,${lat},${lon});
+        way["highway"]["name"](around:100,${lat},${lon});
+    );out center;`;
+    fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q) })
+        .then(r => r.json())
+        .then(data => {
+            const els = data.elements || [];
+            const lake = els.find(e => (e.tags || {}).natural === 'water' && e.tags.name);
+            const addressParts = buildAddress(els, mainRoad, houseNum, area);
+            if (lake && !mainRoad) {
+                resolveFeaturePosition(lat, lon, lake.tags.name, 'lake', addressParts);
+            } else if (addressParts.length) {
+                mapSelectedAddress = addressParts.join(', ');
+                updateMapDisplay();
+            } else {
+                lmLookup(lat, lon, addressParts);
+            }
+        })
+        .catch(() => {
+            const street = mainRoad ? (mainRoad + (houseNum ? ' ' + houseNum : '')) : '';
+            const parts = [street, area].filter(Boolean);
+            if (parts.length) { mapSelectedAddress = parts.join(', '); updateMapDisplay(); }
+            else lmLookup(lat, lon, parts);
+        });
+}
+
+function buildAddress(els, mainRoad, houseNum, area) {
+    const roads = [...new Set(els.filter(e => (e.tags || {}).highway && e.tags.name).map(e => e.tags.name))];
+    const crossRoad = roads.find(r => r !== mainRoad);
+    let street = '';
+    if (mainRoad && crossRoad) {
+        street = mainRoad + ' / ' + crossRoad + (houseNum ? ' ' + houseNum : '');
+    } else if (mainRoad) {
+        street = mainRoad + (houseNum ? ' ' + houseNum : '');
+    }
+    return [street, area].filter(Boolean);
+}
+
+let _lmData = null;
+function lmLookup(lat, lon, addressParts) {
+    const done = () => { if (addressParts.length) { mapSelectedAddress = addressParts.join(', '); updateMapDisplay(); } };
+    const search = (data) => {
+        _lmData = data;
+        let best = null, bestDist = Infinity;
+        for (const p of data) {
+            const d = Math.pow(p.la - lat, 2) + Math.pow((p.lo - lon) * Math.cos(lat * Math.PI / 180), 2);
+            if (d < bestDist) { bestDist = d; best = p; }
+        }
+        const distKm = Math.sqrt(bestDist) * 111.32;
+        if (best && distKm < 5) {
+            const type = best.t === 's' ? 'lake' : best.t === 'b' ? 'mountain' : 'island';
+            resolveFeaturePosition(lat, lon, best.n, type, addressParts);
+        } else { done(); }
+    };
+    if (_lmData) { search(_lmData); return; }
+    fetch('ortnamn.json').then(r => r.json()).then(search).catch(done);
+}
+
+function resolveFeaturePosition(lat, lon, name, type, addressParts) {
+    fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`)
+        .then(r => r.json())
+        .then(results => {
+            let prefix = name;
+            if (results.length && results[0].boundingbox) {
+                const bb = results[0].boundingbox.map(Number);
+                const cLat = (bb[0] + bb[1]) / 2, cLon = (bb[2] + bb[3]) / 2;
+                const latSpan = bb[1] - bb[0], lonSpan = bb[3] - bb[2];
+                const ns = (lat - cLat) / (latSpan || 1), ew = (lon - cLon) / (lonSpan || 1);
+                const t = 0.15;
+                const dir = computeDirection(ns, ew, t);
+                if (dir) {
+                    prefix = dir + ' ' + name;
+                }
+            }
+            const allParts = [prefix, ...addressParts].filter(Boolean);
+            mapSelectedAddress = allParts.join(', ');
+            updateMapDisplay();
+        })
+        .catch(() => {
+            mapSelectedAddress = [name, ...addressParts].filter(Boolean).join(', ');
+            updateMapDisplay();
+        });
+}
+
+function computeDirection(ns, ew, t) {
+    if (Math.abs(ns) < t && Math.abs(ew) < t) return 'C';
+    let dir = '';
+    if (ns > t) dir += 'N'; else if (ns < -t) dir += 'S';
+    if (ew > t) dir += 'Ö';
+    else if (ew < -t) dir += 'V';
+    return dir;
+}
+
+function updateMapDisplay() {
+    const disp = document.getElementById('mapMgrsDisplay');
+    if (disp && mapSelectedMgrs && mapSelectedAddress) {
+        disp.textContent = mapSelectedMgrs + ' — ' + mapSelectedAddress;
+    }
+    const sp = document.getElementById('geoSpinner'); if (sp) sp.classList.add('hidden');
+    // Om användaren redan bekräftat — uppdatera Ställe-fältet i bakgrunden
+    if (mapConfirmed && mapSelectedMgrs && mapSelectedAddress) {
+        const field = document.getElementById('stalle');
+        if (field) field.value = mapSelectedMgrs + ', ' + mapSelectedAddress;
+        mapConfirmed = false;
+    }
+}
+
+function lockViewportForMapModal() {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+        if (mapViewportRestore === null) mapViewportRestore = viewport.getAttribute('content') || '';
+        viewport.setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0');
+    }
+    window.scrollTo(0, 0);
+}
+
+function restoreViewportAfterMapModal() {
+    const viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport && mapViewportRestore !== null) viewport.setAttribute('content', mapViewportRestore);
+}
+
+function openMapModal() {
+    lockViewportForMapModal();
+    document.getElementById('mapModal').classList.add('open');
+    document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
+    document.getElementById('mapConfirmBtn').disabled = true;
+    mapSelectedMgrs = '';
+    mapConfirmed = false;
+    if (mapInstance) {
+        mapInstance.eachLayer(function(layer) {
+            if (layer instanceof L.Marker) mapInstance.removeLayer(layer);
+        });
+    }
+    mapMarker = null;
+    var sp = document.getElementById('mapSpinner');
+    if (sp && !mapInstance) { sp.classList.remove('hidden'); }
+
+    if (!mapInstance) {
+        mapInstance = L.map('mapContainer', { zoomControl: true });
+        var tileLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+            maxZoom: 17,
+            attribution: '&copy; <a href="https://opentopomap.org">OpenTopoMap</a>'
+        }).addTo(mapInstance);
+        tileLayer.on('load', function() { if (sp) sp.classList.add('hidden'); });
+        if (window.OfflineTiles && typeof window.OfflineTiles.attachCoverageControl === 'function') {
+            window.OfflineTiles.attachCoverageControl(mapInstance);
+        }
+        if (window.MapHardatModal && typeof window.MapHardatModal.attach === 'function') {
+            window.MapHardatModal.attach({
+                map: mapInstance,
+                baseLayer: tileLayer,
+                headerEl: document.querySelector('#mapModal .map-modal-header'),
+                warningEl: document.getElementById('mapExtTileWarning')
+            });
+        }
+
+        mapInstance.on('click', function(e) {
+            const { lat, lng } = e.latlng;
+            mapSelectedLat = lat;
+            mapSelectedLon = lng;
+            mapSelectedMgrs = MGRS.forward(lat, lng);
+            document.getElementById('mapMgrsDisplay').textContent = mapSelectedMgrs + ' — ';
+            document.getElementById('geoSpinner').classList.remove('hidden');
+            document.getElementById('mapConfirmBtn').disabled = false;
+            reverseGeocode(lat, lng);
+            if (mapMarker) {
+                mapMarker.setLatLng(e.latlng);
+            } else {
+                mapMarker = L.marker(e.latlng).addTo(mapInstance);
+            }
+        });
+    }
+
+    setTimeout(() => {
+        mapInstance.invalidateSize();
+        var cached = null;
+        try { cached = JSON.parse(localStorage.getItem('mapLastPos') || 'null'); } catch (_) { cached = null; }
+        if (cached && typeof cached.lat === 'number' && typeof cached.lng === 'number') { mapInstance.setView([cached.lat, cached.lng], cached.z || 13); }
+        else { mapInstance.setView([59.33, 18.07], 5); }
+        // OPSEC: ingen passiv geolocation-prompt vid kartmodal-öppning.
+        // Användaren drar/klickar på kartan manuellt för att välja punkt.
+    }, 100);
+}
+
+function closeMapModal() {
+    document.getElementById('mapModal').classList.remove('open');
+    restoreViewportAfterMapModal();
+}
+
+function clearMapMarker() {
+    if (mapMarker) { mapMarker.remove(); mapMarker = null; }
+    mapSelectedMgrs = '';
+    document.getElementById('mapMgrsDisplay').textContent = 'Tryck på kartan';
+    document.getElementById('mapConfirmBtn').disabled = true;
+}
+
+function confirmMapSelection() {
+    if (!mapSelectedMgrs) return;
+    const field = document.getElementById('stalle');
+    field.value = mapSelectedAddress ? mapSelectedMgrs + ', ' + mapSelectedAddress : mapSelectedMgrs;
+    // Om geocoding fortfarande pågår — flagga för bakgrundsuppdatering
+    mapConfirmed = !mapSelectedAddress;
+    // Spegla val i mini-thumbnail
+    try {
+        const ll = MGRS.inverse(mapSelectedMgrs);
+        if (ll && isFinite(ll.lat) && isFinite(ll.lon)) updateStalleMiniMap(ll.lat, ll.lon);
+    } catch (_) {}
+    closeMapModal();
+}
+
+// ── Mini-karta: thumbnail under STÄLLE-fältet ──────────────────────────────
+// En liten Leaflet-instans som spegelvisar vald koord. Klick öppnar full
+// modal-karta via openMapModal(). Initieras lazy vid första uppdatering;
+// fram tills dess visas placeholdern (rendered i HTML).
+let stalleMiniMap = null;
+let stalleMiniMarker = null;
+
+function ensureStalleMiniMap() {
+    if (stalleMiniMap) return stalleMiniMap;
+    const el = document.getElementById('stalleMiniMap');
+    if (!el || typeof L === 'undefined') return null;
+    // Behåll hint-texten som overlay (z-index:500) ovanpå kartan så användaren
+    // ser både en sample av kartbakgrunden och vet att man kan trycka.
+    stalleMiniMap = L.map(el, {
+        zoomControl: false,
+        attributionControl: false,
+        dragging: false,
+        touchZoom: false,
+        scrollWheelZoom: false,
+        doubleClickZoom: false,
+        boxZoom: false,
+        keyboard: false,
+        tap: false
+    }).setView([62.5, 15.5], 4);
+    L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+        maxZoom: 17, crossOrigin: true
+    }).addTo(stalleMiniMap);
+    return stalleMiniMap;
+}
+
+// Initiera mini-kartan direkt vid sidladdning — visar Sverige-översikt som
+// sample av kartbakgrunden istället för svart ruta. Hint-texten ligger kvar
+// som overlay. Kallas via samma attachStalleMiniSync() nedan.
+function initStalleMiniMapPreview() {
+    ensureStalleMiniMap();
+}
+
+function updateStalleMiniMap(lat, lng) {
+    const m = ensureStalleMiniMap();
+    if (!m) return;
+    if (stalleMiniMarker) {
+        stalleMiniMarker.setLatLng([lat, lng]);
+    } else {
+        stalleMiniMarker = L.circleMarker([lat, lng], {
+            radius: 7, color: '#c8a24e', fillColor: '#c8a24e', fillOpacity: 0.9, weight: 2
+        }).addTo(m);
+    }
+    m.setView([lat, lng], 13);
+}
+
+// Synka mini-kartan när stalle-fältet ändras (klistra in, manuell inmatning).
+// Försök tolka som MGRS först, sen lat/lng-par.
+function syncStalleMiniFromField() {
+    const el = document.getElementById('stalle');
+    if (!el) return;
+    const v = el.value.trim();
+    if (!v) return;
+    // MGRS: t.ex. "33VWF1234567890"
+    const mgrsMatch = v.match(/\b(\d{1,2}[C-X])\s*([A-HJ-NP-Z]{2})\s*(\d{1,5})\s*(\d{1,5})\b/i);
+    if (mgrsMatch) {
+        try {
+            const ll = MGRS.inverse(mgrsMatch[0].replace(/\s+/g, ''));
+            if (ll && isFinite(ll.lat) && isFinite(ll.lon)) {
+                updateStalleMiniMap(ll.lat, ll.lon);
+                return;
+            }
+        } catch (_) {}
+    }
+    // Decimal: 59.32, 18.07 eller 59.32 N 18.07 E
+    const ddMatch = v.match(/(-?\d+\.\d+)[°\s,NS]+(-?\d+\.\d+)/);
+    if (ddMatch) {
+        const lat = parseFloat(ddMatch[1]), lng = parseFloat(ddMatch[2]);
+        if (Math.abs(lat) <= 90 && Math.abs(lng) <= 180) updateStalleMiniMap(lat, lng);
+    }
+}
+
+// Anslut input-listener när DOM är klar (script ligger inline efter form i HTML).
+(function attachStalleMiniSync() {
+    function attach() {
+        const el = document.getElementById('stalle');
+        if (!el) return;
+        el.addEventListener('input', () => {
+            clearTimeout(attach._t);
+            attach._t = setTimeout(syncStalleMiniFromField, 350);
+        });
+        el.addEventListener('change', syncStalleMiniFromField);
+        // Visa mini-kartan som sample direkt (innan användaren skrivit något),
+        // sedan synka om fältet redan har värde (t.ex. återställd session).
+        initStalleMiniMapPreview();
+        setTimeout(syncStalleMiniFromField, 100);
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', attach);
+    } else {
+        attach();
+    }
+})();
+
+// ── +/- för Styrka ─────────────────────────────────────────────────────────
+function changeCount(delta) {
+    const el = document.getElementById('styrka');
+    const current = parseInt(el.value, 10);
+    const next = isNaN(current) ? Math.max(0, delta) : Math.max(0, current + delta);
+    el.value = next;
+}
+
+// ── Tid ─────────────────────────────────────────────────────────────────────
+function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
+
+let tnrLong = false;
+function toggleTnrFormat() {
+    tnrLong = !tnrLong;
+    const sw = document.getElementById('tnrSwitch');
+    sw.classList.toggle('is-long', tnrLong);
+    sw.setAttribute('aria-checked', tnrLong);
+    const inp = sw.closest('.input-row').querySelector('input[type="text"]');
+    if (inp) {
+        const v = inp.value.trim();
+        if (tnrLong && /^\d{6}$/.test(v)) {
+            const d = new Date();
+            const z = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
+            const mån = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
+            inp.value = v + z + mån + d.getFullYear();
+        } else if (!tnrLong && /^\d{6}[AB][A-Z]{3}\d{4}$/.test(v)) {
+            inp.value = v.substring(0, 6);
+        }
+    }
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain); gain.connect(ctx.destination);
+        osc.frequency.value = tnrLong ? 880 : 660;
+        gain.gain.value = 0.03;
+        osc.start();
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.06);
+        osc.stop(ctx.currentTime + 0.06);
+    } catch(e) {}
+}
+function setCurrentTime() {
+    const now = new Date(), p = n => String(n).padStart(2,'0');
+    // Stund - alltid KORT format, oavsett tnrLong
+    const base = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}`;
+    document.getElementById('stund').value = base;
+}
+
+// ── Rapport ─────────────────────────────────────────────────────────────────
+function nowTnr() {
+    const now = new Date(), p = n => String(n).padStart(2,'0');
+    const base = `${p(now.getDate())}${p(now.getHours())}${p(now.getMinutes())}`;
+    if (tnrLong) {
+        const months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
+        const tz = now.getTimezoneOffset() <= -120 ? 'B' : 'A';
+        return base + tz + months[now.getMonth()] + now.getFullYear();
+    }
+    return base;
+}
+function generateReport() {
+    const v = id => document.getElementById(id).value.trim();
+    savePlaceIfNew(v('stalle'));
+    saveSagesmanIfNew(v('sagesman'));
+    saveTillIfNew(v('till'));
+    saveFranIfNew(v('fran'));
+    const lines = [
+        '7S RAPPORT',
+        `Till: ${v('till') || '-'}`,
+        `Från: ${v('fran') || '-'}`,
+        '',
+        `TNR: ${nowTnr()}`,
+        '',
+        `Stund: ${v('stund') || '-'}`,
+        `Ställe: ${v('stalle') || '-'}`,
+        `Styrka: ${v('styrka') || '-'}`,
+        `Slag: ${v('slag') || '-'}`,
+        `Sysselsättning: ${v('sysselsattning') || '-'}`,
+        `Symbol: ${v('symbol') || '-'}`,
+        lastFotoFilename ? `Foto: ${lastFotoFilename}` : null,
+        `Sagesman: ${v('sagesman') || '-'}`,
+        `Sedan: ${v('sedan') || '-'}`,
+    ].filter(Boolean);
+    document.getElementById('reportOutput').textContent = lines.join('\n');
+    document.getElementById('formView').classList.add('hidden');
+    document.getElementById('resultView').classList.add('active');
+}
+
+// ── CoT (Cursor on Target) Export ────────────────────────────────────────────
+function slagToCoTType(slag) {
+    if (!slag || slag === '-') return 'a-u-G';
+    const s = slag.toLowerCase();
+    if (/dr.nar|uas|rpas|uav|multikopter|quadro/.test(s)) return 'a-h-A-MFQ';
+    if (/flyg|jet|plan|helikopter|heli|strids.?flyg/.test(s)) return 'a-h-A';
+    if (/fordon|stridsfordon|bv|pansarvagn|stridsvagn|lastbil|bandvagn/.test(s)) return 'a-h-G-E';
+    if (/b.t|fartyg|ub.t/.test(s)) return 'a-h-S';
+    if (/person|soldat|infanteri|skytte|grupp|patrull/.test(s)) return 'a-h-G';
+    return 'a-h-G';
+}
+
+function mgrsToLatLon(mgrsStr) {
+    if (!mgrsStr || mgrsStr === '-') return null;
+    try { return MGRS.inverse(mgrsStr); } catch(e) { return null; }
+}
+
+function generateCoTXML() {
+    const v = id => document.getElementById(id).value.trim();
+    const stalle = v('stalle');
+    const stund = v('stund');
+    const slag = v('slag');
+
+    const coords = mgrsToLatLon(stalle);
+    const lat = coords ? coords[0].toFixed(6) : '0';
+    const lon = coords ? coords[1].toFixed(6) : '0';
+
+    const time = parseTnrToISO(stund);
+    const stale = new Date(new Date(time).getTime() + 30 * 60000).toISOString();
+    const type = slagToCoTType(slag);
+    const uid = '7S-' + Date.now().toString(36).toUpperCase();
+
+    const remarks = [
+        v('styrka') ? `Styrka: ${v('styrka')}` : null,
+        v('slag') ? `Slag: ${v('slag')}` : null,
+        v('sysselsattning') ? `Sysselsättning: ${v('sysselsattning')}` : null,
+        v('symbol') ? `Symbol: ${v('symbol')}` : null,
+        v('sedan') ? `Sedan: ${v('sedan')}` : null,
+        v('sagesman') ? `Sagesman: ${v('sagesman')}` : null,
+    ].filter(Boolean).join('; ');
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+<event version="2.0" uid="${uid}" type="${type}" how="h-e" time="${time}" start="${time}" stale="${stale}">
+  <point lat="${lat}" lon="${lon}" hae="0" ce="50" le="0"/>
+  <detail>
+    <contact callsign="7S Rapport"/>
+    <remarks>7S RAPPORT — ${escapeXml(remarks) || '-'}</remarks>
+  </detail>
+</event>`;
+}
+
+function copyCoT() {
+    const xml = generateCoTXML();
+    if (navigator.clipboard?.writeText) {
+        navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat'));
+    } else {
+        const ta = document.createElement('textarea');
+        ta.value = xml; ta.style.cssText = 'position:fixed;opacity:0';
+        document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); showCotFeedback('CoT XML kopierat'); }
+        catch(e) { alert('Kunde inte kopiera CoT XML.'); }
+        document.body.removeChild(ta);
+    }
+}
+
+// ── Minimal ZIP-generator (ATAK Data Package) ──────────────────────────────
+function buildZip(files) {
+    // files: [{name: 'path/file.ext', data: Uint8Array}]
+    const te = new TextEncoder();
+    const parts = []; const central = []; let offset = 0;
+    for (const f of files) {
+        const name = te.encode(f.name);
+        const data = f.data instanceof Uint8Array ? f.data : te.encode(f.data);
+        const crc = crc32(data);
+        // Local file header
+        const lh = new Uint8Array(30 + name.length);
+        const lv = new DataView(lh.buffer);
+        lv.setUint32(0, 0x04034b50, true); lv.setUint16(4, 20, true); // ver
+        lv.setUint16(8, 0, true); // store (no compression)
+        lv.setUint32(14, crc, true);
+        lv.setUint32(18, data.length, true); lv.setUint32(22, data.length, true);
+        lv.setUint16(26, name.length, true);
+        lh.set(name, 30);
+        // Central directory
+        const cd = new Uint8Array(46 + name.length);
+        const cv = new DataView(cd.buffer);
+        cv.setUint32(0, 0x02014b50, true); cv.setUint16(4, 20, true); cv.setUint16(6, 20, true);
+        cv.setUint32(16, crc, true);
+        cv.setUint32(20, data.length, true); cv.setUint32(24, data.length, true);
+        cv.setUint16(28, name.length, true);
+        cv.setUint32(42, offset, true);
+        cd.set(name, 46);
+        parts.push(lh, data);
+        central.push(cd);
+        offset += lh.length + data.length;
+    }
+    const cdOffset = offset;
+    let cdSize = 0;
+    for (const c of central) cdSize += c.length;
+    // End of central directory
+    const ecd = new Uint8Array(22);
+    const ev = new DataView(ecd.buffer);
+    ev.setUint32(0, 0x06054b50, true);
+    ev.setUint16(8, files.length, true); ev.setUint16(10, files.length, true);
+    ev.setUint32(12, cdSize, true); ev.setUint32(16, cdOffset, true);
+    return new Blob([...parts, ...central, ecd], { type: 'application/zip' });
+}
+function crc32(data) {
+    let crc = 0xFFFFFFFF;
+    for (let i = 0; i < data.length; i++) {
+        crc ^= data[i];
+        for (let j = 0; j < 8; j++) crc = (crc >>> 1) ^ (crc & 1 ? 0xEDB88320 : 0);
+    }
+    return (crc ^ 0xFFFFFFFF) >>> 0;
+}
+
+function buildDataPackage(cotXml, prefix) {
+    const uid = prefix + '-' + Date.now().toString(36);
+    const manifest = `<?xml version="1.0" encoding="UTF-8"?>
+<MissionPackageManifest version="2">
+  <Configuration>
+    <Parameter name="uid" value="${uid}"/>
+    <Parameter name="name" value="${prefix} Rapport"/>
+  </Configuration>
+  <Contents>
+    <Content ignore="false" zipEntry="cot/${prefix.toLowerCase()}-rapport.cot"/>
+  </Contents>
+</MissionPackageManifest>`;
+    return buildZip([
+        { name: 'manifest.xml', data: manifest },
+        { name: `cot/${prefix.toLowerCase()}-rapport.cot`, data: cotXml }
+    ]);
+}
+
+function downloadCoT() {
+    const xml = generateCoTXML();
+    const dpBlob = buildDataPackage(xml, '7S');
+    const url = URL.createObjectURL(dpBlob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `7S-rapport-${new Date().toISOString().slice(0,10)}.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showCotFeedback('Data Package nedladdad');
+}
+
+function showCotFeedback(msg) {
+    const el = document.getElementById('copyFeedback');
+    el.textContent = msg;
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+    setTimeout(() => { el.textContent = 'Kopierat'; }, 2500);
+}
+
+// ── Publicera till TAK + dela via Signal ─────────────────────────────────────
+const SIGNAL_GROUP_KEY = '7s.signalGroup';
+function getSignalGroup() {
+    try { return (localStorage.getItem(SIGNAL_GROUP_KEY) || '').trim(); } catch (_) { return ''; }
+}
+function saveSignalGroup(name) {
+    try {
+        const t = (name || '').trim();
+        if (t) localStorage.setItem(SIGNAL_GROUP_KEY, t);
+        else localStorage.removeItem(SIGNAL_GROUP_KEY);
+    } catch (_) {}
+}
+
+function showPublishDialog() {
+    const v = id => document.getElementById(id).value.trim();
+    const stalle = v('stalle') || '-';
+    const info = document.getElementById('publishInfo');
+    const grupp = getSignalGroup();
+    const signalRad = grupp
+        ? `<span class="label">Signal:</span> Textrapport delas → ${grupp}`
+        : `<span class="label">Signal:</span> Textrapport delas`;
+    info.innerHTML =
+        `<span class="label">Position:</span> ${stalle}\n` +
+        `<span class="label">TAK:</span> .cot-fil delas till ATAK\n` +
+        signalRad;
+    const inp = document.getElementById('signalGruppInp');
+    if (inp) inp.value = grupp;
+    document.getElementById('publishOverlay').classList.add('open');
+}
+
+function closePublishDialog() {
+    document.getElementById('publishOverlay').classList.remove('open');
+}
+
+function executePublish() {
+    // Spara förvald Signal-grupp innan dialogen stängs — nästa rapport förifylls.
+    const inp = document.getElementById('signalGruppInp');
+    if (inp) saveSignalGroup(inp.value);
+    closePublishDialog();
+    const text = document.getElementById('reportOutput').textContent;
+    const xml = generateCoTXML();
+    const dpBlob = buildDataPackage(xml, '7S');
+    const dpFile = new File([dpBlob], `7S-rapport-${new Date().toISOString().slice(0,10)}.zip`, { type: 'application/zip' });
+
+    // Samla filer: alltid Data Package, valfritt foto
+    const files = [dpFile];
+    if (lastFotoFile) files.push(lastFotoFile);
+
+    const grupp = getSignalGroup();
+    const grupphint = grupp ? ' → ' + grupp : '';
+
+    if (navigator.share) {
+        const shareData = { text, files };
+        if (navigator.canShare?.(shareData)) {
+            navigator.share(shareData).then(() => {
+                showCotFeedback('Rapport delad' + grupphint);
+            }).catch(() => {
+                fallbackDownloadCoT(xml);
+                shareTextOnly(text);
+            });
+        } else {
+            fallbackDownloadCoT(xml);
+            shareTextOnly(text);
+        }
+    } else {
+        fallbackDownloadCoT(xml);
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(() => showCotFeedback('Nedladdad + text kopierad' + grupphint));
+        }
+    }
+}
+
+function fallbackDownloadCoT(xml) {
+    const dpBlob = buildDataPackage(xml, '7S');
+    const url = URL.createObjectURL(dpBlob);
+    const a = document.createElement('a');
+    a.href = url; a.download = `7S-rapport-${new Date().toISOString().slice(0,10)}.zip`;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+}
+
+function shareTextOnly(text) {
+    if (navigator.share) {
+        navigator.share({ text }).catch(() => {});
+    }
+}
+
+function copyToClipboard() {
+    const text = document.getElementById('reportOutput').textContent;
+    const doCopy = () => {
+        if (navigator.clipboard?.writeText) {
+            navigator.clipboard.writeText(text).then(() => showCopyFeedback()).catch(() => { fallbackCopy(text); });
+        } else { fallbackCopy(text); }
+    };
+    // Om en bild laddades via EXIF och webbläsaren stödjer fildelning — erbjud att bifoga
+    if (lastFotoFile && navigator.share) {
+        const shareData = { text, files: [lastFotoFile] };
+        if (navigator.canShare?.(shareData)) {
+            doCopy();
+            if (confirm('Vill du bifoga fotot (' + lastFotoFilename + ') till meddelandet?')) {
+                navigator.share(shareData).catch(() => {});
+            } else {
+                navigator.share({ text }).catch(() => {});
+            }
+            return;
+        }
+    }
+    doCopy();
+    if (navigator.share) navigator.share({ text }).catch(() => {});
+}
+
+function fallbackCopy(text) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.cssText = 'position:fixed;opacity:0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); showCopyFeedback(); }
+    catch(e) { alert('Kunde inte kopiera. Markera texten manuellt.'); }
+    document.body.removeChild(ta);
+}
+function showCopyFeedback() {
+    const el = document.getElementById('copyFeedback');
+    el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+function backToEdit() {
+    document.getElementById('formView').classList.remove('hidden');
+    document.getElementById('resultView').classList.remove('active');
+}
+function resetForm() {
+    if (!confirm('Nollställ rapporten?')) return;
+    ['stund','stalle','styrka','slag','sysselsattning','symbol','sedan','sagesman'].forEach(id =>
+        document.getElementById(id).value = '');
+    lastFotoFilename = ''; lastFotoFile = null;
+    document.getElementById('fotoStatus').textContent = '';
+    backToEdit();
+}
+
+// ── Sparade platser & sagesman ───────────────────────────────────────────────
+const get = key => { try { return JSON.parse(localStorage.getItem(key) || '[]'); } catch (_) { return []; } };
+const set = (key, val) => localStorage.setItem(key, JSON.stringify(val));
+
+function savePlaceIfNew(v) {
+    if (!v?.trim()) return;
+    let items = get('7s_places');
+    if (!items.includes(v)) { set('7s_places', [v,...items].slice(0,5)); loadSavedItems(); }
+}
+function saveSagesmanIfNew(v) {
+    if (!v?.trim()) return;
+    let items = get('7s_sagesman');
+    if (!items.includes(v)) set('7s_sagesman', [v,...items].slice(0,5));
+    localStorage.setItem('7s_lastSagesman', v);
+    loadSavedItems();
+}
+function saveTillIfNew(v) {
+    if (!v?.trim()) return;
+    let items = get('7s_till');
+    if (!items.includes(v)) set('7s_till', [v,...items].slice(0,5));
+    localStorage.setItem('7s_lastTill', v);
+    loadSavedItems();
+}
+function saveFranIfNew(v) {
+    if (!v?.trim()) return;
+    let items = get('7s_fran');
+    if (!items.includes(v)) set('7s_fran', [v,...items].slice(0,5));
+    localStorage.setItem('7s_lastFran', v);
+    loadSavedItems();
+}
+function loadLastSagesman() {
+    const last = localStorage.getItem('7s_lastSagesman');
+    if (last) document.getElementById('sagesman').value = last;
+}
+function loadSavedItems() {
+    renderSaved('savedStalle',  get('7s_places'),   'stalle',   deleteSavedPlace);
+    renderSaved('savedSagesman',get('7s_sagesman'), 'sagesman', deleteSavedSagesman);
+    renderSaved('savedTill',    get('7s_till'),     'till',     deleteSavedTill);
+    renderSaved('savedFran',    get('7s_fran'),     'fran',     deleteSavedFran);
+}
+function clearSavedItems() {
+    if (!confirm('Rensa alla sparade snabbval (till, från, ställen, sägesmän)? Tömmer även auto-ifyllnaden vid nästa öppning.')) return;
+    ['7s_places','7s_sagesman','7s_lastSagesman','7s_till','7s_lastTill','7s_fran','7s_lastFran'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+    loadSavedItems();
+}
+function renderSaved(cid, items, inputId, delFn) {
+    const c = document.getElementById(cid); c.innerHTML = '';
+    items.forEach(item => {
+        const s = document.createElement('span'); s.className = 'saved-item';
+        s.onclick = () => document.getElementById(inputId).value = item;
+        s.appendChild(document.createTextNode(item));
+        const d = document.createElement('span'); d.className = 'delete'; d.textContent = '×';
+        d.onclick = e => { e.stopPropagation(); delFn(item); };
+        s.appendChild(d); c.appendChild(s);
+    });
+}
+function deleteSavedPlace(v)    { set('7s_places',   get('7s_places').filter(x=>x!==v));   loadSavedItems(); }
+function deleteSavedSagesman(v) { set('7s_sagesman', get('7s_sagesman').filter(x=>x!==v)); loadSavedItems(); }
+function deleteSavedTill(v)     { set('7s_till',     get('7s_till').filter(x=>x!==v));     loadSavedItems(); }
+function deleteSavedFran(v)     { set('7s_fran',     get('7s_fran').filter(x=>x!==v));     loadSavedItems(); }
+
+document.addEventListener('DOMContentLoaded', () => { loadSavedItems(); loadLastSagesman(); setCurrentTime(); });
+
+// SW + install-banner + offline-info hanteras i pwa.js
+
+// Footer (priv-not + feedback-länk + Om projektet) hanteras i footer.js
+</script>
+<script src="opsec.js"></script>
+<script src="pwa.js"></script>
+<script>window.FORM_ID = { title: '7S' }; window.HV_PAGE = '7S';</script>
+<script src="footer.js"></script>
+<script src="lib/nav.js"></script>
+<script src="version.js"></script>
+</body>
+</html>

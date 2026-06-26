@@ -1,0 +1,1072 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<title>Arkitektur-review — hv / 7S Rapport</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  :root{
+    --bg:#0d1f0d; --bg2:#152815; --card:#1a321a; --card2:#1f3a1f;
+    --border:#2d4a2d; --border2:#4a7c4a;
+    --txt:#e8f0e8; --txt2:#a8c2a8; --muted:#6a8a6a;
+    --accent:#4caf50; --accent2:#66bb6a;
+    --warn:#ffb300; --danger:#e53935; --info:#42a5f5;
+    --move:#ab47bc; --edit:#26c6da; --keep:#9ccc65;
+    --delta:#ff7043; --done:#26a69a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    font-family:'Inter','Segoe UI',system-ui,sans-serif;
+    background:linear-gradient(180deg,#0a1a0a 0%,#0d1f0d 100%);
+    color:var(--txt); min-height:100vh; padding:24px 16px;
+    line-height:1.55;
+  }
+  .slide{
+    max-width:1180px; margin:0 auto;
+    background:var(--bg2); border:1px solid var(--border);
+    border-radius:14px; padding:32px 36px;
+    box-shadow:0 8px 32px rgba(0,0,0,.4);
+  }
+  header{ border-bottom:1px solid var(--border); padding-bottom:18px; margin-bottom:24px; }
+  h1{
+    font-size:1.55rem; font-weight:800; letter-spacing:.04em;
+    color:var(--accent); text-transform:uppercase;
+  }
+  header .sub{ color:var(--txt2); font-size:.92rem; margin-top:6px; }
+  header .stamp{ color:var(--muted); font-size:.78rem; margin-top:4px; letter-spacing:.05em; }
+
+  h2{
+    font-size:1.05rem; font-weight:700; letter-spacing:.08em;
+    text-transform:uppercase; margin:26px 0 12px;
+    display:flex; align-items:center; gap:10px;
+  }
+  h2 .dot{
+    width:10px; height:10px; border-radius:50%;
+    background:var(--accent); flex-shrink:0;
+  }
+  h2.move .dot{ background:var(--move) }
+  h2.edit .dot{ background:var(--edit) }
+  h2.change .dot{ background:var(--warn) }
+  h2.keep .dot{ background:var(--keep) }
+  h2.toc .dot{ background:var(--info) }
+  h2.delta .dot{ background:var(--delta) }
+
+  .grid{
+    display:grid; gap:12px;
+    grid-template-columns:repeat(auto-fit,minmax(340px,1fr));
+  }
+  .card{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:10px; padding:14px 16px;
+  }
+  .card.move{ border-left:3px solid var(--move) }
+  .card.edit{ border-left:3px solid var(--edit) }
+  .card.change{ border-left:3px solid var(--warn) }
+  .card.keep{ border-left:3px solid var(--keep) }
+  .card.delta{ border-left:3px solid var(--delta) }
+  .card.done{ border-left:3px solid var(--done) }
+
+  .badge{
+    display:inline-block; font-size:.65rem; font-weight:700;
+    letter-spacing:.06em; padding:2px 7px; border-radius:4px;
+    margin-left:6px; vertical-align:middle;
+  }
+  .badge.done{ background:#143c3a; color:#80cbc4; border:1px solid #26a69a }
+  .badge.partial{ background:#3a2a14; color:#ffb74d; border:1px solid #ff9800 }
+  .badge.confirmed{ background:#2a143a; color:#ce93d8; border:1px solid #ab47bc }
+  .badge.new{ background:#3a1414; color:#ff8a65; border:1px solid #ff5722 }
+
+  .card h3{
+    font-size:.92rem; font-weight:700; letter-spacing:.03em;
+    margin-bottom:6px; color:var(--accent2);
+  }
+  .card .why{ color:var(--txt2); font-size:.85rem; margin-bottom:8px; }
+  .card pre{
+    background:#0a160a; border:1px solid var(--border); border-radius:6px;
+    padding:8px 10px; font-size:.78rem; color:#cfe5cf;
+    overflow-x:auto; font-family:ui-monospace,'Cascadia Code',Consolas,monospace;
+    white-space:pre; line-height:1.4;
+  }
+  .card .impact{
+    margin-top:8px; font-size:.74rem; color:var(--muted);
+    letter-spacing:.04em; text-transform:uppercase;
+  }
+  .impact b.l{ color:var(--accent2) }
+  .impact b.m{ color:var(--warn) }
+  .impact b.h{ color:var(--danger) }
+
+  .nu-pil{
+    color:var(--muted); padding:0 8px; font-weight:600;
+  }
+  .tag{
+    display:inline-block; font-size:.7rem; letter-spacing:.06em;
+    padding:2px 8px; border-radius:99px;
+    background:#0a160a; border:1px solid var(--border);
+    color:var(--txt2); margin-right:4px;
+  }
+
+  .summary{
+    background:var(--card2); border-left:3px solid var(--accent);
+    padding:14px 18px; border-radius:8px; margin-bottom:18px;
+    font-size:.95rem; color:var(--txt2);
+  }
+  .summary b{ color:var(--accent2) }
+  .summary ul{ margin:8px 0 0 20px }
+  .summary li{ margin:3px 0 }
+
+  .toc-list{ display:flex; flex-wrap:wrap; gap:8px; }
+  .toc-list a{
+    background:var(--card); border:1px solid var(--border);
+    color:var(--txt); text-decoration:none; padding:6px 12px;
+    border-radius:99px; font-size:.82rem;
+  }
+  .toc-list a:hover{ border-color:var(--accent); color:var(--accent2) }
+
+  .nums{
+    display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr));
+    gap:10px; margin-top:10px;
+  }
+  .num{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:8px; padding:10px 12px;
+  }
+  .num b{ display:block; font-size:1.4rem; color:var(--accent); font-weight:800 }
+  .num span{ font-size:.78rem; color:var(--txt2) }
+
+  footer{
+    margin-top:28px; padding-top:16px; border-top:1px solid var(--border);
+    color:var(--muted); font-size:.78rem; text-align:center;
+  }
+
+  @media(max-width:640px){
+    .slide{ padding:20px 16px; }
+    h1{ font-size:1.2rem; }
+  }
+
+  /* ─── Före/efter-träd ───────────────────────────────── */
+  .trees{
+    display:grid; grid-template-columns:1fr 1fr; gap:14px;
+    margin-top:8px;
+  }
+  @media(max-width:820px){ .trees{ grid-template-columns:1fr; } }
+  .tree{
+    background:var(--card); border:1px solid var(--border);
+    border-radius:10px; padding:14px 14px 14px 12px;
+    font-family:ui-monospace,'Cascadia Code',Consolas,monospace;
+    font-size:.76rem; line-height:1.55;
+  }
+  .tree.before{ border-left:3px solid var(--muted); }
+  .tree.after{ border-left:3px solid var(--accent); }
+  .tree h4{
+    font-family:'Inter',system-ui,sans-serif;
+    font-size:.85rem; font-weight:700; letter-spacing:.06em;
+    margin-bottom:10px; padding-bottom:8px;
+    border-bottom:1px solid var(--border);
+    color:var(--txt);
+    display:flex; align-items:center; gap:8px;
+  }
+  .tree.before h4 .lbl{ background:#2a2a2a; color:#bbb }
+  .tree.after  h4 .lbl{ background:var(--accent-dim,#1e3d1e); color:var(--accent2) }
+  .tree h4 .lbl{
+    font-size:.65rem; padding:2px 8px; border-radius:4px;
+    letter-spacing:.08em;
+  }
+  .tree details{ margin:0; }
+  .tree summary{
+    cursor:pointer; list-style:none; user-select:none;
+    padding:1px 0; outline:none;
+  }
+  .tree summary::-webkit-details-marker{ display:none }
+  .tree summary::before{
+    content:'▸'; color:var(--muted);
+    display:inline-block; width:14px; font-size:.7rem;
+    transition:transform .15s;
+  }
+  .tree details[open] > summary::before{ content:'▾'; }
+  .tree details > div, .tree details > details{ padding-left:18px; }
+  .tree .file{ padding:1px 0 1px 18px; color:var(--txt2); }
+  .tree .fold{ color:#90caf9; font-weight:600; }
+  .tree .new   .fold, .tree .new .nm   { color:#ff8a65; }
+  .tree .move  .fold, .tree .move .nm  { color:#ce93d8; }
+  .tree .keep  .fold, .tree .keep .nm  { color:#9ccc65; }
+  .tree .mess  .fold, .tree .mess .nm  { color:#ef9a9a; }
+  .tree .extr  .fold, .tree .extr .nm  { color:#80cbc4; }
+  .tree .count{ color:var(--muted); font-size:.7rem; margin-left:6px; font-weight:400; }
+  .tree .annot{ color:var(--muted); font-style:italic; font-size:.7rem; margin-left:6px; }
+  .tree .nm{ color:var(--txt2); }
+
+  .tree-legend{
+    display:flex; flex-wrap:wrap; gap:10px;
+    margin:8px 0 14px; font-size:.75rem; color:var(--txt2);
+  }
+  .tree-legend span{
+    display:inline-flex; align-items:center; gap:5px;
+  }
+  .tree-legend i{
+    display:inline-block; width:10px; height:10px; border-radius:2px;
+  }
+  .lg-keep i{ background:#9ccc65 }
+  .lg-move i{ background:#ce93d8 }
+  .lg-new  i{ background:#ff8a65 }
+  .lg-extr i{ background:#80cbc4 }
+  .lg-mess i{ background:#ef9a9a }
+  .tree-controls{
+    display:flex; gap:8px; margin-bottom:10px; flex-wrap:wrap;
+  }
+  .tree-controls button{
+    background:var(--card); border:1px solid var(--border);
+    color:var(--txt2); padding:5px 12px; border-radius:6px;
+    font-size:.75rem; cursor:pointer; font-family:inherit;
+  }
+  .tree-controls button:hover{ border-color:var(--accent); color:var(--accent2) }
+</style>
+</head>
+<body>
+<div class="slide">
+
+  <header>
+    <h1>Arkitektur-review — hv (7S Rapport)</h1>
+    <div class="sub">Senior systemarkitekt: hur jag hade strukturerat om om vi byggde från scratch i dag — utan att byta stack.</div>
+    <div class="stamp">Rev 2 · 2026-05-16 · 37 HTML · 33 JS · flat root · vanilla PWA · <span style="color:var(--delta)">8 nya sidor sedan rev 1</span></div>
+  </header>
+
+  <h2 class="delta"><span class="dot"></span>Δ Sedan rev 1 — vad har hänt</h2>
+  <div class="grid">
+
+    <div class="card delta">
+      <h3>8 nya sidor på samma flat root <span class="badge new">CONFIRMS DRIFT</span></h3>
+      <div class="why">På bara några commits har rooten växt från 36 → 37 HTML, plus 5 nya data-filer och en ny shared engine. Trenden mot trängre root fortsätter.</div>
+<pre>NYA SIDOR:
+  linje.html             (linjebyggnad/fältkabel)
+  sigskydd.html          (FRO Signalskydd v1.0)
+  ra763.html, app6.html  (decks på flashcards-engine)
+  forkort.html, fg.html  (decks på flashcards-engine)
+  symbol.html, un.html   (interaktiva verktyg)
+  saekr.html, patl.html  (interaktiva verktyg)
+NYA DATA:
+  sigskydd-data.js, ra763-data.js, app6-data.js,
+  forkort-data.js, fg-data.js
+NY SHARED:
+  flashcards-engine.js   ← se nedan, lyckad återanvändning</pre>
+      <div class="impact">Förstärker rev 1: feature-mappar nu mer värda än då. <b class="m">Större ROI</b> på <code>features/</code>-flytten.</div>
+    </div>
+
+    <div class="card done">
+      <h3>flashcards-engine.js: bevis på att mönstret fungerar <span class="badge done">VALIDERAT</span></h3>
+      <div class="why">5 deck-sidor (sigskydd, ra763, app6, forkort, fg) delar nu en motor med <code>mountBrowse</code>/<code>mountExam</code>. Detta är exakt mönstret rev 1 föreslog för tutorial-engine. <b>Det går.</b></div>
+<pre>// Användning per deck-sida:
+&lt;script src="flashcards-engine.js"&gt;&lt;/script&gt;
+&lt;script src="ra763-data.js"&gt;&lt;/script&gt;
+&lt;script&gt;
+  Flashcards.mountBrowse(el, RA763_CARDS, {storageKey:'ra763'});
+&lt;/script&gt;
+
+→ samma mönster bör appliceras på:
+  - minkarta-tutorial.js + sensorskiss-tutorial.js → tutorial-engine.js
+  - generateReport() i alla rapportsidor → report-engine.js
+  - IndexedDB-state i minkarta + sensorskiss → idb-store.js</pre>
+      <div class="impact">Joel <b class="l">har redan visat att han kan göra detta</b> — extrapolera vidare till tutorial &amp; rapportgen.</div>
+    </div>
+
+    <div class="card delta">
+      <h3>Tab-nav delades i 2 rader manuellt över ~30 sidor <span class="badge confirmed">REV 1 BEKRÄFTAD</span></h3>
+      <div class="why">Commit <code>22e1c82</code>: "nav: dela tab-nav-sub i två rader (Fält + Övning)". Detta är exakt scenariot rev 1 varnade för — en navändring som måste copy-pasteas in i 30 sidor. Smärtan har materialiserats.</div>
+<pre>Hade tab-nav legat i en datalist (rev 1 punkt 3.4):
+  // lib/nav.js
+  export const TABS_FIELD = [...];
+  export const TABS_TRAINING = [...];
+→ EN commit hade gjort uppdelningen.
+
+Istället: ~30 individuella HTML-edits (eller en sed-svep
+som ger samma risk).
+Nästa nav-ändring kommer kosta lika mycket.</pre>
+      <div class="impact"><b class="h">Hög</b> ROI på "tab-nav som datamodell" — flytta upp i prioriteringen.</div>
+    </div>
+
+    <div class="card done">
+      <h3>shared/theme-toggle.* nu använd av 24 sidor <span class="badge done">RIKTNING OK</span></h3>
+      <div class="why">Mönstret med <code>shared/</code> + <code>data-theme</code>-attr fungerar. Inline-IIFE i &lt;head&gt; för light/dark-init är OK kompromiss (no-flash). Men: temat (CSS-variablerna) ligger fortfarande copy-pasted i varje &lt;style&gt;.</div>
+<pre>// Det här IIFE:t ligger nu i ~24 head-sektioner:
+&lt;script&gt;(function(){
+  try{
+    var s=localStorage.getItem('skyttebok_settings_lightmode');
+    var l=(s==='on')||(s!=='off'&amp;&amp;matchMedia('(prefers-color-scheme: light)').matches);
+    if(l)document.documentElement.setAttribute('data-theme','light');
+  }catch(_){}
+})();&lt;/script&gt;
+
+→ Nästa steg: när /ui/theme.css extraheras, ta även IIFE:t
+   med — då är ALLT tema på ett ställe.</pre>
+      <div class="impact"><b class="m">Halvvägs.</b> Slutför genom CSS-extraktion (rev 1 punkt 2.1).</div>
+    </div>
+
+    <div class="card delta">
+      <h3>CSP-sweep: 18 av 35 sidor klara <span class="badge partial">DELVIS</span></h3>
+      <div class="why">Strikt <code>default-src 'self'</code> är nu på 18 sidor (alla nya sidor + några äldre). 17 sidor kvar med bara <code>upgrade-insecure-requests</code> — typiskt de kart-tunga (minkarta, sensorskiss, weft, scrim, what, ah, obslosa, etc).</div>
+<pre>STRIKT CSP (18):
+  app6, fg, forkort, hjalm24, linje, matt, opsec, patl,
+  ra763, ramsor, roadmap, saekr, sigskydd, symbol,
+  tavla, tccc, tipsa, un
+
+KVAR (17) — innehåller fortfarande externa anrop:
+  ah, data, eobusare, fors, index, minkarta, obo, obslosa,
+  pedars, postschema, rassoika, scrim, sensorskiss,
+  skyttebok, skyttebok-info, vader, weft, what
+
+→ De kvarvarande är svårare: behöver explicit connect-src
+  för OSM/OTM-tiles, Nominatim, SMHI, Overpass, R2-bucket.</pre>
+      <div class="impact"><b class="m">Halvvägs.</b> Återstående 17 är de svåra — kart-sidorna. Lös genom <i>en</i> mall, inte 17 individuella val.</div>
+    </div>
+
+    <div class="card delta">
+      <h3>verktyg/Ny mapp/ — PDF-pool växer okontrollerat <span class="badge new">NYTT PROBLEM</span></h3>
+      <div class="why">Untracked. Innehåller 10+ FM-PDF:er (Minneskort Signalskydd, RA763-checklista, Reglementet, MSB-bok, Lathund symboler etc) + en sub-mapp <code>Hjälpmedel-20260515/</code> med 10 till. Detta är källmaterial — referenser till reglemente — som drivit nya sidor.</div>
+<pre>De är inte produkt-assets (laddas inte i appen), de är inte
+roadmap-doc. De är KÄLLOR — referenser till reglemente som
+sidornas innehåll baseras på.
+
+Föreslagen plats:
+  docs/källor/                  (eller docs/reglemente/)
+    signalskydd/
+      20240830-Minneskort-Signalskydd-V1_0.pdf
+    radio/
+      20241120-Checklista-RA763_swALE.pdf
+    farligt-gods/
+      Hjälpmedel-20260515/...
+    allmänt/
+      Reglementet.pdf
+      MSB-bok-2025-26.pdf
+
++ ADD till .gitignore eller commita som ren referens.
+  Idag är de i untracked-limbo.</pre>
+      <div class="impact"><b class="l">Låg</b> teknisk risk, men de växer. Bestäm regel: <i>källor i git</i> eller <i>källor på disk men inte i git</i> — välj en.</div>
+    </div>
+
+  </div>
+
+  <div class="summary">
+    <b>Premiss som behålls:</b> "Modern Vanilla" + service worker + lokal-only-data. Det är rätt val för fält-PWA (snabb start, offline, låg batteriförbrukning, ingen build-pipeline att underhålla). <b>Det jag skulle ändra på är inte stacken — det är dispositionen.</b>
+    <ul>
+      <li><b>Flat root</b> med 121 filer döljer feature-gränser. Mappa per feature.</li>
+      <li><b>CSS-temat duplicerat i 36 &lt;style&gt;-block.</b> Bryt ut en delad <code>theme.css</code>.</li>
+      <li><b>Service-worker FILES-listan handhållen</b> (80+ rader). Generera den vid commit istället.</li>
+      <li><b>Roadmaps + sessions i roten</b> (17+ filer). De är arbetsmaterial — flytta till <code>docs/</code>.</li>
+      <li><b>stab/</b> innehåller både PDF-källor och en hel Python-app (docker-compose, ingest.py). Splittra.</li>
+    </ul>
+  </div>
+
+  <div class="nums">
+    <div class="num"><b>37</b><span>HTML-sidor i root (+1)</span></div>
+    <div class="num"><b>×37</b><span>kopior av tema-CSS</span></div>
+    <div class="num"><b>5/35</b><span>sidor på flashcards-engine</span></div>
+    <div class="num"><b>18/35</b><span>strikt CSP klar</span></div>
+    <div class="num"><b>24</b><span>sidor på shared/theme-toggle</span></div>
+    <div class="num"><b>~30</b><span>sidor edited för 2-rads-nav</span></div>
+  </div>
+
+  <h2 class="toc"><span class="dot"></span>Översikt</h2>
+  <div class="toc-list">
+    <a href="#move">1. Flytt (struktur)</a>
+    <a href="#edit">2. Redigeringar (kodnivå)</a>
+    <a href="#change">3. Större ändringar (mekanik)</a>
+    <a href="#keep">4. Behåll (gör inte om)</a>
+    <a href="#prio">Prio-omläggning (rev 2)</a>
+  </div>
+
+  <h2><span class="dot"></span>Visualisering — så här hade strukturen sett ut</h2>
+
+  <div class="tree-legend">
+    <span class="lg-keep"><i></i>oförändrad</span>
+    <span class="lg-move"><i></i>flyttad</span>
+    <span class="lg-new"><i></i>ny / extraherad</span>
+    <span class="lg-extr"><i></i>dedup-vinst</span>
+    <span class="lg-mess"><i></i>nuvarande röra</span>
+  </div>
+
+  <div class="tree-controls">
+    <button onclick="document.querySelectorAll('.trees details').forEach(d=>d.open=true)">Veckla ut alla</button>
+    <button onclick="document.querySelectorAll('.trees details').forEach(d=>d.open=false)">Stäng alla</button>
+  </div>
+
+  <div class="trees">
+
+    <!-- ───── FÖRE ───── -->
+    <div class="tree before">
+      <h4>hv/ <span class="lbl">NU</span> <span class="count">37 HTML · 33 JS · 17 roadmaps · allt i root</span></h4>
+
+      <details open><summary class="fold">📁 hv/</summary>
+        <div>
+          <div class="file mess"><span class="nm">index.html, ah.html, fors.html, pedars.html, obslosa.html, obo.html…</span><span class="annot">14 rapportsidor i root</span></div>
+          <div class="file mess"><span class="nm">minkarta.html, sensorskiss.html, skyttebok.html, skyttebok-info.html</span><span class="annot">feature-sidor i root</span></div>
+          <div class="file mess"><span class="nm">ramsor.html, sigskydd.html, ra763.html, app6.html, forkort.html, fg.html</span><span class="annot">6 deck-sidor i root</span></div>
+          <div class="file mess"><span class="nm">symbol.html, un.html, saekr.html, patl.html, linje.html, hjalm24.html, matt.html</span><span class="annot">7 verktygssidor i root</span></div>
+          <div class="file"><span class="nm">tavla.html, tipsa.html, roadmap.html, opsec.html, data.html, vader.html, tccc.html</span></div>
+          <div class="file mess"><span class="nm">minkarta-*.js (4), sensorskiss-*.js (4), skyttebok-*.js (4)</span><span class="annot">prefix istället för mapp</span></div>
+          <div class="file mess"><span class="nm">*-data.js × 10</span><span class="annot">ramsor, ra763, app6, forkort, fg, sigskydd, tccc, roadmap, skyttebok…</span></div>
+          <div class="file"><span class="nm">footer.js, pwa.js, version.js, opsec.js, flashcards-engine.js</span></div>
+          <div class="file"><span class="nm">offline-tiles.js, pmtiles-layer.js, topo-overlay.js, countries.js</span></div>
+          <div class="file mess"><span class="nm">roadmap-*.md × 17</span><span class="annot">arbetsmaterial blandat med kod</span></div>
+          <div class="file mess"><span class="nm">TUTORIAL_ROADMAP.md, TUTORIAL_ROADMAP_V2.md, llm-rollspelsguide.md</span></div>
+          <div class="file mess"><span class="nm">extract-skyttebok-data.js, fetch-ortnamn.js, parse-ortnamn-all.js</span><span class="annot">byggskript bland runtime</span></div>
+          <div class="file mess"><span class="nm">20221206-*.pdf, Screenshot_*.png × 4, 20260409_*.png</span><span class="annot">källor + dumps i root</span></div>
+          <div class="file"><span class="nm">ortnamn.json, sjöar.xml, öar.xml, kriterier.xml</span></div>
+          <div class="file"><span class="nm">deltawing.svg, fixed_wing.svg, multicopter_*.svg, icon.svg, favicon.ico</span></div>
+          <div class="file"><span class="nm">service-worker.js</span><span class="annot">80+ rader handhållen FILES-lista</span></div>
+          <div class="file"><span class="nm">manifest.json, CNAME, LICENSE, README.md, CHANGELOG.md</span></div>
+
+          <details><summary class="fold mess">📁 audit/<span class="count">roadmaps + 6 session-loggar</span></summary>
+            <div>
+              <div class="file"><span class="nm">roadmap-*.md × 8, session-*.md × 6, audit.md, security.md, …</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold">📁 shared/<span class="count">3 filer</span></summary>
+            <div>
+              <div class="file"><span class="nm">theme-toggle.js, theme-toggle.css, map-hardat-modal.js</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold mess">📁 stab/<span class="count">⚠ två projekt blandat</span></summary>
+            <div>
+              <div class="file"><span class="nm">JL.pdf, Mineringar-*.pdf, Utbildningsanvisning-sensorer.pdf, FORMAT.md</span><span class="annot">reglements-källor</span></div>
+              <div class="file"><span class="nm">Ny mapp (2)/ — minkarta v4-symboler</span></div>
+              <div class="file mess"><span class="nm">ingest.py, mock_sender.py, docker-compose.yml, requirements.txt, run_system.bat</span><span class="annot">⚠ Python+Docker-app i hv-repot</span></div>
+              <div class="file mess"><span class="nm">testsprite_tests/, __pycache__/, poll_debug.log</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold mess">📁 verktyg/<span class="count">blandad miscellanea</span></summary>
+            <div>
+              <div class="file"><span class="nm">tipsa-worker/</span><span class="annot">Cloudflare Worker</span></div>
+              <div class="file"><span class="nm">kamera-*.py, webcam-*.py, kamera-test-*.jpg × 5</span></div>
+              <div class="file"><span class="nm">build-grannlander-pmtiles.md, build-sverige-hillshade.md</span></div>
+              <div class="file"><span class="nm">ATAK_INTEGRATION_PROMPT.md, presentation-atak-roadmap.html</span></div>
+              <div class="file mess"><span class="nm">Ny mapp/</span><span class="annot">untracked — FM-PDF-pool växer</span></div>
+              <div class="file"><span class="nm">obsidian/, m_blankett/, parmrobot/</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold">📁 vendor/<span class="count">CDN-deps lokalt — bra</span></summary>
+            <div>
+              <div class="file"><span class="nm">leaflet/, exifr/, pmtiles/, protomaps/, qrcode-generator/, jsqr/</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold">📁 fonts/, tccc/, raw/</summary>
+            <div>
+              <div class="file"><span class="nm">inter.css + inter-{400,500,600,700}.woff2</span></div>
+              <div class="file"><span class="nm">tccc/tccc-guidelines-2026.pdf</span></div>
+              <div class="file"><span class="nm">raw/ — gamla källor</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold mess">📁 NAV mått/<span class="count">untracked PNG-screenshots</span></summary>
+            <div>
+              <div class="file"><span class="nm">20260508_*.png × 5</span></div>
+            </div>
+          </details>
+        </div>
+      </details>
+    </div>
+
+    <!-- ───── EFTER ───── -->
+    <div class="tree after">
+      <h4>hv/ <span class="lbl">FÖRESLAGET</span> <span class="count">root städad · feature-grupper · docs/ separerat</span></h4>
+
+      <details open><summary class="fold">📁 hv/</summary>
+        <div>
+          <div class="file keep"><span class="nm">index.html</span><span class="annot">rot-URL → 7S (kvar för bevarad URL)</span></div>
+          <div class="file keep"><span class="nm">manifest.json, icon.svg, favicon.ico, CNAME</span></div>
+          <div class="file new"><span class="nm">service-worker.js</span><span class="annot">FILES auto-genererad via scripts/build/</span></div>
+          <div class="file keep"><span class="nm">README.md, CHANGELOG.md, LICENSE</span></div>
+          <div class="file new"><span class="nm">package.json</span><span class="annot">npm run build / dev / audit</span></div>
+
+          <details open><summary class="fold new">📁 ui/ <span class="annot">NY — allt tema på ett ställe</span></summary>
+            <div>
+              <div class="file extr"><span class="nm">theme.css</span><span class="annot">extraherad ur 37 &lt;style&gt;-block</span></div>
+              <div class="file extr"><span class="nm">theme-init.js</span><span class="annot">IIFE från ~24 sidors &lt;head&gt;</span></div>
+              <div class="file move"><span class="nm">theme-toggle.js, theme-toggle.css</span><span class="annot">var shared/</span></div>
+              <div class="file new"><span class="nm">header.html, footer.html, tab-nav.html</span><span class="annot">include-templates</span></div>
+            </div>
+          </details>
+
+          <details open><summary class="fold new">📁 lib/ <span class="annot">delade moduler</span></summary>
+            <div>
+              <div class="file move"><span class="nm">footer.js, pwa.js, version.js, opsec.js</span></div>
+              <div class="file move"><span class="nm">flashcards-engine.js</span><span class="annot">redan delad av 5 sidor</span></div>
+              <div class="file extr"><span class="nm">tutorial-engine.js</span><span class="annot">slå ihop minkarta + sensorskiss-tutorial</span></div>
+              <div class="file new"><span class="nm">report-template.js</span><span class="annot">gemensam generateReport()</span></div>
+              <div class="file new"><span class="nm">idb-store.js</span><span class="annot">central IndexedDB-wrapper</span></div>
+              <div class="file new"><span class="nm">nav.js</span><span class="annot">tab-nav som data (en sanning)</span></div>
+              <div class="file new"><span class="nm">include.js</span><span class="annot">runtime-include för &lt;header&gt;/&lt;footer&gt;</span></div>
+            </div>
+          </details>
+
+          <details open><summary class="fold move">📁 map/ <span class="annot">kart-stack</span></summary>
+            <div>
+              <div class="file move"><span class="nm">offline-tiles.js, pmtiles-layer.js, topo-overlay.js, countries.js</span></div>
+              <div class="file move"><span class="nm">hardat-modal.js</span><span class="annot">var shared/map-hardat-modal.js</span></div>
+            </div>
+          </details>
+
+          <details open><summary class="fold move">📁 features/ <span class="annot">en mapp per stor feature</span></summary>
+            <div>
+              <details open><summary class="fold move">📁 minkarta/</summary>
+                <div>
+                  <div class="file move"><span class="nm">minkarta.html</span></div>
+                  <div class="file move"><span class="nm">symbols.js, export.js, game.js</span><span class="annot">var minkarta-*.js</span></div>
+                  <div class="file move"><span class="nm">tutorial-steps.js</span><span class="annot">datan; motorn nu i lib/</span></div>
+                  <div class="file move"><span class="nm">tutorial.css</span></div>
+                </div>
+              </details>
+              <details><summary class="fold move">📁 sensorskiss/</summary>
+                <div>
+                  <div class="file move"><span class="nm">sensorskiss.html, symbols.js, export.js</span></div>
+                  <div class="file move"><span class="nm">tutorial-steps.js, tutorial.css</span></div>
+                </div>
+              </details>
+              <details><summary class="fold move">📁 skyttebok/</summary>
+                <div>
+                  <div class="file move"><span class="nm">skyttebok.html, skyttebok.js, data.js, extras.js, sig.js</span></div>
+                  <div class="file move"><span class="nm">info.html</span><span class="annot">var skyttebok-info.html</span></div>
+                </div>
+              </details>
+            </div>
+          </details>
+
+          <details open><summary class="fold move">📁 reports/ <span class="annot">14 rapportblanketter, samma mall</span></summary>
+            <div>
+              <div class="file move"><span class="nm">7s.html, ah.html, fors.html, pedars.html, obslosa.html</span></div>
+              <div class="file move"><span class="nm">obo.html, rassoika.html, postschema.html, eobusare.html</span></div>
+              <div class="file move"><span class="nm">scrim.html, weft.html, what.html, vader.html, tccc.html</span></div>
+              <div class="file new"><span class="nm">_template.html</span><span class="annot">delad form-mall</span></div>
+            </div>
+          </details>
+
+          <details open><summary class="fold new">📁 decks/ <span class="annot">flashcards-baserade — alla på engine</span></summary>
+            <div>
+              <div class="file move"><span class="nm">ramsor.html + data.js</span></div>
+              <div class="file move"><span class="nm">sigskydd.html + data.js</span></div>
+              <div class="file move"><span class="nm">ra763.html + data.js</span></div>
+              <div class="file move"><span class="nm">app6.html + data.js</span></div>
+              <div class="file move"><span class="nm">forkort.html + data.js</span></div>
+              <div class="file move"><span class="nm">fg.html + data.js</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold new">📁 tools-app/ <span class="annot">interaktiva verktyg (i appen)</span></summary>
+            <div>
+              <div class="file move"><span class="nm">symbol.html, un.html, saekr.html, patl.html</span></div>
+              <div class="file move"><span class="nm">linje.html, hjalm24.html, matt.html</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold move">📁 data/ <span class="annot">rena data-paket</span></summary>
+            <div>
+              <div class="file move"><span class="nm">ortnamn.json</span><span class="annot">49 781 poster</span></div>
+              <div class="file move"><span class="nm">roadmap.js, tccc.js, sigskydd.js…</span></div>
+              <div class="file move"><span class="nm">sjöar.xml, öar.xml, kriterier.xml</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold move">📁 assets/ <span class="annot">SVG/bilder som inte är ikoner</span></summary>
+            <div>
+              <div class="file move"><span class="nm">deltawing.svg, fixed_wing.svg, multicopter_quad.svg, multicopter_octo.svg</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold keep">📁 vendor/ <span class="annot">behåll — CDN-deps lokalt</span></summary>
+            <div>
+              <div class="file keep"><span class="nm">leaflet/, exifr/, pmtiles/, protomaps/, qrcode-generator/, jsqr/</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold keep">📁 fonts/</summary>
+            <div>
+              <div class="file keep"><span class="nm">inter.css + inter-{400,500,600,700}.woff2</span></div>
+            </div>
+          </details>
+
+          <details open><summary class="fold move">📁 docs/ <span class="annot">allt arbetsmaterial — ut ur root</span></summary>
+            <div>
+              <details><summary class="fold move">📁 roadmaps/<span class="count">17 filer</span></summary>
+                <div><div class="file move"><span class="nm">roadmap-*.md (alla från root + audit/)</span></div></div>
+              </details>
+              <details><summary class="fold move">📁 audit/</summary>
+                <div><div class="file move"><span class="nm">audit.md, security.md, index.md</span></div></div>
+              </details>
+              <details><summary class="fold move">📁 sessions/</summary>
+                <div><div class="file move"><span class="nm">session-1.md … session-6.md</span></div></div>
+              </details>
+              <details><summary class="fold move">📁 prompts/</summary>
+                <div>
+                  <div class="file move"><span class="nm">llm-rollspelsguide.md</span></div>
+                  <div class="file move"><span class="nm">atak-integration.md</span></div>
+                </div>
+              </details>
+              <details><summary class="fold move">📁 reglemente/<span class="count">var stab/</span></summary>
+                <div>
+                  <div class="file move"><span class="nm">JL.pdf, Mineringar-*.pdf, Utbildningsanvisning-sensorer.pdf</span></div>
+                  <div class="file move"><span class="nm">symboler/ — var stab/Ny mapp (2)/</span></div>
+                  <div class="file move"><span class="nm">signalskydd/, radio/, farligt-gods/, allmänt/</span><span class="annot">var verktyg/Ny mapp/</span></div>
+                  <div class="file move"><span class="nm">FORMAT.md</span></div>
+                </div>
+              </details>
+              <details><summary class="fold move">📁 screenshots/</summary>
+                <div><div class="file move"><span class="nm">var root *.png + stab/*.png + NAV mått/*.png</span></div></div>
+              </details>
+            </div>
+          </details>
+
+          <details open><summary class="fold new">📁 scripts/ <span class="annot">build + audit-skript</span></summary>
+            <div>
+              <details><summary class="fold new">📁 build/</summary>
+                <div>
+                  <div class="file new"><span class="nm">gen-sw-files.js</span><span class="annot">auto-generera FILES-listan</span></div>
+                  <div class="file new"><span class="nm">build-pages.js</span><span class="annot">header/footer-include</span></div>
+                  <div class="file new"><span class="nm">stamp-version.js</span><span class="annot">CACHE-namn från git</span></div>
+                  <div class="file move"><span class="nm">fetch-ortnamn.js, parse-ortnamn-all.js, extract-skyttebok-data.js</span></div>
+                </div>
+              </details>
+              <details><summary class="fold move">📁 audit/</summary>
+                <div><div class="file move"><span class="nm">cot-fuzz.html, tnr-fuzz.html</span></div></div>
+              </details>
+            </div>
+          </details>
+
+          <details><summary class="fold move">📁 tools/ <span class="annot">var verktyg/ — externa tooling</span></summary>
+            <div>
+              <div class="file move"><span class="nm">tipsa-worker/</span><span class="annot">Cloudflare Worker</span></div>
+              <div class="file move"><span class="nm">build-pmtiles/, camera-ai/, obsidian/, m_blankett/, parmrobot/</span></div>
+            </div>
+          </details>
+
+          <details><summary class="fold new">📁 tests/ <span class="annot">smoke + CI-gates</span></summary>
+            <div>
+              <div class="file new"><span class="nm">smoke.spec.js</span><span class="annot">Playwright — alla sidor laddar utan JS-fel</span></div>
+              <div class="file new"><span class="nm">tab-nav-consistency.js</span></div>
+            </div>
+          </details>
+        </div>
+      </details>
+
+      <details style="margin-top:14px"><summary class="fold mess">⤴ Flyttat UT ur hv-repot</summary>
+        <div>
+          <div class="file mess"><span class="nm">signal-ingest/</span><span class="annot">var stab/ingest.py + docker-compose + testsprite — eget repo, deployas separat</span></div>
+        </div>
+      </details>
+    </div>
+
+  </div>
+
+  <h2 id="move" class="move"><span class="dot"></span>1. Flytt — målbild för katalogstruktur</h2>
+  <div class="grid">
+
+    <div class="card move">
+      <h3>Feature-mappar istället för feature-prefix</h3>
+      <div class="why">Filerna grupperar sig redan med prefix (<code>minkarta-*</code>, <code>sensorskiss-*</code>, <code>skyttebok-*</code>). Det är en mapp som inte fått bli en mapp.</div>
+<pre>features/
+  minkarta/
+    minkarta.html
+    symbols.js  (var minkarta-symbols.js)
+    export.js
+    game.js
+    tutorial.js
+    tutorial.css
+  sensorskiss/
+    sensorskiss.html
+    symbols.js
+    export.js
+    tutorial.js
+    tutorial.css
+  skyttebok/
+    skyttebok.html
+    skyttebok.js
+    data.js
+    extras.js
+    sig.js
+    info.html</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · Risk: SW-paths + interna <code>&lt;script src&gt;</code>. Lös med git-mv + sed-svep.</div>
+    </div>
+
+    <div class="card move">
+      <h3>Rapportformulär i egen mapp</h3>
+      <div class="why">14 rapportsidor med samma mönster (header, GPS-modal, footer, generator). De är systerprodukter — visa det i strukturen.</div>
+<pre>reports/
+  index.html       (7S — huvudblanketten)
+  ah.html
+  fors.html
+  pedars.html
+  obslosa.html
+  obo.html
+  rassoika.html
+  postschema.html
+  eobusare.html
+  scrim.html
+  weft.html
+  what.html
+  vader.html
+  tccc.html</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · <code>index.html</code> i root behövs för rot-URL — symlinka eller dubbel-pusha.</div>
+    </div>
+
+    <div class="card move">
+      <h3>Dokumentation ut ur root</h3>
+      <div class="why">17 roadmap-*.md + 6 audit/session-*.md + TUTORIAL_ROADMAP_V2.md ligger jämte produktionskod. De är inte deploy-mål.</div>
+<pre>docs/
+  roadmaps/        (alla roadmap-*.md, gitignored idag)
+  audit/           (flytta audit/ rakt av)
+  sessions/        (audit/session-*.md)
+  prompts/         (llm-rollspelsguide.md, ATAK_INTEGRATION_PROMPT.md)
+  research/        (kompetensprov-tavla-research.md)
+README.md, CHANGELOG.md, LICENSE  &lt;— kvar i root</pre>
+      <div class="impact">Påverkan: <b class="l">Låg</b> · ingen kod-ändring, bara <code>git mv</code> + uppdaterad <code>.gitignore</code>.</div>
+    </div>
+
+    <div class="card move">
+      <h3>Delade moduler i lib/</h3>
+      <div class="why"><code>footer.js</code>, <code>pwa.js</code>, <code>version.js</code>, <code>opsec.js</code>, <code>offline-tiles.js</code>, <code>topo-overlay.js</code>, <code>pmtiles-layer.js</code>, <code>flashcards-engine.js</code>, <code>countries.js</code> är delade — de hör inte hemma jämte feature-koden.</div>
+<pre>lib/
+  footer.js
+  pwa.js
+  version.js
+  opsec.js
+  flashcards-engine.js
+map/
+  offline-tiles.js
+  pmtiles-layer.js
+  topo-overlay.js
+  countries.js
+  hardat-modal.js  (var shared/map-hardat-modal.js)
+ui/
+  theme.css        (NY — extraherad)
+  theme-toggle.js  (var shared/)
+  theme-toggle.css</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · 36 HTML-filer pekar på dessa.</div>
+    </div>
+
+    <div class="card move">
+      <h3>Data-paket i data/</h3>
+      <div class="why"><code>*-data.js</code>-filerna är rena data (ramsor, forkort, fg, ra763, app6, tccc, skyttebok, roadmap, sigskydd) som inte beter sig som kod. Sär dem från logiken.</div>
+<pre>data/
+  ramsor.js
+  forkort.js
+  fg.js
+  ra763.js
+  app6.js
+  tccc.js
+  sigskydd.js
+  roadmap.js
+  skyttebok.js, skyttebok-extras.js
+assets/
+  ortnamn.json
+  sjöar.xml, öar.xml, kriterier.xml
+  countries.js   (om kvar som data — annars under map/)</pre>
+      <div class="impact">Påverkan: <b class="l">Låg</b> · ortnamn.json (49k poster) är tung — flytta utan att bryta SW-path.</div>
+    </div>
+
+    <div class="card move">
+      <h3>stab/ är två saker — splittra</h3>
+      <div class="why">Idag innehåller <code>stab/</code> både statiska reglements-PDF/PNG <i>och</i> en helt fristående Python-app (<code>ingest.py</code>, <code>docker-compose.yml</code>, <code>testsprite_tests/</code>, <code>requirements.txt</code>). Två projekt i samma mapp.</div>
+<pre>docs/reglemente/         &lt;— PDFs, PNGs, JL.pdf, Utbildningsanvisning-sensorer.pdf
+docs/reglemente/symboler/  &lt;— "Ny mapp (2)/" SVG:erna som minkarta v4 använder
+tools/signal-ingest/     &lt;— hela Python-Docker-grejen flyttas hit
+(eller ännu hellre: eget repo om den deployas separat)</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · Python-koden importerar inget från hv så flytten är säker.</div>
+    </div>
+
+    <div class="card move">
+      <h3>verktyg/ → tools/, rensa loose files</h3>
+      <div class="why"><code>verktyg/</code> är ett vänligt namn men innehåller blandat: build-doc, ATAK-prompt, kamera-AI-skript, foton, en Cloudflare Worker. Saker som inte hör ihop ligger jämte varandra.</div>
+<pre>tools/
+  tipsa-worker/         (Cloudflare Worker — egen sub-deploy)
+  build-pmtiles/        (build-grannlander-pmtiles.md, build-sverige-hillshade.md)
+  camera-ai/            (kamera-*.py, webcam-*.py, kamera-test-*.jpg)
+  obsidian/             (verktyg/obsidian)
+  m_blankett/           (verktyg/m_blankett)
+docs/prompts/atak-integration.md
+(radera kamera-test-*.jpg som lever i git utan att vara test-data)</pre>
+      <div class="impact">Påverkan: <b class="l">Låg</b> · ingen runtime-kod tar in dessa.</div>
+    </div>
+
+    <div class="card move">
+      <h3>Build-artefakt vs källa</h3>
+      <div class="why"><code>fetch-ortnamn.js</code>, <code>parse-ortnamn-all.js</code>, <code>extract-skyttebok-data.js</code> är byggskript som producerar <code>ortnamn.json</code> resp. <code>skyttebok-data.js</code>. Ligger jämte runtime-koden idag.</div>
+<pre>scripts/
+  build/
+    fetch-ortnamn.js
+    fetch-ortnamn.sh
+    parse-ortnamn-all.js
+    extract-skyttebok-data.js
+  audit/
+    cot-fuzz.html
+    tnr-fuzz.html        (var audit/tnr-fuzz.html)</pre>
+      <div class="impact">Påverkan: <b class="l">Låg</b> · skripten är manuella, ingen CI bryts.</div>
+    </div>
+
+    <div class="card move">
+      <h3>Skärmdumpar bort från git</h3>
+      <div class="why"><code>20260409_153702.png</code>, <code>Screenshot_*.png</code> ×3 i root + diverse i stab/ och verktyg/. Git är inte fotoalbum.</div>
+<pre>.gitignore (lägg till):
+  *Screenshot*.png
+  /*.png   (utom favicon-relaterat)
+  /*-test-*.jpg
+flytta nuvarande dumps till docs/screenshots/ ELLER
+ta bort om de inte är referens-material</pre>
+      <div class="impact">Påverkan: <b class="l">Låg</b> · krymper repo + clone-tid.</div>
+    </div>
+
+  </div>
+
+  <h2 id="edit" class="edit"><span class="dot"></span>2. Redigeringar — kodnivå</h2>
+  <div class="grid">
+
+    <div class="card edit">
+      <h3>Bryt ut tema-CSS ur 37 HTML-filer <span class="badge partial">Δ: 36→37, theme-toggle delvis löst</span></h3>
+      <div class="why">Samma <code>:root{--bg-primary…--accent…}</code> + grundlayout står i alla 37 HTML-filer (200–600 rader per fil). En ändring kräver 37 commits eller en regex-sweep. <i>Rev 2:</i> <code>shared/theme-toggle.{js,css}</code> visar att shared/-mönstret går — men CSS-variablerna är fortfarande copy-pasted.</div>
+<pre>// FRÅN (i varje .html):
+&lt;style&gt;
+  :root{--bg-primary:#0d1f0d;…}
+  body{font-family:'Inter'…}
+  .form-group{…}
+  /* ~250 rader bas-tema */
+  /* ~50–300 rader sid-specifikt */
+&lt;/style&gt;
+
+// TILL:
+&lt;link rel="stylesheet" href="/ui/theme.css"&gt;
+&lt;style&gt;
+  /* ENDAST sid-specifikt — typ 30–100 rader */
+&lt;/style&gt;</pre>
+      <div class="impact">Påverkan: <b class="h">Hög</b> · vinst: en cache-vänlig fil + en sanning. Risk: regression på enskilda sidor — gör inte i en commit, gör sida-för-sida.</div>
+    </div>
+
+    <div class="card edit">
+      <h3>Generera SW FILES-listan</h3>
+      <div class="why"><code>service-worker.js</code> har 80+ rader handhållen lista över precache-paths. Glöms uppdatera när nya filer läggs till — bugg.</div>
+<pre>// scripts/build/gen-sw-files.js
+import {globby} from 'globby';
+const files = await globby([
+  '*.html','*.js','*.json','*.svg',
+  'fonts/**','vendor/**','shared/**','features/**'
+],{cwd:'./'});
+// Skriv ut JSON-array → injecta i service-worker.js
+// Kör som pre-commit hook eller npm run build:sw</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · introducerar ett build-steg men eliminerar en pågående felklass. Auto-bumpen finns redan — bygg vidare på den.</div>
+    </div>
+
+    <div class="card edit">
+      <h3>Konsolidera tutorial-systemen <span class="badge confirmed">flashcards-engine bevisar konceptet</span></h3>
+      <div class="why"><code>minkarta-tutorial.js/css</code> och <code>sensorskiss-tutorial.js/css</code> är två kopior av samma walkthrough-motor (993 + ~600 rader). Innehållet skiljer, motorn inte. <i>Rev 2:</i> Joel har just byggt <code>flashcards-engine.js</code> som delas av 5 sidor — exakt samma mönster.</div>
+<pre>features/_shared/tutorial-engine.js
+features/_shared/tutorial-engine.css
+features/minkarta/tutorial-steps.js   // bara datan
+features/sensorskiss/tutorial-steps.js // bara datan
+
+// engine: new Tutorial(steps, {onDone, persistKey})</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · halverar tutorial-kod. Gör efter att feature-mapparna finns.</div>
+    </div>
+
+    <div class="card edit">
+      <h3>Rapportgenerator som modul</h3>
+      <div class="why">Varje rapport-HTML har sin egen lokala <code>generateReport()</code> + TNR-render + clipboard-copy. Mönstret är identiskt — Signal-vänlig text, Zulu-tid, "Kopiera"-knapp.</div>
+<pre>lib/report-template.js
+  export function renderReport({title, fields, tnr, footer}){…}
+  export function copyToClipboard(text){…}
+  export function buildTnr(format /* 'short'|'full' */){…}
+
+// I varje reports/*.html:
+import {renderReport, copyToClipboard} from '/lib/report-template.js';
+const txt = renderReport({title:'7S', fields:{…}, tnr:…});</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · högt värde långsiktigt, men varje sida har drift — gör en sida åt gången, börja med <code>fors.html</code> (minst diff).</div>
+    </div>
+
+    <div class="card edit">
+      <h3>Versionsstämpel via build-tid, inte hand</h3>
+      <div class="why"><code>const CACHE = 'hv-20260515_212347';</code> är handsatt. Auto-bumpen löser det idag — gör formellt: en <code>VERSION</code>-fil eller <code>git rev-parse --short HEAD</code> matas in vid commit.</div>
+<pre>// service-worker.js
+const CACHE = `hv-__VERSION__`;
+// pre-commit hook:
+echo -n "hv-$(date +%Y%m%d)-$(git rev-parse --short HEAD)" &gt; .cache-name
+sed -i "s|__VERSION__|$(cat .cache-name)|" service-worker.js</pre>
+      <div class="impact">Påverkan: <b class="l">Låg</b> · liten städning, mer deterministisk versionering.</div>
+    </div>
+
+    <div class="card edit">
+      <h3>Strikt CSP — sweep klart <span class="badge partial">18/35 klara (rev 2)</span></h3>
+      <div class="why">Sedan rev 1 är strikt CSP utrullat på 18 sidor — alla nya sidor (linje, sigskydd, decks, verktyg) plus några äldre. Återstår 17, huvudsakligen kart-tunga sidor som behöver explicit connect-src för OSM/SMHI/Nominatim/R2. Finish the job innan nästa feature.</div>
+<pre>// Lägg till per sida (eller bättre: i theme.css-laddad header.html-snippet):
+&lt;meta http-equiv="Content-Security-Policy" content="
+  default-src 'self';
+  img-src 'self' data: https://*.tile.openstreetmap.org https://*.opentopomap.org;
+  connect-src 'self' https://nominatim.openstreetmap.org https://api.open-meteo.com
+              https://opendata-download-metfcst.smhi.se https://overpass-api.de
+              https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev;
+  style-src 'self' 'unsafe-inline';
+  script-src 'self';
+"&gt;</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · säkerhetsvinst direkt, testa per sida — kart-tiles &amp; SMHI &amp; Nominatim måste vara explicit listade.</div>
+    </div>
+
+  </div>
+
+  <h2 id="change" class="change"><span class="dot"></span>3. Större ändringar — mekanik &amp; process</h2>
+  <div class="grid">
+
+    <div class="card change">
+      <h3>HTML-mall via include, inte copy-paste</h3>
+      <div class="why">Header/footer/tab-nav-sub upprepas i alla rapportsidor. När en ny tabb läggs till måste 19 filer ändras (CHANGELOG bekräftar att det redan har bett om städning).</div>
+<pre>Två vägar — välj en:
+A) Build-steg: scripts/build/build-pages.js läser
+   templates/header.html + templates/footer.html + reports/X.body.html
+   → reports/X.html
+B) Runtime: &lt;header data-include="/templates/header.html"&gt;&lt;/header&gt;
+   + en liten fetch+innerHTML-loader i lib/include.js (ingen SSR-PWA-konflikt
+   så länge SW pre-cacheas före första bruk)
+Rekommendation: (A) — håller "rena HTML-sidor" i produktion.</pre>
+      <div class="impact">Påverkan: <b class="h">Hög</b> · stort ingrepp men botar tab-nav-divergens permanent.</div>
+    </div>
+
+    <div class="card change">
+      <h3>Lägg minimalt build-skikt — inte Vite, inte Webpack</h3>
+      <div class="why">Vanilla-stacken är en feature. Men <i>helt</i> utan build-steg betyder hand-uppdaterade SW-listor, copy-pasted CSS, hand-bumpade versioner. Ett tunt <code>npm run build</code> löser de tre på en gång.</div>
+<pre>package.json:
+  "scripts": {
+    "dev":   "python -m http.server 8000",
+    "build": "node scripts/build/gen-sw-files.js
+              && node scripts/build/build-pages.js
+              && node scripts/build/stamp-version.js",
+    "audit": "node scripts/audit/check-tab-nav.js"
+  }
+Ingen bundler. Ingen TS. Ingen JSX. Bara
+node-skript som producerar exakt det som idag görs för hand.</pre>
+      <div class="impact">Påverkan: <b class="h">Hög</b> · paradigm-skifte. Men förändrar inte produktionsbeteendet — bara hur du itererar.</div>
+    </div>
+
+    <div class="card change">
+      <h3>IndexedDB-wrapper centralt</h3>
+      <div class="why">Idag har <code>minkarta</code> + <code>sensorskiss</code> egna IDB-implementationer med ungefär samma <code>state</code>-store-mönster. <code>data.html</code>'s export-knapp känner till båda hardcoded. Tredje feature triggar tredje kopian.</div>
+<pre>lib/idb-store.js
+  export function createStore(dbName, storeName){
+    return { get, set, clear, dump, restore };
+  }
+features/minkarta/state.js:
+  import {createStore} from '/lib/idb-store.js';
+  export const store = createStore('minkarta','state');
+features/data/export-all.js läser dynamiskt en
+"registered stores"-lista istället för hardcodad lista.</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · gör <code>data.html</code>-export framtidssäker.</div>
+    </div>
+
+    <div class="card change">
+      <h3>Tab-nav som en datamodell, inte 37 stycken &lt;nav&gt; <span class="badge confirmed">SMÄRTA MATERIALISERAD</span></h3>
+      <div class="why">CHANGELOG nämner "existerande inkonsekvens i tab-nav lämnas till framtida städning". Anledningen är att varje HTML-fil har sin egen kopia av tab-nav-HTML. <i>Rev 2:</i> commit <code>22e1c82</code> delade tab-nav i 2 rader manuellt över ~30 sidor — exakt scenariot den här punkten varnade för. <b>Nästa nav-ändring kommer kosta lika mycket.</b></div>
+<pre>lib/nav.js:
+  export const TABS = [
+    {id:'minkarta', label:'MIN KARTA', href:'/features/minkarta/minkarta.html'},
+    {id:'sensorskiss', label:'SENSORSKISS', href:'/features/sensorskiss/sensorskiss.html'},
+    {id:'ramsor', label:'RAMSOR', href:'/data/ramsor.html'},
+    …
+  ];
+header-template renderar dem alla, markerar aktiv via data-attr.
+ETT ställe att lägga till en flik.</pre>
+      <div class="impact">Påverkan: <b class="h">Hög</b> · stor vinst, kräver att header-include är på plats först.</div>
+    </div>
+
+    <div class="card change">
+      <h3>Smoke-test-suite, även för vanilla</h3>
+      <div class="why">Inga tester syns i repo:t (utöver <code>stab/testsprite_tests/</code> som tillhör Python-appen). Vid 46k rader är 5 smoke-tester (laddar alla sidor utan JS-fel) high-value.</div>
+<pre>tests/smoke.spec.js (Playwright):
+  for (const page of pages) {
+    test(`${page} loads without console errors`, async ({page: pw}) =&gt; {
+      const errors = [];
+      pw.on('pageerror', e =&gt; errors.push(e));
+      await pw.goto(`http://localhost:8000/${page}`);
+      expect(errors).toEqual([]);
+    });
+  }
++ ett "alla länkar i tab-nav 200 OK"-test.</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · första testet som vore värt något — pre-prompten kräver det redan från v0.2.</div>
+    </div>
+
+    <div class="card change">
+      <h3>CI: bara två steg, men ha dem</h3>
+      <div class="why"><code>.github/</code> finns men jag ser inget pågående audit/build-CI. Auto-bump är skript, inte gate.</div>
+<pre>.github/workflows/check.yml:
+  on: [push, pull_request]
+  jobs:
+    smoke:
+      - npm run build
+      - npx playwright test tests/smoke.spec.js
+      - node scripts/audit/check-tab-nav.js   # konsistens
+      - node scripts/audit/check-sw-files.js  # ingen path i FILES saknas
+Hård fail på FILES-driften — den buggen hör inte hemma.</pre>
+      <div class="impact">Påverkan: <b class="m">Medel</b> · fångar regressioner som idag bara märks i fält.</div>
+    </div>
+
+  </div>
+
+  <h2 id="keep" class="keep"><span class="dot"></span>4. Behåll — gör inte om</h2>
+  <div class="grid">
+    <div class="card keep">
+      <h3>Vanilla HTML/CSS/JS-stacken</h3>
+      <div class="why">Snabb start, ingen build-tunnel mellan Joel och produktion, små bundles, batteri-vänlig. React/Vue/Svelte skulle göra appen sämre på mobilen i fält. <span class="tag">behåll</span></div>
+    </div>
+    <div class="card keep">
+      <h3>Service-worker + Cache API + IndexedDB</h3>
+      <div class="why">Rätt verktyg för offline-PWA. Endast formaliera: versionering, FILES-generering, IDB-wrapper. <span class="tag">behåll mekanik</span></div>
+    </div>
+    <div class="card keep">
+      <h3>vendor/ för CDN-beroenden</h3>
+      <div class="why">Leaflet, exifr, pmtiles, protomaps, qrcode, jsqr lokalt — eliminerar CDN-leak och supply-chain-överraskningar. Hold the line. <span class="tag">behåll</span></div>
+    </div>
+    <div class="card keep">
+      <h3>"Modern Vanilla"-disciplin</h3>
+      <div class="why">Inga jQuery-rester, inga jumbo-frameworks. Använder native HTML5 D&amp;D, IndexedDB, Fetch, Web Share API. Behåll filosofin. <span class="tag">behåll</span></div>
+    </div>
+    <div class="card keep">
+      <h3>Härdat läge + opsec.js + threat model i README</h3>
+      <div class="why">Få privata projekt har faktiskt en threat-model-tabell. Den hör hemma. <span class="tag">behåll</span></div>
+    </div>
+    <div class="card keep">
+      <h3>CHANGELOG + dagbok i README</h3>
+      <div class="why">Detaljnivån är hög och spårbar — det är pre-prompten som funkar. Fortsätt. <span class="tag">behåll</span></div>
+    </div>
+  </div>
+
+  <h2 id="prio"><span class="dot"></span>Ordning jag hade gjort det i — REV 2 (omprioriterad)</h2>
+  <div class="card" style="margin-top:8px">
+<pre>OMPRIORITERING JÄMFÖRT MED REV 1:
+  ↑ Tab-nav-data flyttas UPP (smärtan precis manifesterad i commit 22e1c82)
+  ↑ CSP-sweep KLAR (halvvägs redan — ingen anledning att lämna kvar 17 sidor)
+  ↓ HTML-mall via include — gör efter att tab-nav-data finns, för då går den lätt
+
+v0.1  Bryt ut /ui/theme.css + flytta IIFE-theme-init dit.    [edit]
+      → Dedup av CSS-variabler i 37 sidor. Joel har redan
+        bevisat shared/-mönstret med theme-toggle.
+v0.2  Auto-generera service-worker FILES + version-stamp.    [edit + change]
+      → 35 .html-paths i FILES, nya sidor glöms lätt.
+v0.3  Tab-nav som data + EN header-include-mekanik.          [change]   ← UPP
+      → Smärtan från 2-rads-navet manifesterad: 30 sidor edited.
+        Nästa nav-ändring ska kosta 1 fil.
+v0.4  CSP-sweep slutförd (de svåra 17 kart-sidorna).         [edit]     ← UPP
+      → Halva loppet redan klart. En CSP-mall i header-include.
+v0.5  Flytta docs/ + scripts/ + tools/ + källor/.            [move, kodlös]
+      → Inkl. verktyg/Ny mapp/ PDF-poolen som börjar växa.
+v0.6  Feature-mappar (features/minkarta, sensorskiss, decks).[move]
+v0.7  Konsolidera tutorial-engine (mönstret från flashcards).[edit]
+v0.8  Rapport-template-modul (1 sida i taget).               [edit]
+v0.9  IDB-wrapper + dynamisk data.html-export.               [change]
+v1.0  Smoke-suite + CI-gates.                                [change]</pre>
+    <div class="impact">Varje steg landas i 1–3 commits. <b class="m">v0.3 + v0.4 är de som hade sparat mest tid OM de varit gjorda före senaste sprinten</b> — gör dem nu så är resten lättare.</div>
+  </div>
+
+  <footer>
+    Detta är en review, inga filer har ändrats. <br>
+    Rev 2 — <span id="d"></span>. Lägg till nya delta-poster (orange) över tid när nya commits/sidor tillkommer.
+    <script>document.getElementById('d').textContent = new Date().toISOString().slice(0,10);</script>
+  </footer>
+
+</div>
+</body>
+</html>

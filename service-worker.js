@@ -75,6 +75,8 @@ const FILES = [
   './tccc.html',
   './topo-overlay.js',
   './un.html',
+  './upk-data.js',
+  './upk.html',
   './vader.html',
   './version.js',
   './weft.html',
