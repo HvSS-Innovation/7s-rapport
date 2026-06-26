@@ -105,15 +105,6 @@
         .input-row { display: flex; gap: 8px; }
         .input-row input { flex: 1; min-width: 0; }
 
-        /* Compass */
-        .compass { display:grid; grid-template-columns:40px 40px 40px; grid-template-rows:40px 40px 40px; gap:4px; justify-content:center; margin-top:8px; margin-bottom:4px; }
-        .compass-btn { display:flex; align-items:center; justify-content:center; background:#1e2d45; border:1px solid #2e4a70; color:#90b8e8; border-radius:6px; cursor:pointer; font-family:inherit; font-size:0.75rem; font-weight:700; transition:all .15s; -webkit-tap-highlight-color:transparent; padding:0; }
-        .compass-btn:hover { background:#2a4a7a; border-color:#4a80c0; color:#c8e0f8; }
-        .compass-btn:active { transform:scale(0.92); }
-        .compass-btn.active { background:#4caf50; border-color:#4caf50; color:#0d1f0d; }
-        .compass-btn svg { width:18px; height:18px; }
-        .compass-center { background:var(--bg-input); border:1px solid var(--border); border-radius:6px; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:var(--text-muted); cursor:pointer; }
-        .compass-center:hover { border-color:var(--danger); color:var(--danger); }
         /* Chip buttons */
         .chip-group { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
         .chip {
@@ -160,8 +151,6 @@
         .btn-gps { background: var(--accent-dim); color: var(--accent); border: 1px solid var(--accent-dim); }
         .btn-gps:hover { background: var(--border-focus); border-color: var(--border-focus); }
         .btn-gps:disabled { opacity: 0.5; cursor: not-allowed; }
-        .btn-count { background: var(--bg-secondary); color: var(--text-secondary); border: 1px solid var(--border); font-size: 1.2rem; padding: 12px 16px; }
-        .btn-count:hover { background: var(--bg-card); color: var(--text-primary); }
         .btn-time { background: var(--accent-dim); color: var(--accent); font-size: 0.85rem; min-height: 48px; padding: 12px 16px; border-radius: var(--radius-sm); white-space: nowrap; }
         .btn-time:hover { background: var(--border-focus); }
         /* ── TNR Toggle Switch ─── */
@@ -349,99 +338,17 @@
                 </div>
             </div>
 
-            <!-- STYRKA -->
+            <!-- HÄNDELSE -->
             <div class="form-group">
                 <div class="label-row">
-                    <label for="styrka">Styrka</label>
-                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoStyrka')" aria-label="Info om Styrka">i</button>
+                    <label for="handelse">Händelse</label>
+                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoHandelse')" aria-label="Info om Händelse">i</button>
                 </div>
-                <div class="info-text" id="infoStyrka">Antal observerade fiender, fordon eller objekt.</div>
-                <div class="input-row">
-                    <button class="btn btn-sm btn-count" tabindex="-1" onclick="changeCount(-1)">−</button>
-                    <input type="text" id="styrka" placeholder="Antal" inputmode="numeric" autocomplete="off">
-                    <button class="btn btn-sm btn-count" tabindex="-1" onclick="changeCount(1)">+</button>
-                </div>
-            </div>
-
-            <!-- SLAG -->
-            <div class="form-group">
-                <div class="label-row">
-                    <label for="slag">Slag</label>
-                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSlag')" aria-label="Info om Slag">i</button>
-                </div>
-                <div class="info-text" id="infoSlag">Typ av fiender eller objekt. T.ex. stridsvagn, infanteri, lastbil.</div>
-                <textarea id="slag" rows="2" placeholder="Typ av fiende/objekt"></textarea>
-                <div class="chip-group">
-                    <button class="chip" onclick="appendChip('slag','Infanteri')">Infanteri</button>
-                    <button class="chip" onclick="appendChip('slag','Civila')">Civila</button>
-                    <button class="chip" onclick="appendChip('slag','Personbil')">Personbil</button>
-                    <button class="chip" onclick="appendChip('slag','MC')">MC</button>
-                    <button class="chip" onclick="appendChip('slag','Moped')">Moped</button>
-                    <button class="chip" onclick="appendChip('slag','VOI')">VOI</button>
-                    <button class="chip" onclick="appendChip('slag','Cykel')">Cykel</button>
-                    <button class="chip" onclick="appendChip('slag','Lastbil')">Lastbil</button>
-                    <button class="chip" onclick="appendChip('slag','Drönare')">Drönare</button>
-                    <button class="chip" onclick="appendChip('slag','Stridsvagn')">Stridsvagn</button>
-                    <button class="chip" onclick="appendChip('slag','Helikopter')">Helikopter</button>
-                </div>
-            </div>
-
-            <!-- SYSSELSÄTTNING -->
-            <div class="form-group">
-                <div class="label-row">
-                    <label for="sysselsattning">Sysselsättning</label>
-                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSyssel')" aria-label="Info om Sysselsättning">i</button>
-                </div>
-                <div class="info-text" id="infoSyssel">Fiendens verksamhet. Vad gör de? Rörelser, gruppering, etc.</div>
-                <textarea id="sysselsattning" rows="2" placeholder="Vad gör fienden?"></textarea>
-                <div style="display:flex;align-items:center;gap:14px;flex-wrap:wrap">
-                    <div class="compass">
-                        <span></span>
-                        <button class="compass-btn" data-dir="N" onclick="toggleDir(this)">
-                            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M10 2 L13 10 L10 7 L7 10Z"/><text x="10" y="18" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">N</text></svg>
-                        </button>
-                        <span></span>
-                        <button class="compass-btn" data-dir="V" onclick="toggleDir(this)">
-                            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M2 10 L10 7 L7 10 L10 13Z"/><text x="16" y="13" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">V</text></svg>
-                        </button>
-                        <button class="compass-center" onclick="clearDirs()" title="Rensa riktning">
-                            <svg viewBox="0 0 20 20" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><line x1="10" y1="3" x2="10" y2="6"/><line x1="10" y1="14" x2="10" y2="17"/><line x1="3" y1="10" x2="6" y2="10"/><line x1="14" y1="10" x2="17" y2="10"/></svg>
-                        </button>
-                        <button class="compass-btn" data-dir="Ö" onclick="toggleDir(this)">
-                            <svg viewBox="0 0 20 20" fill="currentColor"><path d="M18 10 L10 7 L13 10 L10 13Z"/><text x="5" y="13" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">Ö</text></svg>
-                        </button>
-                        <span></span>
-                        <button class="compass-btn" data-dir="S" onclick="toggleDir(this)">
-                            <svg viewBox="0 0 20 20" fill="currentColor"><text x="10" y="7" text-anchor="middle" font-size="6" font-weight="700" fill="currentColor">S</text><path d="M10 18 L7 10 L10 13 L13 10Z"/></svg>
-                        </button>
-                        <span></span>
-                    </div>
-                    <div class="chip-group" style="margin-top:0">
-                        <button class="chip" onclick="appendChip('sysselsattning','Spanar')">Spanar</button>
-                        <button class="chip" onclick="appendChip('sysselsattning','Saboterar')">Saboterar</button>
-                        <button class="chip" onclick="appendChip('sysselsattning','Patrull')">Patrull</button>
-                    </div>
-                </div>
-            </div>
-
-            <!-- SYMBOL -->
-            <div class="form-group">
-                <div class="label-row">
-                    <label for="symbol">Symbol</label>
-                    <button class="info-btn" tabindex="-1" onclick="toggleInfo('infoSymbol')" aria-label="Info om Symbol">i</button>
-                </div>
-                <div class="info-text" id="infoSymbol">Märkning, siffror, förbandstecken, färg på fordon/uniformer.</div>
-                <textarea id="symbol" rows="2" placeholder="Märkning, färg, tecken"></textarea>
-                <div class="chip-group">
-                    <button class="chip" onclick="appendChip('symbol','Grön')"><span class="chip-dot" style="background:#4caf50"></span>Grön</button>
-                    <button class="chip" onclick="appendChip('symbol','Röd')"><span class="chip-dot" style="background:#e53935"></span>Röd</button>
-                    <button class="chip" onclick="appendChip('symbol','Svart')"><span class="chip-dot" style="background:#555;border:1px solid #888"></span>Svart</button>
-                    <button class="chip" onclick="appendChip('symbol','Vit')"><span class="chip-dot" style="background:#eee;border:1px solid #888"></span>Vit</button>
-                    <button class="chip" onclick="appendChip('symbol','Gul')"><span class="chip-dot" style="background:#fdd835"></span>Gul</button>
-                    <button class="chip" onclick="appendChip('symbol','Blå')"><span class="chip-dot" style="background:#1565c0"></span>Blå</button>
-                    <button class="chip" onclick="appendChip('symbol','Kamouflage')">Kamouflage</button>
-                </div>
-                <div class="symbol-format-group">
+                <div class="info-text" id="infoHandelse">Beskriv i fritext vad som hände — skriv naturligt, t.ex. "Såg två killar cykla förbi, svartklädda, med ryggsäckar". Försök få med de fyra S:en så rapporten kan bearbetas: <strong>Styrka</strong> (antal), <strong>Slag</strong> (typ av fiende/objekt), <strong>Sysselsättning</strong> (vad de gör) och <strong>Symbol</strong> (märkning, färg, tecken).</div>
+                <textarea id="handelse" rows="4" placeholder="Ex: Såg två killar cykla förbi, svartklädda, med ryggsäckar"></textarea>
+                <div class="field-hint">Kom ihåg de fyra S:en: <strong>S</strong>tyrka · <strong>S</strong>lag · <strong>S</strong>ysselsättning · <strong>S</strong>ymbol</div>
+                <div class="field-hint" style="margin-top:10px">Identifieringshjälp — fyll i och klistra in i Händelse:</div>
+                <div class="symbol-format-group" style="margin-top:6px">
                     <button class="symbol-format-btn" onclick="openSymbolEmbed('scrim.html','SCRIM')">SCRIM</button>
                     <button class="symbol-format-btn" onclick="openSymbolEmbed('what.html','WHAT')">WHAT</button>
                     <button class="symbol-format-btn" onclick="openSymbolEmbed('weft.html','WEFT')">WEFT</button>
@@ -449,11 +356,11 @@
                 </div>
             </div>
 
-            <!-- Symbol embed modal -->
+            <!-- Identifierings-embed modal (SCRIM/WHAT/WEFT/A-H → Händelse) -->
             <div class="embed-modal-overlay" id="symbolModal">
                 <div class="embed-modal">
                     <div class="embed-modal-header">
-                        <span class="embed-modal-title" id="symbolModalTitle">SYMBOL</span>
+                        <span class="embed-modal-title" id="symbolModalTitle">IDENTIFIERING</span>
                         <button class="embed-modal-close" onclick="closeSymbolEmbed()">×</button>
                     </div>
                     <iframe id="symbolIframe" sandbox="allow-scripts allow-same-origin"></iframe>
@@ -748,35 +655,6 @@ async function readFoto(input) {
     input.value = '';
 }
 
-// ── Kompass-riktningsväljare ──────────────────────────────────────────────────
-const compassOrder = ['N','S','Ö','V'];
-const compassOpposite = { N:'S', S:'N', Ö:'V', V:'Ö' };
-function toggleDir(btn) {
-    const dir = btn.dataset.dir;
-    const wasActive = btn.classList.contains('active');
-    if (!wasActive) {
-        const oppBtn = document.querySelector('.compass-btn[data-dir="' + compassOpposite[dir] + '"]');
-        if (oppBtn) oppBtn.classList.remove('active');
-    }
-    btn.classList.toggle('active');
-    const active = [...document.querySelectorAll('.compass-btn.active')].map(b => b.dataset.dir);
-    const field = document.getElementById('sysselsattning');
-    const current = field.value.replace(/Rör sig [NSÖVO]+,?\s*/g, '').trim();
-    if (active.length === 0) {
-        field.value = current;
-        return;
-    }
-    const sorted = active.sort((a, b) => compassOrder.indexOf(a) - compassOrder.indexOf(b));
-    const dirStr = sorted.join('').replace(/Ö/g, 'O');
-    field.value = current ? 'Rör sig ' + dirStr + ', ' + current : 'Rör sig ' + dirStr;
-    scrollFieldToTop(field);
-}
-function clearDirs() {
-    document.querySelectorAll('.compass-btn.active').forEach(b => b.classList.remove('active'));
-    const field = document.getElementById('sysselsattning');
-    field.value = field.value.replace(/Rör sig [NSÖVO]+,?\s*/g, '').trim();
-}
-
 // ── Chip-knappar (appendar till befintligt värde) ─────────────────────────────
 function scrollFieldToTop(el) {
     const group = el.closest('.form-group') || el;
@@ -796,7 +674,7 @@ function appendChip(fieldId, value) {
 
 // ── Symbol embed (SCRIM/WHAT/WEFT/A-H i modal) ──────────────────────────────
 function openSymbolEmbed(file, label) {
-    document.getElementById('symbolModalTitle').textContent = 'SYMBOL: Fyll i via ' + label;
+    document.getElementById('symbolModalTitle').textContent = 'Fyll i via ' + label;
     document.getElementById('symbolIframe').src = file + '?mode=embed';
     document.getElementById('symbolModal').classList.add('open');
 }
@@ -806,7 +684,7 @@ function closeSymbolEmbed() {
 }
 window.addEventListener('message', function(e) {
     if (e.data && e.data.type === 'symbol-fill') {
-        const el = document.getElementById('symbol');
+        const el = document.getElementById('handelse');
         const prefix = el.value.trim();
         const formatted = `(${e.data.format})\n${e.data.text}`;
         el.value = prefix ? prefix + '\n' + formatted : formatted;
@@ -1158,14 +1036,6 @@ function syncStalleMiniFromField() {
     }
 })();
 
-// ── +/- för Styrka ─────────────────────────────────────────────────────────
-function changeCount(delta) {
-    const el = document.getElementById('styrka');
-    const current = parseInt(el.value, 10);
-    const next = isNaN(current) ? Math.max(0, delta) : Math.max(0, current + delta);
-    el.value = next;
-}
-
 // ── Tid ─────────────────────────────────────────────────────────────────────
 function toggleInfo(id) { document.getElementById(id).classList.toggle('show'); }
 
@@ -1232,10 +1102,7 @@ function generateReport() {
         '',
         `Stund: ${v('stund') || '-'}`,
         `Ställe: ${v('stalle') || '-'}`,
-        `Styrka: ${v('styrka') || '-'}`,
-        `Slag: ${v('slag') || '-'}`,
-        `Sysselsättning: ${v('sysselsattning') || '-'}`,
-        `Symbol: ${v('symbol') || '-'}`,
+        `Händelse: ${v('handelse') || '-'}`,
         lastFotoFilename ? `Foto: ${lastFotoFilename}` : null,
         `Sagesman: ${v('sagesman') || '-'}`,
         `Sedan: ${v('sedan') || '-'}`,
@@ -1246,9 +1113,9 @@ function generateReport() {
 }
 
 // ── CoT (Cursor on Target) Export ────────────────────────────────────────────
-function slagToCoTType(slag) {
-    if (!slag || slag === '-') return 'a-u-G';
-    const s = slag.toLowerCase();
+function handelseToCoTType(handelse) {
+    if (!handelse || handelse === '-') return 'a-u-G';
+    const s = handelse.toLowerCase();
     if (/dr.nar|uas|rpas|uav|multikopter|quadro/.test(s)) return 'a-h-A-MFQ';
     if (/flyg|jet|plan|helikopter|heli|strids.?flyg/.test(s)) return 'a-h-A';
     if (/fordon|stridsfordon|bv|pansarvagn|stridsvagn|lastbil|bandvagn/.test(s)) return 'a-h-G-E';
@@ -1266,7 +1133,7 @@ function generateCoTXML() {
     const v = id => document.getElementById(id).value.trim();
     const stalle = v('stalle');
     const stund = v('stund');
-    const slag = v('slag');
+    const handelse = v('handelse');
 
     const coords = mgrsToLatLon(stalle);
     const lat = coords ? coords[0].toFixed(6) : '0';
@@ -1274,14 +1141,11 @@ function generateCoTXML() {
 
     const time = parseTnrToISO(stund);
     const stale = new Date(new Date(time).getTime() + 30 * 60000).toISOString();
-    const type = slagToCoTType(slag);
+    const type = handelseToCoTType(handelse);
     const uid = '7S-' + Date.now().toString(36).toUpperCase();
 
     const remarks = [
-        v('styrka') ? `Styrka: ${v('styrka')}` : null,
-        v('slag') ? `Slag: ${v('slag')}` : null,
-        v('sysselsattning') ? `Sysselsättning: ${v('sysselsattning')}` : null,
-        v('symbol') ? `Symbol: ${v('symbol')}` : null,
+        v('handelse') ? `Händelse: ${v('handelse')}` : null,
         v('sedan') ? `Sedan: ${v('sedan')}` : null,
         v('sagesman') ? `Sagesman: ${v('sagesman')}` : null,
     ].filter(Boolean).join('; ');
@@ -1527,7 +1391,7 @@ function backToEdit() {
 }
 function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
-    ['stund','stalle','styrka','slag','sysselsattning','symbol','sedan','sagesman'].forEach(id =>
+    ['stund','stalle','handelse','sedan','sagesman'].forEach(id =>
         document.getElementById(id).value = '');
     lastFotoFilename = ''; lastFotoFile = null;
     document.getElementById('fotoStatus').textContent = '';
