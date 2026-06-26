@@ -77,6 +77,8 @@
         var baseLayer = opts.baseLayer;
         var headerEl = opts.headerEl;
         var warningEl = opts.warningEl || null;
+        // Behåll map i closure så Härdat-knappen kan öppna landskaps-väljaren
+        // (shared/landskap-offline.js) och panna kartan efter aktivering.
 
         // Idempotens: om redan attachad till denna karta, gör inget.
         if (map.__hardenCtrl) return map.__hardenCtrl;
@@ -105,9 +107,17 @@
         refresh();
 
         btn.addEventListener('click', async function () {
-            // Om användaren slår PÅ utan pre-downloadad fil: varna att
-            // första request:en kommer synas hos R2-hosten. Avgöra med
-            // checkPrefetched() mot aktuell controller-URL.
+            // Landskaps-väljaren är den nya ingången: klick öppnar väljaren
+            // där operatören laddar ner landskap offline och slår på/av härdat
+            // läge per landskap. Faller tillbaka till gammalt toggle-beteende
+            // på sidor som inte inkluderat landskap-offline.js än.
+            if (global.LandskapOffline && typeof global.LandskapOffline.open === 'function') {
+                global.LandskapOffline.open({ ctrl: ctrl, map: map });
+                return;
+            }
+            // Fallback (utan landskaps-väljare): toggle direkt. Om användaren
+            // slår PÅ utan pre-downloadad fil: varna att första request:en
+            // kommer synas hos R2-hosten.
             if (!ctrl.isActive()) {
                 try {
                     var cached = await ctrl.checkPrefetched();
