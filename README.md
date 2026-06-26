@@ -99,7 +99,7 @@ Toggle finns i kart-modalen på **alla rapportfiler med karta** (7S, A-H, SCRIM,
 
 ### CSP — status
 
-Strikt `default-src 'self'` med explicit `connect-src` är på plats på `opsec.html`. Övriga 14 sidor har fortfarande den bredare originalvarianten med `upgrade-insecure-requests`. Att rulla ut strikt CSP brett är på roadmappen ([audit/roadmap.md](audit/roadmap.md) Sväng 1.2). XML-escape i CoT-export, OPSEC-formulär-sweep (`autocomplete=off`, `spellcheck=false`, `data-1p-ignore`), referrer-policy `strict-origin` och `notranslate` är gjorda.
+Strikt `default-src 'self'` med explicit `connect-src` är utrullad på **samtliga sidor** (2026-06-02). `upgrade-insecure-requests` används inte längre någonstans. Sidor med extern trafik har snäva allowlists: `vader.html` (SMHI + Open-Meteo + Nominatim), kartsidorna `minkarta.html`/`sensorskiss.html` m.fl. (tile-hosts + Overpass + R2-bucket), `tipsa.html`/`tavla.html` (exakt Worker-URL). XML-escape i CoT-export, OPSEC-formulär-sweep (`autocomplete=off`, `spellcheck=false`, `data-1p-ignore`), referrer-policy `strict-origin` och `notranslate` är gjorda.
 
 ### Threat model
 

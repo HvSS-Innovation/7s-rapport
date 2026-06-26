@@ -2,9 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
-    <!-- CSP TODO §1.2: lägg till pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev
-         i connect-src om/när strikt CSP rullas ut hit (PMTiles för Härdat läge) -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.opentopomap.org; font-src 'self'; connect-src 'self' https://tile.openstreetmap.org https://*.tile.opentopomap.org https://nominatim.openstreetmap.org https://overpass-api.de https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
     <meta name="referrer" content="strict-origin">
     <meta name="google" content="notranslate">
     <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
@@ -313,6 +311,7 @@
                 <input type="text" id="sagesman" placeholder="GUD 111. 3e p, 2a grp." autocomplete="off" oninput="this.value = this.value.toUpperCase()">
                 <div class="field-hint">(Namnkod = de två första bokstäverna i efternamnet + första bokstaven i förnamnet)</div>
                 <div class="saved-items" id="savedSagesman"></div>
+                <button type="button" class="clear-saved" onclick="clearSavedItems()" style="margin-top:8px;background:none;border:none;color:var(--text-muted);font-size:0.78rem;text-decoration:underline;cursor:pointer;padding:2px 0">Rensa sparade</button>
             </div>
 
             <hr class="divider">
@@ -492,7 +491,7 @@ function toggleTnrFormat() {
         if (tnrLong && /^\d{6}$/.test(v)) {
             const d = new Date();
             const z = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
-            const mån = ['JAN','FEB','MAR','APR','MAJ','JUN','JUL','AUG','SEP','OKT','NOV','DEC'][d.getMonth()];
+            const mån = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
             inp.value = v + z + mån + d.getFullYear();
         } else if (!tnrLong && /^\d{6}[AB][A-Z]{3}\d{4}$/.test(v)) {
             inp.value = v.substring(0, 6);
@@ -574,7 +573,7 @@ function generateCoTXML() {
 }
 function copyCoT() {
     const xml = generateCoTXML();
-    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat')); }
+    if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat')).catch(() => showCotFeedback('Kunde inte kopiera')); }
     else { const ta = document.createElement('textarea'); ta.value = xml; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showCotFeedback('CoT XML kopierat'); } catch(e) { alert('Kunde inte kopiera.'); } document.body.removeChild(ta); }
 }
 // ── Minimal ZIP-generator (ATAK Data Package) ──────────────────────────────
@@ -695,7 +694,8 @@ function showCopyFeedback() { const el = document.getElementById('copyFeedback')
 function backToEdit() { document.getElementById('formView').classList.remove('hidden'); document.getElementById('resultView').classList.remove('active'); }
 function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
-    ['stund','stalle','size','colour','registration','identifying','model','sagesman'].forEach(id => document.getElementById(id).value = '');
+    ['till','fran','stund','stalle','size','colour','registration','identifying','model','sagesman'].forEach(id => document.getElementById(id).value = '');
+    lastFotoFilename = '';
     backToEdit();
 }
 
@@ -707,6 +707,11 @@ function loadLastSagesman() { const last = localStorage.getItem('7s_lastSagesman
 function loadSavedItems() {
     renderSaved('savedStalle', get('7s_places'), 'stalle', deleteSavedPlace);
     renderSaved('savedSagesman', get('7s_sagesman'), 'sagesman', deleteSavedSagesman);
+}
+function clearSavedItems() {
+    if (!confirm('Rensa alla sparade snabbval (ställen, sägesmän)? Tömmer även auto-ifyllnaden vid nästa öppning.')) return;
+    ['7s_places','7s_sagesman','7s_lastSagesman','7s_till','7s_lastTill','7s_fran','7s_lastFran'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+    loadSavedItems();
 }
 function renderSaved(cid, items, inputId, delFn) {
     const c = document.getElementById(cid); c.innerHTML = '';

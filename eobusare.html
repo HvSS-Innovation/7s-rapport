@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
     <meta name="referrer" content="strict-origin">
     <meta name="google" content="notranslate">
     <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
@@ -338,7 +338,7 @@ function toggleTnrFormat() {
         if (tnrLong && /^\d{6}$/.test(v)) {
             const d = new Date();
             const z = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
-            const mån = ['JAN','FEB','MAR','APR','MAJ','JUN','JUL','AUG','SEP','OKT','NOV','DEC'][d.getMonth()];
+            const mån = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
             inp.value = v + z + mån + d.getFullYear();
         } else if (!tnrLong && /^\d{6}[AB][A-Z]{3}\d{4}$/.test(v)) {
             inp.value = v.substring(0, 6);
@@ -451,7 +451,7 @@ function backToEdit() {
 function borjaOm() {
     if (!confirm('B\u00f6rja om med ny eldst\u00e4llning? All data rensas.')) return;
 
-    ['tnr','e1_position','e2_namn','e2_position','e3_bevak',
+    ['till','fran','tnr','e1_position','e2_namn','e2_position','e3_bevak',
      'e5_kanal','e6_ammo','e6_skadade','e6_ovrigt','e7_till','e8_forbattra'].forEach(function(id) {
         const el = document.getElementById(id);
         if (el) el.value = '';

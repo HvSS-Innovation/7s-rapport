@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
     <meta name="referrer" content="strict-origin">
     <meta name="google" content="notranslate">
     <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
@@ -442,7 +442,7 @@ function toggleTnrFormat() {
         if (tnrLong && /^\d{6}$/.test(v)) {
             const d = new Date();
             const z = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
-            const mån = ['JAN','FEB','MAR','APR','MAJ','JUN','JUL','AUG','SEP','OKT','NOV','DEC'][d.getMonth()];
+            const mån = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
             inp.value = v + z + mån + d.getFullYear();
         } else if (!tnrLong && /^\d{6}[AB][A-Z]{3}\d{4}$/.test(v)) {
             inp.value = v.substring(0, 6);
@@ -602,7 +602,7 @@ function generateReport() {
     if (v('o_egna')) { lines.push('  Egna: ' + v('o_egna')); o_has = true; }
     if (v('o_uppgift')) { lines.push('  Uppgift/Idé: ' + v('o_uppgift')); o_has = true; }
     if (v('o_inpass')) { lines.push('  In/Utpassering: ' + v('o_inpass')); o_has = true; }
-    if (v('o_los1') || v('o_los2')) { lines.push(`  Lösen: ${v('o_los1').toUpperCase()} - ${v('o_los2').toUpperCase()}`); o_has = true; }
+    if (v('o_los1') || v('o_los2')) { const lA = v('o_los1').toUpperCase(), lB = v('o_los2').toUpperCase(); lines.push('  Lösen: ' + (lA && lB ? `${lA} - ${lB}` : (lA || lB))); o_has = true; }
     if (v('o_samb_tecken')) { lines.push('  Egna tecken: ' + v('o_samb_tecken')); o_has = true; }
     if (v('o_atersaml')) { lines.push('  Återsamlingsplatser: ' + v('o_atersaml')); o_has = true; }
     lines.push('  Visat på: ' + v('o_visat'));
@@ -647,12 +647,20 @@ function generateReport() {
 // ============================================================
 function copyReport() {
     const text = document.getElementById('reportOutput').textContent;
-    navigator.clipboard.writeText(text).then(() => {
+    const done = () => {
         const fb = document.getElementById('copyFeedback');
         fb.classList.add('show');
         setTimeout(() => fb.classList.remove('show'), 2000);
         if (navigator.share) navigator.share({ text }).catch(() => {});
-    });
+    };
+    const fallback = () => {
+        const ta = document.createElement('textarea'); ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select();
+        try { document.execCommand('copy'); done(); } catch (_) { alert('Kunde inte kopiera.'); }
+        document.body.removeChild(ta);
+    };
+    if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(done).catch(fallback);
+    else fallback();
 }
 
 function goBack() {

@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
     <meta name="referrer" content="strict-origin">
     <meta name="google" content="notranslate">
     <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
@@ -214,6 +214,7 @@
             <label for="sagesman" style="margin-top:12px">Schemaansvarig</label>
             <input type="text" id="sagesman" placeholder="Ex: Per Johansson, 2a Plut" autocomplete="off" oninput="this.value = this.value.toUpperCase()">
             <div class="saved-items" id="savedSagesman"></div>
+            <button type="button" class="clear-saved" onclick="clearSavedItems()" style="margin-top:8px;background:none;border:none;color:var(--text-muted);font-size:0.78rem;text-decoration:underline;cursor:pointer;padding:2px 0">Rensa sparade</button>
 
             <div style="margin-top:12px; display:grid; grid-template-columns:1fr 1fr; gap:8px; align-items: end">
                 <div>
@@ -302,6 +303,11 @@ function saveSagesmanIfNew(val) {
     renderSagesman();
 }
 
+function clearSavedItems() {
+    if (!confirm('Rensa alla sparade schemaansvariga? Tömmer även auto-ifyllnaden vid nästa öppning.')) return;
+    ['sch_sagesman','sch_lastSagesman'].forEach(k => { try { localStorage.removeItem(k); } catch (_) {} });
+    renderSagesman();
+}
 function renderSagesman() {
     const c = document.getElementById('savedSagesman'); c.innerHTML = '';
     lsGet('sch_sagesman').forEach(s => {
@@ -370,7 +376,11 @@ function toggleTnrFormat() {
         if (tnrLong && /^\d{6}$/.test(v)) {
             const d = new Date();
             const z = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
-            const mån = ['JAN','FEB','MAR','APR','MAJ','JUN','JUL','AUG','SEP','OKT','NOV','DEC'][d.getMonth()];
+            // NATO DTG: engelska månadsförkortningar — samma lista som setNow()
+            // och opsec.js parseTnrToISO. Var tidigare svenska (MAJ/OKT) här,
+            // vilket gav inkonsistent TNR i maj/oktober beroende på vilken
+            // funktion som skrev senast.
+            const mån = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
             inp.value = v + z + mån + d.getFullYear();
         } else if (!tnrLong && /^\d{6}[AB][A-Z]{3}\d{4}$/.test(v)) {
             inp.value = v.substring(0, 6);
@@ -546,7 +556,17 @@ function genererSchema() {
             // Fallback: ignorera vilokrav om inga kandidater finns (undviker låsning)
             const fallback = activePool.filter(sol => !busyNow.has(sol))
                 .sort((a, b) => (lastFinished[a] ?? 0) - (lastFinished[b] ?? 0));
-            nyPerson = candidates[0] || fallback[0] || activePool[0];
+            nyPerson = candidates[0] || fallback[0];
+            if (!nyPerson) {
+                // Sista utvägen tidigare var activePool[0], men då tilldelades en
+                // soldat som redan stod på en post i pipelinen — silent
+                // dubbel-bokning. Bryt schema-genereringen istället så
+                // användaren ser att konfigurationen inte går ihop.
+                alert('Kan inte schemalägga: alla soldater är upptagna i nuvarande skift. '
+                    + 'Lägg till fler soldater, minska antal poster eller sänk vilokrav.');
+                schema = [];
+                return;
+            }
             passMinuter = passLangdMin; // Använder användarens inställda passlängd
         }
 
@@ -844,7 +864,7 @@ function nollstall() {
     document.getElementById('summaryContainer').innerHTML = '';
     document.getElementById('specialControls').innerHTML = '';
 
-    addPost('Värnpost', false); addPost('Eldvakt', false);
+    addPost('Värnpost', false); addPost('Eldpost', false);
     addSoldat('', false); addSoldat('', false); addSoldat('', false); addSoldat('', false);
     document.getElementById('steg2').style.display = 'none';
     document.getElementById('steg1').style.display = 'block';
@@ -857,7 +877,7 @@ document.addEventListener('DOMContentLoaded', () => {
     const last = localStorage.getItem('sch_lastSagesman');
     if (last) document.getElementById('sagesman').value = last;
     setNow();
-    addPost('Värnpost', false); addPost('Eldvakt', false);
+    addPost('Värnpost', false); addPost('Eldpost', false);
     addSoldat('', false); addSoldat('', false); addSoldat('', false); addSoldat('', false);
 });
 
