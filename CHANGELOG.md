@@ -3,6 +3,15 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.6 — 2026-06-26 — Landskaps-väljare för offline-karta (i bitar)
+
+- **Ny helskärms-väljare `shared/landskap-offline.js`:** öppnas från både "Ladda ner offline"- och "Härdat läge"-knapparna (minkarta + 7S/index). Interaktiv SVG-karta över Sveriges 25 landskap (hover-highlight synkad med listan) + grupperad lista (Götaland/Svealand/Norrland). Klick = lägg landskap i kö; "Ladda ner offline" hämtar varje köat landskap seriellt som en egen liten PMTiles-fil i stället för hela Sverige (~4,1 GB). "Visa på kartan" aktiverar härdat läge för ett nedladdat landskap och pannar dit; "Radera"/"Stäng av härdat" finns i samma vy. Syfte: små offline-filer i stället för en jätteklump.
+- **`landskap.js` + `landskap-geo.js`:** presets (bbox/center/zoom + tom `pmtiles`-placeholder, mönster som `countries.js`) och förenklad landskaps-geometri för kartan. Geometri från `perliedman/svenska-landskap` (CC0, Lantmäteriets Distriktskarta), förenklad ~40 500→3 600 punkter (~60 KB).
+- **`pmtiles-layer.js`:** ny per-URL `PMTilesPrefetch.fetchSmart()` (SW-delegerad, överlever sid-navigering) + `cancel()`/`expectedBytesForUrl()`; `getExpectedBytesForUrl` känner nu även landskaps-presets.
+- **Decoupling:** klient-UI:t skeppas direkt. Inget landskap är nedladdningsbart förrän dess pmtiles-fil byggts + laddats upp (visas "Kommer snart" tills dess). "Hela Sverige" finns som val överst och funkar redan. Turnkey byggrecept: `verktyg/build-landskap-pmtiles.md` (extraherar varje landskap direkt ur `sverige.pmtiles` via `pmtiles extract --bbox=…`, ingen planet-nedladdning).
+- **OPSEC:** väljarens karta är ren inline-SVG (ingen tile-bakgrund) → noll utgående anrop bara för att öppna den. Per-landskap PMTiles från egen R2 läcker inte intresseområde (till skillnad från raster-bulk mot OpenTopoMap).
+- **Nya filer i FILES:** `landskap.js`, `landskap-geo.js`, `shared/landskap-offline.js`. Service worker auto-bumpas.
+
 ## v0.3.5 — 2026-06-25 — UPK korridor/karta-verktyg (Dolda)
 
 - **Nytt verktyg `upk.html`** (nav-grupp HIDDEN/Dolda): planeringsverktyg för UPK-punkter. Korridor mellan två punkter (planär UTM-matematik, "bred pensel"), sökbar punktlista, KML-export (Google Earth/ATAK), och inmatning av punkter (hand, inklistrad lista/OCR, samt kart-väljare i härdat läge). MGRS↔UTM↔lat-lon räknas ut lokalt (verifierat mot 58 kända punkter, 0 m fel).

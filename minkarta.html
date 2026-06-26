@@ -44,6 +44,9 @@
     <script src="lib/layers.js" defer></script>
     <script src="minkarta-tutorial.js" defer></script>
     <script src="countries.js" defer></script>
+    <script src="landskap.js" defer></script>
+    <script src="landskap-geo.js" defer></script>
+    <script src="shared/landskap-offline.js" defer></script>
     <script src="offline-tiles.js" defer></script>
     <script type="module" src="pmtiles-layer.js"></script>
     <script type="module" src="topo-overlay.js"></script>
@@ -1481,6 +1484,12 @@ function renderMapControls() {
             window.alert('PMTiles-modulen är inte laddad.');
             return;
         }
+        // Härdat-knappen öppnar landskaps-väljaren (offline i bitar). Faller
+        // tillbaka till direkt-toggle om väljar-modulen inte hann laddas.
+        if (window.LandskapOffline && typeof window.LandskapOffline.open === 'function') {
+            window.LandskapOffline.open({ ctrl: ctrl, map: map });
+            return;
+        }
         await ctrl.toggle();
     });
     if (window.MK_HARDENING) {
@@ -1560,8 +1569,15 @@ function renderMapControls() {
     prefetchBtn.addEventListener('click', async () => {
         const ctrl = window.MK_HARDENING;
         if (!ctrl) return;
+        // "Ladda ner offline" öppnar landskaps-väljaren (offline i bitar) i
+        // stället för att hämta hela aktiva filen i en klump. Väljaren har
+        // "Hela Sverige" som val överst om man ändå vill ha allt. Faller
+        // tillbaka till hela-filen-prefetch om väljar-modulen inte laddats.
+        if (window.LandskapOffline && typeof window.LandskapOffline.open === 'function') {
+            window.LandskapOffline.open({ ctrl: ctrl, map: map });
+            return;
+        }
         if (prefetchRunning) return;
-
         const cached = await ctrl.checkPrefetched();
         if (cached) {
             if (!window.confirm('Filen finns redan cachad lokalt. Radera och ladda ner igen?')) return;
@@ -1569,23 +1585,16 @@ function renderMapControls() {
             await refreshPrefetchBtn();
             return;
         }
-
         prefetchRunning = true;
         prefetchBtn.disabled = true;
         prefetchBtn.textContent = 'Hämtar… 0%';
-
-        // Hash krävs bara för svensk fil (Fas 2). Demo-filer kör utan.
         const url = ctrl.getUrl();
         const expectedHash = (window.PMTilesPrefetch && url === window.PMTilesPrefetch.SVERIGE_URL)
             ? window.PMTilesPrefetch.SVERIGE_SHA256 : '';
-
         const result = await ctrl.prefetch({
             expectedSha256: expectedHash,
-            onProgress: (p) => {
-                prefetchBtn.textContent = 'Hämtar… ' + (p.percent || 0) + '%';
-            }
+            onProgress: (p) => { prefetchBtn.textContent = 'Hämtar… ' + (p.percent || 0) + '%'; }
         });
-
         prefetchRunning = false;
         if (result.ok) {
             const mb = (result.bytes / (1024 * 1024)).toFixed(1);

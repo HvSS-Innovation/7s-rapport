@@ -343,7 +343,49 @@ function getExpectedBytesForUrl(url) {
             }
         }
     }
+    // Landskaps-presets (landskap.js) — samma form som grannländerna, men
+    // nyckeln är landskaps-id istället för landskod.
+    if (typeof window !== 'undefined' && window.HVLandskap
+            && window.HVLandskap.presets) {
+        const lp = window.HVLandskap.presets;
+        for (const id in lp) {
+            const p = lp[id];
+            if (p && p.pmtiles && p.pmtiles.url && p.pmtiles.url === url) {
+                return p.pmtiles.bytes || 0;
+            }
+        }
+    }
     return 0;
+}
+
+// Per-URL prefetch oberoende av controller-instans. Behövs av landskaps-
+// väljaren (shared/landskap-offline.js) som laddar ner flera filer som inte
+// är "den aktiva" controller-URL:en. Speglar controller.prefetch:s logik:
+// SW-delegerad om möjligt (överlever sid-navigering), annars in-page-loop.
+// Returnerar samma form som prefetchPMTiles: { ok, bytes, error, ... }.
+function fetchSmart(url, opts) {
+    opts = opts || {};
+    if (!url) return Promise.resolve({ ok: false, error: 'Ingen URL angiven' });
+    if (canDelegateToSW()) {
+        return swPrefetchPMTiles(url, {
+            expectedBytes: opts.expectedBytes || getExpectedBytesForUrl(url),
+            onProgress: opts.onProgress
+        });
+    }
+    return prefetchPMTiles(url, {
+        signal: opts.signal,
+        expectedSha256: opts.expectedSha256 || '',
+        onProgress: opts.onProgress
+    });
+}
+
+// Avbryt en pågående SW-delegerad prefetch för en URL. (In-page-loopen
+// avbryts av anroparens egen AbortSignal.)
+function cancelSmart(url) {
+    if (canDelegateToSW() && navigator.serviceWorker.controller) {
+        try { navigator.serviceWorker.controller.postMessage({ type: 'PM_CANCEL', url: url }); }
+        catch (_) {}
+    }
 }
 
 async function isPrefetched(url, expectedBytes) {
@@ -596,6 +638,9 @@ function createController(map, normalLayer, opts) {
 // Globala helpers (oberoende av controller-instans).
 window.PMTilesPrefetch = {
     fetch: prefetchPMTiles,
+    fetchSmart: fetchSmart,
+    cancel: cancelSmart,
+    expectedBytesForUrl: getExpectedBytesForUrl,
     isPrefetched: isPrefetched,
     remove: removePrefetched,
     verifyHash: verifyHash,
