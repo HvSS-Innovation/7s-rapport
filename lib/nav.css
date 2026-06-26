@@ -275,6 +275,64 @@ body.hv-nav-locked {
   color: var(--accent, #4caf50);
 }
 
+/* ── "Visa hela menyn" — färgad CTA i slim-läget ── */
+.hv-nav-fullmenu {
+  width: 100%;
+  min-height: 52px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  background: var(--accent, #4caf50);
+  color: var(--bg-primary, #0d1f0d);
+  border: 1px solid var(--accent, #4caf50);
+  border-radius: var(--radius-sm, 6px);
+  cursor: pointer;
+  font-family: inherit;
+  padding: 8px 12px;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter .15s, box-shadow .15s;
+}
+.hv-nav-fullmenu:hover,
+.hv-nav-fullmenu:focus-visible {
+  filter: brightness(1.08);
+  outline: none;
+  box-shadow: 0 0 0 2px var(--accent-dim, #2d6a30);
+}
+.hv-nav-fullmenu-label {
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+.hv-nav-fullmenu-sub {
+  font-size: 0.7rem;
+  font-weight: 500;
+  opacity: 0.85;
+  letter-spacing: 0.02em;
+}
+
+/* ── "Visa enkel meny" — diskret väg tillbaka till slim (full-läget) ── */
+.hv-nav-slim-toggle {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 8px;
+  background: none;
+  border: none;
+  color: var(--text-muted, #6a8a6a);
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 0.78rem;
+  letter-spacing: 0.03em;
+  -webkit-tap-highlight-color: transparent;
+  transition: color .15s;
+}
+.hv-nav-slim-toggle:hover,
+.hv-nav-slim-toggle:focus-visible {
+  color: var(--accent, #4caf50);
+  outline: none;
+}
+
 /* ── Reduced motion ── */
 @media (prefers-reduced-motion: reduce) {
   .hv-nav-drawer,
@@ -282,7 +340,9 @@ body.hv-nav-locked {
   .hv-nav-burger,
   .hv-nav-item,
   .hv-nav-close,
-  .hv-nav-hidden-toggle {
+  .hv-nav-hidden-toggle,
+  .hv-nav-fullmenu,
+  .hv-nav-slim-toggle {
     transition: none;
   }
 }
