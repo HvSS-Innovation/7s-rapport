@@ -129,7 +129,9 @@
             bbox: { west: 12.1377, south: 59.8541, east: 16.7048, north: 62.2675 },
             center: [61.0608, 14.4213], zoom: 6,
             // TODO: bygg + ladda upp. Se verktyg/build-landskap-pmtiles.md.
-            pmtiles: { url: '', bytes: 0, sha256: '' }
+            pmtiles: {
+                url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/dalarna.pmtiles', bytes: 328318712, sha256: '7413bd6ee70e2cbd87ad694c39a7b4b41efd27e580bbb559b064fb9f27ecfd55'
+            }
         },
         narke: {
             id: 'narke', namn: "Närke", landsdel: "Svealand", kod: 11,
@@ -208,14 +210,18 @@
             bbox: { west: 11.9746, south: 62.2808, east: 16.999, north: 65.1189 },
             center: [63.6999, 14.4868], zoom: 6,
             // TODO: bygg + ladda upp. Se verktyg/build-landskap-pmtiles.md.
-            pmtiles: { url: '', bytes: 0, sha256: '' }
+            pmtiles: {
+                url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/jamtland.pmtiles', bytes: 369297050, sha256: 'bebef3104796d79c0bc1f9e6c9451a9b81739cb2786edbcd08532e46798544a4'
+            }
         },
         lappland: {
             id: 'lappland', namn: "Lappland", landsdel: "Norrland", kod: 24,
             bbox: { west: 14.3259, south: 63.8801, east: 23.2694, north: 69.0581 },
             center: [66.4691, 18.7976], zoom: 5,
             // TODO: bygg + ladda upp. Se verktyg/build-landskap-pmtiles.md.
-            pmtiles: { url: '', bytes: 0, sha256: '' }
+            pmtiles: {
+                url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/lappland.pmtiles', bytes: 606421230, sha256: 'e4e82c70d027ab62c9bb3ca84ff14c0ea5c4cd71f8d7f7e65378f4f2dd053a31'
+            }
         },
         medelpad: {
             id: 'medelpad', namn: "Medelpad", landsdel: "Norrland", kod: 20,
