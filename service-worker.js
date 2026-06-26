@@ -494,30 +494,29 @@ async function runPmtilesJob(spec) {
     const total = parseInt(resp.headers.get('content-length') || '0', 10);
     job.total = total;
 
-    const reader = resp.body.getReader();
-    const blobChunks = [];
-    while (true) {
-      if (job.controller.signal.aborted) {
-        throw Object.assign(new Error('Avbruten'), { name: 'AbortError' });
+    // Strömma nät → cache via TransformStream. Tidigare versionen samlade
+    // varje chunk i en blobChunks-array och byggde slut-Blob:en innan
+    // cache.put — på Sverige.pmtiles (~4 GB) sprängde det mobil-RAM.
+    // Cache API konsumerar Response-body:n lat: data flödar direkt från
+    // fetch-streamen genom transformen (där vi observerar chunk-storleken
+    // för progress) ner till disk. Abort/nätverksfel propageras via
+    // stream-error och cache.put rejectar — ingen partiell cache-post.
+    const progressStream = new TransformStream({
+      transform(chunk, controller) {
+        job.loaded += chunk.length;
+        job.percent = total ? Math.round(job.loaded / total * 100) : 0;
+        flush(false);
+        controller.enqueue(chunk);
       }
-      const { done, value } = await reader.read();
-      if (done) break;
-      blobChunks.push(new Blob([value]));
-      job.loaded += value.length;
-      job.percent = total ? Math.round(job.loaded / total * 100) : 0;
-      flush(false);
-    }
-
-    const fullBlob = new Blob(blobChunks, { type: 'application/octet-stream' });
-    blobChunks.length = 0;
+    });
 
     const cache = await caches.open(PMTILES_CACHE);
-    const cacheResp = new Response(fullBlob, {
+    const cacheResp = new Response(resp.body.pipeThrough(progressStream), {
       status: 200,
       statusText: 'OK',
       headers: {
-        'Content-Type': 'application/octet-stream',
-        'Content-Length': String(job.loaded),
+        'Content-Type': resp.headers.get('content-type') || 'application/octet-stream',
+        'Content-Length': String(total),
         'Accept-Ranges': 'bytes'
       }
     });

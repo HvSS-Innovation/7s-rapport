@@ -112,6 +112,13 @@
 <script>
 'use strict';
 
+// ── Kända IndexedDB-databaser ────────────────────────────────────────────────
+// Safari saknar `indexedDB.databases()` så vi måste lista DB-namn manuellt
+// där. När en ny IDB-databas läggs till någonstans i koden — lägg också
+// till namnet här, annars läcker den på iOS-användares "Glöm enheten".
+// Sökmönster: `indexedDB.open(` i .html eller .js → lägg till basnamnet här.
+const KNOWN_IDB_DATABASES = ['minkarta', 'sensorskiss'];
+
 const $ = id => document.getElementById(id);
 const log = (msg, cls) => {
   $('logCard').style.display = 'block';
@@ -179,15 +186,33 @@ async function nukeEverything() {
 
   if (window.indexedDB) {
     let names = [];
+    let runtimeSupported = false;
     try {
       if (indexedDB.databases) {
+        runtimeSupported = true;
         const dbs = await indexedDB.databases();
         names = dbs.map(d => d.name).filter(Boolean);
       }
     } catch (_) {}
-    // Fallback: Safari stöder inte indexedDB.databases() — försök kända namn.
-    const known = ['minkarta', 'sensorskiss'];
-    const all = Array.from(new Set([...names, ...known]));
+
+    if (!runtimeSupported) {
+      // Safari-väg: vi vet inte säkert vilka DB:er som finns. Logga så att
+      // användaren ser att vi kör på den hårdkodade listan.
+      log('OBS: Safari saknar indexedDB.databases() — försöker bara kända namn: '
+        + KNOWN_IDB_DATABASES.join(', '), 'warn');
+    } else {
+      // Säkerhetsnät för utvecklare: om runtime-listan innehåller DB:er som
+      // inte står i KNOWN_IDB_DATABASES så vet vi att Safari-fallbacken är
+      // föråldrad. Listan här ska uppdateras innan release.
+      const missing = names.filter(n => !KNOWN_IDB_DATABASES.includes(n));
+      if (missing.length) {
+        log('VARNING: IDB-namn upptäckta som saknas i KNOWN_IDB_DATABASES — '
+          + 'Safari-användare missar dessa vid Glöm enheten: '
+          + missing.join(', ') + ' (uppdatera listan i opsec.html)', 'warn');
+      }
+    }
+
+    const all = Array.from(new Set([...names, ...KNOWN_IDB_DATABASES]));
     for (const name of all) {
       await new Promise(r => {
         const req = indexedDB.deleteDatabase(name);

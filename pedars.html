@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="Content-Security-Policy" content="upgrade-insecure-requests">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
     <meta name="referrer" content="strict-origin">
     <meta name="google" content="notranslate">
     <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
@@ -586,7 +586,7 @@ function fallbackCopy(text) {
     document.body.appendChild(ta);ta.select();try{document.execCommand('copy');}catch(_){}
     document.body.removeChild(ta);showFeedback();
 }
-function showFeedback(){const el=document.getElementById('copyFeedback');el.classList.remove('show');void el.offsetWidth;el.classList.add('show');}
+function showFeedback(){const el=document.getElementById('copyFeedback');el.classList.remove('show');void el.offsetWidth;el.classList.add('show');clearTimeout(el._t);el._t=setTimeout(()=>el.classList.remove('show'),2000);}
 function backToEdit(){document.getElementById('formView').classList.remove('hidden');document.getElementById('resultView').classList.remove('active');}
 function resetForm() {
     if (!confirm('Nollställ hela formuläret?')) return;
@@ -596,6 +596,9 @@ function resetForm() {
     document.getElementById('persLista').innerHTML = ''; persId = 0;
     document.getElementById('fordonsLista').innerHTML = ''; fordId = 0;
     document.getElementById('repLista').innerHTML = ''; repId = 0;
+    document.getElementById('elverksLista').innerHTML = ''; elvId = 0;
+    document.getElementById('lamporLista').innerHTML = ''; lampId = 0;
+    document.getElementById('vedLista').innerHTML = ''; vedId = 0;
     document.getElementById('ammoTabell').innerHTML = ''; initAmmo();
     svSelected = -1; SV_CLASSES.forEach((c,i) => { document.getElementById(`sv${i}`).className = 'sv-btn'; });
     document.getElementById('formView').classList.remove('hidden');
@@ -615,7 +618,7 @@ function toggleTnrFormat() {
         if (tnrLong && /^\d{6}$/.test(v)) {
             const d = new Date();
             const z = d.getTimezoneOffset() <= -120 ? 'B' : 'A';
-            const mån = ['JAN','FEB','MAR','APR','MAJ','JUN','JUL','AUG','SEP','OKT','NOV','DEC'][d.getMonth()];
+            const mån = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'][d.getMonth()];
             inp.value = v + z + mån + d.getFullYear();
         } else if (!tnrLong && /^\d{6}[AB][A-Z]{3}\d{4}$/.test(v)) {
             inp.value = v.substring(0, 6);
