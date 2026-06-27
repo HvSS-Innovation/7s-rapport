@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+    <meta name="referrer" content="strict-origin">
+    <meta name="google" content="notranslate">
+    <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+    <script>
+        // Theme — sätt FÖRE body renderas, undviker FOUC. Samma localStorage-nyckel som övriga sidor.
+        (function(){
+            try {
+                var stored = localStorage.getItem('skyttebok_settings_lightmode');
+                var useLight;
+                if (stored === 'on') useLight = true;
+                else if (stored === 'off') useLight = false;
+                else useLight = window.matchMedia &&
+                    window.matchMedia('(prefers-color-scheme: light)').matches;
+                if (useLight) document.documentElement.setAttribute('data-theme', 'light');
+            } catch (_) {}
+        })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0d1f0d">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="icon" type="image/svg+xml" href="icon.svg">
+    <link rel="alternate icon" href="favicon.ico">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="7S Översikt">
+    <title>Översikt – 7S Rapport</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="shared/theme-toggle.css">
+    <script src="shared/theme-toggle.js" defer></script>
+    <link rel="stylesheet" href="fonts/inter.css">
+    <link rel="stylesheet" href="lib/nav.css">
+    <style>
+        :root {
+            --bg-primary: #0d1f0d; --bg-secondary: #152815; --bg-card: #1a321a;
+            --bg-input: #0f240f; --border: #2d4a2d; --border-focus: #4a7c4a;
+            --text-primary: #e8f0e8; --text-secondary: #8aaa8a; --text-muted: #5a7a5a;
+            --accent: #4caf50; --accent-hover: #66bb6a; --accent-dim: #1e3d1e;
+            --danger: #c62828; --danger-hover: #e53935;
+            --info: #1565c0; --info-hover: #1976d2;
+            --radius: 8px; --radius-sm: 4px;
+        }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg-primary); color: var(--text-primary);
+            min-height: 100vh; padding: 16px;
+        }
+        .container { max-width: 640px; margin: 0 auto; }
+
+        header { text-align: center; padding: 20px 0 8px; }
+        header h1 { font-size: 1.4rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: var(--accent); }
+        header .tagline { font-size: 0.78rem; color: var(--text-secondary); letter-spacing: 0.06em; margin-top: 3px; }
+        header .disclaimer { font-size: 0.66rem; color: var(--text-muted); letter-spacing: 0.03em; margin-top: 8px; line-height: 1.5; max-width: 420px; margin-left: auto; margin-right: auto; opacity: 0.85; }
+
+        /* Sökfält */
+        .hub-search-wrap { position: relative; margin: 14px 0 18px; }
+        .hub-search {
+            width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+            border-radius: var(--radius); color: var(--text-primary);
+            font-family: inherit; font-size: 1rem; padding: 13px 40px 13px 14px;
+            outline: none; transition: border-color 0.15s; -webkit-appearance: none; appearance: none;
+        }
+        .hub-search:focus { border-color: var(--border-focus); }
+        .hub-search-clear {
+            position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+            background: none; border: none; color: var(--text-muted); font-size: 1.4rem;
+            cursor: pointer; padding: 4px 10px; line-height: 1; display: none;
+        }
+        .hub-search-clear:hover { color: var(--text-primary); }
+        .hub-search-wrap.has-value .hub-search-clear { display: block; }
+
+        /* Kort per grupp */
+        .hub-card {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: var(--radius); padding: 14px 14px 16px; margin-bottom: 12px;
+        }
+        .hub-card-head { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+        .hub-card-emoji {
+            flex-shrink: 0; width: 40px; height: 40px; border-radius: var(--radius-sm);
+            background: var(--accent-dim); display: flex; align-items: center; justify-content: center;
+            font-size: 1.3rem; line-height: 1;
+        }
+        .hub-card-titles { min-width: 0; }
+        .hub-card-title { font-size: 0.92rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--accent); }
+        .hub-card-sub { font-size: 0.74rem; color: var(--text-secondary); margin-top: 1px; line-height: 1.35; }
+
+        .hub-tools { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+        .hub-tool {
+            display: flex; align-items: center; gap: 10px; min-height: 48px;
+            background: var(--bg-secondary); border: 1px solid var(--border);
+            border-radius: var(--radius-sm); padding: 8px 12px; text-decoration: none;
+            color: var(--text-primary); transition: background 0.15s, border-color 0.15s, transform 0.1s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .hub-tool:hover { background: var(--accent-dim); border-color: var(--border-focus); }
+        .hub-tool:active { transform: scale(0.97); }
+        .hub-tool-icon { flex-shrink: 0; width: 22px; height: 22px; color: var(--text-secondary); display: flex; align-items: center; justify-content: center; }
+        .hub-tool-icon svg { width: 22px; height: 22px; display: block; }
+        .hub-tool:hover .hub-tool-icon { color: var(--accent); }
+        .hub-tool-label { font-size: 0.86rem; font-weight: 600; letter-spacing: 0.03em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .hub-tool-badge { margin-left: auto; flex-shrink: 0; font-size: 0.58rem; font-weight: 700; letter-spacing: 0.08em; color: var(--accent); background: var(--accent-dim); border-radius: 10px; padding: 2px 7px; }
+
+        .hub-empty { display: none; text-align: center; color: var(--text-muted); font-size: 0.86rem; padding: 28px 0; }
+        .hub-empty.show { display: block; }
+        .hub-card[hidden] { display: none; }
+        .hub-tool[hidden] { display: none; }
+
+        @media (max-width: 360px) {
+            .hub-tools { grid-template-columns: 1fr 1fr; }
+        }
+    </style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Översikten byggs med JavaScript. Aktivera i webbläsarens inställningar och ladda om sidan — eller gå direkt till <a href="index.html" style="color:#ffd1d1">7S-formuläret</a>.</div></noscript>
+<div class="container">
+    <header>
+        <h1>7S Rapport</h1>
+        <p class="tagline">Översikt — välj vad du vill göra</p>
+        <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
+    </header>
+    <main>
+        <div class="hub-search-wrap" id="hubSearchWrap">
+            <input type="text" class="hub-search" id="hubSearch" placeholder="Sök verktyg…"
+                   autocomplete="off" autocapitalize="off" spellcheck="false" inputmode="search"
+                   aria-label="Sök bland verktygen">
+            <button class="hub-search-clear" id="hubSearchClear" type="button" aria-label="Rensa sökning">×</button>
+        </div>
+        <div id="hubGrid" aria-label="Alla verktyg grupperade efter ändamål"></div>
+        <p class="hub-empty" id="hubEmpty">Inga verktyg matchar din sökning.</p>
+    </main>
+</div>
+
+<script>
+// ── Hubb — bygger korten data-drivet från lib/nav.js (window.HvNav) ──────────
+// Renderar EN källa: samma grupper/verktyg som hamburger-menyn och webbplats-
+// kartan. Lägg till ett verktyg i nav.js → det dyker upp här automatiskt.
+(function () {
+    function buildHub() {
+        const nav = window.HvNav;
+        const grid = document.getElementById('hubGrid');
+        if (!grid) return;
+        if (!nav || !Array.isArray(nav.GROUPS) || !Array.isArray(nav.ITEMS)) {
+            // Fallback om navet inte laddat: skicka vidare till 7S.
+            grid.innerHTML = '<p class="hub-empty show">Kunde inte ladda verktygslistan. ' +
+                '<a href="index.html" style="color:var(--accent)">Gå till 7S →</a></p>';
+            return;
+        }
+        const icons = nav.ICONS || {};
+        const frag = document.createDocumentFragment();
+
+        nav.GROUPS.forEach(group => {
+            const items = nav.ITEMS.filter(it => it.group === group.id);
+            if (!items.length) return;
+
+            const card = document.createElement('section');
+            card.className = 'hub-card';
+            card.setAttribute('data-group', group.id);
+
+            const head = document.createElement('div');
+            head.className = 'hub-card-head';
+
+            const emoji = document.createElement('span');
+            emoji.className = 'hub-card-emoji';
+            emoji.setAttribute('aria-hidden', 'true');
+            emoji.textContent = group.emoji || '•';
+            head.appendChild(emoji);
+
+            const titles = document.createElement('div');
+            titles.className = 'hub-card-titles';
+            const h2 = document.createElement('h2');
+            h2.className = 'hub-card-title';
+            h2.textContent = group.label;
+            titles.appendChild(h2);
+            const subText = group.blurb || group.subtitle;
+            if (subText) {
+                const sub = document.createElement('p');
+                sub.className = 'hub-card-sub';
+                sub.textContent = subText;
+                titles.appendChild(sub);
+            }
+            head.appendChild(titles);
+            card.appendChild(head);
+
+            const tools = document.createElement('div');
+            tools.className = 'hub-tools';
+            items.forEach(item => {
+                const a = document.createElement('a');
+                a.className = 'hub-tool';
+                a.href = item.href;
+                a.setAttribute('data-label', (item.label || '').toLowerCase());
+
+                const ic = document.createElement('span');
+                ic.className = 'hub-tool-icon';
+                ic.setAttribute('aria-hidden', 'true');
+                if (item.icon && icons[item.icon]) ic.innerHTML = icons[item.icon];
+                a.appendChild(ic);
+
+                const lbl = document.createElement('span');
+                lbl.className = 'hub-tool-label';
+                lbl.textContent = item.label;
+                a.appendChild(lbl);
+
+                if (item.badge) {
+                    const b = document.createElement('span');
+                    b.className = 'hub-tool-badge';
+                    b.textContent = item.badge;
+                    a.appendChild(b);
+                }
+                tools.appendChild(a);
+            });
+            card.appendChild(tools);
+            frag.appendChild(card);
+        });
+
+        grid.innerHTML = '';
+        grid.appendChild(frag);
+        wireSearch();
+    }
+
+    // ── Live-filter: döljer verktyg/kort som inte matchar ──
+    function wireSearch() {
+        const input = document.getElementById('hubSearch');
+        const wrap = document.getElementById('hubSearchWrap');
+        const clear = document.getElementById('hubSearchClear');
+        const empty = document.getElementById('hubEmpty');
+        if (!input) return;
+
+        function apply() {
+            const q = input.value.trim().toLowerCase();
+            wrap.classList.toggle('has-value', q.length > 0);
+            let anyVisible = false;
+            document.querySelectorAll('.hub-card').forEach(card => {
+                let cardHas = false;
+                card.querySelectorAll('.hub-tool').forEach(tool => {
+                    const match = !q || (tool.getAttribute('data-label') || '').indexOf(q) !== -1;
+                    tool.hidden = !match;
+                    if (match) cardHas = true;
+                });
+                card.hidden = !cardHas;
+                if (cardHas) anyVisible = true;
+            });
+            empty.classList.toggle('show', !anyVisible);
+        }
+
+        input.addEventListener('input', apply);
+        input.addEventListener('keydown', e => { if (e.key === 'Escape') { input.value = ''; apply(); input.blur(); } });
+        clear.addEventListener('click', () => { input.value = ''; apply(); input.focus(); });
+    }
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', buildHub);
+    } else {
+        buildHub();
+    }
+})();
+</script>
+<script src="opsec.js"></script>
+<script src="pwa.js"></script>
+<script>window.FORM_ID = { title: 'Översikt' };</script>
+<script src="footer.js"></script>
+<script src="lib/nav.js"></script>
+<script src="version.js"></script>
+</body>
+</html>

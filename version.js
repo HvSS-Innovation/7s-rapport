@@ -62,18 +62,14 @@ function buildSiteMap() {
     const wrap = document.createElement('div');
     wrap.style.cssText = 'padding:6px 0 2px';
 
-    // Verktygsgrupper i samma ordning som menyn (inkl. "Dolda" sist).
+    // Verktygsgrupper i samma ordning som menyn. System-sidor (Mina data,
+    // Roadmap, Glöm enheten m.m.) ligger numera i SYSTEM-gruppen i nav.js och
+    // renderas därmed automatiskt här — ingen hårdkodad ÖVRIGT-lista behövs.
     nav.GROUPS.forEach(g => {
         const items = nav.ITEMS.filter(it => it.group === g.id);
         if (!items.length) return;
         wrap.appendChild(buildSiteMapGroup(g.label, items, activeFile));
     });
-
-    // Övriga toppnivå-sidor som inte ligger i verktygsmenyn.
-    wrap.appendChild(buildSiteMapGroup('ÖVRIGT', [
-        { label: 'Mina data', href: 'data.html' },
-        { label: 'Roadmap & önskemål', href: 'roadmap.html' }
-    ], activeFile));
 
     details.appendChild(wrap);
     return details;
@@ -91,8 +87,12 @@ function buildSiteMapGroup(label, links, activeFile) {
     const row = document.createElement('div');
     row.style.cssText = 'display:flex;flex-wrap:wrap;justify-content:center;gap:3px 12px';
     links.forEach(l => {
+        const hasFragment = l.href.indexOf('#') !== -1;
         const file = (l.href.split('#')[0] || '').toLowerCase();
-        if (file && file === activeFile) {
+        // Fragment-länkar (deep-links som Handtecken → ramsor.html#handtecken)
+        // förblir klickbara även på samma fil — annars dubbelmarkeras sidan och
+        // genvägen försvinner just där den är mest relevant.
+        if (!hasFragment && file && file === activeFile) {
             // Nuvarande sida — markerad, ingen länk.
             const span = document.createElement('span');
             span.textContent = l.label;

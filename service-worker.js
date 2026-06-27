@@ -72,6 +72,7 @@ const FILES = [
   './skyttebok-sig.js',
   './skyttebok.html',
   './skyttebok.js',
+  './start.html',
   './symbol.html',
   './tccc-data.js',
   './tccc.html',
