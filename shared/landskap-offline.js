@@ -42,10 +42,15 @@
             '.lo-x{background:none;border:1px solid #2d4a2d;color:#8aaa8a;border-radius:6px;width:38px;height:38px;font-size:1.3rem;line-height:1;cursor:pointer;flex:0 0 auto}',
             '.lo-x:hover{background:#3d1a1a;color:#ff8a8a;border-color:#c62828}',
             '.lo-body{flex:1 1 auto;display:flex;min-height:0;overflow:hidden}',
-            '.lo-mapwrap{flex:1 1 55%;min-width:0;position:relative;background:#0a160a;display:flex;align-items:center;justify-content:center;padding:8px}',
+            '.lo-mapwrap{flex:1 1 55%;min-width:0;position:relative;background:#132613;display:flex;align-items:center;justify-content:center;padding:8px}',
             '.lo-svg{width:100%;height:100%;touch-action:manipulation}',
-            '.lo-land{fill:#1e3d1e;stroke:#0a160a;stroke-width:0.8;cursor:pointer;transition:fill 0.12s}',
-            '.lo-land:hover,.lo-land.lo-hover{fill:#356b35}',
+            '.lo-land{fill:#3a6e3a;stroke:#0d1f0d;stroke-width:1;cursor:pointer;transition:fill 0.12s}',
+            '.lo-land:hover,.lo-land.lo-hover{fill:#62b562}',
+            // Flytande etikett som följer muspekaren och visar landskapets namn.
+            '.lo-tip{position:absolute;pointer-events:none;left:0;top:0;z-index:5;background:rgba(13,31,13,0.96);border:1px solid #62b562;',
+                'color:#eafaea;padding:4px 11px;border-radius:7px;font-size:0.92rem;font-weight:700;white-space:nowrap;',
+                'box-shadow:0 3px 10px rgba(0,0,0,0.55);opacity:0;transition:opacity 0.08s;will-change:transform}',
+            '.lo-tip.lo-tip-on{opacity:1}',
             '.lo-land.lo-queued{fill:#4caf50;stroke:#0d1f0d}',
             '.lo-land.lo-cached{fill:#2f6d8c;stroke:#0d1f0d}',
             '.lo-land.lo-cached.lo-active{fill:#4aa3c8}',
@@ -85,8 +90,12 @@
             '.lo-btn-ghost{background:transparent;color:#8aaa8a}',
             '@media (max-width:760px){',
                 '.lo-body{flex-direction:column}',
-                '.lo-mapwrap{flex:0 0 40%}',
+                // Kartan är hög och smal (Sverige) — ge den rejäl höjd så den inte
+                // krymper till en oläslig strimma på en bred/kort mobilskärm.
+                '.lo-mapwrap{flex:0 0 auto;height:52vh;min-height:260px;padding:4px}',
                 '.lo-side{flex:1 1 auto;max-width:none;border-left:none;border-top:1px solid #2d4a2d}',
+                '.lo-tip{font-size:1rem;padding:5px 13px}',
+                '.lo-hovername{display:none}', // floating-tippen räcker på mobil
             '}'
         ].join('');
         var s = document.createElement('style');
@@ -220,11 +229,37 @@
         document.body.appendChild(overlay);
 
         var svg = overlay.querySelector('#loSvg');
+        var mapWrap = overlay.querySelector('.lo-mapwrap');
         var listEl = overlay.querySelector('#loList');
         var infoEl = overlay.querySelector('#loInfo');
         var dlBtn = overlay.querySelector('#loDownload');
         var hardOffBtn = overlay.querySelector('#loHardOff');
         var hoverEl = overlay.querySelector('#loHover');
+
+        // Flytande etikett som följer muspekaren över kartan.
+        var tip = document.createElement('div');
+        tip.className = 'lo-tip';
+        mapWrap.appendChild(tip);
+        var hoverId = null;        // landskapet pekaren är över just nu
+        function moveTip(clientX, clientY) {
+            if (!hoverId) return;
+            var r = mapWrap.getBoundingClientRect();
+            var x = clientX - r.left, y = clientY - r.top;
+            var tw = tip.offsetWidth, th = tip.offsetHeight, off = 16;
+            // Placera nedtill höger om pekaren; vänd in mot kartan vid kanterna.
+            var px = (x + off + tw > r.width) ? x - off - tw : x + off;
+            var py = (y + off + th > r.height) ? y - off - th : y + off;
+            if (px < 2) px = 2;
+            if (py < 2) py = 2;
+            tip.style.transform = 'translate(' + Math.round(px) + 'px,' + Math.round(py) + 'px)';
+        }
+        function showTip(id, clientX, clientY) {
+            var p = presetFor(id);
+            tip.textContent = p ? p.namn : '';
+            tip.classList.add('lo-tip-on');
+            moveTip(clientX, clientY);
+        }
+        function hideTip() { tip.classList.remove('lo-tip-on'); }
 
         // ── SVG-karta ──────────────────────────────────────────────────────
         var proj = buildProjection(global.HVLandskapGeo, 1000);
@@ -431,10 +466,18 @@
 
         Object.keys(pathEls).forEach(function (id) {
             var el = pathEls[id];
-            el.addEventListener('mouseenter', function () { setHover(id, true); });
-            el.addEventListener('mouseleave', function () { setHover(id, false); });
+            el.addEventListener('mouseenter', function (e) {
+                hoverId = id; setHover(id, true); showTip(id, e.clientX, e.clientY);
+            });
+            el.addEventListener('mouseleave', function () {
+                setHover(id, false);
+                if (hoverId === id) { hoverId = null; hideTip(); }
+            });
             el.addEventListener('click', function () { selectId(id); });
         });
+        // Etiketten följer pekaren; göm den när musen lämnar kartan helt.
+        svg.addEventListener('mousemove', function (e) { moveTip(e.clientX, e.clientY); });
+        mapWrap.addEventListener('mouseleave', function () { hoverId = null; hideTip(); });
         Object.keys(rowEls).forEach(function (id) {
             var row = rowEls[id];
             row.addEventListener('mouseenter', function () { setHover(id, true); });
