@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.8 — 2026-06-27 — Startsida-hubb + intent-baserad navigering (IA Fas 1)
+
+- **Ny startsida `start.html`:** en hubb som visar alla verktyg grupperade efter ändamål i sex kort (📡 Rapportera, 🔎 Signalement, 🗺️ Karta & terräng, ✅ Förbered gruppen, 📚 Plugga & slå upp, 🔧 Appen & data), var och en med klartext-blurb + verktygen som stora ikon-knappar. Live-sökfilter för att hitta ett verktyg direkt. Data-driven från `window.HvNav` (samma källa som menyn) → noll drift. Mörkt/ljust tema, offline (tillagd i service-worker FILES).
+- **`lib/nav.js` omgrupperad efter avsikt:** de gamla förkortnings-grupperna (OBSERVATION/RAPPORT/PLANERING/ADMIN/RAMSOR/Dolda) ersatta av sex intent-grupper med klartext-undertexter. Grupperna driver nu tre ytor från en enda källa: hamburger-menyn, hubben och webbplatskartan. Kart-verktygen (MINKARTA/SENSORSKISS/UPK + DRÖNDRIFT) samlade i en grupp; WHAT/SCRIM/WEFT/A–H fick en egen tydlig Signalement-grupp; system-sidor (Mina data/Roadmap/Glöm enheten/Skytte-info) samlade i en SYSTEM-grupp. "Dolda"-mekaniken borttagen. Slim-snabbmenyn utökad 3→5 (7S/FORS/PEDARS + WHAT + DRÖNDRIFT). "Översikt"-länk till hubben överst i menyn på alla sidor. `ICONS` exponeras i `window.HvNav`.
+- **`version.js`:** webbplatskartan renderar nu system-sidorna automatiskt via SYSTEM-gruppen (hårdkodad ÖVRIGT-lista borttagen); fragment-deep-links (Handtecken) förblir klickbara på sin egen sida.
+- **`lib/nav.css`:** död CSS för borttagna Dolda-gruppen/toggeln rensad; stil för `.hv-nav-hub`-länken tillagd.
+- **Process:** taxonomin designad via multi-agent-workflow (kartläggning → 4 perspektiv → syntes) och granskad adversariskt (4 dimensioner) före push — granskningen fångade att hubben saknade `nav.css` (burger/drawer ostylad), nu fixat. TIPSA medvetet utelämnad ur publik nav (pin-skyddad privat ingång). `index.html` förblir 7S (PWA-ingång orörd).
+
 ## v0.3.7 — 2026-06-27 — Webbplatskarta i sidfoten
 
 - **Ny webbplatskarta i `version.js`:** kollapsad `<details>`-sektion som alltid ligger längst ner, direkt under versionsnumret, på alla sidor som laddar `version.js`. Byggs från `window.HvNav` (lib/nav.js) så den aldrig hamnar i otakt med menyn — alla verktygsgrupper inkl. "Dolda", plus en ÖVRIGT-grupp (Mina data, Roadmap & önskemål). Nuvarande sida markeras (aria-current); länkarna ligger i DOM:en för sökmotorer/skärmläsare även när sektionen är kollapsad. Hoppas över i symbol-embed-iframes (`?mode=embed`). Inga HTML-filer rörda.
