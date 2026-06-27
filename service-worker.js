@@ -1,4 +1,4 @@
-const CACHE = 'hv-20260627_083650';
+const CACHE = 'hv-20260627_172236';
 // Separat cache för offline-tiles. FÅR INTE rensas av activate-cleanup
 // nedan — användaren har själv laddat ner data hit och förväntar sig att
 // den överlever en deploy. Versionera bara om format ändras.
