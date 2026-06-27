@@ -3,6 +3,10 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.7 — 2026-06-27 — Webbplatskarta i sidfoten
+
+- **Ny webbplatskarta i `version.js`:** kollapsad `<details>`-sektion som alltid ligger längst ner, direkt under versionsnumret, på alla sidor som laddar `version.js`. Byggs från `window.HvNav` (lib/nav.js) så den aldrig hamnar i otakt med menyn — alla verktygsgrupper inkl. "Dolda", plus en ÖVRIGT-grupp (Mina data, Roadmap & önskemål). Nuvarande sida markeras (aria-current); länkarna ligger i DOM:en för sökmotorer/skärmläsare även när sektionen är kollapsad. Hoppas över i symbol-embed-iframes (`?mode=embed`). Inga HTML-filer rörda.
+
 ## v0.3.6 — 2026-06-26 — Landskaps-väljare för offline-karta (i bitar)
 
 - **Ny helskärms-väljare `shared/landskap-offline.js`:** öppnas från både "Ladda ner offline"- och "Härdat läge"-knapparna (minkarta + 7S/index). Interaktiv SVG-karta över Sveriges 25 landskap (hover-highlight synkad med listan) + grupperad lista (Götaland/Svealand/Norrland). Klick = lägg landskap i kö; "Ladda ner offline" hämtar varje köat landskap seriellt som en egen liten PMTiles-fil i stället för hela Sverige (~4,1 GB). "Visa på kartan" aktiverar härdat läge för ett nedladdat landskap och pannar dit; "Radera"/"Stäng av härdat" finns i samma vy. Syfte: små offline-filer i stället för en jätteklump.
