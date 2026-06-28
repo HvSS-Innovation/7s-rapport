@@ -25,10 +25,16 @@ skyttebok), utvecklarens förnamn i JS-kommentarer, testfixturer. Toponymer i
 
 #### Öppet — kräver beslut
 
-- **Git-historik:** både personnamnen och e-posten finns kvar i äldre commits i
-  det publika repot. Full borttagning kräver history-rewrite (force-push,
-  påverkar repo + ev. forks) — medvetet uppskjutet. Beslut: (a) lämna
-  historiken, (b) rewrite.
+- **Git-historik — ✅ BESLUT 2026-06-28: (a) lämna historiken.** Personnamnen +
+  e-posten finns kvar i äldre commits (publikt repo + 4 forks på origin + 3
+  spegel-repon: faltrapport/hvund/sjus). En full history-rewrite bedömdes
+  oproportionerlig: ren städning, ingen formell raderingsbegäran, inget
+  OPSEC-känsligt — och rewriten kan ändå inte garantera radering (forks,
+  PR-refs, GitHub-cache, release på tag `pmtiles-v1`). Sajten + senaste
+  versionen är avnamnad (`c87597c`), vilket räcker här. **Återöppna bara** vid
+  formell raderingsbegäran (GDPR art. 17) eller om uppgiften visar sig känslig
+  (namn↔förband/övning) — en komplett vetad rewrite-plan (steg 0–12 +
+  riskregister) togs fram 2026-06-28 och kan återanvändas.
 - **Worker-handle:** `dawn-star-7fc5.nijoda.workers.dev` (tavla/tipsa, jfr post 6)
   innehåller kontohandle "nijoda". Funktionell endpoint — byte kräver omdöpning
   av Cloudflare-workern. Låg risk; sidorna är noindex/pin-skyddade. Lämnat.
