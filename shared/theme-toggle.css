@@ -25,6 +25,23 @@ html[data-theme="light"] input[type="text"],
 html[data-theme="light"] textarea,
 html[data-theme="light"] select { color-scheme: light; }
 
+/* On-accent-text i ljust tema. Knappar/pills med accent-bakgrund hårdkodar
+   mörk text (#0d1f0d), vilket fungerar i mörkt tema (ljus accent #4caf50) men
+   ger för låg kontrast i ljust tema (accent blir medel-mörk grön #2e7d32).
+   Vit text → godkänd kontrast (≈4.6:1). Träffar bara ljust tema; mörkt tema
+   är oförändrat. Scope:ad till accent-bakgrunds-klasserna app-brett. */
+html[data-theme="light"] .btn-primary,
+html[data-theme="light"] .fc-btn-primary,
+html[data-theme="light"] .fc-btn-yes:hover,
+html[data-theme="light"] .file-btn.primary,
+html[data-theme="light"] .move-btns button.current,
+html[data-theme="light"] .pill.active,
+html[data-theme="light"] .request-btn,
+html[data-theme="light"] .role-pill.active,
+html[data-theme="light"] .start-btn {
+    color: #ffffff;
+}
+
 /* Placering matchar SKYTTEBOK: absolute i header, top-right.
    JS sätter `header.style.position = 'relative'` om den är static. */
 .theme-toggle-fab {
