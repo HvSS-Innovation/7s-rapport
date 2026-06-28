@@ -2,11 +2,16 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
 <meta http-equiv="Cache-Control" content="no-store">
 <meta name="referrer" content="strict-origin">
 <meta name="google" content="notranslate">
 <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<!-- "APP-6": bygger på NATO:s symbolstandard APP-6 ("NATO Joint Military
+     Symbology", APP-6B/C). MIL-STD-2525 = amerikansk motsvarighet; APP-6 =
+     NATO-namnet (svensk NATO-anpassad kontext). Denna sida slår ihop f.d.
+     SYMBOL (Bygg/Mystery) med deck-lägena (Lär/Prov/Uppslag).
+     Bakgrund: https://en.wikipedia.org/wiki/NATO_Joint_Military_Symbology -->
 <script>
     (function(){
         try {
@@ -28,7 +33,7 @@
 <link rel="alternate icon" href="favicon.ico">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="APP-6">
-<title>APP-6 — Minneskort &amp; prov</title>
+<title>APP-6 — Militära kartsymboler</title>
 <link rel="manifest" href="manifest.json">
 <link rel="stylesheet" href="shared/theme-toggle.css">
 <script src="shared/theme-toggle.js" defer></script>
@@ -49,23 +54,23 @@
   header { text-align:center; padding:20px 0 16px; }
   header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
   header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
-  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:420px; margin-left:auto; margin-right:auto; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:440px; margin-left:auto; margin-right:auto; }
 
   .tab-nav { display:flex; gap:4px; margin-bottom:4px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
   .tab-link { flex:1; text-align:center; padding:9px 2px; border-radius:var(--radius-sm); color:var(--text-muted); text-decoration:none; font-size:0.75rem; font-weight:700; letter-spacing:0.05em; transition:background 0.15s,color 0.15s; -webkit-tap-highlight-color:transparent; }
   .tab-link:hover { background:var(--bg-card); color:var(--text-secondary); }
   .tab-link.active { background:var(--accent-dim); color:var(--accent); }
-  .tab-nav-sub { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-top:4px; margin-bottom:16px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
-  .tab-nav-sub .tab-link { font-size:0.75rem; padding:9px 2px; letter-spacing:0.05em; }
 
   .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
   .back-link::before { content:'←'; font-size:1.1rem; }
 
-  /* ── Mode-väljare (KORT/PROV/REFERENS) ── */
-  .mode-nav { display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin-bottom:14px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
-  .mode-btn { background:transparent; border:none; color:var(--text-muted); font-size:0.78rem; font-weight:700; letter-spacing:0.06em; padding:11px 4px; border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; text-transform:uppercase; min-height:44px; transition:background 0.15s,color 0.15s; }
+  /* ── Mode-väljare (Lär / Bygg / Testa / Uppslag) ── */
+  .mode-nav { display:grid; grid-template-columns:repeat(4,1fr); gap:4px; margin-bottom:14px; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:4px; }
+  .mode-nav.sub { grid-template-columns:repeat(2,1fr); margin-bottom:12px; }
+  .mode-btn { background:transparent; border:none; color:var(--text-muted); font-size:0.78rem; font-weight:700; letter-spacing:0.05em; padding:11px 4px; border-radius:var(--radius-sm); cursor:pointer; font-family:inherit; text-transform:uppercase; min-height:44px; transition:background 0.15s,color 0.15s; }
   .mode-btn:hover { background:var(--bg-card); color:var(--text-secondary); }
   .mode-btn.active { background:var(--accent-dim); color:var(--accent); }
+  @media (max-width:380px) { .mode-btn { font-size:0.72rem; letter-spacing:0.02em; } }
 
   /* ── Flashcards-engine styling (.fc-*) ── */
   .fc-wrap { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:14px; }
@@ -122,7 +127,7 @@
   .fc-wrong-picked { color:var(--danger); }
   .fc-wrong-right { color:var(--accent); }
 
-  /* Referens-vy */
+  /* Referens-vy (Uppslag) */
   .ref-cat { font-size:0.72rem; color:var(--accent); letter-spacing:0.1em; text-transform:uppercase; margin:14px 0 6px; font-weight:600; padding:6px 10px; background:var(--bg-secondary); border-left:3px solid var(--accent); border-radius:0 var(--radius-sm) var(--radius-sm) 0; }
   .ref-cat:first-child { margin-top:6px; }
   .ref-row { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:12px 14px; margin-bottom:8px; }
@@ -137,6 +142,36 @@
 
   .keys-hint { font-size:0.7rem; color:var(--text-muted); text-align:center; margin-top:10px; opacity:0.7; letter-spacing:0.04em; }
   @media (max-width:480px) { .keys-hint { display:none; } }
+
+  /* ── Bygg-läge (f.d. SYMBOL) ── */
+  .panel { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:14px; margin-bottom:12px; }
+  .panel h2 { font-size:0.78rem; color:var(--text-secondary); letter-spacing:0.08em; text-transform:uppercase; margin-bottom:10px; font-weight:600; }
+
+  .pills { display:flex; flex-wrap:wrap; gap:6px; }
+  .pill { background:var(--bg-input); border:1px solid var(--border); color:var(--text-secondary); font-size:0.85rem; font-weight:600; padding:8px 14px; border-radius:20px; cursor:pointer; font-family:inherit; min-height:36px; transition:all 0.15s; }
+  .pill:hover { background:var(--bg-secondary); border-color:var(--border-focus); color:var(--text-primary); }
+  .pill.active { background:var(--accent); border-color:var(--accent); color:#0d1f0d; }
+
+  .preview { display:flex; flex-direction:column; align-items:center; gap:12px; padding:20px 0; }
+  .preview-svg { background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:20px; min-width:200px; }
+  .preview-label { font-size:0.92rem; color:var(--text-primary); text-align:center; line-height:1.5; font-weight:600; }
+
+  /* Bygg: regel-förklaringar (gör Bygg till ett lär-läge) */
+  .build-rules { width:100%; background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm); padding:12px 14px; margin-top:4px; }
+  .build-rules .rule { font-size:0.82rem; color:var(--text-secondary); line-height:1.5; padding:2px 0; }
+  .build-rules .rule strong { color:var(--accent); font-weight:700; }
+  .build-disclaimer { font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:8px; opacity:0.8; line-height:1.4; }
+
+  .actions { display:flex; gap:8px; }
+  .btn { flex:1; padding:13px 12px; border-radius:var(--radius-sm); border:1px solid var(--border); background:var(--bg-input); color:var(--text-primary); font-family:inherit; font-size:0.9rem; font-weight:600; letter-spacing:0.04em; cursor:pointer; min-height:48px; transition:all 0.15s; }
+  .btn:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+  .btn-primary { background:var(--accent); color:#0d1f0d; border-color:var(--accent); }
+  .btn-primary:hover { background:var(--accent-hover); }
+
+  /* Testa › Läs symbolen (f.d. Mystery) */
+  .quiz-feedback { font-size:0.85rem; padding:10px 12px; border-radius:var(--radius-sm); margin-top:10px; }
+  .quiz-feedback.correct { background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); }
+  .quiz-feedback.partial { background:var(--bg-secondary); color:var(--text-secondary); border:1px solid var(--border); }
 </style>
     <link rel="stylesheet" href="lib/nav.css">
 </head>
@@ -146,17 +181,18 @@
 <div class="container">
   <header>
     <h1>APP-6</h1>
-    <p>Militära symboler — APP-6B/C</p>
+    <p>Lär dig läsa och bygg militära kartsymboler (APP-6B/C)</p>
     <p class="disclaimer">Privatutvecklat utbildnings- och minneshjälpverktyg.<br>Inte kopplat till eller fastställt av Försvarsmakten.</p>
   </header>
 
 
 <a href="index.html" class="back-link">Tillbaka</a>
 
-  <div class="mode-nav" role="tablist">
-    <button class="mode-btn active" data-mode="cards" type="button" role="tab">Kort</button>
-    <button class="mode-btn" data-mode="exam" type="button" role="tab">Prov</button>
-    <button class="mode-btn" data-mode="ref" type="button" role="tab">Referens</button>
+  <div class="mode-nav">
+    <button class="mode-btn active" data-mode="cards" type="button">Lär</button>
+    <button class="mode-btn" data-mode="build" type="button">Bygg</button>
+    <button class="mode-btn" data-mode="test" type="button">Testa</button>
+    <button class="mode-btn" data-mode="ref" type="button">Uppslag</button>
   </div>
 
   <main id="modeContent"></main>
@@ -168,26 +204,25 @@
 (function () {
   const data = window.APP6_DATA;
   const $content = document.getElementById('modeContent');
-  const $modeBtns = document.querySelectorAll('.mode-btn');
-  let activeHandle = null;
+  const $modeBtns = document.querySelectorAll('.mode-nav:not(.sub) .mode-btn');
+  let activeHandle = null;   // flashcards-engine browse/exam-handle att städa
+  let quizTimer = null;      // auto-advance-timer i "Läs symbolen" — måste avbrytas vid lägesbyte
 
-  function setMode(mode) {
-    $modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  function clearHandle() {
     if (activeHandle && activeHandle.destroy) { try { activeHandle.destroy(); } catch (_) {} }
     activeHandle = null;
-    $content.innerHTML = '';
-
-    if (mode === 'cards') renderStartCards();
-    else if (mode === 'exam') renderStartExam();
-    else if (mode === 'ref') renderRef();
+    if (quizTimer) { clearTimeout(quizTimer); quizTimer = null; }
   }
 
+  function replaceHash(slug) { try { history.replaceState(null, '', '#' + slug); } catch (_) {} }
+
+  /* ══════════ LÄR — minneskort (flashcards-engine) ══════════ */
   function renderStartCards() {
     const start = document.createElement('div');
     start.className = 'start-card';
     start.innerHTML = `
       <h2>Bläddra ${data.cards.length} kort</h2>
-      <p>Vänd kortet, markera om du kunde svaret. Missade kort dyker upp igen innan sessionen är klar.</p>
+      <p>Vänd kortet, markera om du kunde svaret. Missade kort dyker upp igen innan sessionen är klar. Lär dig byggstenarna här innan du bygger och testar.</p>
       <button class="start-btn" type="button">Starta</button>
       <div class="keys-hint">Mellanslag = vänd · J = kunde · F = kunde inte</div>
     `;
@@ -200,25 +235,7 @@
     $content.appendChild(start);
   }
 
-  function renderStartExam() {
-    const start = document.createElement('div');
-    start.className = 'start-card';
-    const count = Math.min(20, data.exam.length);
-    const passAt = Math.ceil(count * 0.8);
-    start.innerHTML = `
-      <h2>Prov — ${count} frågor</h2>
-      <p>Slumpade flervalsfrågor. Godkänt ≥ ${passAt}.</p>
-      <button class="start-btn" type="button">Starta prov</button>
-    `;
-    start.querySelector('button').addEventListener('click', () => {
-      $content.innerHTML = '';
-      const host = document.createElement('div');
-      $content.appendChild(host);
-      activeHandle = Flashcards.mountExam(host, data.exam, { storageKey: 'app6_exam', count: count, passAt: passAt });
-    });
-    $content.appendChild(start);
-  }
-
+  /* ══════════ UPPSLAG — referenslista per kategori ══════════ */
   function renderRef() {
     const byCat = {};
     const order = [];
@@ -248,8 +265,377 @@
     });
   }
 
+  /* ══════════ Symbol-definitioner (f.d. symbol.html) ══════════ */
+  const COLORS = {
+    'van':     { fill:'#5fafff', stroke:'#1565c0' },
+    'fiende':  { fill:'#ff5c5c', stroke:'#b71c1c' },
+    'neutral': { fill:'#7fd896', stroke:'#1b5e20' },
+    'okand':   { fill:'#ffd166', stroke:'#8d6708' }
+  };
+  const AFF_LABEL = { 'van':'Vän', 'fiende':'Fiende', 'neutral':'Neutral', 'okand':'Okänd' };
+  const DIM_LABEL = { 'luft':'Luft', 'mark':'Mark', 'sjo':'Sjö', 'uv':'Undervatten', 'mtrl':'Materiel' };
+  const AFF_COLOR = { 'van':'blå', 'fiende':'röd', 'neutral':'grön', 'okand':'gul' };
+  const DIM_FORM = {
+    'mark':'ramform efter affiliation (vän rektangel · fiende romb · neutral kvadrat · okänd fyrklöver)',
+    'luft':'öppen ram nertill (i luften)',
+    'sjo':'ramform efter affiliation',
+    'uv':'öppen ram upptill (under ytan)',
+    'mtrl':'ramform efter affiliation'
+  };
+
+  function framePath(aff, dim) {
+    if (dim === 'luft') {
+      if (aff === 'van')     return { d:'M10,90 Q60,10 110,90', closed:false };
+      if (aff === 'fiende')  return { d:'M10,90 L10,45 L60,15 L110,45 L110,90', closed:false };
+      if (aff === 'neutral') return { d:'M10,90 L10,15 L110,15 L110,90', closed:false };
+      if (aff === 'okand')   return { d:'M30,90 C5,90 5,55 25,55 C25,30 60,30 60,55 C95,30 115,55 95,55 C115,90 90,90 90,90', closed:false };
+    }
+    if (dim === 'mark') {
+      if (aff === 'van' || aff === 'neutral') {
+        const fill = aff === 'neutral' ? COLORS.neutral.fill : COLORS.van.fill;
+        const stroke = aff === 'neutral' ? COLORS.neutral.stroke : COLORS.van.stroke;
+        return { kind:'rect', x:10, y:30, w:100, h:60, fill, stroke };
+      }
+      if (aff === 'fiende') return { kind:'poly', points:'60,15 110,55 60,95 10,55' };
+      if (aff === 'okand')  return { kind:'cloverleaf' };
+    }
+    if (dim === 'sjo') {
+      if (aff === 'van')     return { kind:'circle', cx:60, cy:55, r:40 };
+      if (aff === 'fiende')  return { kind:'poly', points:'60,15 110,55 60,95 10,55' };
+      if (aff === 'neutral') return { kind:'rect', x:10, y:30, w:100, h:60 };
+      if (aff === 'okand')   return { kind:'cloverleaf' };
+    }
+    if (dim === 'uv') {
+      if (aff === 'van')     return { d:'M10,15 Q60,95 110,15', closed:false };
+      if (aff === 'fiende')  return { d:'M10,15 L10,55 L60,90 L110,55 L110,15', closed:false };
+      if (aff === 'neutral') return { d:'M10,15 L10,90 L110,90 L110,15', closed:false };
+      if (aff === 'okand')   return { kind:'cloverleaf', inverted:true };
+    }
+    if (dim === 'mtrl') {
+      if (aff === 'van')     return { kind:'circle', cx:60, cy:55, r:40 };
+      if (aff === 'fiende')  return { kind:'poly', points:'60,15 110,55 60,95 10,55' };
+      if (aff === 'neutral') return { kind:'rect', x:10, y:30, w:100, h:60 };
+      if (aff === 'okand')   return { kind:'cloverleaf' };
+    }
+    return null;
+  }
+
+  function cloverleafPath(inverted) {
+    if (inverted) {
+      return 'M25,90 a18,18 0 0 1 0,-30 a18,18 0 0 1 25,-15 a18,18 0 0 1 35,0 a18,18 0 0 1 25,15 a18,18 0 0 1 0,30 Z';
+    }
+    return 'M25,20 a18,18 0 0 0 0,30 a18,18 0 0 0 25,15 a18,18 0 0 0 35,0 a18,18 0 0 0 25,-15 a18,18 0 0 0 0,-30 a18,18 0 0 0 -25,-15 a18,18 0 0 0 -35,0 a18,18 0 0 0 -25,15 Z';
+  }
+
+  const ICONS = {
+    'inget':    { label:'(ingen)', draw:() => '' },
+    'inf':      { label:'Infanteri (X)',         draw:(c) => `<line x1="${c.x1}" y1="${c.y1}" x2="${c.x2}" y2="${c.y2}" stroke="${c.s}" stroke-width="2.5"/><line x1="${c.x2}" y1="${c.y1}" x2="${c.x1}" y2="${c.y2}" stroke="${c.s}" stroke-width="2.5"/>` },
+    'pansar':   { label:'Pansar (oval)',         draw:(c) => `<ellipse cx="60" cy="${(c.y1+c.y2)/2}" rx="22" ry="11" fill="none" stroke="${c.s}" stroke-width="2.5"/>` },
+    'pv':       { label:'Pansarvärn (Λ)',        draw:(c) => `<polyline points="${c.x1},${c.y2} 60,${c.y1} ${c.x2},${c.y2}" fill="none" stroke="${c.s}" stroke-width="2.5"/>` },
+    'art':      { label:'Artilleri (●)',         draw:(c) => `<circle cx="60" cy="${(c.y1+c.y2)/2}" r="5.5" fill="${c.s}"/>` },
+    'grk':      { label:'Granatkastare (↑)',     draw:(c) => `<line x1="60" y1="${c.y2}" x2="60" y2="${c.y1+4}" stroke="${c.s}" stroke-width="2.5"/><polyline points="55,${c.y1+8} 60,${c.y1+2} 65,${c.y1+8}" fill="none" stroke="${c.s}" stroke-width="2.5"/>` },
+    'lv':       { label:'Luftvärn (∩)',          draw:(c) => `<path d="M${c.x1+5},${c.y2} Q60,${c.y1-5} ${c.x2-5},${c.y2}" fill="none" stroke="${c.s}" stroke-width="2.5"/>` },
+    'sjv':      { label:'Sjukvård (+)',          draw:(c) => `<line x1="60" y1="${c.y1+4}" x2="60" y2="${c.y2-4}" stroke="${c.s}" stroke-width="3.5"/><line x1="${c.x1+6}" y1="${(c.y1+c.y2)/2}" x2="${c.x2-6}" y2="${(c.y1+c.y2)/2}" stroke="${c.s}" stroke-width="3.5"/>` },
+    'rec':      { label:'Spaning (\\)',          draw:(c) => `<line x1="${c.x1+4}" y1="${c.y1+4}" x2="${c.x2-4}" y2="${c.y2-4}" stroke="${c.s}" stroke-width="2.5"/>` },
+    'hkp':      { label:'Helikopter (bog-fluga)', draw:(c) => `<line x1="${c.x1+4}" y1="${(c.y1+c.y2)/2}" x2="${c.x2-4}" y2="${(c.y1+c.y2)/2}" stroke="${c.s}" stroke-width="2.5"/><polygon points="${c.x1+4},${(c.y1+c.y2)/2-6} ${c.x1+14},${(c.y1+c.y2)/2} ${c.x1+4},${(c.y1+c.y2)/2+6}" fill="${c.s}"/><polygon points="${c.x2-4},${(c.y1+c.y2)/2-6} ${c.x2-14},${(c.y1+c.y2)/2} ${c.x2-4},${(c.y1+c.y2)/2+6}" fill="${c.s}"/>` },
+    'uav':      { label:'UAV (drone)',           draw:(c) => `<line x1="${c.x1+4}" y1="${(c.y1+c.y2)/2}" x2="${c.x2-4}" y2="${(c.y1+c.y2)/2}" stroke="${c.s}" stroke-width="2.5"/><polygon points="${c.x1+4},${(c.y1+c.y2)/2-6} ${c.x1+14},${(c.y1+c.y2)/2} ${c.x1+4},${(c.y1+c.y2)/2+6}" fill="none" stroke="${c.s}" stroke-width="2"/><polygon points="${c.x2-4},${(c.y1+c.y2)/2-6} ${c.x2-14},${(c.y1+c.y2)/2} ${c.x2-4},${(c.y1+c.y2)/2+6}" fill="none" stroke="${c.s}" stroke-width="2"/>` }
+  };
+
+  const SIZES = [
+    { id:'none',   label:'(ingen)' },
+    { id:'grupp', label:'Grupp •',         render:'<circle cx="60" cy="6" r="3" fill="currentColor"/>' },
+    { id:'tropp', label:'Tropp ••',        render:'<circle cx="53" cy="6" r="3" fill="currentColor"/><circle cx="67" cy="6" r="3" fill="currentColor"/>' },
+    { id:'plut',  label:'Pluton •••',      render:'<circle cx="46" cy="6" r="3" fill="currentColor"/><circle cx="60" cy="6" r="3" fill="currentColor"/><circle cx="74" cy="6" r="3" fill="currentColor"/>' },
+    { id:'komp',  label:'Kompani |',       render:'<line x1="60" y1="0" x2="60" y2="12" stroke="currentColor" stroke-width="2.5"/>' },
+    { id:'bat',   label:'Bataljon ||',     render:'<line x1="54" y1="0" x2="54" y2="12" stroke="currentColor" stroke-width="2.5"/><line x1="66" y1="0" x2="66" y2="12" stroke="currentColor" stroke-width="2.5"/>' },
+    { id:'reg',   label:'Regemente |||',   render:'<line x1="48" y1="0" x2="48" y2="12" stroke="currentColor" stroke-width="2.5"/><line x1="60" y1="0" x2="60" y2="12" stroke="currentColor" stroke-width="2.5"/><line x1="72" y1="0" x2="72" y2="12" stroke="currentColor" stroke-width="2.5"/>' },
+    { id:'brig',  label:'Brigad X',        render:'<text x="60" y="11" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">X</text>' },
+    { id:'div',   label:'Division XX',     render:'<text x="60" y="11" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">XX</text>' },
+    { id:'kar',   label:'Kår XXX',         render:'<text x="60" y="11" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">XXX</text>' },
+    { id:'arme',  label:'Armé XXXX',       render:'<text x="60" y="11" text-anchor="middle" font-size="13" font-weight="700" fill="currentColor">XXXX</text>' }
+  ];
+
+  const state = { aff:'van', dim:'mark', icon:'inf', size:'plut', status:'present' };
+
+  function buildSvg(s) {
+    const w = 140, h = 130;
+    const col = COLORS[s.aff];
+    const fr = framePath(s.aff, s.dim);
+    const dashed = s.status === 'planned' ? ' stroke-dasharray="5,3"' : '';
+
+    let frameSvg = '';
+    if (fr) {
+      if (fr.kind === 'rect') {
+        frameSvg = `<rect x="${fr.x}" y="${fr.y}" width="${fr.w}" height="${fr.h}" fill="${fr.fill || col.fill}" stroke="${fr.stroke || col.stroke}" stroke-width="2.5"${dashed}/>`;
+      } else if (fr.kind === 'circle') {
+        frameSvg = `<circle cx="${fr.cx}" cy="${fr.cy}" r="${fr.r}" fill="${col.fill}" stroke="${col.stroke}" stroke-width="2.5"${dashed}/>`;
+      } else if (fr.kind === 'poly') {
+        frameSvg = `<polygon points="${fr.points}" fill="${col.fill}" stroke="${col.stroke}" stroke-width="2.5"${dashed}/>`;
+      } else if (fr.kind === 'cloverleaf') {
+        frameSvg = `<path d="${cloverleafPath(fr.inverted)}" fill="${col.fill}" stroke="${col.stroke}" stroke-width="2.5"${dashed}/>`;
+      } else if (fr.d) {
+        frameSvg = `<path d="${fr.d}" fill="none" stroke="${col.stroke}" stroke-width="2.5"${dashed}/>`;
+      }
+    }
+
+    const iconCoords = { x1:28, y1:s.dim==='uv'?22:32, x2:92, y2:s.dim==='uv'?78:78, s:col.stroke };
+    if (s.dim === 'luft') { iconCoords.y1 = 38; iconCoords.y2 = 80; }
+    if (s.dim === 'mtrl' || s.dim === 'sjo') { iconCoords.y1 = 38; iconCoords.y2 = 74; }
+    const iconSvg = (ICONS[s.icon] && ICONS[s.icon].draw) ? ICONS[s.icon].draw(iconCoords) : '';
+
+    let sizeSvg = '';
+    if (s.size !== 'none' && s.dim !== 'mtrl') {
+      const sz = SIZES.find(x => x.id === s.size);
+      if (sz && sz.render) sizeSvg = `<g style="color:${col.stroke}" transform="translate(10,3)">${sz.render}</g>`;
+    }
+
+    return `<svg xmlns="http://www.w3.org/2000/svg" width="${w*2}" height="${h*2}" viewBox="0 0 ${w} ${h}">${sizeSvg}<g transform="translate(10,15)">${frameSvg}${iconSvg}</g></svg>`;
+  }
+
+  function describe(s) {
+    const sz = SIZES.find(x => x.id === s.size);
+    const ic = ICONS[s.icon];
+    const parts = [AFF_LABEL[s.aff], DIM_LABEL[s.dim]];
+    if (s.dim !== 'mtrl' && s.size !== 'none' && sz) parts.push(sz.label.split(' ')[0]);
+    if (s.icon !== 'inget' && ic) parts.push(ic.label.split(' ')[0]);
+    if (s.status === 'planned') parts.push('(planerad)');
+    return parts.join(' · ');
+  }
+
+  // Regel-förklaring per val — gör Bygg till ett lär-läge.
+  function ruleLines(s) {
+    const lines = [];
+    lines.push(`<strong>${AFF_LABEL[s.aff]}</strong> → ${AFF_COLOR[s.aff]} ram`);
+    lines.push(`<strong>${DIM_LABEL[s.dim]}</strong> → ${DIM_FORM[s.dim]}`);
+    lines.push(s.status === 'planned'
+      ? '<strong>Planerad</strong> → streckad ram'
+      : '<strong>Befintlig</strong> → heldragen ram');
+    if (s.dim !== 'mtrl' && s.size !== 'none') {
+      const sz = SIZES.find(x => x.id === s.size);
+      if (sz) lines.push(`<strong>${sz.label.split(' ')[0]}</strong> → förbandstecken ovanför ramen`);
+    }
+    if (s.icon !== 'inget' && ICONS[s.icon]) {
+      lines.push(`<strong>${ICONS[s.icon].label.split(' ')[0]}</strong> → funktion (ikon inuti ramen)`);
+    }
+    return lines;
+  }
+
+  /* ══════════ BYGG — guidat konstruktionslabb ══════════ */
+  function renderBuild() {
+    $content.innerHTML = '';
+
+    const preview = document.createElement('div');
+    preview.className = 'panel preview';
+    preview.innerHTML = `<div class="preview-svg" id="previewSvg"></div><div class="preview-label" id="previewLabel"></div>`+
+      `<div class="build-rules" id="buildRules"></div>`+
+      `<div class="build-disclaimer">Vissa ramformer är förenklade — se <strong>Uppslag</strong> för exakt form.</div>`;
+    $content.appendChild(preview);
+
+    const sections = [
+      { title:'Affiliation (vem)', key:'aff', opts:[['van','Vän'],['fiende','Fiende'],['neutral','Neutral'],['okand','Okänd']] },
+      { title:'Battle dimension (var)', key:'dim', opts:[['luft','Luft'],['mark','Mark'],['sjo','Sjö'],['uv','Undervatten'],['mtrl','Materiel']] },
+      { title:'Status', key:'status', opts:[['present','Befintlig (heldragen)'],['planned','Planerad (streckad)']] },
+      { title:'Förbandsstorlek', key:'size', opts: SIZES.map(s => [s.id, s.label]) },
+      { title:'Ikon (funktion)', key:'icon', opts: Object.entries(ICONS).map(([k,v]) => [k, v.label]) }
+    ];
+
+    sections.forEach(sec => {
+      const p = document.createElement('div');
+      p.className = 'panel';
+      p.innerHTML = `<h2>${sec.title}</h2><div class="pills" data-key="${sec.key}"></div>`;
+      const pills = p.querySelector('.pills');
+      sec.opts.forEach(([val, label]) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'pill' + (state[sec.key] === val ? ' active' : '');
+        b.textContent = label;
+        b.dataset.val = val;
+        b.addEventListener('click', () => { state[sec.key] = val; renderBuild(); });
+        pills.appendChild(b);
+      });
+      $content.appendChild(p);
+    });
+
+    const actions = document.createElement('div');
+    actions.className = 'panel actions';
+    actions.innerHTML = `<button class="btn" type="button" id="copySvg">Kopiera SVG</button><button class="btn btn-primary" type="button" id="downloadSvg">Ladda ner SVG</button>`;
+    $content.appendChild(actions);
+
+    document.getElementById('previewSvg').innerHTML = buildSvg(state);
+    document.getElementById('previewLabel').textContent = describe(state);
+    document.getElementById('buildRules').innerHTML = ruleLines(state).map(r => `<div class="rule">${r}</div>`).join('');
+
+    document.getElementById('copySvg').addEventListener('click', () => {
+      const svg = buildSvg(state);
+      navigator.clipboard.writeText(svg).then(
+        () => { document.getElementById('previewLabel').textContent = describe(state) + ' — kopierad'; },
+        () => { document.getElementById('previewLabel').textContent = describe(state) + ' — kopiering misslyckades'; }
+      );
+    });
+    document.getElementById('downloadSvg').addEventListener('click', () => {
+      const svg = buildSvg(state);
+      const blob = new Blob([svg], { type: 'image/svg+xml' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `app6-${state.aff}-${state.dim}-${state.icon}-${state.size}.svg`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(url), 100);
+    });
+  }
+
+  /* ══════════ TESTA › Läs symbolen (f.d. Mystery) ══════════ */
+  function newMystery() {
+    const affs = ['van','fiende','neutral','okand'];
+    const dims = ['luft','mark','sjo','uv','mtrl'];
+    const iconKeys = Object.keys(ICONS).filter(k => k !== 'inget');
+    const sizeKeys = SIZES.map(s => s.id).filter(s => s !== 'none');
+    return {
+      aff: affs[Math.floor(Math.random()*affs.length)],
+      dim: dims[Math.floor(Math.random()*dims.length)],
+      icon: Math.random() < 0.6 ? iconKeys[Math.floor(Math.random()*iconKeys.length)] : 'inget',
+      size: Math.random() < 0.6 ? sizeKeys[Math.floor(Math.random()*sizeKeys.length)] : 'none',
+      status: 'present'
+    };
+  }
+
+  let mystery = null;
+  let mysteryGuess = null;
+
+  function renderQuiz(host) {
+    host.innerHTML = '';
+    if (!mystery) mystery = newMystery();
+    if (!mysteryGuess) mysteryGuess = { aff:null, dim:null };
+
+    const preview = document.createElement('div');
+    preview.className = 'panel preview';
+    preview.innerHTML = `<div class="preview-svg">${buildSvg(mystery)}</div><div class="preview-label">Vad ser du? Gissa affiliation och battle dimension.</div>`;
+    host.appendChild(preview);
+
+    const aSec = document.createElement('div');
+    aSec.className = 'panel';
+    aSec.innerHTML = `<h2>Affiliation</h2><div class="pills" id="qAff"></div>`;
+    ['van','fiende','neutral','okand'].forEach(v => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pill' + (mysteryGuess.aff === v ? ' active' : '');
+      b.textContent = AFF_LABEL[v];
+      b.addEventListener('click', () => { mysteryGuess.aff = v; renderQuiz(host); });
+      aSec.querySelector('#qAff').appendChild(b);
+    });
+    host.appendChild(aSec);
+
+    const dSec = document.createElement('div');
+    dSec.className = 'panel';
+    dSec.innerHTML = `<h2>Battle dimension</h2><div class="pills" id="qDim"></div>`;
+    ['luft','mark','sjo','uv','mtrl'].forEach(v => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'pill' + (mysteryGuess.dim === v ? ' active' : '');
+      b.textContent = DIM_LABEL[v];
+      b.addEventListener('click', () => { mysteryGuess.dim = v; renderQuiz(host); });
+      dSec.querySelector('#qDim').appendChild(b);
+    });
+    host.appendChild(dSec);
+
+    const act = document.createElement('div');
+    act.className = 'panel actions';
+    act.innerHTML = `<button class="btn" type="button" id="qSkip">Ny</button><button class="btn btn-primary" type="button" id="qCheck"${(mysteryGuess.aff && mysteryGuess.dim) ? '' : ' disabled'}>Kontrollera</button>`;
+    host.appendChild(act);
+
+    const skipBtn = host.querySelector('#qSkip');
+    const checkBtn = host.querySelector('#qCheck');
+    skipBtn.addEventListener('click', () => {
+      mystery = newMystery(); mysteryGuess = { aff:null, dim:null }; renderQuiz(host);
+    });
+    checkBtn.addEventListener('click', () => {
+      const ok = (mysteryGuess.aff === mystery.aff) && (mysteryGuess.dim === mystery.dim);
+      const fb = document.createElement('div');
+      fb.className = 'quiz-feedback ' + (ok ? 'correct' : 'partial');
+      fb.textContent = ok ? `Rätt — ${describe(mystery)}` : `Rätt svar: ${AFF_LABEL[mystery.aff]} · ${DIM_LABEL[mystery.dim]}`;
+      preview.appendChild(fb);
+      checkBtn.disabled = true;
+      // quizTimer i module-scope → clearHandle() avbryter den om man byter läge
+      // innan den fyrar (annars renderQuiz mot detacherat host = krasch).
+      quizTimer = setTimeout(() => {
+        mystery = newMystery(); mysteryGuess = { aff:null, dim:null }; renderQuiz(host);
+      }, ok ? 1100 : 2400);
+    });
+  }
+
+  /* ══════════ TESTA › Prov (flashcards-engine) ══════════ */
+  function renderExam(host) {
+    host.innerHTML = '';
+    const start = document.createElement('div');
+    start.className = 'start-card';
+    const count = Math.min(20, data.exam.length);
+    const passAt = Math.ceil(count * 0.8);
+    start.innerHTML = `
+      <h2>Prov — ${count} frågor</h2>
+      <p>Slumpade flervalsfrågor. Godkänt ≥ ${passAt}.</p>
+      <button class="start-btn" type="button">Starta prov</button>
+    `;
+    start.querySelector('button').addEventListener('click', () => {
+      host.innerHTML = '';
+      const eh = document.createElement('div');
+      host.appendChild(eh);
+      activeHandle = Flashcards.mountExam(eh, data.exam, { storageKey: 'app6_exam', count: count, passAt: passAt });
+    });
+    host.appendChild(start);
+  }
+
+  /* ══════════ TESTA — skal med undermeny (Läs symbolen / Prov) ══════════ */
+  let testSub = 'lasa';   // 'lasa' | 'prov'
+  function renderTest() {
+    $content.innerHTML = '';
+    clearHandle();
+    replaceHash(testSub === 'prov' ? 'prov' : 'lasa');
+
+    const sub = document.createElement('div');
+    sub.className = 'mode-nav sub';
+    [['lasa','Läs symbolen'],['prov','Prov']].forEach(([id, label]) => {
+      const b = document.createElement('button');
+      b.type = 'button';
+      b.className = 'mode-btn' + (testSub === id ? ' active' : '');
+      b.textContent = label;
+      b.addEventListener('click', () => { testSub = id; renderTest(); });
+      sub.appendChild(b);
+    });
+    $content.appendChild(sub);
+
+    const host = document.createElement('div');
+    $content.appendChild(host);
+
+    if (testSub === 'lasa') { mystery = null; mysteryGuess = null; renderQuiz(host); }
+    else { renderExam(host); }
+  }
+
+  /* ══════════ Gemensam mode-växel ══════════ */
+  function setMode(mode) {
+    $modeBtns.forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+    clearHandle();
+    $content.innerHTML = '';
+    if (mode === 'cards') renderStartCards();
+    else if (mode === 'build') renderBuild();
+    else if (mode === 'test') renderTest();
+    else if (mode === 'ref') renderRef();
+    // 'test' sätter sin egen hash (lasa/prov) i renderTest.
+    const slug = { cards:'lar', build:'bygg', ref:'uppslag' }[mode];
+    if (slug) replaceHash(slug);
+  }
   $modeBtns.forEach(b => b.addEventListener('click', () => setMode(b.dataset.mode)));
-  setMode('cards');
+
+  // Djuplänk via hash: #bygg #lasa/#mystery #prov #uppslag #lar
+  function applyHash() {
+    const h = (location.hash || '').toLowerCase().replace('#', '');
+    if (h === 'bygg') return setMode('build');
+    if (h === 'lasa' || h === 'mystery' || h === 'las') { testSub = 'lasa'; return setMode('test'); }
+    if (h === 'prov') { testSub = 'prov'; return setMode('test'); }
+    if (h === 'uppslag' || h === 'referens') return setMode('ref');
+    if (h === 'lar' || h === 'kort') return setMode('cards');
+    return setMode('cards');
+  }
+  applyHash();
 })();
 </script>
 

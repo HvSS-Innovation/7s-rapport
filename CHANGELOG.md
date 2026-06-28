@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.9 — 2026-06-28 — APP-6 + SYMBOL sammanslagna (pedagogiskt)
+
+- **Mergead sida `app6.html`:** SYMBOL-byggaren absorberad i APP-6-decket. Fyra lägen i en inlärningsbåge (vänster→höger = novis→van): **Lär** (bläddra 62 minneskort), **Bygg** (f.d. SYMBOL — bygg en symbol live + se REGELN bakom varje val, kopiera/ladda ner SVG), **Testa** (undermeny: **Läs symbolen** [f.d. Mystery] + **Prov** [20 frågor, ≥80%]), **Uppslag** (referenslista per kategori). Landar på Lär. Djuplänkar: `#bygg`/`#lasa`/`#prov`/`#uppslag`.
+- **Bygg uppgraderat till lär-läge:** varje val visar regeln det styr ("Fiende → röd ram", "Planerad → streckad ram", "Luft → öppen ram upptill" …) + disclaimer om att vissa ramformer är förenklade. Det enda nya UI-arbetet; resten är återanvänd kod.
+- **`symbol.html` → redirect-stub** till `app6.html#bygg` (skyddar gamla bokmärken/PWA-genvägar; noindex, behålls i SW FILES).
+- **`lib/nav.js`:** SYMBOL-item borttaget → drawer/hubb/sitemap uppdateras automatiskt (single source). localStorage (`app6_cards`/`app6_exam`) oförändrad → ingen progress nollställs.
+- **Namnförtydligande:** sidnamn behålls "APP-6" men får klarspråks-underrubrik "Lär dig läsa och bygg militära kartsymboler (APP-6B/C)"; lägena döpta på klarspråk (Kort→Lär, Referens→Uppslag, Mystery→Läs symbolen). Namnvalet APP-6 dokumenterat med Wikipedia-källa (NATO Joint Military Symbology). Verifierat med jsdom-integrationstest (22 checks) + adversariell granskning.
+
 ## v0.3.8 — 2026-06-27 — Startsida-hubb + intent-baserad navigering (IA Fas 1)
 
 - **Ny startsida `start.html`:** en hubb som visar alla verktyg grupperade efter ändamål i sex kort (📡 Rapportera, 🔎 Signalement, 🗺️ Karta & terräng, ✅ Förbered gruppen, 📚 Plugga & slå upp, 🔧 Appen & data), var och en med klartext-blurb + verktygen som stora ikon-knappar. Live-sökfilter för att hitta ett verktyg direkt. Data-driven från `window.HvNav` (samma källa som menyn) → noll drift. Mörkt/ljust tema, offline (tillagd i service-worker FILES).
