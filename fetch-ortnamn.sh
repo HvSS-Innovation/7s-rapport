@@ -1,7 +1,7 @@
 #!/bin/bash
 # Hämta alla sjöar och öar från Lantmäteriet Ortnamn Direkt
 BASE="https://api.lantmateriet.se/distribution/produkter/ortnamn/v2.2/kriterier"
-USER="nijoda@gmail.com"
+USER="${GEOTORGET_USER:?Sätt din Geotorget-e-post i miljövariabeln GEOTORGET_USER, t.ex. GEOTORGET_USER=din@epost.se ./fetch-ortnamn.sh}"
 
 echo "Ange ditt Geotorget-lösenord:"
 read -s PASS
