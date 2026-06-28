@@ -32,6 +32,39 @@
   height: 22px;
 }
 
+/* ── "Översikt"-länk i sidhuvudet (in-flow, → start.html) ── */
+.hv-nav-overview {
+  display: flex;
+  width: fit-content;
+  margin: 12px auto 0;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 999px;
+  background: var(--accent-dim, #1e3d1e);
+  color: var(--accent, #4caf50);
+  border: 1px solid var(--border-focus, #4a7c4a);
+  text-decoration: none;
+  font-size: 0.76rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  line-height: 1;
+  -webkit-tap-highlight-color: transparent;
+  transition: filter .15s, border-color .15s;
+}
+.hv-nav-overview:hover,
+.hv-nav-overview:focus-visible {
+  filter: brightness(1.12);
+  border-color: var(--accent, #4caf50);
+  outline: none;
+}
+.hv-nav-overview svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
 /* ── Overlay bakom drawer ── */
 .hv-nav-overlay {
   position: fixed;
