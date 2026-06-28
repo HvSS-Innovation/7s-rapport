@@ -3,7 +3,7 @@
    Inte fastställt av FM. Repetitions-/utbildningssyfte.
    Komplement till befintliga minkarta-verktyget.
 
-   Varför namnet "APP-6": verktyget (och systerverktyget symbol.html) bygger på
+   Varför namnet "APP-6": verktyget (inkl. Bygg-läget, tidigare symbol.html) bygger på
    NATO:s symbolstandard APP-6 — "NATO Joint Military Symbology" (utgåva
    APP-6B/C) — som är den standard kartsymbolerna tillhör. MIL-STD-2525 är den
    amerikanska motsvarigheten; APP-6 är NATO-publikationen och därför det
