@@ -54,7 +54,7 @@ function assert(cond, msg) {
     const instruktor = newSandbox();
     const Sig = instruktor.SkyttebokSig;
 
-    const self = await Sig.generateSelfKey('Sgt Andersson');
+    const self = await Sig.generateSelfKey('Sgt AQ');
     assert(self.keyId.length === 16, 'keyId är 16 hex-tecken');
     assert(self.fingerprintFormatted.includes(' '), 'fingerprint är formaterad');
     assert(['Ed25519', 'ECDSA-P256'].includes(self.algo), 'algo är Ed25519 eller ECDSA-P256');
@@ -62,7 +62,7 @@ function assert(cond, msg) {
 
     const reread = Sig.getSelf();
     assert(reread.keyId === self.keyId, 'getSelf() returnerar samma keyId');
-    assert(reread.name === 'Sgt Andersson', 'visningsnamn lagrat');
+    assert(reread.name === 'Sgt AQ', 'visningsnamn lagrat');
 
     console.log('— Test 2: exportera publik nyckel —');
     const exported = await Sig.exportSelfPublicKeyPayload();
@@ -113,7 +113,7 @@ function assert(cond, msg) {
     const verifyOk = await SigS.verifySignature(sigPayload, pass);
     assert(verifyOk.valid === true, 'signatur är giltig');
     assert(verifyOk.trusted === true, 'signatur kommer från trusted-key (grön)');
-    assert(verifyOk.signerName === 'Sgt Andersson', 'signerns namn återges');
+    assert(verifyOk.signerName === 'Sgt AQ', 'signerns namn återges');
 
     console.log('— Test 6: tampered pass → bruten signatur (röd) —');
     const tamperedPass = Object.assign({}, pass, { traff: 6 }); // 5 → 6
@@ -194,7 +194,7 @@ function assert(cond, msg) {
     const verifyE2 = await Sig2.verifySignature(sigOnE2, pass);
     assert(verifyE2.valid === true, 'sig är giltig på enhet2 efter v2-import');
     assert(verifyE2.trusted === true, 'trusted-key reste med — grön badge på enhet2');
-    assert(verifyE2.signerName === 'Sgt Andersson', 'signerns namn återges på enhet2');
+    assert(verifyE2.signerName === 'Sgt AQ', 'signerns namn återges på enhet2');
 
     console.log('— Test 12: Fas 5 — säkerhetsprov-signering & "officiellt godkänd" —');
     // Säkerhetsprov-objektet har inget id-fält. UI-koden bygger ett
@@ -209,7 +209,7 @@ function assert(cond, msg) {
     };
     const spSig = await Sig.signPass(spSignable);
     assert(spSig.passId === 'sp_bas', 'sp-sig har passId=sp_bas');
-    assert(spSig.signer.name === 'Sgt Andersson', 'signerns namn matchar');
+    assert(spSig.signer.name === 'Sgt AQ', 'signerns namn matchar');
 
     // Verifiera på enhet med trusted-key (soldat-sandbox med imported pubkey).
     const enhet3 = newSandbox();
@@ -236,7 +236,7 @@ function assert(cond, msg) {
     // multi-key roster-flöde.
     const inst1 = newSandbox();
     const inst2 = newSandbox();
-    const inst1Self = await inst1.SkyttebokSig.generateSelfKey('Sgt Andersson');
+    const inst1Self = await inst1.SkyttebokSig.generateSelfKey('Sgt AQ');
     const inst2Self = await inst2.SkyttebokSig.generateSelfKey('Lt Bergström');
     const inst1Pub = await inst1.SkyttebokSig.exportSelfPublicKeyPayload();
     const inst2Pub = await inst2.SkyttebokSig.exportSelfPublicKeyPayload();
@@ -245,7 +245,7 @@ function assert(cond, msg) {
     const rosterPayload = {
         format: 'sb-roster-v1',
         name: 'Kompani 3 / VT26',
-        issuer: 'Cap N. Eriksson',
+        issuer: 'Cap AQ',
         issuedAt: '2026-01-15T08:00:00Z',
         validUntil: '2026-12-31T23:59:59Z',
         keys: [inst1Pub, inst2Pub]
@@ -339,7 +339,7 @@ function assert(cond, msg) {
     // Instruktör B öppnar begäran på sin enhet (har eget nyckelpar).
     const instrukB = newSandbox();
     const InstB = instrukB.SkyttebokSig;
-    await InstB.generateSelfKey('Sgt Andersson');
+    await InstB.generateSelfKey('Sgt AQ');
     const instBPub = await InstB.exportSelfPublicKeyPayload();
     const response = await InstB.signSignRequest(reqParsed);
     assert(response.format === 'sb-sigs-v1', 'response har korrekt format');

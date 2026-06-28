@@ -2190,7 +2190,7 @@
                 '<div>' +
                     '<label for="sigSelfName">Visningsnamn (frivilligt)</label>' +
                     '<input type="text" id="sigSelfName" autocomplete="off" maxlength="60" ' +
-                        'value="' + escapeHtml(self.name || '') + '" placeholder="T.ex. Sgt Andersson">' +
+                        'value="' + escapeHtml(self.name || '') + '" placeholder="T.ex. Sgt AQ">' +
                 '</div>' +
                 '<button class="btn btn-sm btn-secondary" type="button" onclick="skyttebokSigSaveName()">Spara</button>' +
             '</div>' +

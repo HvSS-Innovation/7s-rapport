@@ -34,7 +34,7 @@
     // av kartan när användaren byter härdat läge så vyn pannar dit automatiskt
     // istället för att stå kvar över Sverige.
     //
-    // Placeholders för pmtiles-filen (url/bytes/sha256) fylls i NÄR Joel har
+    // Placeholders för pmtiles-filen (url/bytes/sha256) fylls i NÄR utvecklaren har
     // byggt och laddat upp filen. Tills dess: knappen är disabled.
     var pmtilesPresets = {
         DK: {

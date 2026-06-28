@@ -110,7 +110,7 @@ const SYMBOLS = {
     },
 
     // Hund — markbunden sensor. Toggle "Fast / Patrullerande" i edit-popup
-    // styr obj.patrull (default false). Vid patrullerande ritar Joel en
+    // styr obj.patrull (default false). Vid patrullerande ritas en
     // separat patrullstig (linje-verktyget) for rutten. Directional = vart
     // hunden tittar/gar.
     hund: {
