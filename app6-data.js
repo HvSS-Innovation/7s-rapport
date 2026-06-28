@@ -2,12 +2,20 @@
    Källa: Lathund symboler på lägeskarta (APP-6B/C, MIL-STD-2525).
    Inte fastställt av FM. Repetitions-/utbildningssyfte.
    Komplement till befintliga minkarta-verktyget.
+
+   Varför namnet "APP-6": verktyget (och systerverktyget symbol.html) bygger på
+   NATO:s symbolstandard APP-6 — "NATO Joint Military Symbology" (utgåva
+   APP-6B/C) — som är den standard kartsymbolerna tillhör. MIL-STD-2525 är den
+   amerikanska motsvarigheten; APP-6 är NATO-publikationen och därför det
+   naturliga namnet i en svensk, NATO-anpassad kontext.
+   Bakgrund: https://en.wikipedia.org/wiki/NATO_Joint_Military_Symbology
 */
 window.APP6_DATA = {
   meta: {
     title: 'APP-6',
     subtitle: 'Militära symboler — minneskort & prov',
-    source: 'NATO APP-6B/C, US MIL-STD-2525'
+    source: 'NATO APP-6B/C, US MIL-STD-2525',
+    sourceUrl: 'https://en.wikipedia.org/wiki/NATO_Joint_Military_Symbology'
   },
 
   cards: [
