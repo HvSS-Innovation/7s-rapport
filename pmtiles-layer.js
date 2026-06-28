@@ -59,7 +59,7 @@ function topoPaintRules() {
             dataLayer: 'roads',
             symbolizer: new LineSymbolizer({ color: '#666', width: 1.2 })
         },
-        // Byggnader — svarta polygoner (det Joel bad om)
+        // Byggnader — svarta polygoner (önskat beteende)
         {
             dataLayer: 'buildings',
             symbolizer: new PolygonSymbolizer({ fill: '#000' })

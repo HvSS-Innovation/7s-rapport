@@ -35,7 +35,7 @@ const TOPO_CACHE = 'hv-topo-overlay-v1'; // Cache API-namespace för PMTiles-fil
 // Konfig — utbytbar datakälla. Sätt url:'' för att inaktivera knappen helt
 // (om ingen Sverige-fil är publicerad och inga online-fallbacks är ok).
 //
-// Plats för Joel att uppdatera när sverige-hillshade.pmtiles är byggd och
+// Plats att uppdatera när sverige-hillshade.pmtiles är byggd och
 // uppladdad till R2:
 //   1. kind: 'pmtiles-raster'
 //   2. url:  'https://pub-...r2.dev/sverige-hillshade.pmtiles'
