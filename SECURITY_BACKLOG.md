@@ -8,6 +8,33 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### 2026-06-28 — Avnamning + PII-rensning (personnamn, e-post)
+
+Alla personnamn borttagna/neutraliserade i den serverade sajten (commit
+`c87597c`): källattribution (linje.html — "av Lukas Tonneman"), namnkod-exempel
+(7S + WHAT/SCRIM/WEFT/A–H), platshållarnamn (postschema/minkarta/sensorskiss/
+skyttebok), utvecklarens förnamn i JS-kommentarer, testfixturer. Toponymer i
+`ortnamn.json` lämnade orörda (platsnamn, ej personnamn).
+
+#### Åtgärdat
+
+- **E-post ur byggskript (`fetch-ortnamn.js` + `fetch-ortnamn.sh`):**
+  `nijoda@gmail.com` var hårdkodad som Geotorget-API-användarnamn. Läses nu ur
+  miljövariabeln `GEOTORGET_USER` (lösenord efterfrågas fortf. interaktivt,
+  hamnar aldrig i fil/env-dump).
+
+#### Öppet — kräver beslut
+
+- **Git-historik:** både personnamnen och e-posten finns kvar i äldre commits i
+  det publika repot. Full borttagning kräver history-rewrite (force-push,
+  påverkar repo + ev. forks) — medvetet uppskjutet. Beslut: (a) lämna
+  historiken, (b) rewrite.
+- **Worker-handle:** `dawn-star-7fc5.nijoda.workers.dev` (tavla/tipsa, jfr post 6)
+  innehåller kontohandle "nijoda". Funktionell endpoint — byte kräver omdöpning
+  av Cloudflare-workern. Låg risk; sidorna är noindex/pin-skyddade. Lämnat.
+- **Nästlat repo:** `tools/m_blankett/.git` (gitignored, ej publikt via hv) har
+  e-posten i sina egna commit-author-rader — separat projekt, utanför scope.
+
 ### 2026-06-19 — Adversariellt korrekthetssvep, rapportfamiljen (11 sidor)
 
 11 template-klonade rapportsidor (ah, eobusare, index, fors, obo, obslosa,

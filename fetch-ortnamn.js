@@ -1,14 +1,21 @@
-// Hämta alla ortnamn från Lantmäteriet — kör: node fetch-ortnamn.js
+// Hämta alla ortnamn från Lantmäteriet.
+// Kör: GEOTORGET_USER=din@epost.se node fetch-ortnamn.js  (lösenord efterfrågas)
 const https = require('https');
 const fs = require('fs');
 const readline = require('readline');
 
 const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
 
+const user = (process.env.GEOTORGET_USER || '').trim();
+if (!user) {
+    console.error('Sätt din Geotorget-e-post i miljövariabeln GEOTORGET_USER, t.ex.:\n  GEOTORGET_USER=din@epost.se node fetch-ortnamn.js');
+    rl.close();
+    process.exit(1);
+}
 rl.question('Ange Geotorget-lösenord: ', (pass) => {
     rl.close();
     process.stdout.write('\n');
-    const auth = Buffer.from('nijoda@gmail.com:' + pass).toString('base64');
+    const auth = Buffer.from(user + ':' + pass).toString('base64');
 
     const searches = [
         // Sjöar
