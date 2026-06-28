@@ -3,6 +3,12 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.10 — 2026-06-28 — Navigering omgrupperad (8 grupper, klarare etiketter)
+
+- **Ny grupp-indelning i `lib/nav.js`** (driver meny + hubb + sitemap från en källa): 8 grupper — 👀 Observation (7S), 📡 Rapportera (FORS/PEDARS), 🔎 Signalement, 🗺️ Karta & terräng (+VÄDER), ✅ Förbered gruppen (+OBSLÖSA/EOBUSARE/OBO), 📚 Plugga & slå upp (+SÄKR/LINJE), 📋 Admin (MÅTT/Hjälm 24/UN/PATL/SKYTTE), 🔧 Appen & data (system-sidor). Flyttar: 7S → egen Observation-grupp; VÄDER → Karta; OBSLÖSA/EOBUSARE/OBO → Förbered; SÄKR/LINJE → Plugga; MÅTT/Hjälm 24/UN/PATL/SKYTTE → Admin.
+- **Klarare etiketter:** FG → "FG – Farligt gods", FÖRKORT → "FÖRKORT – Förkortningar", SIGSKYDD → "SIGSKYDD – Signalskydd". Hub-knappar fick `title` så fullnamnet syns vid hover.
+- Verifierat: 36 items, alla → giltig grupp, inga döda länkar, hubb renderar 8 kort, sitemap ok.
+
 ## v0.3.9 — 2026-06-28 — APP-6 + SYMBOL sammanslagna (pedagogiskt)
 
 - **Mergead sida `app6.html`:** SYMBOL-byggaren absorberad i APP-6-decket. Fyra lägen i en inlärningsbåge (vänster→höger = novis→van): **Lär** (bläddra 62 minneskort), **Bygg** (f.d. SYMBOL — bygg en symbol live + se REGELN bakom varje val, kopiera/ladda ner SVG), **Testa** (undermeny: **Läs symbolen** [f.d. Mystery] + **Prov** [20 frågor, ≥80%]), **Uppslag** (referenslista per kategori). Landar på Lär. Djuplänkar: `#bygg`/`#lasa`/`#prov`/`#uppslag`.
