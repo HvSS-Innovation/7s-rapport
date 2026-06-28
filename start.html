@@ -193,6 +193,7 @@
                 const a = document.createElement('a');
                 a.className = 'hub-tool';
                 a.href = item.href;
+                a.title = item.label;
                 a.setAttribute('data-label', (item.label || '').toLowerCase());
 
                 const ic = document.createElement('span');
