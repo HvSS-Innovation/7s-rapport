@@ -77,6 +77,12 @@
         var baseLayer = opts.baseLayer;
         var headerEl = opts.headerEl;
         var warningEl = opts.warningEl || null;
+        // Loading-spinnern (#mapSpinner) i rapportfilernas modal döljs annars
+        // ENBART av OTM-baslagrets 'load'-event. När härdat läge auto-aktiverar
+        // vid sid-omladdning rivs OTM-lagret innan det hinner 'load':a → eventet
+        // fyrar aldrig → den opaka spinnern täcker den färdigrenderade PMTiles-
+        // kartan i evighet. Dölj därför spinnern även när härdat blir aktivt.
+        var spinnerEl = opts.spinnerEl || document.getElementById('mapSpinner') || null;
         // Behåll map i closure så Härdat-knappen kan öppna landskaps-väljaren
         // (shared/landskap-offline.js) och panna kartan efter aktivering.
 
@@ -102,6 +108,9 @@
             var active = ctrl.isActive();
             setActiveStyle(btn, active);
             dimWarning(warningEl, active);
+            // Härdat aktivt → PMTiles-lagret ligger redan på kartan; lås upp vyn
+            // genom att dölja spinnern (OTM:s 'load' kommer aldrig fyra här).
+            if (active && spinnerEl) spinnerEl.classList.add('hidden');
         }
         ctrl.onChange(refresh);
         refresh();
