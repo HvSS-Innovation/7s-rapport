@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.11 — 2026-06-29 — FG + UN sammanslagna (Farligt gods)
+
+- **Mergead sida `fg.html` ("Farligt gods"):** UN (uppslag + godsdeklaration) absorberad i FG-decket. Fyra lägen i lär→gör-båge: **Kort** (flashcards) · **Prov** · **Uppslag** (UN-nummer-sök i UN_DB + ADR-kort-referens hopslagna) · **Godsdek** (ADR-S 5.4.1-deklaration, kopiera/skriv ut). Djuplänkar `#kort/#prov/#uppslag/#godsdek`.
+- **Synergi (hela poängen):** "Använd i godsdeklaration"-knapp på varje uppslagsträff förfyller deklarationen (un/namn/klass/PG/etikett) — eliminerar manuell avskrift, en felkälla i ett korrekthetsverktyg. UN_DB och FG_DATA hålls separata (olika livscykel; delar bara fältnamn).
+- **`un.html` → redirect-stub** till `fg.html#godsdek` (skyddar bokmärken/PWA; gammal genväg landar direkt i Godsdek — panik-vänligt). Behålls i SW FILES.
+- **`lib/nav.js`:** UN-item borttaget ur Admin → drawer/hubb/sitemap uppdateras automatiskt; FG-label → "Farligt gods"; ADMIN-blurb justerad. Godsdek-läget har egen "slå alltid upp gällande ADR-S"-disclaimer.
+- Beslut taget via multi-agent-workflow (4 perspektiv inkl. kontrariskt) → MERGE. Verifierat: jsdom-integrationstest (15 checks, inkl. förfyllnings-synergin) + adversariell granskning.
+
 ## v0.3.10 — 2026-06-28 — Navigering omgrupperad (8 grupper, klarare etiketter)
 
 - **Ny grupp-indelning i `lib/nav.js`** (driver meny + hubb + sitemap från en källa): 8 grupper — 👀 Observation (7S), 📡 Rapportera (FORS/PEDARS), 🔎 Signalement, 🗺️ Karta & terräng (+VÄDER), ✅ Förbered gruppen (+OBSLÖSA/EOBUSARE/OBO), 📚 Plugga & slå upp (+SÄKR/LINJE), 📋 Admin (MÅTT/Hjälm 24/UN/PATL/SKYTTE), 🔧 Appen & data (system-sidor). Flyttar: 7S → egen Observation-grupp; VÄDER → Karta; OBSLÖSA/EOBUSARE/OBO → Förbered; SÄKR/LINJE → Plugga; MÅTT/Hjälm 24/UN/PATL/SKYTTE → Admin.

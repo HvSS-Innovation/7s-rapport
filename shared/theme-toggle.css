@@ -38,8 +38,17 @@ html[data-theme="light"] .move-btns button.current,
 html[data-theme="light"] .pill.active,
 html[data-theme="light"] .request-btn,
 html[data-theme="light"] .role-pill.active,
+html[data-theme="light"] .un-use:hover,
 html[data-theme="light"] .start-btn {
     color: #ffffff;
+}
+
+/* Godsdek-varningsrutan (fg.html) hårdkodar mörka amber-färger — egen
+   ljust-tema-override så den inte blir en mörkbrun ö på vit sida. */
+html[data-theme="light"] .godsdek-note {
+    background: #fff7e6;
+    color: #8a5a00;
+    border-color: #e0c080;
 }
 
 /* Placering matchar SKYTTEBOK: absolute i header, top-right.
