@@ -3,6 +3,11 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.12 — 2026-06-29 — Fix: härdat läge fastnar i spinner efter omladdning
+
+- **Bugg:** efter att kartan laddats ner offline + härdat läge slagits på, en stängning och återöppning av sidan visade evig spinner ("härdat: på" men kartan syntes inte). Orsak: rapportfilernas `#mapSpinner` doldes ENBART av OpenTopoMap-baslagrets `'load'`-event — men när härdat läge auto-aktiverar vid omladdning rivs OTM-lagret innan det hinner `'load':a`, så eventet fyrade aldrig och den opaka spinnern täckte den färdigrenderade PMTiles-kartan.
+- **Fix (en plats, täcker alla 6 rapportfiler):** `shared/map-hardat-modal.js` döljer nu spinnern även när härdat blir aktivt (via controllerns `onChange`/`refresh`). Ingen ändring i HTML-filerna behövdes — spinnern slås upp via `#mapSpinner`-id:t som alla rapportmodaler delar.
+
 ## v0.3.11 — 2026-06-29 — FG + UN sammanslagna (Farligt gods)
 
 - **Mergead sida `fg.html` ("Farligt gods"):** UN (uppslag + godsdeklaration) absorberad i FG-decket. Fyra lägen i lär→gör-båge: **Kort** (flashcards) · **Prov** · **Uppslag** (UN-nummer-sök i UN_DB + ADR-kort-referens hopslagna) · **Godsdek** (ADR-S 5.4.1-deklaration, kopiera/skriv ut). Djuplänkar `#kort/#prov/#uppslag/#godsdek`.
