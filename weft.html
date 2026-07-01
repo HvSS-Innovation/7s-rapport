@@ -673,12 +673,15 @@ const droneAscii = {
 function generateReport() {
     const v = id => document.getElementById(id).value.trim();
     savePlaceIfNew(v('stalle')); saveSagesmanIfNew(v('sagesman'));
+    const tnr = nowTnr();
+    // Meningsfullt fotonamn tie:at till TNR (Android ger annars MediaStore-ID som filnamn).
+    const fotoName = lastFotoFilename ? `WEFT-${tnr.slice(0,6)}${(lastFotoFilename.match(/\.[a-z0-9]+$/i)||['.jpg'])[0].toLowerCase()}` : '';
     const lines = [
         'WEFT RAPPORT',
         `Till: ${v('till') || '-'}`,
         `Från: ${v('fran') || '-'}`,
         '',
-        `TNR: ${nowTnr()}`,
+        `TNR: ${tnr}`,
         '',
         `Stund:    ${v('stund') || '-'}`,
         `Ställe:   ${v('stalle') || '-'}`,
@@ -687,7 +690,7 @@ function generateReport() {
         `Engines:  ${v('engines') || '-'}`,
         `Fuselage: ${v('fuselage') || '-'}`,
         `Tail:     ${v('tail') || '-'}`,
-        lastFotoFilename ? `Foto: ${lastFotoFilename}` : null,
+        fotoName ? `Foto: ${fotoName}` : null,
         `Sagesman: ${v('sagesman') || '-'}`,
     ].filter(Boolean);
     if (selectedDroneType && droneAscii[selectedDroneType]) {

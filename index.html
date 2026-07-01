@@ -649,8 +649,16 @@ function showVerifyBtn(mgrsStr) {
 })();
 
 // ── Foto EXIF ────────────────────────────────────────────────────────────────
-let lastFotoFilename = '';
+let lastFotoFilename = '';   // rått filnamn från väljaren (ofta MediaStore-ID på Android)
 let lastFotoFile = null;
+let lastFotoName = '';       // rapport-tie:at namn (7S-<TNR>.jpg) för text + bilaga
+// Bygg en File med rapport-tie:at namn så bilagan matchar Foto:-raden.
+function renamedFoto() {
+    if (!lastFotoFile) return null;
+    const name = lastFotoName || lastFotoFile.name;
+    try { return new File([lastFotoFile], name, { type: lastFotoFile.type }); }
+    catch (_) { return lastFotoFile; }
+}
 async function readFoto(input) {
     const file = input.files[0];
     if (!file) return;
@@ -1115,18 +1123,26 @@ function generateReport() {
     saveSagesmanIfNew(v('sagesman'));
     saveTillIfNew(v('till'));
     saveFranIfNew(v('fran'));
+    const tnr = nowTnr();
+    // Döp fotot efter rapportens TNR så namnet blir meningsfullt (Android ger annars MediaStore-ID).
+    if (lastFotoFile) {
+        const ext = (lastFotoFile.name.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0].toLowerCase();
+        lastFotoName = `7S-${tnr.slice(0,6)}${ext}`;
+    } else {
+        lastFotoName = '';
+    }
     const lines = [
         '7S RAPPORT',
         `Till: ${v('till') || '-'}`,
         `Från: ${v('fran') || '-'}`,
         '',
-        `TNR: ${nowTnr()}`,
+        `TNR: ${tnr}`,
         '',
         `Stund: ${v('stund') || '-'}`,
         `Ställe: ${v('stalle') || '-'}`,
         `Händelse: ${v('handelse') || '-'}`,
         `Symbol: ${v('symbol') || '-'}`,
-        lastFotoFilename ? `Foto: ${lastFotoFilename}` : null,
+        lastFotoName ? `Foto: ${lastFotoName}` : null,
         `Sagesman: ${v('sagesman') || '-'}`,
         `Sedan: ${v('sedan') || '-'}`,
     ].filter(Boolean);
@@ -1332,7 +1348,7 @@ function executePublish() {
 
     // Samla filer: alltid Data Package, valfritt foto
     const files = [dpFile];
-    if (lastFotoFile) files.push(lastFotoFile);
+    if (lastFotoFile) files.push(renamedFoto());
 
     const grupp = getSignalGroup();
     const grupphint = grupp ? ' → ' + grupp : '';
@@ -1382,10 +1398,10 @@ function copyToClipboard() {
     };
     // Om en bild laddades via EXIF och webbläsaren stödjer fildelning — erbjud att bifoga
     if (lastFotoFile && navigator.share) {
-        const shareData = { text, files: [lastFotoFile] };
+        const shareData = { text, files: [renamedFoto()] };
         if (navigator.canShare?.(shareData)) {
             doCopy();
-            if (confirm('Vill du bifoga fotot (' + lastFotoFilename + ') till meddelandet?')) {
+            if (confirm('Vill du bifoga fotot (' + (lastFotoName || lastFotoFilename) + ') till meddelandet?')) {
                 navigator.share(shareData).catch(() => {});
             } else {
                 navigator.share({ text }).catch(() => {});
@@ -1417,7 +1433,7 @@ function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
     ['stund','stalle','handelse','symbol','sedan','sagesman'].forEach(id =>
         document.getElementById(id).value = '');
-    lastFotoFilename = ''; lastFotoFile = null;
+    lastFotoFilename = ''; lastFotoFile = null; lastFotoName = '';
     document.getElementById('fotoStatus').textContent = '';
     backToEdit();
 }
