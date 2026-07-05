@@ -45,6 +45,7 @@ const FILES = [
   './offline-tiles.js',
   './opsec.html',
   './opsec.js',
+  './ovningspass.html',
   './patl.html',
   './pedars.html',
   './pmtiles-layer.js',
