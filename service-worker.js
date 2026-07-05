@@ -46,7 +46,6 @@ const FILES = [
   './opsec.html',
   './opsec.js',
   './ovningspass.html',
-  './ovningspass.js',
   './patl.html',
   './pedars.html',
   './pmtiles-layer.js',
