@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.16 — 2026-07-05 — Övningspass v2: dokument-först med låg tröskel (Joels omdesign)
+
+- **Mallen ligger färdig från start** — 45 min, standardinslag (truppföringsram + två flexibla innehållsmoment) — och syns hela tiden som **redigerbar HTML-tabell** (klicka i cellen och skriv). Ingen formulärvägg.
+- **Instruktionsbok → förslag:** läs in PDF/textfil (vendorerad pdf.js 3.11.174, allt lokalt) och tryck Generera — övningsnamn, momentförslag, **utrustnings- och dukningslistor (separata)** föreslås regelstyrt ur bokens text (rubrik-heuristik + materiel-lexikon, **ingen AI, inga nätverksanrop**). Sidor väljs till/från med chips — förslagen räknas om direkt och omgenerering dubblerar aldrig (gen-flagga; egna rader rörs ej). Boktexten sparas ALDRIG i localStorage — bara förslagen.
+- **Slides mot informationsöverflöd:** 5 steg (Boken · Listor · Tid · Risk · Sjukvård) visar en sak i taget. Tid-sliden skalar flex-momenten till vald passlängd (ramen fast) + tidslinje + "min per deltagare"-check. Risk-sliden: nivåval per risk (SÄkR-åtgärdskrav visas) → högsta → riskfaktor R. Sjukvårds-sliden: närmaste vårdcentral/sjukhus + restid → tidsfaktor T (T fastställs formellt av CMA/C OrgE — märkt planeringshjälp) → **R×T → sjukvårdsberedskap in i planen**.
+- **Export:** Skriv ut/PDF (ren print-vy) + Ladda ner Word (.doc som HTML-blob, filnamn utan personnamn). Fler format senare.
+- Logik i `ovningspass.js` + 49 vm-testchecks (`verktyg/test-ovningspass.js`), adversarial 3-lins-review före push. Badge SNART → BETA.
+
 ## v0.3.15 — 2026-07-05 — Övningspass v0.1 tillbakarullad (för hög tröskel), arkiverad för återbruk
 
 - **Beslut (Joel):** v0.1-formuläret blev för mycket på en gång — för många fält och krav direkt. Verktyget ska ha så låg tröskel som möjligt; nästa design blir troligen stegvis inmatning (några fält i taget) eller dokument-först-flöde (ladda in mall/manual → tweaka variabler). Sidan är återställd till "innehåll kommer snart"-placeholdern (badge BETA → SNART).
