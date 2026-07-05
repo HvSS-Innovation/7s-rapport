@@ -8,6 +8,19 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### 2026-07-05 — Meta-CSP: `frame-ancestors` och `Cache-Control` i `<meta>` är verkningslösa
+
+Sajtens sidor (patl, ovningspass m.fl.) deklarerar `frame-ancestors 'none'` i
+CSP-`<meta>`-taggen och `Cache-Control: no-store` som `http-equiv`. Enligt
+CSP-spec ignoreras `frame-ancestors` (liksom `sandbox`/`report-uri`) när CSP
+levereras via `<meta>`, och meta-Cache-Control respekteras inte av webbläsare —
+inget clickjacking-skydd trots att policyn ser ut att ge det. GitHub Pages
+tillåter inga egna HTTP-headers, så riktig fix kräver antingen en proxy
+(Cloudflare) framför sajten eller en JS-framebust (`if (top !== self)
+top.location = location`) i inline-bootstrapen på alla sidor. Praktisk risk låg
+(data i localStorage, inga sessioner) — men mönstret bör inte kopieras vidare
+som om det verkade. Fynd från adversarial review av ovningspass v0.1.
+
 ### 2026-06-28 — Avnamning + PII-rensning (personnamn, e-post)
 
 Alla personnamn borttagna/neutraliserade i den serverade sajten (commit

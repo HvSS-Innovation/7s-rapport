@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.14 — 2026-07-05 — Övningspass v0.1: användbar beta (grunddata + mål + moment + utskrift)
+
+- **Placeholder → fungerande verktyg** samma dag: `ovningspass.html` är nu en tidig beta där instruktören fyller i grunddata (förlagans 15-fältsfaktaruta), bygger mål med H UtbM-formeln ([Vem] ska [förhållanden] [nivå] [prestation] [kriterium] för att [tillämpning]) och redigerar en momenttabell med förifylld truppföringsram — och skriver ut en komplett övningsplan (sidhuvud, faktaruta, MÅL/SYFTE/KRAV, autogenererad disposition, momenttabell med ackumulerad tid).
+- **Single-source:** mål+syfte skrivs en gång och injiceras via `{{MÅL+SYFTE}}`-token i Övningsgenomgång + Utvärdera-momenten (förlagan upprepar dem ordagrant på tre ställen). Ack-tid räknas från moment 1 (Förberedelser ingår ej, som i förlagan). Live-valideringar: momentsumma vs passlängd, DTG-intervall (DDHHMM), tom säkerhetsgenomgång (SÄkR-delgivningskrav), saknat mål (H UtbM-minimikrav).
+- **Logik i `ovningspass.js`** (testbar, ingen DOM) + vm-smoketest `verktyg/test-ovningspass.js` (36 checks, gröna). Adversarial 3-lins-review (korrekthet/UX+print/OPSEC) före push.
+- **Hjälp till-ruta:** feedback- och underlagsbidrags-länkar som prefyllda GitHub-issues, med OPSEC-varning (publika ärenden — beskriv, klistra aldrig in dokument/namn/platser). Kunskapstrappan märkt som kurspraxis (ej H UtbM). Ingen FM-heraldik i utskriften. opsec.js-härdning på alla fält; "Glöm enheten" rensar även `ovnpass_state` (localStorage.clear). Badge SNART → BETA.
+- Riskhanteringsmodul (S×K→R→sjukvårdsberedskap), bilagor 1–4, MÅL-anslag och momentunderlag ligger näst på tur (spec i lokalt workspace).
+
 ## v0.3.13 — 2026-07-05 — Ny Admin-flik: Övningspass (placeholder)
 
 - **Ny flik `ovningspass.html`** under Admin-gruppen: övningsplaneringsverktyg för instruktörer som ska mynna ut i bl.a. en färdig övningsplan. Just nu en placeholder med "innehåll kommer snart"-ruta som beskriver planerat innehåll (syfte & mål, moment/stationer, materiel, säkerhet, utvärdering). Badge "SNART" i menyn.
