@@ -3,6 +3,13 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.13 — 2026-07-05 — Ny Admin-flik: Övningspass (placeholder)
+
+- **Ny flik `ovningspass.html`** under Admin-gruppen: övningsplaneringsverktyg för instruktörer som ska mynna ut i bl.a. en färdig övningsplan. Just nu en placeholder med "innehåll kommer snart"-ruta som beskriver planerat innehåll (syfte & mål, moment/stationer, materiel, säkerhet, utvärdering). Badge "SNART" i menyn.
+- Feedback-issues fungerar som på övriga flikar (`FORM_ID` → footer.js → prefylld GitHub-issue).
+- `lib/nav.js`: nytt ADMIN-item + blurb-justering (drawer/hubb/sitemap följer med automatiskt). Sidan tillagd i SW FILES.
+- Underlag/prompter kommer att ligga i separat lokalt workspace (`Antigravity/ovningspass/`) — inte i detta publika repo.
+
 ## v0.3.12 — 2026-06-29 — Fix: härdat läge fastnar i spinner efter omladdning
 
 - **Bugg:** efter att kartan laddats ner offline + härdat läge slagits på, en stängning och återöppning av sidan visade evig spinner ("härdat: på" men kartan syntes inte). Orsak: rapportfilernas `#mapSpinner` doldes ENBART av OpenTopoMap-baslagrets `'load'`-event — men när härdat läge auto-aktiverar vid omladdning rivs OTM-lagret innan det hinner `'load':a`, så eventet fyrade aldrig och den opaka spinnern täckte den färdigrenderade PMTiles-kartan.
