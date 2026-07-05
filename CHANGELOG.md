@@ -3,6 +3,12 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.15 — 2026-07-05 — Övningspass v0.1 tillbakarullad (för hög tröskel), arkiverad för återbruk
+
+- **Beslut (Joel):** v0.1-formuläret blev för mycket på en gång — för många fält och krav direkt. Verktyget ska ha så låg tröskel som möjligt; nästa design blir troligen stegvis inmatning (några fält i taget) eller dokument-först-flöde (ladda in mall/manual → tweaka variabler). Sidan är återställd till "innehåll kommer snart"-placeholdern (badge BETA → SNART).
+- **Arbetet är bevarat för återbruk:** hela v0.1 (verktyg + logikmodul + 40 testchecks + adversarial-review-fixar) ligger i branchen **`arkiv/ovningspass-v01`** (commit `4c6f9da`). Logiken i `ovningspass.js` (målformel, tidsberäkning, DTG, disposition, print-rendering, validering) är UI-oberoende och återanvänds rakt av i nästa UI-tappning.
+- `ovningspass.js` + `verktyg/test-ovningspass.js` borttagna från main; SW FILES justerad. SECURITY_BACKLOG-posten (meta-CSP) behålls — den gäller sajten i stort.
+
 ## v0.3.14 — 2026-07-05 — Övningspass v0.1: användbar beta (grunddata + mål + moment + utskrift)
 
 - **Placeholder → fungerande verktyg** samma dag: `ovningspass.html` är nu en tidig beta där instruktören fyller i grunddata (förlagans 15-fältsfaktaruta), bygger mål med H UtbM-formeln ([Vem] ska [förhållanden] [nivå] [prestation] [kriterium] för att [tillämpning]) och redigerar en momenttabell med förifylld truppföringsram — och skriver ut en komplett övningsplan (sidhuvud, faktaruta, MÅL/SYFTE/KRAV, autogenererad disposition, momenttabell med ackumulerad tid).
