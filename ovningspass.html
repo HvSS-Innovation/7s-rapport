@@ -2,7 +2,7 @@
 <html lang="sv">
 <head>
 <meta charset="UTF-8">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
 <meta http-equiv="Cache-Control" content="no-store">
 <meta name="referrer" content="strict-origin">
 <meta name="google" content="notranslate">
@@ -28,25 +28,121 @@
     --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
     --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
     --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --danger:#c62828; --warn:#c8a24e;
     --radius:8px; --radius-sm:4px;
   }
   * { box-sizing:border-box; margin:0; padding:0; }
   body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; }
-  .container { max-width:640px; margin:0 auto; }
-  header { text-align:center; padding:20px 0 16px; }
+  .container { max-width:860px; margin:0 auto; }
+  header { text-align:center; padding:20px 0 10px; }
   header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header h1 .beta { font-size:0.6rem; vertical-align:super; background:var(--accent-dim); color:var(--accent); border:1px solid var(--border-focus); border-radius:999px; padding:2px 8px; letter-spacing:0.1em; margin-left:6px; }
   header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
-  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:420px; margin:6px auto 0; }
+  header .disclaimer { font-size:0.65rem; color:var(--text-muted); margin-top:6px; opacity:0.85; line-height:1.5; max-width:480px; margin:6px auto 0; }
   .back-link { display:inline-flex; align-items:center; gap:6px; color:var(--accent); text-decoration:none; font-size:0.88rem; font-weight:600; padding:10px 0; min-height:44px; }
   .back-link::before { content:'←'; font-size:1.1rem; }
 
-  .soon-card { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:20px 18px; margin-bottom:14px; }
-  .soon-badge { display:inline-block; background:var(--accent-dim); color:var(--accent); border:1px solid var(--border-focus); border-radius:999px; padding:5px 14px; font-size:0.7rem; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; margin-bottom:14px; }
-  .soon-card h2 { font-size:0.95rem; color:var(--text-primary); margin-bottom:10px; line-height:1.5; }
-  .soon-card p { font-size:0.84rem; color:var(--text-secondary); line-height:1.7; margin-bottom:10px; }
-  .soon-card ul { margin:0 0 12px; padding-left:20px; font-size:0.84rem; color:var(--text-secondary); line-height:1.8; }
-  .soon-card li strong { color:var(--text-primary); font-weight:600; }
-  .soon-note { font-size:0.74rem; color:var(--text-muted); line-height:1.6; border-top:1px solid var(--border); padding-top:12px; margin-top:4px; }
+  /* ── Slides ── */
+  .steg-nav { display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px; }
+  .steg-nav button { flex:1; min-width:96px; min-height:44px; background:var(--bg-secondary); border:1px solid var(--border); color:var(--text-secondary); border-radius:var(--radius-sm); font-family:inherit; font-size:0.78rem; font-weight:600; cursor:pointer; padding:6px 8px; }
+  .steg-nav button.aktiv { background:var(--accent-dim); border-color:var(--border-focus); color:var(--accent); }
+  .slide { display:none; background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; margin-bottom:14px; }
+  .slide.aktiv { display:block; }
+  .slide h2 { font-size:0.8rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent); margin-bottom:8px; }
+  .slide .ingress { font-size:0.78rem; color:var(--text-secondary); line-height:1.6; margin-bottom:12px; }
+  .slide .not { font-size:0.7rem; color:var(--text-muted); line-height:1.55; margin-top:10px; }
+  .slide-knappar { display:flex; justify-content:space-between; gap:8px; margin:0 0 14px; }
+  .slide-knappar button { min-height:44px; min-width:110px; background:var(--bg-input); border:1px solid var(--border); color:var(--text-primary); border-radius:var(--radius-sm); font-family:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; padding:8px 14px; }
+  .slide-knappar button:disabled { opacity:0.35; cursor:default; }
+
+  .field { display:flex; flex-direction:column; gap:4px; margin-bottom:10px; }
+  .field label { font-size:0.68rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; font-weight:600; }
+  .field input, .field textarea, .field select {
+    background:var(--bg-input); border:1px solid var(--border); border-radius:var(--radius-sm);
+    color:var(--text-primary); font-family:inherit; font-size:0.95rem; padding:9px 11px; outline:none; min-height:44px; width:100%;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus { border-color:var(--border-focus); }
+  .tva-kol { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+  @media (max-width:560px) { .tva-kol { grid-template-columns:1fr; } }
+
+  .knapp { display:inline-flex; align-items:center; justify-content:center; min-height:48px; padding:10px 18px; background:var(--accent); color:#0d1f0d; border:1px solid var(--accent); border-radius:var(--radius-sm); font-family:inherit; font-size:0.9rem; font-weight:700; cursor:pointer; }
+  .knapp:hover { background:var(--accent-hover); }
+  .knapp[disabled] { opacity:0.4; cursor:default; }
+  .knapp-sekundar { background:var(--bg-input); color:var(--text-primary); border-color:var(--border); font-weight:600; }
+  .knapp-sekundar:hover { background:var(--bg-secondary); border-color:var(--border-focus); }
+
+  .filzon { border:2px dashed var(--border-focus); border-radius:var(--radius); padding:18px; text-align:center; color:var(--text-secondary); font-size:0.85rem; line-height:1.6; cursor:pointer; }
+  .filzon.drag { background:var(--accent-dim); }
+  .filzon input { display:none; }
+  .bok-status { font-size:0.78rem; color:var(--warn); margin-top:10px; line-height:1.5; min-height:1.2em; }
+  .sid-chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .sid-chips label { display:inline-flex; align-items:center; gap:4px; background:var(--bg-input); border:1px solid var(--border); border-radius:999px; padding:6px 10px; font-size:0.74rem; color:var(--text-secondary); cursor:pointer; min-height:36px; user-select:none; }
+  .sid-chips label.av { opacity:0.45; text-decoration:line-through; }
+  .sid-chips input { accent-color:var(--accent); }
+
+  .checklista { list-style:none; }
+  .checklista li { display:flex; align-items:center; gap:8px; padding:6px 0; border-bottom:1px solid var(--border); }
+  .checklista li:last-child { border-bottom:none; }
+  .checklista input[type=checkbox] { width:20px; height:20px; accent-color:var(--accent); flex:none; }
+  .checklista .txt { flex:1; font-size:0.86rem; }
+  .checklista .gen-tag { font-size:0.6rem; color:var(--warn); border:1px solid #4a3a1a; border-radius:999px; padding:1px 7px; flex:none; }
+  .checklista .bort { background:none; border:none; color:var(--text-muted); font-size:1rem; cursor:pointer; min-width:36px; min-height:36px; }
+  .checklista .bort:hover { color:var(--danger); }
+  .lagg-till { display:flex; gap:6px; margin-top:8px; }
+  .lagg-till input { flex:1; }
+  .lagg-till button { min-width:52px; }
+
+  .tidslinje { display:flex; height:34px; border-radius:var(--radius-sm); overflow:hidden; border:1px solid var(--border); margin:10px 0 6px; }
+  .tidslinje div { min-width:2px; display:flex; align-items:center; justify-content:center; font-size:0.6rem; color:#0d1f0d; font-weight:700; overflow:hidden; white-space:nowrap; }
+  .tid-legend { font-size:0.72rem; color:var(--text-secondary); line-height:1.7; }
+
+  .risk-rad { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius-sm); padding:10px; margin-bottom:10px; }
+  .risk-rad .krav { font-size:0.7rem; color:var(--warn); line-height:1.5; margin-top:4px; }
+  .risk-sammanf { font-size:0.82rem; color:var(--text-primary); background:var(--bg-input); border:1px solid var(--border-focus); border-radius:var(--radius-sm); padding:10px 12px; margin-top:8px; line-height:1.6; }
+
+  /* ── Live-tabellen ── */
+  .plan-zon h2 { font-size:0.8rem; letter-spacing:0.1em; text-transform:uppercase; color:var(--accent); margin:18px 0 8px; }
+  .op-tabell { width:100%; border-collapse:collapse; background:var(--bg-card); font-size:0.82rem; }
+  .op-tabell caption { caption-side:top; text-align:center; font-weight:700; letter-spacing:0.15em; padding:8px; color:var(--accent); border:1px solid var(--border); border-bottom:none; }
+  .op-tabell .op-edithint { font-weight:400; letter-spacing:0; font-size:0.68rem; color:var(--text-muted); text-transform:none; }
+  .op-tabell th, .op-tabell td { border:1px solid var(--border); padding:7px 9px; text-align:left; vertical-align:top; }
+  .op-tabell th { width:26%; background:var(--bg-secondary); font-size:0.7rem; letter-spacing:0.05em; text-transform:uppercase; color:var(--text-muted); }
+  .op-momhead th { background:var(--accent-dim); color:var(--accent); width:auto; }
+  .op-tid { white-space:nowrap; font-weight:700; width:1%; }
+  .op-vad { font-weight:700; }
+  .op-hur { color:var(--text-secondary); margin-top:2px; min-height:1em; }
+  .op-anm { color:var(--text-muted); font-style:italic; font-size:0.74rem; margin-top:2px; min-height:1em; }
+  [data-edit] { cursor:text; border-bottom:1px dashed var(--border-focus); }
+  [data-edit]:hover { outline:1px dashed var(--border-focus); outline-offset:1px; }
+  [data-edit]:focus { outline:2px solid var(--accent); outline-offset:1px; background:var(--bg-input); }
+  [data-edit]:empty::before { content:'✎ tryck här och skriv'; color:var(--text-muted); font-style:italic; font-size:0.74rem; }
+
+  .klar-banner { background:var(--accent-dim); border:1px solid var(--border-focus); border-radius:var(--radius); padding:10px 14px; font-size:0.8rem; color:var(--text-primary); line-height:1.55; margin-bottom:10px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .klar-banner button { min-height:40px; padding:6px 12px; background:var(--accent); color:#0d1f0d; border:none; border-radius:var(--radius-sm); font-family:inherit; font-size:0.78rem; font-weight:700; cursor:pointer; }
+
+  .actions { display:flex; gap:8px; flex-wrap:wrap; margin:14px 0 8px; }
+  .actions button { flex:1; min-width:150px; min-height:48px; }
+  .knapp-danger { background:var(--bg-input); color:var(--danger); border:1px solid var(--border); border-radius:var(--radius-sm); font-family:inherit; font-size:0.9rem; font-weight:600; cursor:pointer; }
+  .knapp-danger:hover { border-color:var(--danger); }
+  .hint-foot { font-size:0.72rem; color:var(--text-muted); line-height:1.55; margin-bottom:6px; }
+
+  /* ── Print: enbart planen ── */
+  #printRoot { display:none; }
+  @media print {
+    body { background:#fff; color:#000; padding:0; font-size:11pt; }
+    .container, .hv-nav-burger { display:none !important; }
+    #printRoot { display:block; }
+    #printRoot .op-tabell { width:100%; border-collapse:collapse; font-size:9.5pt; background:#fff; }
+    #printRoot caption { font-weight:700; letter-spacing:2px; padding:6px; color:#000; border:none; }
+    #printRoot th, #printRoot td { border:1px solid #000; padding:5px 7px; text-align:left; vertical-align:top; background:#fff; color:#000; }
+    #printRoot th { background:#eee; width:26%; }
+    #printRoot .op-momhead th { background:#ddd; width:auto; }
+    #printRoot .op-tid { white-space:nowrap; font-weight:700; }
+    #printRoot .op-vad { font-weight:700; color:#000; }
+    #printRoot .op-hur { color:#000; }
+    #printRoot .op-anm { font-style:italic; font-size:8.5pt; color:#333; }
+    #printRoot tr { page-break-inside:avoid; }
+  }
 </style>
     <link rel="stylesheet" href="lib/nav.css">
 </head>
@@ -54,30 +150,573 @@
 <noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px;text-align:center">JavaScript krävs.</div></noscript>
 
 <div class="container">
+<div class="app-ui">
   <header>
-    <h1>Övningspass</h1>
-    <p>Övningsplanering för instruktörer</p>
-    <p class="disclaimer">Privatutvecklat planeringsverktyg. Inte kopplat till eller fastställt av Försvarsmakten.</p>
+    <h1>Övningspass<span class="beta">BETA</span></h1>
+    <p>Mallen är redan klar — förfina den en sak i taget</p>
+    <p class="disclaimer">Privatutvecklat planeringsverktyg. Inte kopplat till eller fastställt av Försvarsmakten. All data stannar på din enhet — inga nätverksanrop, ingen AI.</p>
   </header>
 
   <a href="start.html" class="back-link">Tillbaka</a>
 
-  <div class="soon-card">
-    <span class="soon-badge">🚧 Innehåll kommer snart</span>
-    <h2>Ett planeringsverktyg för dig som instruktör — från idé till färdig övningsplan.</h2>
-    <p>Här kommer du steg för steg kunna bygga ett komplett övningspass och få ut en färdig <strong>övningsplan</strong>, redo att skrivas ut eller delas med medhjälpare och chefer.</p>
-    <p>Planerat innehåll i urval:</p>
-    <ul>
-      <li><strong>Syfte &amp; mål</strong> — vad övningen ska ge och hur målen formuleras utvärderingsbart</li>
-      <li><strong>Moment &amp; stationer</strong> — bygg upp passet med tider, genomförande och organisation</li>
-      <li><strong>Materiel &amp; plats</strong> — checklista på det som ska fram innan trupp är på plats</li>
-      <li><strong>Säkerhet</strong> — säkerhetsgenomgång och riskhantering som en del av planen</li>
-      <li><strong>Utvärdering</strong> — fånga erfarenheter medan de är färska</li>
-    </ul>
-    <p class="soon-note">Verktyget byggs stegvis under sommaren/hösten 2026. Har du önskemål eller mallar du saknar? Använd feedback-länken längst ner på sidan — den skapar ett ärende direkt i projektets backlog.</p>
+  <div class="klar-banner">
+    <span style="flex:1;min-width:200px">✅ <strong>En färdig 45-minutersplan ligger längre ner</strong> — skriv ut den direkt, ändra i tabellen, eller förfina med stegen.</span>
+    <button type="button" id="tillPlanen">Visa planen ↓</button>
+  </div>
+
+  <nav class="steg-nav" aria-label="Steg">
+    <button type="button" data-steg="0">1 · Boken</button>
+    <button type="button" data-steg="1">2 · Listor</button>
+    <button type="button" data-steg="2">3 · Tid</button>
+    <button type="button" data-steg="3">4 · Risk</button>
+    <button type="button" data-steg="4">5 · Sjukvård</button>
+  </nav>
+
+  <!-- Slide 1: Instruktionsboken -->
+  <section class="slide" data-slide="0">
+    <h2>Instruktionsboken</h2>
+    <p class="ingress">Planen nedan är redan färdig att använda (45 min, standardupplägg). Vill du bygga passet på en instruktionsbok: läs in den och tryck <strong>Generera förslag</strong> — övningsnamn, moment, utrustning och dukning föreslås ur boken. Allt sker lokalt i din webbläsare, regelstyrt utan AI.</p>
+    <label class="filzon" id="filzon">
+      <strong>Läs in instruktionsbok</strong><br>PDF eller textfil — klicka här eller släpp filen<br>
+      <input type="file" id="bokFil" accept=".pdf,.txt,application/pdf,text/plain">
+    </label>
+    <div class="bok-status" id="bokStatus"></div>
+    <div class="sid-chips" id="sidChips"></div>
+    <div style="margin-top:12px; display:flex; gap:8px; flex-wrap:wrap">
+      <button class="knapp" type="button" id="genereraBtn" disabled>Generera förslag</button>
+    </div>
+    <p class="not">Sidorna kan väljas till/från efter inläsningen — förslagen räknas om direkt. Boken sparas inte på enheten; bara förslagen som hamnar i planen. Förslag markeras och kan alltid tas bort.</p>
+  </section>
+
+  <!-- Slide 2: Listor -->
+  <section class="slide" data-slide="1">
+    <h2>Dukning &amp; utrustning</h2>
+    <p class="ingress">Två separata listor. Bocka i det som gäller — bara ibockade rader hamnar i planen. Rader märkta <em>förslag</em> kommer från boken.</p>
+    <div class="tva-kol">
+      <div>
+        <h2 style="font-size:0.7rem">Dukning</h2>
+        <ul class="checklista" id="dukLista"></ul>
+        <div class="lagg-till"><input type="text" id="dukNy" placeholder="Lägg till egen rad…"><button class="knapp knapp-sekundar" type="button" id="dukLagg">+</button></div>
+      </div>
+      <div>
+        <h2 style="font-size:0.7rem">Utrustning</h2>
+        <ul class="checklista" id="utrLista"></ul>
+        <div class="lagg-till"><input type="text" id="utrNy" placeholder="Lägg till egen rad…"><button class="knapp knapp-sekundar" type="button" id="utrLagg">+</button></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Slide 3: Tid & deltagare -->
+  <section class="slide" data-slide="2">
+    <h2>Tid &amp; deltagare</h2>
+    <p class="ingress">Passets längd skalar de flexibla momenten automatiskt — ramen (befäl, genomgångar, utvärdering) ligger fast.</p>
+    <div class="tva-kol">
+      <div class="field"><label for="inLangd">Passets längd (minuter)</label><input id="inLangd" type="number" inputmode="numeric" min="10" max="480" step="5"></div>
+      <div class="field"><label for="inDelt">Antal deltagare</label><input id="inDelt" type="number" inputmode="numeric" min="1" max="200"></div>
+    </div>
+    <div class="tidslinje" id="tidslinje" aria-hidden="true"></div>
+    <div class="tid-legend" id="tidLegend"></div>
+    <p class="not" id="deltNot"></p>
+  </section>
+
+  <!-- Slide 4: Risk -->
+  <section class="slide" data-slide="3">
+    <h2>Säkerhets- och riskbedömning</h2>
+    <p class="ingress">Beskriv riskerna och välj nivå — åtgärdskravet visas direkt och högsta kvarstående nivå ger riskfaktorn (R) som går in i planen. Nivåval enligt SÄkR:s skala; gör den formella bedömningen mot gällande reglemente.</p>
+    <div id="riskRader"></div>
+    <button class="knapp knapp-sekundar" type="button" id="riskLagg" style="min-height:44px">+ Lägg till risk</button>
+    <div class="risk-sammanf" id="riskSammanf"></div>
+  </section>
+
+  <!-- Slide 5: Sjukvård -->
+  <section class="slide" data-slide="4">
+    <h2>Närmaste vård</h2>
+    <p class="ingress">Var finns närmaste vårdcentral och sjukhus, och hur långt är det dit? Restiden ger tidsfaktorn (T) som tillsammans med riskfaktorn styr sjukvårdsberedskapen i planen.</p>
+    <div class="tva-kol">
+      <div class="field"><label for="inVc">Närmaste vårdcentral</label><input id="inVc" type="text" placeholder="namn/ort"></div>
+      <div class="field"><label for="inVcMin">Restid dit (minuter)</label><input id="inVcMin" type="number" inputmode="numeric" min="0" max="600"></div>
+      <div class="field"><label for="inSh">Närmaste sjukhus (akut)</label><input id="inSh" type="text" placeholder="namn/ort"></div>
+      <div class="field"><label for="inShMin">Restid dit (minuter)</label><input id="inShMin" type="number" inputmode="numeric" min="0" max="600"></div>
+    </div>
+    <div class="risk-sammanf" id="vardSammanf"></div>
+    <p class="not">Tidsfaktorn (T1–T3) fastställs formellt av CMA på militära övningsfält, annars av lägst C OrgE — värdet här är en planeringshjälp, inte ett beslut.</p>
+  </section>
+
+  <div class="slide-knappar">
+    <button type="button" id="stegBak">← Föregående</button>
+    <button type="button" id="stegFram">Nästa →</button>
+  </div>
+
+  <!-- Live-planen -->
+  <div class="plan-zon">
+    <div id="planZon"></div>
+    <div class="actions">
+      <button class="knapp" type="button" id="printBtn">Skriv ut / PDF</button>
+      <button class="knapp knapp-sekundar" type="button" id="wordBtn">Ladda ner (Word)</button>
+      <button class="knapp-danger" type="button" id="clearBtn">Rensa allt</button>
+    </div>
+    <p class="hint-foot">Utkastet sparas automatiskt i webbläsaren på denna enhet — ingenting skickas någonstans. Utskriften är skyddsvärd: den innehåller namn, tider och platser.</p>
   </div>
 </div>
+</div>
 
+<div id="printRoot" aria-hidden="true"></div>
+
+<script src="ovningspass.js"></script>
+<script src="vendor/pdfjs/pdf.min.js" defer></script>
+<script>
+(function () {
+  'use strict';
+  const OP = window.OvnPass;
+  let state = OP.loadState();
+  if (!state.grund.datum) {
+    try { state.grund.datum = new Date().toISOString().slice(0, 10); } catch (_) {}
+  }
+
+  let bokSidor = [];   // sidtexter i minnet — sparas aldrig i localStorage
+
+  let saveTimer = null;
+  function save() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => OP.saveState(state), 250);
+  }
+
+  // ── Slides ──
+  let aktivtSteg = 0;
+  const slides = Array.from(document.querySelectorAll('.slide'));
+  const stegKnappar = Array.from(document.querySelectorAll('.steg-nav button'));
+  function visaSteg(n) {
+    aktivtSteg = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach(s => s.classList.toggle('aktiv', +s.dataset.slide === aktivtSteg));
+    stegKnappar.forEach(b => b.classList.toggle('aktiv', +b.dataset.steg === aktivtSteg));
+    document.getElementById('stegBak').disabled = aktivtSteg === 0;
+    document.getElementById('stegFram').disabled = aktivtSteg === slides.length - 1;
+  }
+  stegKnappar.forEach(b => b.addEventListener('click', () => visaSteg(+b.dataset.steg)));
+  document.getElementById('stegBak').addEventListener('click', () => visaSteg(aktivtSteg - 1));
+  document.getElementById('stegFram').addEventListener('click', () => visaSteg(aktivtSteg + 1));
+
+  // ── Boken ──
+  const bokStatus = document.getElementById('bokStatus');
+  const genereraBtn = document.getElementById('genereraBtn');
+  const filzon = document.getElementById('filzon');
+  const bokFil = document.getElementById('bokFil');
+
+  function status(txt) { bokStatus.textContent = txt; }
+
+  async function lasPdf(buf) {
+    const pdfjsLib = window.pdfjsLib || window['pdfjs-dist/build/pdf'];
+    if (!pdfjsLib) throw new Error('PDF-läsaren har inte laddats ännu — försök igen om en sekund.');
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'vendor/pdfjs/pdf.worker.min.js';
+    // isEvalSupported:false — stänger CVE-2024-4367-vägen (eval via preparerad
+    // FontMatrix); textextraktion behöver den inte.
+    const doc = await pdfjsLib.getDocument({ data: buf, isEvalSupported: false }).promise;
+    const antal = Math.min(doc.numPages, 300);
+    const sidor = [];
+    for (let i = 1; i <= antal; i++) {
+      const page = await doc.getPage(i);
+      const tc = await page.getTextContent();
+      // Radbygge: ny rad när y-positionen hoppar.
+      let text = '', lastY = null;
+      tc.items.forEach(item => {
+        const y = item.transform ? Math.round(item.transform[5]) : 0;
+        if (lastY !== null && Math.abs(y - lastY) > 2) text += '\n';
+        else if (text && !text.endsWith('\n')) text += ' ';
+        text += item.str;
+        lastY = y;
+      });
+      sidor.push(text);
+      if (i % 20 === 0) status('Läser sida ' + i + ' av ' + antal + ' …');
+    }
+    return sidor;
+  }
+
+  async function lasBok(file) {
+    if (!file) return;
+    if (file.size > 40 * 1024 * 1024) { status('Filen är för stor (max 40 MB).'); return; }
+    genereraBtn.disabled = true;
+    status('Läser ' + file.name + ' …');
+    try {
+      if (/\.txt$/i.test(file.name) || file.type === 'text/plain') {
+        bokSidor = [await file.text()];
+      } else {
+        bokSidor = await lasPdf(await file.arrayBuffer());
+      }
+      state.bok = { titel: file.name.replace(/\.(pdf|txt)$/i, ''), sidantal: bokSidor.length, valda: bokSidor.map((_, i) => i) };
+      save();
+      status(bokSidor.length + ' sidor inlästa ur "' + state.bok.titel + '". Välj bort sidor nedan om du vill — tryck sedan Generera.');
+      genereraBtn.disabled = false;
+      renderSidChips();
+    } catch (err) {
+      status('Kunde inte läsa filen: ' + (err && err.message ? err.message : 'okänt fel'));
+      bokSidor = [];
+      genereraBtn.disabled = true;
+      renderSidChips(); // rensa stale chips från ev. tidigare bok
+    } finally {
+      // Nollställ file-inputen — annars fires inte change vid samma filnamn.
+      bokFil.value = '';
+    }
+  }
+
+  bokFil.addEventListener('change', () => lasBok(bokFil.files[0]));
+  filzon.addEventListener('dragover', e => { e.preventDefault(); filzon.classList.add('drag'); });
+  filzon.addEventListener('dragleave', () => filzon.classList.remove('drag'));
+  filzon.addEventListener('drop', e => {
+    e.preventDefault(); filzon.classList.remove('drag');
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) lasBok(e.dataTransfer.files[0]);
+  });
+
+  function renderSidChips() {
+    const wrap = document.getElementById('sidChips');
+    wrap.innerHTML = '';
+    if (!bokSidor.length) {
+      if (state.bok.titel) {
+        const p = document.createElement('span');
+        p.style.cssText = 'font-size:0.72rem;color:var(--text-muted)';
+        p.textContent = 'Förslag ur "' + state.bok.titel + '" ligger kvar i planen. Läs in filen igen för att ändra sidval.';
+        wrap.appendChild(p);
+      }
+      return;
+    }
+    bokSidor.forEach((_, i) => {
+      const lb = document.createElement('label');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox';
+      cb.checked = state.bok.valda.indexOf(i) !== -1;
+      lb.classList.toggle('av', !cb.checked);
+      cb.addEventListener('change', () => {
+        state.bok.valda = cb.checked
+          ? state.bok.valda.concat([i]).sort((a, b) => a - b)
+          : state.bok.valda.filter(x => x !== i);
+        lb.classList.toggle('av', !cb.checked);
+        save();
+        // Räkna bara om automatiskt EFTER första explicita Generera-trycket —
+        // sidval före dess ska inte tyst skriva om planen.
+        if (harGenererat) generera(true);
+      });
+      lb.appendChild(cb);
+      lb.appendChild(document.createTextNode('Sid ' + (i + 1)));
+      wrap.appendChild(lb);
+    });
+  }
+
+  let harGenererat = false;
+  function generera(tyst) {
+    if (!bokSidor.length) return;
+    harGenererat = true;
+    const valdaTexter = state.bok.valda.map(i => bokSidor[i]).filter(Boolean);
+    const forslag = OP.extraheraForslag(valdaTexter);
+    OP.applyForslag(state, forslag, state.bok.titel);
+    save();
+    renderAllt();
+    if (!tyst) {
+      status('Klart — ' + forslag.momentForslag.length + ' momentförslag, ' +
+        forslag.utrustning.length + ' utrustnings- och ' + forslag.dukning.length +
+        ' dukningsförslag inlagda. Granska planen nedan och dra bort det som inte passar.');
+    }
+  }
+  genereraBtn.addEventListener('click', () => generera(false));
+
+  // ── Listor (dukning/utrustning) ──
+  function renderLista(id, arr) {
+    const ul = document.getElementById(id);
+    ul.innerHTML = '';
+    if (!arr.length) {
+      const li = document.createElement('li');
+      li.style.cssText = 'color:var(--text-muted);font-size:0.78rem';
+      li.textContent = 'Tomt — lägg till nedan eller generera ur boken.';
+      ul.appendChild(li);
+      return;
+    }
+    arr.forEach((rad, i) => {
+      const li = document.createElement('li');
+      const cb = document.createElement('input');
+      cb.type = 'checkbox'; cb.checked = !!rad.vald;
+      cb.addEventListener('change', () => { rad.vald = cb.checked; save(); renderPlan(); });
+      const txt = document.createElement('span');
+      txt.className = 'txt'; txt.textContent = rad.text;
+      li.appendChild(cb); li.appendChild(txt);
+      if (rad.gen) {
+        const tag = document.createElement('span');
+        tag.className = 'gen-tag'; tag.textContent = 'förslag';
+        li.appendChild(tag);
+      }
+      const bort = document.createElement('button');
+      bort.className = 'bort'; bort.type = 'button'; bort.textContent = '×'; bort.title = 'Ta bort raden';
+      bort.addEventListener('click', () => { arr.splice(i, 1); save(); renderListor(); renderPlan(); });
+      li.appendChild(bort);
+      ul.appendChild(li);
+    });
+  }
+  function renderListor() {
+    renderLista('dukLista', state.dukning);
+    renderLista('utrLista', state.utrustning);
+  }
+  // Getter i stället för direktreferens — "Rensa allt" byter ut state-objektet
+  // och en fångad array skulle annars peka på det gamla.
+  function kopplaLaggTill(inpId, btnId, getArr) {
+    const inp = document.getElementById(inpId);
+    const lagg = () => {
+      const v = inp.value.trim();
+      if (!v) return;
+      getArr().push({ text: v, vald: true, gen: false });
+      inp.value = '';
+      save(); renderListor(); renderPlan();
+      inp.focus();
+    };
+    document.getElementById(btnId).addEventListener('click', lagg);
+    inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); lagg(); } });
+  }
+  kopplaLaggTill('dukNy', 'dukLagg', () => state.dukning);
+  kopplaLaggTill('utrNy', 'utrLagg', () => state.utrustning);
+
+  // ── Tid & deltagare ──
+  const FARGER = ['#4caf50', '#66bb6a', '#8bc34a', '#aed581', '#c5e1a5', '#9ccc65', '#7cb342', '#689f38'];
+  function renderTid() {
+    document.getElementById('inLangd').value = state.langd;
+    document.getElementById('inDelt').value = state.deltagare;
+    const linje = document.getElementById('tidslinje');
+    const legend = document.getElementById('tidLegend');
+    linje.innerHTML = ''; legend.innerHTML = '';
+    const tider = OP.beraknaTider(state.moment);
+    const sum = OP.totalTid(state.moment) || 1;
+    let flexSum = 0;
+    state.moment.forEach((m, i) => {
+      if (i === 0) return;
+      const t = tider[i];
+      if (t.min === null || t.min === 0) return;
+      if (m.flex) flexSum += t.min;
+      const seg = document.createElement('div');
+      const andel = t.min / sum * 100;
+      seg.style.width = andel + '%';
+      seg.style.background = FARGER[i % FARGER.length];
+      seg.title = m.vad + ' — ' + t.min + ' min';
+      // Siffra bara i segment som får plats — halvklippta glyfer ser trasiga ut.
+      if (andel >= 6) seg.textContent = t.min;
+      linje.appendChild(seg);
+      const rad = document.createElement('div');
+      rad.textContent = t.nr + '. ' + m.vad + ' — ' + t.min + ' min (ack ' + t.ack + ')';
+      legend.appendChild(rad);
+    });
+    const not = document.getElementById('deltNot');
+    const perDelt = flexSum && state.deltagare ? (flexSum / state.deltagare) : 0;
+    not.textContent = perDelt
+      ? 'Med ' + state.deltagare + ' deltagare ger de flexibla momenten ≈ ' + perDelt.toFixed(1) + ' min per deltagare — räcker det för genomförande och redovisning?'
+      : '';
+  }
+  document.getElementById('inLangd').addEventListener('change', e => {
+    const v = parseInt(e.target.value, 10);
+    if (!Number.isFinite(v) || v < 10) {
+      e.target.value = state.langd; // synligt fält ska aldrig avvika tyst från planen
+      return;
+    }
+    state.langd = v;
+    OP.skalaMoment(state.moment, v);
+    save(); renderAllt();
+  });
+  document.getElementById('inDelt').addEventListener('change', e => {
+    const v = parseInt(e.target.value, 10);
+    if (!Number.isFinite(v) || v < 1) return;
+    state.deltagare = v;
+    save(); renderTid(); renderPlan();
+  });
+
+  // ── Risk ──
+  function renderRisker() {
+    const wrap = document.getElementById('riskRader');
+    wrap.innerHTML = '';
+    state.risker.forEach((risk, i) => {
+      const kort = document.createElement('div');
+      kort.className = 'risk-rad';
+
+      const fB = document.createElement('div'); fB.className = 'field';
+      fB.innerHTML = '<label for="risk' + i + '-b">Risk / vådahändelse</label>';
+      const iB = document.createElement('input');
+      iB.id = 'risk' + i + '-b'; iB.type = 'text'; iB.value = risk.beskrivning || '';
+      iB.addEventListener('input', () => { risk.beskrivning = iB.value; save(); renderPlan(); });
+      fB.appendChild(iB); kort.appendChild(fB);
+
+      const rad2 = document.createElement('div'); rad2.className = 'tva-kol';
+      const fN = document.createElement('div'); fN.className = 'field';
+      fN.innerHTML = '<label for="risk' + i + '-n">Kvarstående risknivå</label>';
+      const sel = document.createElement('select');
+      sel.id = 'risk' + i + '-n';
+      OP.RISKNIVAER.forEach((niv, ni) => {
+        const o = document.createElement('option');
+        o.value = String(ni); o.textContent = niv.namn;
+        if (String(risk.niva) === String(ni)) o.selected = true;
+        sel.appendChild(o);
+      });
+      sel.addEventListener('change', () => { risk.niva = sel.value; save(); renderRisker(); renderPlan(); });
+      fN.appendChild(sel);
+      rad2.appendChild(fN);
+
+      const fA = document.createElement('div'); fA.className = 'field';
+      fA.innerHTML = '<label for="risk' + i + '-a">Förebyggande åtgärd</label>';
+      const iA = document.createElement('input');
+      iA.id = 'risk' + i + '-a'; iA.type = 'text'; iA.value = risk.atgard || '';
+      iA.addEventListener('input', () => { risk.atgard = iA.value; save(); renderPlan(); });
+      fA.appendChild(iA);
+      rad2.appendChild(fA);
+      kort.appendChild(rad2);
+
+      const n = parseInt(risk.niva, 10);
+      if (Number.isFinite(n) && OP.RISKNIVAER[n]) {
+        const krav = document.createElement('div');
+        krav.className = 'krav';
+        krav.textContent = 'Åtgärdskrav: ' + OP.RISKNIVAER[n].krav;
+        kort.appendChild(krav);
+      }
+
+      const bort = document.createElement('button');
+      bort.className = 'knapp-danger'; bort.type = 'button';
+      bort.style.cssText = 'min-height:38px;margin-top:6px;padding:4px 12px;font-size:0.78rem';
+      bort.textContent = 'Ta bort risken';
+      bort.addEventListener('click', () => {
+        if (String(risk.beskrivning || '').trim() && !confirm('Ta bort risken?')) return;
+        state.risker.splice(i, 1); save(); renderRisker(); renderPlan();
+      });
+      kort.appendChild(bort);
+      wrap.appendChild(kort);
+    });
+    renderRiskSammanf();
+  }
+  function renderRiskSammanf() {
+    const el = document.getElementById('riskSammanf');
+    const idx = OP.hogstaRiskniva(state.risker);
+    const r = OP.riskFaktor(idx);
+    if (idx < 0) { el.textContent = 'Inga risker tillagda ännu — lägg till minst en (mål + riskanalys är minimikravet).'; return; }
+    el.textContent = 'Högsta kvarstående risknivå: ' + OP.RISKNIVAER[idx].namn +
+      (r === 'STOPP' ? ' — övningen får inte bedrivas som planerat!' :
+        r ? ' → riskfaktor ' + r : ' → inget behov av sjukvårdsberedskap');
+  }
+  document.getElementById('riskLagg').addEventListener('click', () => {
+    state.risker.push({ beskrivning: '', niva: '1', atgard: '' });
+    save(); renderRisker();
+    const inp = document.getElementById('risk' + (state.risker.length - 1) + '-b');
+    if (inp) inp.focus();
+  });
+
+  // ── Sjukvård ──
+  const VARD_FALT = [['inVc', 'vardcentral'], ['inVcMin', 'vcMin'], ['inSh', 'sjukhus'], ['inShMin', 'shMin']];
+  VARD_FALT.forEach(par => {
+    const el = document.getElementById(par[0]);
+    el.value = state.sjukvard[par[1]] || '';
+    el.addEventListener('input', () => {
+      state.sjukvard[par[1]] = el.value;
+      save(); renderVardSammanf(); renderPlan();
+    });
+  });
+  function renderVardSammanf() {
+    const el = document.getElementById('vardSammanf');
+    const t = OP.tFaktor(state.sjukvard.vcMin, state.sjukvard.shMin);
+    const r = OP.riskFaktor(OP.hogstaRiskniva(state.risker));
+    if (!t) { el.textContent = 'Fyll i restid så föreslås tidsfaktor (T1–T3).'; return; }
+    const b = OP.beredskap(r, t);
+    el.textContent = 'Föreslagen tidsfaktor: ' + t + (b ? ' — ' + b : '');
+  }
+
+  // ── Live-planen (redigerbar tabell) ──
+  let redigerarCell = false;
+  function renderPlan() {
+    if (redigerarCell) return; // klipp inte undan cellen mitt i en redigering
+    const zon = document.getElementById('planZon');
+    zon.innerHTML = OP.renderPlanTabell(state, { editable: true });
+    zon.querySelectorAll('[data-edit]').forEach(el => {
+      el.setAttribute('contenteditable', 'plaintext-only');
+      if (el.contentEditable !== 'plaintext-only') el.setAttribute('contenteditable', 'true');
+      // opsec.js-sweepen täcker bara input/textarea/select — härda
+      // contenteditable-cellerna själva (spell-jacking/autocorrect-läckor).
+      el.setAttribute('spellcheck', 'false');
+      el.setAttribute('autocorrect', 'off');
+      el.setAttribute('autocapitalize', 'off');
+      if (/\.min$/.test(el.getAttribute('data-edit'))) el.setAttribute('inputmode', 'numeric');
+    });
+  }
+  const planZon = document.getElementById('planZon');
+  planZon.addEventListener('focusin', e => {
+    if (e.target.closest && e.target.closest('[data-edit]')) redigerarCell = true;
+  });
+  planZon.addEventListener('input', e => {
+    const cell = e.target.closest ? e.target.closest('[data-edit]') : null;
+    if (!cell) return;
+    OP.settViaPath(state, cell.getAttribute('data-edit'), cell.innerText.replace(/ /g, ' '));
+    save();
+  });
+  planZon.addEventListener('focusout', () => {
+    redigerarCell = false;
+    // Rendera om efter redigering så ack-tider/summor uppdateras.
+    setTimeout(() => { if (!redigerarCell) { renderPlan(); renderTid(); } }, 50);
+  });
+  // Enter i encellsfält = klar (blur), inte radbrytning; flerradsceller (data-ml) behåller Enter.
+  planZon.addEventListener('keydown', e => {
+    const cell = e.target.closest ? e.target.closest('[data-edit]') : null;
+    if (cell && e.key === 'Enter' && !cell.hasAttribute('data-ml')) {
+      e.preventDefault();
+      cell.blur();
+    }
+  });
+  // Klistra in/släpp alltid som ren text — fallback-läget contenteditable='true'
+  // (äldre Firefox) skulle annars släppa in rå HTML i DOM:en.
+  planZon.addEventListener('paste', e => {
+    const cell = e.target.closest ? e.target.closest('[data-edit]') : null;
+    if (!cell) return;
+    e.preventDefault();
+    const text = (e.clipboardData || window.clipboardData).getData('text/plain') || '';
+    document.execCommand('insertText', false, text);
+  });
+  planZon.addEventListener('drop', e => {
+    if (e.target.closest && e.target.closest('[data-edit]')) e.preventDefault();
+  });
+
+  function renderAllt() {
+    renderListor(); renderTid(); renderRisker(); renderVardSammanf(); renderPlan(); renderSidChips();
+  }
+
+  // ── Export ──
+  function fillPrint() {
+    document.getElementById('printRoot').innerHTML = OP.renderPlanTabell(state, { editable: false });
+  }
+  document.getElementById('printBtn').addEventListener('click', () => { fillPrint(); window.print(); });
+  window.addEventListener('beforeprint', fillPrint);
+
+  document.getElementById('wordBtn').addEventListener('click', () => {
+    const blob = new Blob(['﻿' + OP.buildDocHtml(state)], { type: 'application/msword' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'ovningsplan-' + (state.grund.datum || 'utkast') + '.doc';
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 200);
+  });
+
+  // ── Rensa ──
+  document.getElementById('clearBtn').addEventListener('click', () => {
+    if (!confirm('Rensa hela utkastet från denna enhet? Detta kan inte ångras.')) return;
+    OP.clearState();
+    state = OP.loadState();
+    try { state.grund.datum = new Date().toISOString().slice(0, 10); } catch (_) {}
+    bokSidor = [];
+    harGenererat = false;
+    genereraBtn.disabled = true;
+    bokFil.value = '';
+    status('');
+    document.getElementById('inVc').value = ''; document.getElementById('inVcMin').value = '';
+    document.getElementById('inSh').value = ''; document.getElementById('inShMin').value = '';
+    renderAllt();
+  });
+
+  document.getElementById('tillPlanen').addEventListener('click', () => {
+    document.getElementById('planZon').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  // ── Init ──
+  visaSteg(0);
+  renderAllt();
+})();
+</script>
+
+<script src="opsec.js"></script>
 <script src="pwa.js" defer></script>
 <script>window.FORM_ID = { title: 'OVNINGSPASS', body: 'ÖVNINGSPASS' }; window.HV_PAGE = 'OVNINGSPASS';</script>
 <script src="footer.js"></script>
