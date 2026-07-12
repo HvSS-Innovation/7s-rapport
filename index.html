@@ -1278,7 +1278,7 @@ function buildDataPackage(cotXml, prefix) {
   </Contents>
 </MissionPackageManifest>`;
     return buildZip([
-        { name: 'manifest.xml', data: manifest },
+        { name: 'MANIFEST/manifest.xml', data: manifest },
         { name: `cot/${prefix.toLowerCase()}-rapport.cot`, data: cotXml }
     ]);
 }
