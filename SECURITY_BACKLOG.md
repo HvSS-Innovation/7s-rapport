@@ -8,6 +8,129 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### 2026-07-05 — OPSEC-audit: "inget lämnar 7srapport i härdat läge" — hål funna
+
+Multi-agent-svep (6 dimensioner + adversariell verifiering, 75 agenter) av ws +
+publikt repo + live-sajt, med fokus på kärnlöftet **"inget får lämna 7srapport
+när kartorna är i härdat läge"**. Slutsats: **löftet håller INTE** — härdat läge
+byter bara ut *tile-lagret*, inte de övriga nätverksvägarna. Sajtens grundposture
+är däremot stark (se längst ned).
+
+#### KRITISKT — bryter kärnlöftet, ej gate:at av härdat läge
+
+C1. **Reverse-geocode + Overpass skickar exakta rapport-koordinater till
+    tredjepart** — `index.html:739` (`nominatim.../reverse?lat=&lon=`),
+    `:764` (Overpass POST `around:1000,lat,lon`), `:820` (Nominatim-sök).
+    Fyras vid kartklick/MGRS-verifiering för att auto-fylla STÄLLE. Gate:as
+    **enbart** på `navigator.onLine` (`:738`) — läser aldrig `pmtiles.hardening`.
+    Identisk copy-paste i `ah/obslosa/scrim/what/weft` samt `minkarta.html:3132`
+    (UPK-reverse). Härdat-maskineriet (`pmtiles-layer.js createController`) byter
+    bara Leaflet-baslager; det finns ingen fetch-interceptor. → Operatör som slår
+    på Härdat och tappar in sin position deanonymiserar exakt grid + IP hos
+    OSM/Overpass, med falsk känsla av isolering. `upk.html:470` har redan ett
+    fungerande `isHardened()`-mönster att kopiera. **Fix:** behandla härdat===offline
+    för geocoding → hoppa nät, använd lokal `ortnamn.json` (`lmLookup`) + synlig
+    notis "adress-uppslag av i härdat läge".
+
+C2. **Bifogat foto delas med intakt EXIF-GPS** — `index.html:1351`
+    `if (lastFotoFile) files.push(renamedFoto())` → `navigator.share({files})`.
+    `readFoto` (`:670`) kör `exifr.parse` **bara för att läsa tidsstämpeln**,
+    strippar aldrig; `renamedFoto` (`:656`) återförpackar originalbytes med nytt
+    namn. → Scenfoto delat till Signal/ATAK bär fotografens GPS-koordinat +
+    kameramodell + tidpunkt. Per-rapport-läcka i normal drift, ej gate:at av
+    härdat. OBS: what.html-fixen 2026-06-19 (#14) gällde *död* kod; index.htmls
+    nyare foto-knapp (commit `3580db4`) återinförde en *levande* väg. ah/scrim/weft
+    har kvar `typeof lastFotoFile`-guard utan setter → delar inget foto idag (städa
+    ändå det döda mönstret). **Fix:** re-encoda fotot via `<canvas>`/`createImageBitmap`
+    → `toBlob` innan bifogande (droppar all EXIF). *Completeness-critic: enskilt
+    viktigaste fixet.*
+
+#### HIGH
+
+H1. **`topo-overlay.js:86` — default-källa `otm-online` kan auto-återaktiveras**
+    ovanpå den härdade basen → tysta OpenTopoMap-tile-requests medan Härdat är på.
+
+H2. **`service-worker.js` (~`:212`/`:220`) — SW respekterar inte härdat läge:**
+    släpper igenom PMTiles-range-requests till R2 vid cache-miss (utan varning)
+    och faller tillbaka till nät för tile-hosts/ocachade requests. Underminerar
+    isoleringen om filen inte är pre-nedladdad.
+
+H3. **Git-historik: geotaggat privat foto** — `IMG_20260306_073127772.jpg`
+    (blob `4b75fa7a…`, tillagt i commit `814803b`) med EXIF-GPS ligger permanent
+    i publik historik (+ speglar `faltrapport`/`hvund`/`sjus`). Enda jpg som
+    någonsin committats. Detta matchar **återöppningskriteriet** i 2026-06-28-
+    beslutet ("OPSEC-känsligt: namn↔förband/övning / GPS"). **Rek:** betrakta
+    koordinaten som exponerad; kör den förberedda history-rewrite-planen på just
+    denna blob + speglarna.
+
+H4. **Git-historik: hårdkodat `FORM_SECRET`-värde** — `const FORM_SECRET =
+    '2367845…vjgh&/&f'` fanns i `tipsa.html` (commit `02a7dab`, ersatt med
+    platshållare i `7d50a97`) → ligger kvar i publik historik. **Rek:** bekräfta
+    att Cloudflare-workern kör `ACCESS_PIN` och att `FORM_SECRET`-fallbacken är
+    **borttagen** i Worker-secrets (inte bara utbytt i klientkoden). Är den kvar =
+    live-credential; rotera. `tipsa-worker.js:352` gör ACCESS_PIN primär, så
+    troligen redan död — men verifiera i dashboarden.
+
+#### MEDIUM
+
+M1. **Referrer self-identifierar appen** — `<meta name="referrer" content="strict-origin">`
+    skickar ändå `https://7srapport.com` som `Referer` till nominatim/overpass/OTM.
+    Tredjepartens logg får "denna IP kör HV-rapportverktyget" ovanpå IP+koordinat.
+    **Fix:** `no-referrer` på alla kart/rapportsidor.
+
+M2. **`roadmap-mineringar.md` + `roadmap-minkarta-v5/v6.md` +
+    `roadmap-fullskarm-area-sliders.md` spårade i PUBLIKT repo** trots
+    `.gitignore /roadmap-*.md` och memory-noten "medvetet lokala". `git check-ignore`
+    tomt → redan tracked (ignore biter inte på trackade filer). Särskilt
+    *mineringar* bör innehålls-granskas. **Fix:** `git rm --cached` om de ska vara
+    lokala.
+
+M3. **`tipsa-worker.js:106` — fritext publiceras i PUBLIKA GitHub-issues** utan
+    scrubbing/rate-limit; ett tips kan innehålla koordinater/känsligt. PAT
+    dokumenterad med full `repo`-scope (`SETUP.md:32`) — över-privilegierad för
+    issue-skapande i ett publikt repo. `originOk` släpper igenom när `Origin`
+    saknas (`:342`), `secretOk` öppet om ingen secret satt (`:354`).
+
+M4. **`upk.html:747` — Google Maps/Waze-länkar bäddar in exakt koordinat** (öppnar
+    tredjepart med positionen). Ej gate:at av härdat.
+
+M5. **Publicerade filer utan CSP:** `stab/Ny mapp/**.html` (symbol-templates, +
+    rörig "Ny mapp/Ny mapp"-nästling), `verktyg/presentation-atak-roadmap.html`,
+    `audit/*-fuzz.html`. Låg risk men ligger i publikt repo/Pages.
+
+#### LOW / info
+
+L1. **HSTS ej preload/`includeSubDomains`** → första `http`-besök är
+    trust-on-first-use (JS-redirect + 301 mildrar; GitHub Pages sätter HSTS 1 år).
+L2. **`stab/index.html` (orphan)** laddar `leaflet`+`mgrs` från unpkg **utan SRI**
+    + CARTO-basemaps → kod-injektion + IP/viewport-läcka. Ej länkad, men publikt.
+L3. **SW postMessage (`PM_START_JOB`/`OT_START_JOB`)** saknar origin-check + URL-allowlist.
+L4. **`.github/workflows/feedback-loop.yml`** pinnar action till mutable tag
+    (`@v4`) och saknar `permissions:` least-privilege.
+L5. **`opsec.js`** täcker ej `contenteditable`, har timing-fönster för inputs
+    skapade före observer-start.
+L6. **`SECURITY_BACKLOG.md` själv i publikt repo** — nu när den listar öppna
+    härdat-läge-hål är den en färdig attacker-checklista. Överväg privat.
+
+#### Redan känt / mildrat (dubbelfixa ej)
+
+- **Informant-namn i localStorage** (`7s_lastSagesman` m.fl.): "Rensa sparade"-knapp
+  + `opsec.html` panic-wipe finns (#13, 2026-06-19). Kvarstår device-capture-risk
+  om användaren inte wipe:ar.
+- **`vader.html` → `api.open-meteo.com`**: medveten andra väderkälla (CSP-post 5d),
+  utöver de av Joel godkända SMHI + nominatim.
+- **Worker-handle `nijoda`**: accepterat 2026-06-28 (låg risk, pin/noindex).
+
+#### Bekräftat STARKT (posture som håller)
+
+Strikt CSP (`default-src 'self'; object-src 'none'; base-uri 'self';
+form-action 'self'; frame-ancestors 'none'`) konsekvent på alla kart/rapportsidor;
+HSTS + `http`→301→`https` + inline JS-redirect; allt tredjeparts-JS vendored lokalt
+(inga trackers/analytics/CDN); R2-bucket ej listbar (HTTP 404 på rot); genererad
+CoT/XML bär **ingen** device/user-id (`uid='7S-'+Date.now().toString(36)`,
+`callsign="7S Rapport"`); kamuflage-läget (`offline-tiles-kamuflage.js`) dött/
+frånkopplat sedan 2026-05-03; QR-koder renderas lokalt utan nät.
+
 ### 2026-07-05 — Meta-CSP: `frame-ancestors` och `Cache-Control` i `<meta>` är verkningslösa
 
 Sajtens sidor (patl, ovningspass m.fl.) deklarerar `frame-ancestors 'none'` i

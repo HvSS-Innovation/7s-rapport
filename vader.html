@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://nominatim.openstreetmap.org https://api.open-meteo.com https://www.smhi.se; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
-    <meta name="referrer" content="strict-origin">
+    <meta name="referrer" content="no-referrer">
     <meta name="google" content="notranslate">
     <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
     <script>
@@ -111,7 +111,7 @@
             </div>
         </div>
 
-        <div style="background:#2a1a0a;border:1px solid #c8a24e;border-radius:6px;padding:10px 12px;margin:0 0 12px;font-size:0.72rem;color:#c8a24e;line-height:1.5">OBS: Vid generering hämtas väderdata från SMHI/Open-Meteo (din valda ort skickas dit).</div>
+        <div style="background:#2a1a0a;border:1px solid #c8a24e;border-radius:6px;padding:10px 12px;margin:0 0 12px;font-size:0.72rem;color:#c8a24e;line-height:1.5">OBS: Vid generering geokodas orten via OpenStreetMap och prognosen hämtas från Open-Meteo (din ort + ungefärlig position, avrundad ~1 km, skickas dit). SMHI används bara för en valfri länk. Avstängt i härdat läge.</div>
         <button class="btn btn-primary" onclick="generera()">Generera väderrapport</button>
         <div class="inline-error" id="formError" role="alert" aria-live="polite"></div>
     </div>
@@ -141,6 +141,9 @@ let ortVal   = '';
 let latVal   = null;
 let lonVal   = null;
 let smhiUrl  = '';
+
+// Härdat läge = PMTiles-hardening aktivt + nedladdad karta (samma flagga som minkarta/index).
+function isHardened() { try { const s = JSON.parse(localStorage.getItem("pmtiles.hardening") || "{}"); return s.active === true && !!s.url; } catch (e) { return false; } }
 
 function setNu() {
     const now = new Date();
@@ -236,6 +239,10 @@ function clearFormError() {
 
 async function generera() {
     clearFormError();
+    if (isHardened()) {
+        showFormError('Väderhämtning är avstängd i härdat läge (kräver externa anrop till Open-Meteo/OpenStreetMap/SMHI). Lämna härdat läge för att hämta väder.');
+        return;
+    }
     const datumVal = document.getElementById('dispDatum').value.trim();
     if (!datumVal) { showFormError('Ange datum (ÅÅMMDD) eller tryck "Nu".'); return; }
     const ortText = document.getElementById('ortInput').value.trim();
@@ -257,7 +264,7 @@ async function generera() {
         ortVal = ortText || document.getElementById('ortInput').value.trim();
 
         const isoDate = toISODate(datumVal);
-        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latVal.toFixed(4)}&longitude=${lonVal.toFixed(4)}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,cloudcover_mean,windspeed_10m_max,winddirection_10m_dominant,sunrise,sunset&timezone=auto&start_date=${isoDate}&end_date=${isoDate}`;
+        const url = `https://api.open-meteo.com/v1/forecast?latitude=${latVal.toFixed(2)}&longitude=${lonVal.toFixed(2)}&daily=temperature_2m_max,temperature_2m_min,precipitation_sum,cloudcover_mean,windspeed_10m_max,winddirection_10m_dominant,sunrise,sunset&timezone=auto&start_date=${isoDate}&end_date=${isoDate}`;
         const resp = await fetch(url);
         if (!resp.ok) throw new Error('API-fel ' + resp.status);
         const data = await resp.json();

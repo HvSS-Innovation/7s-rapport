@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://*.tile.opentopomap.org; font-src 'self'; connect-src 'self' https://tile.openstreetmap.org https://*.tile.opentopomap.org https://nominatim.openstreetmap.org https://overpass-api.de https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
-    <meta name="referrer" content="strict-origin">
+    <meta name="referrer" content="no-referrer">
     <meta name="google" content="notranslate">
     <script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -659,28 +659,51 @@ function renamedFoto() {
     try { return new File([lastFotoFile], name, { type: lastFotoFile.type }); }
     catch (_) { return lastFotoFile; }
 }
+// OPSEC: omkoda bilden via canvas så ALL metadata (GPS/EXIF/kamera) droppas
+// innan den kan bifogas en delning. createImageBitmap med imageOrientation
+// 'from-image' applicerar EXIF-rotationen först → strippad bild blir inte
+// felvriden. Misslyckas omkodningen returneras null (fail-closed: bifoga inget).
+async function stripExif(file) {
+    try {
+        const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' });
+        const canvas = document.createElement('canvas');
+        canvas.width = bmp.width; canvas.height = bmp.height;
+        canvas.getContext('2d').drawImage(bmp, 0, 0);
+        if (bmp.close) bmp.close();
+        const blob = await new Promise((res, rej) =>
+            canvas.toBlob(b => b ? res(b) : rej(new Error('toBlob gav null')), 'image/jpeg', 0.9));
+        const name = file.name.replace(/\.(png|webp|heic|heif|tiff?)$/i, '.jpg');
+        return new File([blob], name, { type: 'image/jpeg' });
+    } catch (_) {
+        return null;
+    }
+}
 async function readFoto(input) {
     const file = input.files[0];
     if (!file) return;
-    lastFotoFilename = file.name;
-    lastFotoFile = file;
     const status = document.getElementById('fotoStatus');
+    lastFotoFilename = file.name;
+    lastFotoFile = null;   // fail-closed tills fotot är rensat på metadata
     status.textContent = 'Läser metadata...';
+    // 1) Läs tidsstämpeln ur ORIGINALET (innan strippning tar bort den).
+    let tidInfo = '';
     try {
         const exif = await exifr.parse(file, { tiff: true, exif: true });
-        if (!exif) { status.textContent = 'Ingen EXIF-data hittades i bilden.'; return; }
-
-        // Stund från DateTimeOriginal — alltid KORT format
-        const dt = exif.DateTimeOriginal || exif.DateTime;
+        const dt = exif && (exif.DateTimeOriginal || exif.DateTime);
         if (dt) {
             const d = new Date(dt), p = n => String(n).padStart(2,'0');
             document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
-            status.textContent = 'Tid hämtad från foto.';
-        } else {
-            status.textContent = 'Ingen tidsstämpel i bilden.';
+            tidInfo = ' Tid hämtad från foto.';
         }
-    } catch(e) {
-        status.textContent = 'Kunde inte läsa bilden: ' + e.message;
+    } catch(_) { /* ingen/oläsbar EXIF — strippa ändå */ }
+    // 2) Strippa ALL metadata via omkodning innan fotot blir bifogbart.
+    status.textContent = 'Rensar metadata...';
+    const stripped = await stripExif(file);
+    if (stripped) {
+        lastFotoFile = stripped;
+        status.textContent = 'Foto klart — metadata rensad.' + tidInfo;
+    } else {
+        status.textContent = 'Kunde inte rensa metadata — fotot bifogas INTE (OPSEC).';
     }
     input.value = '';
 }
@@ -735,7 +758,7 @@ let mapViewportRestore = null;
 
 function reverseGeocode(lat, lon) {
     mapSelectedAddress = '';
-    if (!navigator.onLine) { lmLookup(lat, lon, []); return; }
+    if (!navigator.onLine || isHardened()) { lmLookup(lat, lon, []); return; }
     fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json&accept-language=sv&zoom=19`)
         .then(r => r.json())
         .then(d => {
@@ -816,7 +839,13 @@ function lmLookup(lat, lon, addressParts) {
     fetch('ortnamn.json').then(r => r.json()).then(search).catch(done);
 }
 
+function isHardened() { try { const s = JSON.parse(localStorage.getItem("pmtiles.hardening") || "{}"); return s.active === true && !!s.url; } catch (e) { return false; } }
 function resolveFeaturePosition(lat, lon, name, type, addressParts) {
+    if (!navigator.onLine || isHardened()) {
+        mapSelectedAddress = [name, ...addressParts].filter(Boolean).join(', ');
+        updateMapDisplay();
+        return;
+    }
     fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(name)}&format=json&limit=1`)
         .then(r => r.json())
         .then(results => {
