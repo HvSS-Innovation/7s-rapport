@@ -96,6 +96,8 @@
 <main>
     <div class="form-view" id="formView">
 
+        <div id="hardenBanner" style="margin-bottom:12px"></div>
+
         <div class="status-box">
             <div class="info-text">Datum (ÅÅMMDD)</div>
             <div class="input-row">
@@ -112,7 +114,7 @@
         </div>
 
         <div style="background:#2a1a0a;border:1px solid #c8a24e;border-radius:6px;padding:10px 12px;margin:0 0 12px;font-size:0.72rem;color:#c8a24e;line-height:1.5">OBS: Vid generering geokodas orten via OpenStreetMap och prognosen hämtas från Open-Meteo (din ort + ungefärlig position, avrundad ~1 km, skickas dit). SMHI används bara för en valfri länk. Avstängt i härdat läge.</div>
-        <button class="btn btn-primary" onclick="generera()">Generera väderrapport</button>
+        <button class="btn btn-primary" id="generaBtn" onclick="generera()">Generera väderrapport</button>
         <div class="inline-error" id="formError" role="alert" aria-live="polite"></div>
     </div>
 
@@ -144,6 +146,60 @@ let smhiUrl  = '';
 
 // Härdat läge = PMTiles-hardening aktivt + nedladdad karta (samma flagga som minkarta/index).
 function isHardened() { try { const s = JSON.parse(localStorage.getItem("pmtiles.hardening") || "{}"); return s.active === true && !!s.url; } catch (e) { return false; } }
+function hardenedHasPackage() { try { const s = JSON.parse(localStorage.getItem("pmtiles.hardening") || "{}"); return !!s.url; } catch (e) { return false; } }
+// Skriv om active-flaggan men bevara url/flavor/kind (samma shape som pmtiles-layer.js saveState).
+function setHardened(active) {
+    let s = {};
+    try { s = JSON.parse(localStorage.getItem("pmtiles.hardening") || "{}"); } catch (e) {}
+    s.active = !!active;
+    try { localStorage.setItem("pmtiles.hardening", JSON.stringify(s)); } catch (e) {}
+}
+function disableHardenedFromVader() {
+    const ok = confirm(
+        '⚠ STÄNG AV HÄRDAT LÄGE?\n\n' +
+        'Detta stänger av härdat läge i HELA appen — alla sidor och kartor, inte bara vädersidan. Nätverket öppnas igen.\n\n' +
+        'När du sedan hämtar väder skickas din ort och ungefärliga position (~1 km) till OpenStreetMap (geokodning) och Open-Meteo (prognos).\n\n' +
+        'Slå på härdat läge igen så snart du är klar med vädret.\n\n' +
+        'OK = stäng av skyddet.   Avbryt = förbli skyddad.'
+    );
+    if (!ok) return;
+    setHardened(false);
+    try { sessionStorage.setItem('vader_hardening_off', '1'); } catch (e) {}
+    clearFormError();
+    renderHardenedBanner();
+}
+function reenableHardened() {
+    setHardened(true);
+    try { sessionStorage.removeItem('vader_hardening_off'); } catch (e) {}
+    renderHardenedBanner();
+}
+function renderHardenedBanner() {
+    const el = document.getElementById('hardenBanner');
+    const btn = document.getElementById('generaBtn');
+    if (!el) return;
+    let disabledOff = false;
+    try { disabledOff = sessionStorage.getItem('vader_hardening_off') === '1'; } catch (e) {}
+    if (isHardened()) {
+        el.innerHTML =
+            '<div style="background:#1e3d1e;border:1px solid #4caf50;border-radius:6px;padding:12px 14px;font-size:0.78rem;color:#a9d5a9;line-height:1.5">' +
+            '<strong style="color:#4caf50;letter-spacing:0.04em">🔒 HÄRDAT LÄGE AKTIVT</strong><br>' +
+            'Väder är avstängt eftersom det kräver internet. Att hämta väder skickar din ort + ungefärlig position till OpenStreetMap och Open-Meteo.' +
+            '<button type="button" onclick="disableHardenedFromVader()" style="display:block;width:100%;margin-top:10px;background:transparent;border:1px solid #c62828;color:#e57373;font-size:0.75rem;font-weight:600;letter-spacing:0.03em;text-transform:uppercase;padding:9px 10px;border-radius:4px;cursor:pointer">Stäng av härdat läge för att hämta väder</button>' +
+            '</div>';
+        if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; btn.style.cursor = 'not-allowed'; }
+    } else if (disabledOff && hardenedHasPackage()) {
+        el.innerHTML =
+            '<div style="background:#2a1a0a;border:1px solid #c8a24e;border-radius:6px;padding:12px 14px;font-size:0.78rem;color:#e0c078;line-height:1.5">' +
+            '<strong style="color:#c8a24e;letter-spacing:0.04em">⚠ HÄRDAT LÄGE AV — NÄTET ÄR ÖPPET</strong><br>' +
+            'Du stängde av skyddet i hela appen för att hämta väder. Slå på det igen så snart du är klar.' +
+            '<button type="button" onclick="reenableHardened()" style="display:block;width:100%;margin-top:10px;background:#1e3d1e;border:1px solid #4caf50;color:#4caf50;font-size:0.75rem;font-weight:600;letter-spacing:0.03em;text-transform:uppercase;padding:9px 10px;border-radius:4px;cursor:pointer">🔒 Slå på härdat läge igen</button>' +
+            '</div>';
+        if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
+    } else {
+        el.innerHTML = '';
+        if (btn) { btn.disabled = false; btn.style.opacity = ''; btn.style.cursor = ''; }
+    }
+}
 
 function setNu() {
     const now = new Date();
@@ -524,6 +580,9 @@ function wxAnimate() {
 
     wxAnimId = requestAnimationFrame(wxAnimate);
 }
+
+// Rendera härdat-läge-bannern vid sidladdning (DOM finns — scriptet ligger efter formuläret).
+renderHardenedBanner();
 
 // Footer hanteras i footer.js
 </script>
