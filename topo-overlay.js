@@ -85,6 +85,12 @@ const SOURCES = {
 // dölja knappen helt tills en explicit källa konfigureras.
 const DEFAULT_SOURCE_ID = 'otm-online';
 
+// Härdat läge = global PMTiles-hardening aktivt + nedladdad karta. Topo-overlay
+// hämtar alltid från nätet (OTM online-tiles, eller .pmtiles-range mot R2/GitHub
+// som inte SW-cachas i härdat) — inget av det får ske i härdat läge. Blockeras
+// helt tills en pre-nedladdad offline-hillshade (sverige-hillshade.pmtiles) finns.
+function isHardened() { try { const s = JSON.parse(localStorage.getItem('pmtiles.hardening') || '{}'); return s.active === true && !!s.url; } catch (e) { return false; } }
+
 function loadState() {
     try {
         const raw = localStorage.getItem(STORAGE_KEY);
@@ -175,6 +181,10 @@ function createController(map, opts) {
     async function activate() {
         if (pending) return false;
         if (activeLayer) return true;
+        if (isHardened()) {
+            console.warn('[topo-overlay] Blockerad i härdat läge — skulle skicka nätverksrequests.');
+            return false;
+        }
         const source = getSource(sourceId);
         if (!source) {
             console.warn('[topo-overlay] Ingen källa konfigurerad, ID:', sourceId);
@@ -244,7 +254,7 @@ function createController(map, opts) {
 
     // Auto-aktivera om föregående session lämnade overlay PÅ. Försök tyst,
     // fail = bara emit ändring så UI-knappen visar AV.
-    if (persisted.active && sourceId) {
+    if (persisted.active && sourceId && !isHardened()) {
         Promise.resolve().then(() => activate());
     }
 

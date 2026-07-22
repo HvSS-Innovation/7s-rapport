@@ -142,6 +142,8 @@
   .idx-detail > div { margin-bottom:6px; font-variant-numeric:tabular-nums; font-size:0.88rem; }
   .idx-links { display:flex; gap:10px; margin:10px 0; }
   .idx-links a { flex:1; text-align:center; padding:11px; border-radius:var(--radius); background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); text-decoration:none; font-weight:600; font-size:0.88rem; }
+  .idx-links button.idx-copybtn { flex:1; text-align:center; padding:11px; border-radius:var(--radius); background:var(--accent-dim); color:var(--accent); border:1px solid var(--accent); font-weight:600; font-size:0.88rem; cursor:pointer; font-family:inherit; }
+  .idx-hardnote { font-size:0.72rem; color:var(--text-muted); text-align:center; margin-top:4px; }
   .idx-note { margin-top:6px; }
 </style>
 <link rel="stylesheet" href="lib/nav.css">
@@ -744,9 +746,25 @@
       d.append(el("div", null, "Lat, Lon: " + p.lat + ", " + p.lon));
       d.append(el("div", null, "UTM 33N: " + p.utm_e + " E, " + p.utm_n + " N"));
       const links = el("div", { class: "idx-links" });
-      links.append(el("a", { href: "https://www.google.com/maps/search/?api=1&query=" + p.lat + "," + p.lon, target: "_blank", rel: "noopener" }, "Google Maps"));
-      links.append(el("a", { href: "https://waze.com/ul?ll=" + p.lat + "," + p.lon + "&navigate=yes", target: "_blank", rel: "noopener" }, "Waze"));
-      d.append(links);
+      if (isHardened()) {
+        // Härdat läge: inga externa kartlänkar (skulle öppna Google/Waze med
+        // exakt koordinat). Erbjud lokal kopiering av koordinaten istället.
+        const copyBtn = el("button", { class: "idx-copybtn", type: "button", onclick: () => {
+          if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(p.lat + ", " + p.lon).then(() => {
+              copyBtn.textContent = "Kopierad ✓";
+              setTimeout(() => { copyBtn.textContent = "Kopiera koordinat"; }, 1500);
+            }).catch(() => {});
+          }
+        } }, "Kopiera koordinat");
+        links.append(copyBtn);
+        d.append(links);
+        d.append(el("div", { class: "idx-hardnote" }, "Externa kartlänkar av i härdat läge"));
+      } else {
+        links.append(el("a", { href: "https://www.google.com/maps/search/?api=1&query=" + p.lat + "," + p.lon, target: "_blank", rel: "noopener" }, "Google Maps"));
+        links.append(el("a", { href: "https://waze.com/ul?ll=" + p.lat + "," + p.lon + "&navigate=yes", target: "_blank", rel: "noopener" }, "Waze"));
+        d.append(links);
+      }
       const noteInput = el("input", { class: "idx-note", type: "text", placeholder: "Egen anteckning…", value: note });
       noteInput.addEventListener("change", () => {
         const v = noteInput.value.trim();
