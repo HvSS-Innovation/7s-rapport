@@ -16,6 +16,26 @@ när kartorna är i härdat läge"**. Slutsats: **löftet håller INTE** — hä
 byter bara ut *tile-lagret*, inte de övriga nätverksvägarna. Sajtens grundposture
 är däremot stark (se längst ned).
 
+#### ✅ Åtgärdat 2026-07-05 → 2026-07-25 (Fas 0 + feature-borttagning)
+
+- **C1** (geokod-läcka) ✅ `8fbf10e` — reverse/overpass/nominatim-sök gate:as på
+  `isHardened()` i index/ah/obslosa/scrim/what/weft + minkarta.
+- **C2** (foto-EXIF) ✅ `8fbf10e` — foto omkodas via canvas (EXIF/GPS strippas) före
+  delning i index.html; fail-closed.
+- **M1** (referrer) ✅ `8fbf10e` — `no-referrer` på alla sidor.
+- **VÄDER** ✅ `8fbf10e` + `7249191` — gate + koordinat-avrundning + avstängningsswitch.
+- **H1** (topo-overlay) ✅ `cc2dc3c` — `activate()` + auto-återställning blockeras i härdat.
+- **M4** (upk Maps/Waze-länkar) ✅ `cc2dc3c` — döljs i härdat, ersätts av "Kopiera koordinat".
+- **H4** (FORM_SECRET i git-historik) ✅ — `ACCESS_PIN` styr auth (läckt värde redan dött);
+  `FORM_SECRET` raderat i Cloudflare; hela workern sedan raderad.
+- **M3 + PAT-scope** (tipsa-worker: fritext→publika issues, ingen rate-limit, över-scopad PAT)
+  ✅ `3c59eaf` + manuell radering — **tipsa/tavla pausad, Cloudflare-workern + `GITHUB_TOKEN`
+  raderade**. Attackytan borttagen istället för härdad (starkare).
+- **M2** (roadmap-mineringar spårad publikt) — medvetet lämnad (design-doc, låg känslighet).
+
+**Kvar öppet:** H2 (SW nät-fallback i härdat → Fas 2), H3 (geotaggat foto i historik — ej
+purgat), M5 + L1–L6. Se `roadmap-opsec-hardat-lage.md` (lokal) för Fas 1–3.
+
 #### KRITISKT — bryter kärnlöftet, ej gate:at av härdat läge
 
 C1. **Reverse-geocode + Overpass skickar exakta rapport-koordinater till
