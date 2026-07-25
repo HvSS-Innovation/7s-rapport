@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="robots" content="noindex,nofollow">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self' https://dawn-star-7fc5.nijoda.workers.dev; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
 <meta http-equiv="Cache-Control" content="no-store">
 <meta name="referrer" content="no-referrer">
 <meta name="google" content="notranslate">
@@ -710,8 +710,24 @@
     if (pin) load(); else showPinWall();
   });
 
+  // FEATURE_PAUSED: Tavla-funktionen är pausad — Cloudflare-workern är raderad
+  // (OPSEC: tar bort GITHUB_TOKEN + endpoint helt). Återuppliv: sätt false OCH
+  // återställ workern enligt verktyg/tipsa-worker/SETUP.md. All kod nedan är
+  // orörd så återupplivning bara är denna flagga + workern.
+  const FEATURE_PAUSED = true;
+  function showPausedNotice() {
+    $pinWall.style.display = 'none';
+    if ($protected) $protected.style.display = 'none';
+    const note = document.createElement('div');
+    note.style.cssText = 'text-align:center;padding:28px 18px;max-width:460px;margin:32px auto;';
+    note.innerHTML = '<h2 style="font-size:0.95rem;letter-spacing:0.06em;text-transform:uppercase;margin-bottom:10px;">⏸ Pausad</h2>'
+      + '<p style="font-size:0.85rem;line-height:1.6;color:var(--muted,#8aaa8a);">Tavla-funktionen är tillfälligt avstängd.</p>';
+    ($pinWall.parentNode || document.body).insertBefore(note, $pinWall);
+  }
+
   // Initial: testa sparad pin, annars visa pin-wall
   (async function init() {
+    if (FEATURE_PAUSED) { showPausedNotice(); return; }
     setupDropZones();
     const saved = getPin();
     if (!saved) { showPinWall(); return; }
