@@ -10,12 +10,14 @@
 //  via `pmtiles extract --bbox=... --maxzoom=15`. Bygg-pipeline: se
 //  verktyg/build-grannlander-pmtiles.md.
 //
-//  Status (2026-05-05): pmtiles-filerna är INTE byggda + uppladdade än.
-//  Knapparna visas men är disabled tills url + bytes + sha256 fyllts i
-//  per land. När en fil är klar:
+//  Status per 2026-07-28: FI, EE, LV, LT är byggda + uppladdade (källa:
+//  Protomaps daily build 20260727, maxzoom 15 — samma schema som
+//  sverige.pmtiles). DK + NO återstår; deras knappar är disabled tills
+//  url + bytes + sha256 fyllts i. När en fil är klar:
 //    1. ladda upp till samma R2-bucket som sverige.pmtiles
 //    2. fyll i url + bytes + sha256 i pmtilesPresets nedan
-//    3. lands-knappen aktiveras automatiskt
+//    3. lands-knappen aktiveras automatiskt (och landet blir valbart i
+//       offline-väljaren, shared/landskap-offline.js)
 //
 //  Designprinciper:
 //   - INGA API-nycklar i denna fil (klient-JS är publikt).
@@ -66,25 +68,47 @@
             code: 'FI', label: 'Finland', flag: '🇫🇮',
             bbox: { west: 19.0, south: 59.5, east: 32.0, north: 70.5 },
             center: [64.5, 26.0], zoom: 5,
-            pmtiles: { url: '', bytes: 0, sha256: '' }
+            // Byggd 2026-07-28 ur Protomaps daily 20260727, maxzoom 15.
+            // Klart störst av grannländerna (hela landet i en fil) — den som
+            // bara ska verka i ett hörn av Finland bör vara medveten om att
+            // det är 2,6 GiB att hämta.
+            pmtiles: {
+                url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/finland.pmtiles',
+                bytes: 2760021616,
+                sha256: '6581b1826ff0c730b22945999aa530af0b972843e3c9f3c32a13afe0c12e25df'
+            }
         },
         EE: {
             code: 'EE', label: 'Estland', flag: '🇪🇪',
             bbox: { west: 21.5, south: 57.5, east: 28.5, north: 59.8 },
             center: [58.6, 25.0], zoom: 7,
-            pmtiles: { url: '', bytes: 0, sha256: '' }
+            pmtiles: {
+                url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/estland.pmtiles',
+                bytes: 297876029,
+                sha256: '7940c6911a012422fdd9d0cf6c29639b2d13d8646f4f579710f6ad61e8609e5d'
+            }
         },
         LV: {
             code: 'LV', label: 'Lettland', flag: '🇱🇻',
             bbox: { west: 20.5, south: 55.5, east: 28.5, north: 58.2 },
             center: [56.9, 24.5], zoom: 7,
-            pmtiles: { url: '', bytes: 0, sha256: '' }
+            pmtiles: {
+                url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/lettland.pmtiles',
+                bytes: 549304526,
+                sha256: '8d6e507dde8e41eb345d4198170c086b93fd69b949252ae2f45633b277910cdf'
+            }
         },
         LT: {
             code: 'LT', label: 'Litauen', flag: '🇱🇹',
             bbox: { west: 20.5, south: 53.5, east: 27.0, north: 56.5 },
             center: [55.0, 23.8], zoom: 7,
-            pmtiles: { url: '', bytes: 0, sha256: '' }
+            // Bbox:en täcker även Kaliningrad + gränsremsor av PL/BY — därav
+            // större fil än Lettland trots mindre landyta.
+            pmtiles: {
+                url: 'https://pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev/litauen.pmtiles',
+                bytes: 748661006,
+                sha256: '477fe1c3bb9aade7a1445c514f372072c071d0a70e47608ea18c1ef29f2b5579'
+            }
         }
     };
 

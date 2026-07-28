@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.17 — 2026-07-28 — Härdat läge i Finland + Baltikum (offline-kartor)
+
+- **Fyra nya pmtiles-filer på R2:** Finland (2,6 GiB), Estland (284 MiB), Lettland (524 MiB), Litauen (714 MiB) — extraherade ur Protomaps daily build `20260727` med `--maxzoom=15`, samma schema (Protomaps Basemap v4) och stil-flavors som `sverige.pmtiles`. `countries.js` har url + bytes + sha256 ifyllt, så knapparna `[🇫🇮 FI] [🇪🇪 EE] [🇱🇻 LV] [🇱🇹 LT]` i minkartans kontroll-rad är aktiva. Danmark + Norge återstår ("Kommer snart").
+- **Offline-väljaren listar grannländerna:** `shared/landskap-offline.js` har en ny grupp **Grannländer** med samma kö-, nedladdnings-, visa- och radera-flöde som landskapen. Det var nödvändigt — både "Härdat läge" och "Ladda ner offline" öppnar väljaren, så utan gruppen fanns ingen väg att faktiskt hämta ett grannland (bara att växla till dess URL). Länderna har ingen geometri i SVG-kartan, bara listrader. `countries.js` lagd i `index.html` så väljaren ser länderna även när den öppnas från rapportsidorna.
+- **Avvikelse från receptet:** `pmtiles.exe` går inte längre att köra på laptopen — Smart App Control blockerar osignerade binärer (`VerifiedAndReputablePolicyState = 1`) och det går inte att stänga av reversibelt. Extracten kördes i stället med Linux-binären i WSL (~12 MB/s, 9 min för alla fyra). Dokumenterat i `verktyg/build-grannlander-pmtiles.md`.
+- **Uppladdning kräver S3-multipart:** `wrangler r2 object put` vägrar filer > 300 MiB, så bara Estland skulle ha gått den vägen. Receptets Steg 3 är omskrivet till `upload-r2.js` (aws-sdk lib-storage, 100 MiB-delar) med R2 API-token.
+- **Kostnadsnot:** bucketen låg på ~8,1 GB (sverige + 25 landskap); +4,4 GB tar den över R2:s 10 GB-gräns → ca 0,04 USD/mån. Egress är fortsatt gratis.
+
 ## v0.3.16 — 2026-07-05 — Övningspass v2: dokument-först med låg tröskel (Joels omdesign)
 
 - **Mallen ligger färdig från start** — 45 min, standardinslag (truppföringsram + två flexibla innehållsmoment) — och syns hela tiden som **redigerbar HTML-tabell** (klicka i cellen och skriv). Ingen formulärvägg.
