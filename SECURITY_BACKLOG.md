@@ -8,6 +8,21 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### 2026-07-28 — Statusraden påstår "OpenTopoMap" även i härdat läge
+
+`minkarta.html:1020` härleder lager-etiketten enbart ur zoomnivån
+(`z <= 17 ? 'OpenTopoMap' : 'OSM Standard'`) och läser aldrig
+`MK_HARDENING.isActive()`. Kartan kan alltså rendera lokala PMTiles medan
+statusraden namnger en online-tjänst — och tvärtom efter att härdat stängts av.
+Upptäckt vid live-verifieringen av grannlands-kartorna (härdat FI aktivt,
+raden visade `z 5 — OpenTopoMap`).
+
+→ Konsekvensen är felaktig lägesbild, inte en läcka: inga extra anrop görs.
+Men raden är det enda stället som namnger *vilken* källa som ritar, så en
+operatör som kollar den för att bekräfta isolering blir vilseledd.
+**Fix:** låt `updateStatus()` fråga controllern och skriva t.ex.
+`z 5 — PMTiles (härdat)` med filnamn/land när härdat är på.
+
 ### 2026-07-05 — OPSEC-audit: "inget lämnar 7srapport i härdat läge" — hål funna
 
 Multi-agent-svep (6 dimensioner + adversariell verifiering, 75 agenter) av ws +
