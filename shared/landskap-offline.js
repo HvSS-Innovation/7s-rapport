@@ -7,9 +7,15 @@
 //  kö, och klickar "Ladda ner offline" för att hämta var och en som en egen
 //  liten PMTiles-fil — istället för hela Sverige (~4,1 GB) i en klump.
 //
+//  Utöver landskapen listas grannländerna (Danmark, Norge, Finland, Estland,
+//  Lettland, Litauen) i en egen grupp längst ner — samma nedladdnings- och
+//  visa-flöde, men utan geometri i SVG-kartan (bara listrader). Syftet är att
+//  härdat läge ska gå att använda i grannländerna med samma OPSEC.
+//
 //  Beroenden (alla via window-globaler, ingen modul-import):
 //   - window.HVLandskap        (landskap.js)      — presets: bbox/center/url/bytes
 //   - window.HVLandskapGeo     (landskap-geo.js)  — förenklad GeoJSON för kartan
+//   - window.HVCountries       (countries.js)     — grannlands-presets (valfri)
 //   - window.PMTilesPrefetch   (pmtiles-layer.js) — fetchSmart/isPrefetched/...
 //
 //  Ingen Leaflet-dep: kartan ritas som inline-SVG (Web Mercator), vilket gör
@@ -29,6 +35,7 @@
 
     var STYLE_ID = 'landskap-offline-styles';
     var OVERLAY_ID = 'landskap-offline-overlay';
+    var GRANNLAND_GRUPP = 'Grannländer';
 
     function injectStyles() {
         if (document.getElementById(STYLE_ID)) return;
@@ -191,8 +198,31 @@
             pmtiles: { url: PF.SVERIGE_URL, bytes: PF.SVERIGE_BYTES || 0, sha256: PF.SVERIGE_SHA256 || '' }
         } : null;
 
+        // Grannländerna (countries.js) får samma preset-form som landskapen så
+        // hela rad-/kö-/nedladdningslogiken nedan fungerar oförändrat. De har
+        // ingen geometri i landskaps-kartan — bara listrader.
+        var CPREFIX = '_land_';
+        function countryPreset(code) {
+            var c = global.HVCountries ? global.HVCountries.getPreset(code) : null;
+            if (!c) return null;
+            return {
+                id: CPREFIX + c.code,
+                namn: (c.flag ? c.flag + ' ' : '') + c.label,
+                landsdel: GRANNLAND_GRUPP,
+                center: c.center, zoom: c.zoom,
+                pmtiles: c.pmtiles
+            };
+        }
+        function countryIds() {
+            if (!global.HVCountries) return [];
+            return (global.HVCountries.neighbors || []).filter(function (code) {
+                return !!global.HVCountries.getPreset(code);
+            }).map(function (code) { return CPREFIX + code; });
+        }
+
         function presetFor(id) {
             if (id === '_sverige') return svPreset;
+            if (id.indexOf(CPREFIX) === 0) return countryPreset(id.slice(CPREFIX.length));
             return global.HVLandskap.getPreset(id);
         }
         function isReady(p) { return !!(p && p.pmtiles && p.pmtiles.url && p.pmtiles.bytes > 0); }
@@ -208,11 +238,11 @@
         overlay.id = OVERLAY_ID;
         overlay.className = 'lo-overlay';
         overlay.setAttribute('role', 'dialog');
-        overlay.setAttribute('aria-label', 'Ladda ner kartor offline per landskap');
+        overlay.setAttribute('aria-label', 'Ladda ner kartor offline per landskap eller grannland');
         overlay.innerHTML =
             '<div class="lo-head">' +
                 '<h2>Ladda ner kartor offline' +
-                    '<span class="lo-sub">Välj ett eller flera landskap — varje landskap blir en egen liten offline-fil.</span>' +
+                    '<span class="lo-sub">Välj ett eller flera områden — varje landskap och grannland blir en egen offline-fil.</span>' +
                 '</h2>' +
                 '<span class="lo-hovername" id="loHover"></span>' +
                 '<button type="button" class="lo-x" id="loClose" title="Stäng (Esc)" aria-label="Stäng">×</button>' +
@@ -287,6 +317,8 @@
                 var ids = (global.HVLandskap.byLandsdel && global.HVLandskap.byLandsdel[ld]) || [];
                 if (ids.length) groups.push({ namn: ld, ids: ids });
             });
+            var cIds = countryIds();
+            if (cIds.length) groups.push({ namn: GRANNLAND_GRUPP, ids: cIds });
             groups.forEach(function (grp) {
                 var h = document.createElement('div');
                 h.className = 'lo-group-h';
@@ -426,7 +458,7 @@
                 infoEl.innerHTML = 'Laddar ner… <b>' + (queue.filter(function (id) { return status[id] && status[id].state === 'cached'; }).length) +
                     '</b> klara av ' + queue.length + ' i kön.';
             } else if (q.length === 0) {
-                infoEl.innerHTML = 'Klicka på ett landskap (kartan eller listan) för att lägga det i kön.';
+                infoEl.innerHTML = 'Klicka på ett landskap i kartan — eller på ett landskap/grannland i listan — för att lägga det i kön.';
             } else {
                 infoEl.innerHTML = '<b>' + q.length + '</b> i kö · totalt <b>~' + fmtBytes(totalBytes) + '</b> att ladda ner.';
             }

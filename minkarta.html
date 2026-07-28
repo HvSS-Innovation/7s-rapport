@@ -1676,7 +1676,7 @@ function renderMapControls() {
     //   4. pannar kartan till landets center+zoom så vyn inte stannar i Sverige
     //
     // Disabled tills landets pmtiles-fil är byggd + uppladdad — se
-    // tools/build-grannlander-pmtiles.md. countries.js exponerar isReady(code).
+    // verktyg/build-grannlander-pmtiles.md. countries.js exponerar isReady(code).
     if (window.HVCountries && window.MK_HARDENING) {
         renderCountryPmtilesButtons(row3);
     } else {
@@ -1734,7 +1734,7 @@ function renderCountryPmtilesButtons(row) {
                 'Klick aktiverar och pannar till landet.';
         } else {
             btn.disabled = true;
-            btn.title = preset.label + ' — pmtiles-fil ej byggd än. Se tools/build-grannlander-pmtiles.md.';
+            btn.title = preset.label + ' — pmtiles-fil ej byggd än. Se verktyg/build-grannlander-pmtiles.md.';
         }
         btn.setAttribute('aria-pressed', 'false');
         btn.addEventListener('click', () => {
@@ -1767,7 +1767,7 @@ async function activateCountryPmtiles(code) {
     if (!preset || !preset.pmtiles || !preset.pmtiles.url) {
         window.alert('PMTiles-fil för ' + (preset ? preset.label : code) +
             ' är inte byggd och uppladdad än.\n\n' +
-            'Se tools/build-grannlander-pmtiles.md för bygginstruktioner.');
+            'Se verktyg/build-grannlander-pmtiles.md för bygginstruktioner.');
         return;
     }
     try {
