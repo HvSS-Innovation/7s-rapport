@@ -212,7 +212,9 @@
         linkRow.appendChild(fb);
         const sep = document.createElement('span');
         sep.textContent = '·';
-        sep.style.color = 'var(--border)';
+        // text-muted, inte border: border-färgen är för blek som text i
+        // ljust tema (1.53:1 mot vitt, kontrast-audit 2026-07-29).
+        sep.style.color = 'var(--text-muted)';
         linkRow.appendChild(sep);
         linkRow.appendChild(aboutToggle);
 

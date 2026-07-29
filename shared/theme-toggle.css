@@ -1,6 +1,17 @@
 /* shared/theme-toggle.css — gemensam ljust/mörkt-tema-toggle för tab-sidor.
    Återanvänder samma color-token-namn som tab-sidornas mörka tema. */
 
+/* Panel-ytor (lib/layers.js m.fl. läser --surface-1/2/3 med mörka
+   fallbacks). Utan definition föll panelen tillbaka till mörka värden i
+   BÅDA teman → i ljust tema blev det mörk text på mörk panel (kontrast
+   1.17, audit 2026-07-29). Mörka värden = exakt samma som fallbacks →
+   noll visuell förändring i mörkt tema. */
+:root {
+    --surface-1:#0f1a0f;
+    --surface-2:#1f2a1f;
+    --surface-3:#2a3a2a;
+}
+
 html[data-theme="light"] {
     color-scheme: light;
     --bg-primary:#ffffff;
@@ -11,12 +22,22 @@ html[data-theme="light"] {
     --border-focus:#2e7d32;
     --text-primary:#1a1a1a;
     --text-secondary:#33523a;
-    --text-muted:#5e6f5e;
+    /* muted mörkare än förr: klarar AA även på --surface-3-paneler */
+    --text-muted:#566356;
     --accent:#2e7d32;
     --accent-hover:#1b5e20;
-    --accent-dim:#e3f0e4;
+    /* dim blek nog att accent-text ovanpå klarar AA (4.5+, förr 4.36) */
+    --accent-dim:#edf5ed;
     --danger:#b71c1c;
     --danger-hover:#7f0000;
+    --surface-1:#f2f6f2;
+    --surface-2:#e8efe8;
+    --surface-3:#dbe6db;
+    /* Färgkodade siffror (linje.html suit-1/2/3) — mörkare nyanser så de
+       klarar AA mot vit bakgrund (originalen är valda mot mörk). */
+    --suit-1:#2e7d32;
+    --suit-2:#566356;
+    --suit-3:#9a5c00;
 }
 html[data-theme="light"] input[type="date"],
 html[data-theme="light"] input[type="time"],
@@ -39,9 +60,45 @@ html[data-theme="light"] .pill.active,
 html[data-theme="light"] .request-btn,
 html[data-theme="light"] .role-pill.active,
 html[data-theme="light"] .un-use:hover,
+html[data-theme="light"] button.primary,
+html[data-theme="light"] .knapp:not(.knapp-sekundar),
+html[data-theme="light"] .klar-banner button,
+html[data-theme="light"] .hardat-cta,
+html[data-theme="light"] button.mkt-primary,
 html[data-theme="light"] .start-btn {
     color: #ffffff;
 }
+
+/* Lager-panelens varningsrad (lib/layers.js) — mörk-tema-orange på ljus yta. */
+html[data-theme="light"] .lyr-warn {
+    color: #8a5a00;
+}
+
+/* Tangent-badgen på Maximera-knappen (minkarta/sensorskiss) — halvtransparent
+   svart över ljus knapp gav grå platta med vit text (2.85:1). */
+html[data-theme="light"] #mkFullBtn .mk-tool-shortcut,
+html[data-theme="light"] #skFullBtn .sk-tool-shortcut {
+    background: rgba(0, 0, 0, 0.62);
+}
+
+/* BETA-taggen (tccc m.fl.) — --warn-orange på blek orange yta (1.97:1). */
+html[data-theme="light"] .beta-tag {
+    color: #8a5a00;
+    border-color: #b26a00;
+}
+
+/* Drönardrift-kortets externa länk — ljus amber-text hör hemma på mörk yta;
+   i ljust tema samma amber-på-blekt-mönster som .godsdek-note. */
+html[data-theme="light"] .ext-link-card .h,
+html[data-theme="light"] .ext-link-card .btn-ext {
+    color: #8a5a00;
+}
+html[data-theme="light"] .ext-link-card .h .ext-tag {
+    background: #fff7e6;
+    color: #8a5a00;
+}
+html[data-theme="light"] .ext-link-card .btn-ext { border-color: #b26a00; }
+html[data-theme="light"] .ext-link-card .btn-ext:hover { background: #fff7e6; }
 
 /* Godsdek-varningsrutan (fg.html) hårdkodar mörka amber-färger — egen
    ljust-tema-override så den inte blir en mörkbrun ö på vit sida. */

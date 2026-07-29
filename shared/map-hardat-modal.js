@@ -80,6 +80,15 @@
         if (warningEl.__hardatDecorated) return;
         warningEl.__hardatDecorated = true;
 
+        // Basfärg för CTA-knappen som CSS-regel (inte inline) så ljus-temats
+        // override i shared/theme-toggle.css kan vinna på sidor med toggle.
+        if (!document.getElementById('hardatCtaStyle')) {
+            var st = document.createElement('style');
+            st.id = 'hardatCtaStyle';
+            st.textContent = '.hardat-cta{color:#0d1f0d}';
+            document.head.appendChild(st);
+        }
+
         var originalText = warningEl.textContent;
 
         function render() {
@@ -101,10 +110,12 @@
             warningEl.appendChild(span);
             var btn = document.createElement('button');
             btn.type = 'button';
+            // .hardat-cta: ljust tema byter textfärg till vit (theme-toggle.css)
+            // — hårdkodad mörk text klarar inte AA mot ljus-temats accent.
+            btn.className = 'hardat-cta';
             btn.textContent = 'Slå på Härdat läge';
             btn.title = 'Ladda ner kartan i förväg och rita den lokalt — inga utgående kart-anrop.';
             btn.style.background = 'var(--accent, #4caf50)';
-            btn.style.color = '#0d1f0d';
             btn.style.border = 'none';
             btn.style.borderRadius = '4px';
             btn.style.padding = '3px 10px';
