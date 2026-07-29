@@ -3,6 +3,16 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.18 — 2026-07-29 — Sex förbättringar ur grannlands-granskningen
+
+- **Fix: blå kilar (falska sjöar) i härdat läge.** Custom topo-flavorns `PolygonSymbolizer` saknade geometrifilter och canvas-fyllde även vattendrags-LineStrings i Protomaps `water`-lager → långsmala blå kilar över land (rapporterad i Estland, fanns latent även i Sverige). Nu polygonfyll enbart för geomType 3 + vattendrag som tunna blå linjer.
+- **Varningsraden leder in i Härdat läge.** "Kartbakgrunden laddas från extern server…" har nu en "Slå på Härdat läge"-knapp (öppnar väljaren) och byts mot grön bekräftelse när härdat är på. Central `decorateWarning` i `shared/map-hardat-modal.js` — rapportmodalerna får det via `attach()`, minkarta/sensorskiss via nya id:n. Sensorskiss laddar nu även landskaps-väljaren.
+- **Ärlig statusrad:** `hardenedSourceLabel()` — minkarta/sensorskiss säger "z 9 — Härdat: Estland" i stället för att påstå OpenTopoMap i härdat läge (SECURITY_BACKLOG-post åtgärdad).
+- **Kartstil-valet synliggjort:** "Kartstil"-rad i offline-väljarens footer (fungerar även innan aktivering, alla sidor med väljaren) + synlig etikett vid minkarta/sensorskiss-dropdownen. Kanonisk stil-lista i `PMTilesHardening.FLAVORS`.
+- **Grannlands-panel i väljarkartan:** FI/EE/LV/LT ritas nedskalade i egen panel bredvid Sverige (mockup) med samma hover/klick/status som landskapen. Geometri: `countries-geo.js` ur Natural Earth 50m (public domain, 809 punkter), generator `verktyg/gen-countries-geo.js`. DK/NO dyker upp när geometri + filer finns.
+- **Ljust läge AA-rent:** Playwright-kontrastaudit över alla 26 tema-sidor — 0 brott efter fix (värst före: Lager-panelen 1.17:1, vars `--surface-*`-tokens aldrig definierats). Systemfixar i `shared/theme-toggle.css` (surface-tokens, accent-dim/muted-justering, vit-text-lista, per-komponent-overrides), footer-separator, död `ui/theme.css`-länk borttagen.
+- **Sensorskiss: riktiga symboler.** CIM/PIR/KAMERA/UMRA enligt de roterbara prototyperna i `stab/Ny mapp/` (4-uddig stjärna; PIR en streckad arm 17,5°, KAMERA V ±17,5°, CIM pärlslingor som streckade ellipser, UMRA bara stjärnan) — text-placeholders borta. CCTV/DSLR/HUND utan prototyp fick egna former i samma språk: brett V ±30° (60°-sektor), smalt V ±7,5° (15°-sektor), tassavtryck. CIM/PIR/KAMERA nu riktbara (rotations-slider) som prototyperna avsåg.
+
 ## v0.3.17 — 2026-07-28 — Härdat läge i Finland + Baltikum (offline-kartor)
 
 - **Fyra nya pmtiles-filer på R2:** Finland (2,6 GiB), Estland (284 MiB), Lettland (524 MiB), Litauen (714 MiB) — extraherade ur Protomaps daily build `20260727` med `--maxzoom=15`, samma schema (Protomaps Basemap v4) och stil-flavors som `sverige.pmtiles`. `countries.js` har url + bytes + sha256 ifyllt, så knapparna `[🇫🇮 FI] [🇪🇪 EE] [🇱🇻 LV] [🇱🇹 LT]` i minkartans kontroll-rad är aktiva. Danmark + Norge återstår ("Kommer snart").

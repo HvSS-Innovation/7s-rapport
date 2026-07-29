@@ -1,9 +1,16 @@
 // ─────────────────────────────────────────────────────────────────────────────
 //  SENSORSKISS — symbolbibliotek
 //
-//  TILLFÄLLIG STATUS: markbundna sensorer (CIM/PIR/KAMERA/UMRA) är just nu
-//  text-placeholders. Slutgiltiga vektorformer ritas i externt program och
-//  byts in senare via textIcon → riktig svg.
+//  Markbundna sensorer (CIM/PIR/KAMERA/UMRA) följer de roterbara
+//  HTML-prototyperna i stab/Ny mapp/ (reglementsspråket): en 4-uddig
+//  konkav stjärna som bas — UMRA är bara stjärnan, PIR har EN streckad
+//  arm 17,5° från vertikalen, KAMERA ett V-par ±17,5°, CIM två pärlslingor
+//  (här förenklade till streckade ellipser) ovan/under stjärnan.
+//
+//  CCTV/DSLR/HUND saknar prototyp — egna former i samma språk (beslut
+//  2026-07-29): CCTV = stjärna + brett V ±30° (matchar 60°-sektorn),
+//  DSLR = stjärna + smalt V ±7,5° (15°-sektorn), HUND = tassavtryck
+//  (riktning = dit hunden är vänd).
 //
 //  Övriga symboler (Larmmina, RPAS, Enkelpost, Dubbelpost, In/Utfartspost,
 //  Sensorområde) är reglementsenliga (PDF s. 72 + JL.pdf).
@@ -27,16 +34,33 @@ const SK_INK  = '#000000';
 const SK_HALO = '#ffffff';
 const SK_DASH = '6 4';   // streckad riktningslinje (PDF s. 72)
 
-// PLACEHOLDER för markbundna sensorer (CIM/PIR/KAMERA/UMRA): bara texten
-// renderas i ikonen tills slutgiltiga vektorformer är klara. Anpassar
-// fontstorlek efter teckenantal så även "KAMERA" (6 tecken) ryms.
-function textIcon(label) {
-    const fs = label.length <= 4 ? 8 : 5.6;
-    return '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
-        '<text x="12" y="15" text-anchor="middle" ' +
-            'font-family="Inter,Arial,sans-serif" font-size="' + fs + '" ' +
-            'font-weight="800" fill="' + SK_INK + '">' + label + '</text>' +
-    '</svg>';
+// 4-uddig konkav stjärna (sensorsymbolens bas, från prototyperna i
+// stab/Ny mapp/ — proportioner: kontrollpunkt ≈ 31 % ut / 28 % upp av
+// halvhöjden). half = halva höjden i viewBox-enheter, centrum (12,12).
+function sensorStar(half) {
+    const cx = 12, cy = 12;
+    const qx = +(half * 0.31).toFixed(2);
+    const qy = +(half * 0.28).toFixed(2);
+    return 'M' + cx + ',' + (cy - half) +
+        ' Q' + (cx + qx) + ',' + (cy - qy) + ' ' + (cx + half) + ',' + cy +
+        ' Q' + (cx + qx) + ',' + (cy + qy) + ' ' + cx + ',' + (cy + half) +
+        ' Q' + (cx - qx) + ',' + (cy + qy) + ' ' + (cx - half) + ',' + cy +
+        ' Q' + (cx - qx) + ',' + (cy - qy) + ' ' + cx + ',' + (cy - half) + ' Z';
+}
+function starPath(half) {
+    return '<path d="' + sensorStar(half) + '" fill="' + SK_INK + '"/>';
+}
+
+// Streckad riktningsarm från stjärnspetsen utåt, vinkel i grader från
+// vertikalen (prototypen: arm från r≈stjärnhalva till ~3,5× ut; här klipps
+// den vid viewBox-kanten så paletten inte beskär den).
+function sensorArm(angleDeg, r0, r1) {
+    const a = angleDeg * Math.PI / 180;
+    const x = r => (12 + r * Math.sin(a)).toFixed(1);
+    const y = r => (12 - r * Math.cos(a)).toFixed(1);
+    return '<line x1="' + x(r0) + '" y1="' + y(r0) + '" x2="' + x(r1) + '" y2="' + y(r1) + '" ' +
+        'stroke="' + SK_INK + '" stroke-width="1.6" ' +
+        'stroke-dasharray="2.2 1.8" stroke-linecap="round"/>';
 }
 
 // Bygger en SVG där den roterande delen ligger inne i en <g> som tar emot
@@ -54,72 +78,106 @@ function rotSvg(rotatingInner, staticInner) {
 
 const SYMBOLS = {
 
-    // Markbundna sensorer — PLACEHOLDER med ren text. Ersätts senare med
-    // vektorformer (slutar PR-cykeln med dem i externt program). Inget
-    // prefix → ingen auto-numrering, inget "C1"/"P1" etiketten — bara typen.
+    // Markbundna sensorer — vektorformer enligt prototyperna i stab/Ny mapp/.
+    // Inget prefix → ingen auto-numrering, inget "C1"/"P1" i etiketten.
+
+    // CIM — stjärna + två pärlslingor (prototypens 20-pärlors ellipsringar
+    // förenklade till streckade ellipser; läsbart i 24 px). Slingorna
+    // roterar runt stjärnan (prototypens reglage), stjärnan står still.
     cim: {
         label: 'CIM',
         category: 'point',
         prefix: null,
-        directional: false,
-        svg: textIcon('CIM')
+        directional: true,
+        svg: rotSvg(
+            '<ellipse cx="12" cy="6.9" rx="2.6" ry="5.0" fill="none" ' +
+                'stroke="' + SK_INK + '" stroke-width="1.3" stroke-dasharray="1.6 1.4"/>' +
+            '<ellipse cx="12" cy="17.1" rx="2.6" ry="5.0" fill="none" ' +
+                'stroke="' + SK_INK + '" stroke-width="1.3" stroke-dasharray="1.6 1.4"/>',
+            starPath(5.5)
+        )
     },
+    // PIR — stjärna + EN streckad arm 17,5° från vertikalen (prototypen).
     pir: {
         label: 'PIR',
         category: 'point',
         prefix: null,
-        directional: false,
-        svg: textIcon('PIR')
+        directional: true,
+        svg: rotSvg(sensorArm(17.5, 6.4, 11.3), starPath(6))
     },
+    // KAMERA — stjärna + V-par ±17,5° (35° öppning, prototypen).
     kamera: {
         label: 'KAMERA',
         category: 'point',
         prefix: null,
-        directional: false,
-        svg: textIcon('KAMERA')
+        directional: true,
+        svg: rotSvg(
+            sensorArm(17.5, 6.4, 11.3) + sensorArm(-17.5, 6.4, 11.3),
+            starPath(6)
+        )
     },
+    // UMRA — bara stjärnan (prototypen). Ingen riktning.
     umra: {
         label: 'UMRA',
         category: 'point',
         prefix: null,
         directional: false,
-        svg: textIcon('UMRA')
+        svg: '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">' +
+            starPath(9) +
+        '</svg>'
     },
 
     // CCTV — vridbar kamera med sektorfält (~60° default, räckvidd ~50 m).
     // Sektorn ritas som halvgenomskinlig polygon från symbolens center i
     // obj.rotation grader. Anvandaren kan andra angle/range i edit-popupen.
+    // Ikon: stjärna + brett V ±30° — samma formspråk som KAMERA men med
+    // öppning som speglar 60°-sektorn (egen form, prototyp saknas).
     cctv: {
         label: 'CCTV',
         category: 'point',
         prefix: null,
         directional: true,
         sector: { angle: 60, range: 50 },
-        svg: textIcon('CCTV')
+        svg: rotSvg(
+            sensorArm(30, 6.4, 11.2) + sensorArm(-30, 6.4, 11.2),
+            starPath(6)
+        )
     },
 
     // Digital systemkamera med stark zoom — smalare sektor (~15°) men
     // langre rackvidd (~300 m). Samma rendering som CCTV men andra defaults.
+    // Ikon: stjärna + smalt V ±7,5° (egen form, prototyp saknas).
     dslr: {
         label: 'DSLR',
         category: 'point',
         prefix: null,
         directional: true,
         sector: { angle: 15, range: 300 },
-        svg: textIcon('DSLR')
+        svg: rotSvg(
+            sensorArm(7.5, 6.4, 11.4) + sensorArm(-7.5, 6.4, 11.4),
+            starPath(6)
+        )
     },
 
     // Hund — markbunden sensor. Toggle "Fast / Patrullerande" i edit-popup
     // styr obj.patrull (default false). Vid patrullerande ritas en
     // separat patrullstig (linje-verktyget) for rutten. Directional = vart
-    // hunden tittar/gar.
+    // hunden tittar/gar. Ikon: tassavtryck som pekar i riktningen (egen
+    // form, prototyp saknas) — hela tassen roterar.
     hund: {
         label: 'Hund',
         category: 'point',
         prefix: 'H',
         directional: true,
         toggle: { field: 'patrull', on: 'Patrullerande', off: 'Fast' },
-        svg: textIcon('HUND')
+        svg: rotSvg(
+            '<ellipse cx="12" cy="14.6" rx="3.5" ry="2.9" fill="' + SK_INK + '"/>' +
+            '<circle cx="8.4" cy="10.6" r="1.35" fill="' + SK_INK + '"/>' +
+            '<circle cx="10.9" cy="9.0" r="1.35" fill="' + SK_INK + '"/>' +
+            '<circle cx="13.1" cy="9.0" r="1.35" fill="' + SK_INK + '"/>' +
+            '<circle cx="15.6" cy="10.6" r="1.35" fill="' + SK_INK + '"/>',
+            ''
+        )
     },
 
     // Larmmina — stor fylld svart cirkel + linje. Linjen anger
