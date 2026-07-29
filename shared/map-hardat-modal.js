@@ -46,14 +46,78 @@
         return btn;
     }
 
-    function dimWarning(warningEl, hardened) {
-        if (!warningEl) return;
-        if (hardened) {
-            warningEl.style.opacity = '0.35';
-            warningEl.style.transition = 'opacity 0.18s';
-        } else {
-            warningEl.style.opacity = '';
+    // Gemensam aktiveringsväg: landskaps-väljaren om den finns på sidan,
+    // annars direkt-toggle med OPSEC-confirm (samma logik som knappen).
+    async function activateFlow(ctrl, map) {
+        if (global.LandskapOffline && typeof global.LandskapOffline.open === 'function') {
+            global.LandskapOffline.open({ ctrl: ctrl, map: map });
+            return;
         }
+        if (!ctrl.isActive()) {
+            try {
+                var cached = await ctrl.checkPrefetched();
+                if (!cached) {
+                    var ok = window.confirm(
+                        'Härdat läge kräver att kartan laddats ner via Min Karta-sidan.\n\n' +
+                        'Slå på ändå? Då hämtas kart-tiles on-demand från R2 — ' +
+                        'din IP + visat område kan synas hos hosting-servern första gången.\n\n' +
+                        'OK = aktivera ändå. Avbryt = behåll OpenTopoMap.'
+                    );
+                    if (!ok) return;
+                }
+            } catch (_) { /* check misslyckades — låt toggle gå igenom */ }
+            await ctrl.toggle();
+        }
+    }
+
+    // Gör varningsraden ("kartbakgrunden laddas från extern server…") till en
+    // väg IN i Härdat läge i stället för bara en varning: i oläge får den en
+    // "Slå på Härdat läge"-knapp, i påläge byts den till en grön bekräftelse.
+    // Pedagogiken: användaren som öppnar kartan för en koordinat ska se att
+    // skyddat läge finns — inte behöva hitta en liten knapp i headern.
+    function decorateWarning(warningEl, ctrl, map) {
+        if (!warningEl || !ctrl) return;
+        if (warningEl.__hardatDecorated) return;
+        warningEl.__hardatDecorated = true;
+
+        var originalText = warningEl.textContent;
+
+        function render() {
+            var active = ctrl.isActive();
+            warningEl.innerHTML = '';
+            if (active) {
+                warningEl.style.background = '#10240f';
+                warningEl.style.borderBottom = '1px solid #4caf50';
+                warningEl.style.color = '#9ed99e';
+                warningEl.textContent =
+                    '✓ Härdat läge PÅ — kartbakgrunden ritas lokalt, inga externa kart-anrop.';
+                return;
+            }
+            warningEl.style.background = '#2a1a0a';
+            warningEl.style.borderBottom = '1px solid #c8a24e';
+            warningEl.style.color = '#c8a24e';
+            var span = document.createElement('span');
+            span.textContent = originalText + ' ';
+            warningEl.appendChild(span);
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.textContent = 'Slå på Härdat läge';
+            btn.title = 'Ladda ner kartan i förväg och rita den lokalt — inga utgående kart-anrop.';
+            btn.style.background = 'var(--accent, #4caf50)';
+            btn.style.color = '#0d1f0d';
+            btn.style.border = 'none';
+            btn.style.borderRadius = '4px';
+            btn.style.padding = '3px 10px';
+            btn.style.marginLeft = '8px';
+            btn.style.font = 'inherit';
+            btn.style.fontWeight = '700';
+            btn.style.cursor = 'pointer';
+            btn.style.whiteSpace = 'nowrap';
+            btn.addEventListener('click', function () { activateFlow(ctrl, map); });
+            warningEl.appendChild(btn);
+        }
+        ctrl.onChange(render);
+        render();
     }
 
     function setActiveStyle(btn, active) {
@@ -107,41 +171,25 @@
         function refresh() {
             var active = ctrl.isActive();
             setActiveStyle(btn, active);
-            dimWarning(warningEl, active);
             // Härdat aktivt → PMTiles-lagret ligger redan på kartan; lås upp vyn
             // genom att dölja spinnern (OTM:s 'load' kommer aldrig fyra här).
             if (active && spinnerEl) spinnerEl.classList.add('hidden');
         }
         ctrl.onChange(refresh);
         refresh();
+        decorateWarning(warningEl, ctrl, map);
 
         btn.addEventListener('click', async function () {
             // Landskaps-väljaren är den nya ingången: klick öppnar väljaren
             // där operatören laddar ner landskap offline och slår på/av härdat
-            // läge per landskap. Faller tillbaka till gammalt toggle-beteende
-            // på sidor som inte inkluderat landskap-offline.js än.
-            if (global.LandskapOffline && typeof global.LandskapOffline.open === 'function') {
-                global.LandskapOffline.open({ ctrl: ctrl, map: map });
+            // läge per landskap. När härdat redan är på öppnas väljaren också
+            // (avstängning görs där inne). Sidor utan landskap-offline.js får
+            // fallback-toggle med OPSEC-confirm via activateFlow.
+            if (ctrl.isActive() && !(global.LandskapOffline && global.LandskapOffline.open)) {
+                await ctrl.toggle();
                 return;
             }
-            // Fallback (utan landskaps-väljare): toggle direkt. Om användaren
-            // slår PÅ utan pre-downloadad fil: varna att första request:en
-            // kommer synas hos R2-hosten.
-            if (!ctrl.isActive()) {
-                try {
-                    var cached = await ctrl.checkPrefetched();
-                    if (!cached) {
-                        var ok = window.confirm(
-                            'Härdat läge kräver att kartan laddats ner via Min Karta-sidan.\n\n' +
-                            'Slå på ändå? Då hämtas kart-tiles on-demand från R2 — ' +
-                            'din IP + visat område kan synas hos hosting-servern första gången.\n\n' +
-                            'OK = aktivera ändå. Avbryt = behåll OpenTopoMap.'
-                        );
-                        if (!ok) return;
-                    }
-                } catch (_) { /* check misslyckades — låt toggle gå igenom */ }
-            }
-            await ctrl.toggle();
+            await activateFlow(ctrl, map);
         });
 
         return ctrl;
@@ -165,6 +213,40 @@
         });
     }
 
-    global.MapHardatModal = { attach: attach };
+    // Namnger vad Härdat läge faktiskt ritar, för statusrader ("z 9 — Härdat:
+    // Estland"). Utan denna sa statusraden "OpenTopoMap" även när kartan kom
+    // ur en lokal PMTiles-fil — felaktig lägesbild för en operatör som
+    // kontrollerar sin isolering (SECURITY_BACKLOG 2026-07-28).
+    // Returnerar null när härdat är av → anroparen behåller sin OTM/OSM-etikett.
+    function hardenedSourceLabel(ctrl) {
+        if (!ctrl || !ctrl.isActive || !ctrl.isActive()) return null;
+        var url = (ctrl.getUrl && ctrl.getUrl()) || '';
+        var name = null;
+        if (global.PMTilesPrefetch && url === global.PMTilesPrefetch.SVERIGE_URL) {
+            name = 'Sverige';
+        }
+        if (!name && global.HVCountries && global.HVCountries.pmtilesPresets) {
+            var cp = global.HVCountries.pmtilesPresets;
+            for (var code in cp) {
+                if (cp[code].pmtiles && cp[code].pmtiles.url === url) { name = cp[code].label; break; }
+            }
+        }
+        if (!name && global.HVLandskap && global.HVLandskap.presets) {
+            var lp = global.HVLandskap.presets;
+            for (var id in lp) {
+                if (lp[id].pmtiles && lp[id].pmtiles.url === url) { name = lp[id].namn; break; }
+            }
+        }
+        return name ? 'Härdat: ' + name : 'Härdat (PMTiles)';
+    }
+
+    // decorateWarning + hardenedSourceLabel exponeras separat för sidor med
+    // inline-karta (minkarta, sensorskiss) som har egna kontroller men samma
+    // varningsrad ovanför kartan och samma statusrad under den.
+    global.MapHardatModal = {
+        attach: attach,
+        decorateWarning: decorateWarning,
+        hardenedSourceLabel: hardenedSourceLabel
+    };
 
 })(window);

@@ -8,7 +8,11 @@ med ✅ + datum.
 
 ## Öppna poster
 
-### 2026-07-28 — Statusraden påstår "OpenTopoMap" även i härdat läge
+### ✅ 2026-07-28 — Statusraden påstår "OpenTopoMap" även i härdat läge (åtgärdat 2026-07-29)
+
+Åtgärdat: `MapHardatModal.hardenedSourceLabel(ctrl)` namnger aktiv källa
+("Härdat: Estland" osv. via HVCountries/HVLandskap-presets); minkarta +
+sensorskiss använder den i statusraden och uppdaterar vid toggle.
 
 `minkarta.html:1020` härleder lager-etiketten enbart ur zoomnivån
 (`z <= 17 ? 'OpenTopoMap' : 'OSM Standard'`) och läser aldrig

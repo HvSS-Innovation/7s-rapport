@@ -43,6 +43,11 @@
     <script src="lib/geo-import.js" defer></script>
     <script src="lib/layers.js" defer></script>
     <script src="sensorskiss-tutorial.js" defer></script>
+    <script src="countries.js" defer></script>
+    <script src="landskap.js" defer></script>
+    <script src="landskap-geo.js" defer></script>
+    <script src="shared/landskap-offline.js" defer></script>
+    <script src="shared/map-hardat-modal.js" defer></script>
     <script src="offline-tiles.js" defer></script>
     <script type="module" src="pmtiles-layer.js"></script>
     <script type="module" src="topo-overlay.js"></script>
@@ -540,7 +545,7 @@
         </div>
 
         <div class="map-wrap">
-            <div style="background:#2a1a0a;border-bottom:1px solid #c8a24e;padding:8px 14px;font-size:0.72rem;color:#c8a24e;line-height:1.4;text-align:center">OBS: Kartbakgrunden laddas från extern server som ser IP och visat område. Undvik i skarpt läge.</div>
+            <div id="skExtTileWarning" style="background:#2a1a0a;border-bottom:1px solid #c8a24e;padding:8px 14px;font-size:0.72rem;color:#c8a24e;line-height:1.4;text-align:center">OBS: Kartbakgrunden laddas från extern server som ser IP och visat område. Undvik i skarpt läge.</div>
             <div id="mapContainer"><div class="map-spinner" id="mapSpinner"></div></div>
             <div class="status-row">
                 <span class="status-mgrs" id="statusMgrs">—</span>
@@ -836,7 +841,19 @@ function initMap() {
                 if (window.SK_HARDENING.isActive()) {
                     spinner.classList.add('hidden');
                 }
+                // Statusraden namnger aktiv kartkälla — uppdatera vid toggle.
+                updateStatus();
             });
+            // Varningsraden blir väg in i Härdat läge — se minkarta.html.
+            const wireWarning = () => {
+                if (window.MapHardatModal && window.MapHardatModal.decorateWarning) {
+                    window.MapHardatModal.decorateWarning(
+                        document.getElementById('skExtTileWarning'), window.SK_HARDENING, map);
+                    return true;
+                }
+                return false;
+            };
+            if (!wireWarning()) window.addEventListener('DOMContentLoaded', wireWarning, { once: true });
             window.dispatchEvent(new CustomEvent('SK_HARDENING:ready'));
             return true;
         }
@@ -885,7 +902,11 @@ function updateStatus() {
     const z = map.getZoom();
     const mgrs = safeMgrs(c.lat, c.lng);
     document.getElementById('statusMgrs').textContent = mgrs || '—';
-    const layerLabel = z <= 17 ? 'OpenTopoMap' : 'OSM Standard';
+    // I härdat läge ritas kartan ur lokal PMTiles — statusraden ska namnge
+    // det (och vilket område), inte påstå OpenTopoMap (felaktig lägesbild).
+    const hardLabel = (window.MapHardatModal && window.MapHardatModal.hardenedSourceLabel)
+        ? window.MapHardatModal.hardenedSourceLabel(window.SK_HARDENING) : null;
+    const layerLabel = hardLabel || (z <= 17 ? 'OpenTopoMap' : 'OSM Standard');
     document.getElementById('statusZoom').textContent = 'z ' + z + ' — ' + layerLabel;
 }
 
