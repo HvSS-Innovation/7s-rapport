@@ -49,10 +49,21 @@ function topoPaintRules() {
             dataLayer: 'landuse',
             symbolizer: new PolygonSymbolizer({ fill: '#d8d4cc' })
         },
-        // Vatten — ljusblå
+        // Vatten — ljusblå. OBS: 'water'-lagret innehåller BÅDE polygoner
+        // (sjöar/hav) och LineStrings (åar/bäckar). En PolygonSymbolizer
+        // utan filter canvas-fyller även de öppna linjerna → långsmala blå
+        // "kilar" över land (upptäckt i Estland 2026-07-28, fanns latent
+        // även i Sverige). geomType: 1=punkt, 2=linje, 3=polygon.
         {
             dataLayer: 'water',
-            symbolizer: new PolygonSymbolizer({ fill: '#a4cce0' })
+            symbolizer: new PolygonSymbolizer({ fill: '#a4cce0' }),
+            filter: (z, f) => f.geomType === 3
+        },
+        // Vattendrag som linjer — samma blå, tunt streck (OTM-likt)
+        {
+            dataLayer: 'water',
+            symbolizer: new LineSymbolizer({ color: '#a4cce0', width: 1.1 }),
+            filter: (z, f) => f.geomType === 2
         },
         // Vägar — mörkgrå linjer
         {
