@@ -333,6 +333,61 @@ Här samlas arbetsmoment, inrapporterade fel (Issues från GitHub) och önskemå
 
 ### 📝 Nya / Öppna (Arbetsfördelning)
 
+#### 🐛 Härdat läge: falska "sjöar" (blå kilar) i grannlands-kartorna
+**Symptom (2026-07-28, Estland):** i härdat läge renderas långsmala blå kilar/
+trianglar över land som ser ut som sjöar men inte finns — sannolikt i alla fyra
+nya länderna (FI/EE/LV/LT). Skärmdump i ärendet.
+**Hypotes:** felrenderade vattenpolygoner i mellanzoom — antingen klipps
+polygoner sönder av `pmtiles extract`-bbox:en, eller så hanterar vår
+protomaps-leaflet-version ofullständiga ringar fel. Sverige-filen visar inte
+artefakten (byggd ur äldre daily build, annan pipeline-version).
+**Felsökning:** öppna `estland.pmtiles` i pmtiles.io-viewern och jämför samma
+vy mot Protomaps ursprungliga daily build; skiljer de sig är det extracten →
+bygg om mot färskare daily; ser originalet likadant ut är det renderaren →
+uppgradera `vendor/protomaps/protomaps-leaflet.esm.js`.
+
+#### 🧭 Pedagogik: led in användaren till Härdat läge från kartväljaren
+"Välj plats på kartan"-modalen (MGRS-koordinat) visar idag bara varningsraden
+"OBS: Kartbakgrunden laddas från extern server… Undvik i skarpt läge" och en
+HÄRDAT-knapp som är lätt att missa. Gör vägen till skyddat läge till det
+naturliga valet: t.ex. första-gångs-prompt med "Slå på härdat" som primär
+knapp, tydligare visuell koppling varning ↔ knapp, och/eller att knappen
+pulserar/expanderar när varningen visas. Mål: en användare som öppnar kartan
+för en koordinat ska förstå att härdat finns och vad det ger, utan förkunskap.
+
+#### 🎨 Synliggör stil-valen i Härdat läge
+Idag: stil-dropdownen (Light/Dark/White/Grayscale/Black/Topo) dyker upp
+omärkt bredvid härdat-knappen i minkarta/sensorskiss först när härdat är PÅ —
+man måste veta att den finns. Gör valet upptäckbart: etikett ("Kartstil"),
+placering i härdat-flödet (t.ex. i landskaps-väljaren eller en liten
+stil-förhandsvisning med swatches), och samma möjlighet från rapportsidornas
+kartmodal — inte bara minkarta/sensorskiss.
+
+#### 🗺️ Offline-väljaren: Finland + Baltikum som klickbara ytor i SVG-kartan
+Grannländerna finns idag bara som listrader. Lägg in FI/EE/LV/LT (och DK/NO
+när filerna finns) som geometri bredvid Sverige i väljarens SVG-karta —
+nedskalade i förhållande till Sverige (mockup i ärendet: Sverige stor,
+grannländerna i egen ruta bredvid). Samma hover-beteende som landskapen:
+landets namn highlightas/tooltip följer pekaren, klick köar. Mobil: länderna
+kan behöva skalas ner ytterligare eller staplas för att få plats — testa
+< 760 px-brytpunkten. Förenklad geometri i stil med `landskap-geo.js`
+(~3 600 punkter för 25 landskap; håll grannländerna i samma storleksordning).
+
+#### ☀️ Ljust läge: kontrastgenomgång över hela domänen
+I ljust läge är flera ytor mörk text på mörk bakgrund (exempel i skärmdump:
+Lager-panelen i minkarta — "Lager 1/10", "+ Nytt", knappraden). Gå igenom
+samtliga sidor i ljust läge och rätta kontrasten: text/bakgrund ska klara
+WCAG AA (4,5:1). Trolig rot: komponenter med hårdkodade mörka färger som inte
+följer temavariablerna i `ui/`-CSS:en. Gäller domänen, inte bara minkarta.
+
+#### 🖼️ Sensorskiss: riktiga SVG-ikoner i symbolpaletten
+Markbundna sensorer (CIM, PIR, KAMERA, UMRA, CCTV, DSLR, HUND m.fl.) visas
+idag som text-mockups i paletten. Rita riktiga SVG-ikoner och ersätt
+mockupsen. Utgå från befintlig dokumentation/symbolstandard där sådan finns
+(`sensorskiss-symbols.js`, ev. underlag i repo/ordrar); där dokumentation
+saknas: ta fram egna förslag och implementera dem direkt (enhetlig stil,
+läsbara i litet format, fungerar mot både ljus och mörk bakgrund).
+
 #### 📚 [Ny flik] HANDTECKEN – Interaktiv utbildning (stridstecken, larm, kolonn, helikopter)
 **Mål:** En ny flik `handtecken.html` där användaren kan lära sig och repetera FM:s signaler och tecken från *Reglemente Soldaten i Fält 2001*, kap 14 (s. 438–449). Inte en PDF-visare – en **interaktiv, sökbar och quiz-bar** utbildningsmodul som fungerar offline (PWA).
 
@@ -618,8 +673,11 @@ Utbildningen är upplagd som ett *fältpass med stegrande uppdrag*, ej som flash
 
 ### 🌍 Härdat läge per grannland (DK/NO/FI/EE/LV/LT)
 
-**Status (2026-05-05, omtänkt):** Klient-UI och bygg-pipeline klar.
-**Återstår:** Bygga + ladda upp 6 pmtiles-filer till R2 (Joel kör).
+**Status (2026-07-28):** FI/EE/LV/LT byggda + uppladdade till R2 och LIVE
+(v0.3.17) — lands-knapparna aktiva, länderna nedladdningsbara i
+offline-väljarens grupp Grannländer. **Återstår:** Danmark + Norge (samma
+recept, `verktyg/build-grannlander-pmtiles.md` — extract i WSL,
+S3-multipart för > 300 MiB).
 
 **Bakgrund:** Första försök (commit `f2b623c`) byggde en **tile-cache-modal**
 för grannländer ovanpå befintliga `offline-tiles.js` (per-bbox-cache av
