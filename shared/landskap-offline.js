@@ -63,6 +63,8 @@
             '.lo-land.lo-cached.lo-active{fill:#4aa3c8}',
             '.lo-land.lo-soon{fill:#162a16;cursor:not-allowed;opacity:0.65}',
             '.lo-land.lo-soon:hover{fill:#162a16}',
+            // Grannlands-panelens bakgrundsruta (FI + Baltikum till höger)
+            '.lo-cpanel{fill:#0f240f;stroke:#1e3d1e;stroke-width:1.5}',
             '.lo-side{flex:0 0 360px;max-width:46%;display:flex;flex-direction:column;border-left:1px solid #2d4a2d;background:#10220f;min-height:0}',
             '.lo-list{flex:1 1 auto;overflow-y:auto;padding:8px 10px}',
             '.lo-group-h{font-size:0.68rem;text-transform:uppercase;letter-spacing:0.08em;color:#8aaa8a;margin:12px 4px 4px;font-weight:700}',
@@ -319,20 +321,70 @@
         function hideTip() { tip.classList.remove('lo-tip-on'); }
 
         // ── SVG-karta ──────────────────────────────────────────────────────
+        var SVG_NS = 'http://www.w3.org/2000/svg';
         var proj = buildProjection(global.HVLandskapGeo, 1000);
-        svg.setAttribute('viewBox', '0 0 ' + proj.width + ' ' + Math.round(proj.height));
         var pathEls = {};
         var order = global.HVLandskap.order || Object.keys(global.HVLandskap.presets);
         order.forEach(function (id) {
             var pr = proj.paths[id];
             if (!pr) return;
-            var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            var path = document.createElementNS(SVG_NS, 'path');
             path.setAttribute('d', pr.d);
             path.setAttribute('class', 'lo-land');
             path.dataset.id = id;
             svg.appendChild(path);
             pathEls[id] = path;
         });
+
+        // ── Grannlands-panel (FI + Baltikum) bredvid Sverige ────────────────
+        // Egen panel till höger, nedskalad i förhållande till Sverige (mockup
+        // 2026-07-29). Länderna får samma hover-/klick-/status-beteende som
+        // landskapen genom att registreras i pathEls under sina väljar-id:n
+        // (_land_FI osv.). Geometri: countries-geo.js (Natural Earth 50m,
+        // public domain) — bara länder med både geometri OCH preset ritas,
+        // så DK/NO dyker upp automatiskt när de läggs till i generatorn.
+        var totalW = proj.width;
+        var geoC = global.HVCountriesGeo;
+        var wanted = {};
+        countryIds().forEach(function (id) { wanted[id.slice(CPREFIX.length)] = id; });
+        var cFeats = (geoC && geoC.features) ? geoC.features.filter(function (f) {
+            return wanted[f.properties.id];
+        }) : [];
+        if (cFeats.length) {
+            var GAP = 48, PANEL_PAD = 16, REL_H = 0.80; // panelhöjd rel. Sverige
+            var sub = { features: cFeats };
+            // buildProjection skalar från bredd; räkna om bredden så panelens
+            // höjd landar på REL_H × Sveriges höjd (pad 6 i buildProjection
+            // skalar linjärt med (width − 2·pad)).
+            var trial = buildProjection(sub, 500);
+            var k = (proj.height * REL_H - 12) / (trial.height - 12);
+            var projC = buildProjection(sub, 12 + (500 - 12) * k);
+            var offX = proj.width + GAP;
+            var offY = (proj.height - projC.height) / 2;
+            var grp = document.createElementNS(SVG_NS, 'g');
+            grp.setAttribute('transform', 'translate(' + offX.toFixed(1) + ' ' + offY.toFixed(1) + ')');
+            var panelBg = document.createElementNS(SVG_NS, 'rect');
+            panelBg.setAttribute('x', -PANEL_PAD);
+            panelBg.setAttribute('y', -PANEL_PAD);
+            panelBg.setAttribute('width', projC.width + PANEL_PAD * 2);
+            panelBg.setAttribute('height', projC.height + PANEL_PAD * 2);
+            panelBg.setAttribute('rx', 18);
+            panelBg.setAttribute('class', 'lo-cpanel');
+            grp.appendChild(panelBg);
+            cFeats.forEach(function (f) {
+                var pr = projC.paths[f.properties.id];
+                if (!pr) return;
+                var path = document.createElementNS(SVG_NS, 'path');
+                path.setAttribute('d', pr.d);
+                path.setAttribute('class', 'lo-land');
+                path.dataset.id = wanted[f.properties.id];
+                grp.appendChild(path);
+                pathEls[wanted[f.properties.id]] = path;
+            });
+            svg.appendChild(grp);
+            totalW = offX + projC.width + PANEL_PAD;
+        }
+        svg.setAttribute('viewBox', '0 0 ' + Math.round(totalW) + ' ' + Math.round(proj.height));
 
         // ── Lista ──────────────────────────────────────────────────────────
         var rowEls = {};

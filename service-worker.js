@@ -13,6 +13,7 @@ const FILES = [
   './app6-data.js',
   './app6.html',
   './countries.js',
+  './countries-geo.js',
   './data.html',
   './eobusare.html',
   './fg-data.js',
