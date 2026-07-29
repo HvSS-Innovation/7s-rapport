@@ -7,10 +7,12 @@
 //  arm 17,5° från vertikalen, KAMERA ett V-par ±17,5°, CIM två pärlslingor
 //  (här förenklade till streckade ellipser) ovan/under stjärnan.
 //
-//  CCTV/DSLR/HUND saknar prototyp — egna former i samma språk (beslut
-//  2026-07-29): CCTV = stjärna + brett V ±30° (matchar 60°-sektorn),
-//  DSLR = stjärna + smalt V ±7,5° (15°-sektorn), HUND = tassavtryck
-//  (riktning = dit hunden är vänd).
+//  CCTV/DSLR/HUND saknar prototyp — egna former (beslut 2026-07-29):
+//  civila siluetter som distinkt skiljer sig från stjärnfamiljen, så
+//  tekniska kameror inte förväxlas med reglementssensorerna. CCTV =
+//  övervakningskamera (kamerahus + objektiv + väggfäste), DSLR =
+//  systemkamera med tele-objektiv i steg, HUND = tassavtryck. Alla tre
+//  roterar i sin helhet (riktning = dit de pekar).
 //
 //  Övriga symboler (Larmmina, RPAS, Enkelpost, Dubbelpost, In/Utfartspost,
 //  Sensorområde) är reglementsenliga (PDF s. 72 + JL.pdf).
@@ -130,8 +132,9 @@ const SYMBOLS = {
     // CCTV — vridbar kamera med sektorfält (~60° default, räckvidd ~50 m).
     // Sektorn ritas som halvgenomskinlig polygon från symbolens center i
     // obj.rotation grader. Anvandaren kan andra angle/range i edit-popupen.
-    // Ikon: stjärna + brett V ±30° — samma formspråk som KAMERA men med
-    // öppning som speglar 60°-sektorn (egen form, prototyp saknas).
+    // Ikon: civil övervakningskamera-siluett (kamerahus med objektiv,
+    // fästarm + väggfot) som pekar i riktningen — distinkt mot
+    // stjärnfamiljen. Hela siluetten roterar.
     cctv: {
         label: 'CCTV',
         category: 'point',
@@ -139,14 +142,19 @@ const SYMBOLS = {
         directional: true,
         sector: { angle: 60, range: 50 },
         svg: rotSvg(
-            sensorArm(30, 6.4, 11.2) + sensorArm(-30, 6.4, 11.2),
-            starPath(6)
+            '<rect x="8.4" y="4" width="7.2" height="8" rx="1.5" fill="' + SK_INK + '"/>' +
+            '<circle cx="12" cy="6.6" r="1.6" fill="' + SK_HALO + '"/>' +
+            '<line x1="12" y1="12" x2="12" y2="15.5" ' +
+                'stroke="' + SK_INK + '" stroke-width="1.8"/>' +
+            '<rect x="9.2" y="15.5" width="5.6" height="2.3" rx="1" fill="' + SK_INK + '"/>',
+            ''
         )
     },
 
     // Digital systemkamera med stark zoom — smalare sektor (~15°) men
     // langre rackvidd (~300 m). Samma rendering som CCTV men andra defaults.
-    // Ikon: stjärna + smalt V ±7,5° (egen form, prototyp saknas).
+    // Ikon: civil systemkamera-siluett i sidovy — kamerahus + tele-objektiv
+    // i två steg som pekar i riktningen. Hela siluetten roterar.
     dslr: {
         label: 'DSLR',
         category: 'point',
@@ -154,8 +162,11 @@ const SYMBOLS = {
         directional: true,
         sector: { angle: 15, range: 300 },
         svg: rotSvg(
-            sensorArm(7.5, 6.4, 11.4) + sensorArm(-7.5, 6.4, 11.4),
-            starPath(6)
+            '<rect x="10.7" y="2.6" width="2.6" height="3.6" fill="' + SK_INK + '"/>' +
+            '<rect x="9.9" y="6.2" width="4.2" height="4.4" fill="' + SK_INK + '"/>' +
+            '<rect x="8" y="10.6" width="8" height="7" rx="1.3" fill="' + SK_INK + '"/>' +
+            '<circle cx="12" cy="14.1" r="1.3" fill="' + SK_HALO + '"/>',
+            ''
         )
     },
 
