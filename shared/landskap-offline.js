@@ -95,6 +95,10 @@
             '.lo-btn-primary:hover{background:#66bb6a}',
             '.lo-btn-primary:disabled{background:#23331f;color:#5a7a5a;border-color:#2d4a2d;cursor:not-allowed}',
             '.lo-btn-ghost{background:transparent;color:#8aaa8a}',
+            // Kartstil-raden i footern: etikett + select i samma mörka stil
+            '.lo-style{display:flex;align-items:center;gap:6px;font-size:0.78rem;color:#cfe6cf}',
+            '.lo-style select{background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d;border-radius:6px;padding:7px 8px;font:inherit;cursor:pointer}',
+            '.lo-style select:hover{border-color:#4caf50}',
             '@media (max-width:760px){',
                 '.lo-body{flex-direction:column}',
                 // Kartan är hög och smal (Sverige) — ge den rejäl höjd så den inte
@@ -253,6 +257,9 @@
             '</div>' +
             '<div class="lo-foot">' +
                 '<div class="lo-foot-info" id="loInfo"></div>' +
+                '<label class="lo-style" id="loStyleWrap" style="display:none">Kartstil' +
+                    '<select id="loStyleSel" title="Stil för Härdat läge — gäller alla härdat-kartor"></select>' +
+                '</label>' +
                 '<button type="button" class="lo-btn lo-btn-ghost" id="loHardOff" style="display:none">Stäng av härdat</button>' +
                 '<button type="button" class="lo-btn lo-btn-primary" id="loDownload" disabled>Ladda ner offline</button>' +
             '</div>';
@@ -265,6 +272,26 @@
         var dlBtn = overlay.querySelector('#loDownload');
         var hardOffBtn = overlay.querySelector('#loHardOff');
         var hoverEl = overlay.querySelector('#loHover');
+
+        // Kartstil-raden: synliggör härdat-lägets stilval (tidigare gömt i en
+        // omärkt dropdown som bara dök upp i minkarta/sensorskiss när härdat
+        // redan var på). Valet sparas via ctrl.setFlavor även innan aktivering.
+        var styleWrap = overlay.querySelector('#loStyleWrap');
+        var styleSel = overlay.querySelector('#loStyleSel');
+        if (ctrl && ctrl.getFlavor && ctrl.setFlavor) {
+            var flavors = (global.PMTilesHardening && global.PMTilesHardening.FLAVORS) || [
+                ['topo', 'Topo (svart bygg)'], ['light', 'Light'], ['dark', 'Dark'],
+                ['white', 'White'], ['grayscale', 'Grayscale'], ['black', 'Black']
+            ];
+            flavors.forEach(function (f) {
+                var o = document.createElement('option');
+                o.value = f[0]; o.textContent = f[1];
+                styleSel.appendChild(o);
+            });
+            styleSel.value = ctrl.getFlavor();
+            styleSel.addEventListener('change', function () { ctrl.setFlavor(styleSel.value); });
+            styleWrap.style.display = '';
+        }
 
         // Flytande etikett som följer muspekaren över kartan.
         var tip = document.createElement('div');

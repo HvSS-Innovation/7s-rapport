@@ -2927,19 +2927,20 @@ function renderMapControls() {
     refreshHardenBtn();
     row2.appendChild(hardenBtn);
 
-    // Stil-väljare för Härdat läge — se minkarta.html.
+    // Stil-väljare för Härdat läge — se minkarta.html. Synlig etikett så
+    // dropdownen inte dyker upp omärkt.
+    const flavorLabel = document.createElement('span');
+    flavorLabel.textContent = 'Kartstil:';
+    flavorLabel.style.cssText = 'display:none;font-size:0.78rem;color:var(--text-muted);align-self:center;margin-left:4px';
     const flavorSel = document.createElement('select');
     flavorSel.className = 'btn btn-sm btn-select';
     flavorSel.style.display = 'none';
     flavorSel.title = 'Stil för Härdat läge';
-    [
-        ['topo', 'Topo (svart bygg)'],
-        ['light', 'Light'],
-        ['dark', 'Dark'],
-        ['white', 'White'],
-        ['grayscale', 'Grayscale'],
-        ['black', 'Black']
-    ].forEach(([v, label]) => {
+    const FLAVOR_FALLBACK = [
+        ['topo', 'Topo (svart bygg)'], ['light', 'Light'], ['dark', 'Dark'],
+        ['white', 'White'], ['grayscale', 'Grayscale'], ['black', 'Black']
+    ];
+    ((window.PMTilesHardening && window.PMTilesHardening.FLAVORS) || FLAVOR_FALLBACK).forEach(([v, label]) => {
         const o = document.createElement('option');
         o.value = v; o.textContent = label;
         flavorSel.appendChild(o);
@@ -2948,6 +2949,7 @@ function renderMapControls() {
         const ctrl = window.SK_HARDENING;
         const active = ctrl && ctrl.isActive();
         flavorSel.style.display = active ? '' : 'none';
+        flavorLabel.style.display = active ? '' : 'none';
         if (ctrl) flavorSel.value = ctrl.getFlavor();
     }
     flavorSel.addEventListener('change', () => {
@@ -2963,6 +2965,7 @@ function renderMapControls() {
         }, { once: true });
     }
     refreshFlavorSel();
+    row2.appendChild(flavorLabel);
     row2.appendChild(flavorSel);
 
     // Pre-download (Fas 2) — se motsvarande block i minkarta.html.

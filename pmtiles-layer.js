@@ -663,7 +663,20 @@ window.PMTilesPrefetch = {
 
 // Globalt namespace så icke-modul-script (renderMapControls i minkarta/
 // sensorskiss) kan skapa en controller per karta.
-window.PMTilesHardening = { createController };
+// FLAVORS: kanonisk lista över härdat-lägets kartstilar (värde + etikett).
+// Används av minkarta, sensorskiss och offline-väljarens "Kartstil"-rad så
+// alternativen inte definieras på tre ställen.
+window.PMTilesHardening = {
+    createController,
+    FLAVORS: [
+        ['topo', 'Topo (svart bygg)'],
+        ['light', 'Light'],
+        ['dark', 'Dark'],
+        ['white', 'White'],
+        ['grayscale', 'Grayscale'],
+        ['black', 'Black']
+    ]
+};
 
 // Signalera redoläge så script som körde innan denna modul laddats kan
 // vänta in oss. Modul-script körs efter DOMContentLoaded men innan load,
