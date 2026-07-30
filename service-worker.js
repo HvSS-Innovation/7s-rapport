@@ -304,7 +304,10 @@ self.addEventListener('message', (e) => {
   // grönt läge medan workern ännu inte kände till det.
   try {
     if (e.source && e.source.postMessage) {
-      e.source.postMessage({ type: 'HARDENED_ACK', active: _hardenedMem });
+      // Spegla tillbaka avsändarens id så sidan kan skilja SIN kvittens från
+      // en annan fliks — utan det kunde en aktivering ta emot ACK:en för en
+      // samtidig avaktivering och tro att den lyckats.
+      e.source.postMessage({ type: 'HARDENED_ACK', active: _hardenedMem, id: data.id });
     }
   } catch (_) {}
   if (_hardenedMem) {

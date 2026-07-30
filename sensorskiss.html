@@ -2456,13 +2456,29 @@ function attachPaletteToolbar() {
 let _lastExport = null;       // { blob, filename }
 let _popoverTimer = null;
 
+// OPSEC: skärmen hoppar över objekt i dolda lager (renderObject), men exporten
+// skickade hela state.objects — dolda lager kom alltså tillbaka som pixlar i den
+// delade bilden. Exportera bara det som faktiskt syns. Undo och autosave sparar
+// fortsatt ALLA objekt; det är bara det som lämnar enheten som filtreras.
+function synligaObjekt() {
+    if (!state.layerMgr) return state.objects;
+    return state.objects.filter(o => !o.layerId || state.layerMgr.isVisible(o.layerId));
+}
+
 async function prepareExportBlob() {
     if (!state.objects.length) { toast('Inget att exportera.'); return null; }
     if (!window.SK_EXPORT) { toast('Export-modulen är inte laddad.'); return null; }
+    const synliga = synligaObjekt();
+    const dolda = state.objects.length - synliga.length;
+    if (!synliga.length) {
+        toast('Alla objekt ligger i dolda lager — inget att exportera.', 3600);
+        return null;
+    }
+    if (dolda > 0) toast(dolda + ' objekt i dolda lager tas INTE med i exporten.', 4000);
     const forband = (document.getElementById('pForband')?.value || '').trim();
-    const subtitle = (forband ? forband + ' · ' : '') + 'Sensorskiss · ' + state.objects.length + ' objekt';
+    const subtitle = (forband ? forband + ' · ' : '') + 'Sensorskiss · ' + synliga.length + ' objekt';
     const res = await window.SK_EXPORT.renderExportAsync({
-        objects: state.objects,
+        objects: synliga,
         title: 'SENSORSKISS',
         subtitle,
         dpr: 2
@@ -3417,7 +3433,7 @@ async function shareProtocol() {
     let blobInfo;
     try {
         blobInfo = await window.SK_EXPORT.renderExportAsync({
-            objects: state.objects,
+            objects: synligaObjekt(),   // dolda lager får inte följa med ut
             title: 'SENSORSKISS',
             subtitle: (forband ? forband + ' · ' : '') + new Date().toLocaleString('sv-SE'),
             dpr: 2

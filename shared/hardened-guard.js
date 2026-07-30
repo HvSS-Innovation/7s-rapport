@@ -128,21 +128,28 @@
 
     // Väntar in service workerns HARDENED_ACK. Timeout → false (vi vet inte att
     // spärren är verkställd), aldrig ett tyst "ja".
-    function awaitAck(timeoutMs) {
+    // Varje operation bär ett eget id och sitt EGNA förväntade värde. Utan det
+    // tog en väntande handler emot nästa bästa ACK och jämförde mot den
+    // föränderliga globala `active`: om en annan flik hann ändra läget mitt i
+    // väntan kunde en aktivering få kvittens för en avaktivering och ändå
+    // rapportera lyckat. Nu ignoreras ACK som inte hör till just denna begäran.
+    var ackRäknare = 0;
+    function awaitAck(begärt, timeoutMs) {
         return new Promise(function (resolve) {
             var sw = navigator.serviceWorker;
             if (!sw || !sw.controller) { resolve(false); return; }
+            var id = 'h' + (++ackRäknare) + '-' + Date.now().toString(36);
             var klar = false;
             function handler(ev) {
                 var d = ev.data || {};
-                if (d.type !== 'HARDENED_ACK') return;
+                if (d.type !== 'HARDENED_ACK' || d.id !== id) return;   // inte vår
                 klar = true;
                 sw.removeEventListener('message', handler);
-                resolve(d.active === active);
+                resolve(d.active === begärt);
             }
             sw.addEventListener('message', handler);
             try {
-                sw.controller.postMessage({ type: 'HARDENED_SET', active: active });
+                sw.controller.postMessage({ type: 'HARDENED_SET', active: begärt, id: id });
             } catch (_) {
                 sw.removeEventListener('message', handler);
                 resolve(false);
@@ -174,9 +181,16 @@
                 active + ' — skrivningen gick inte igenom.');
             return Promise.resolve(false);
         }
-        return writeIdb(active).then(function (skrivenOk) {
-            return awaitAck(1500).then(function (ackOk) {
-                return skrivenOk && ackOk;
+        // Frys det värde operationen gäller. `active` kan hinna ändras av en
+        // annan flik under den asynkrona IDB-transaktionen — då ska DENNA
+        // operation misslyckas, inte tyst byta till det nya värdet.
+        var begärt = active;
+        return writeIdb(begärt).then(function (skrivenOk) {
+            return awaitAck(begärt, 1500).then(function (ackOk) {
+                // Ändrades läget under tiden? Då är vår kvittens inte längre
+                // ett besked om nuläget.
+                var oförändrat = readActive() === begärt;
+                return skrivenOk && ackOk && oförändrat;
             });
         }).catch(function () { return false; });
     }

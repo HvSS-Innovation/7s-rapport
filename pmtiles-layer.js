@@ -701,6 +701,46 @@ function createController(map, normalLayer, opts) {
         return Promise.resolve(false);
     }
 
+    // Cross-flik-synk. Sid-guarden uppdaterade bara sin egen variabel vid
+    // storage/BroadcastChannel-event — kartcontrollern hade ett HELT separat
+    // tillstånd (hardLayer) och var döv för andra flikar. Slog man av härdat i
+    // flik B behöll flik A sitt lokala kartlager OCH sitt gröna "inga externa
+    // kart-anrop", medan exporten läste det globala läget och gick ut på nätet.
+    // Split-brain: UI och verklighet sa olika saker.
+    let synkPagar = false;
+    function synkaFranAnnanFlik() {
+        if (synkPagar) return;                 // re-entrans: saveState → sync → hit
+        const s = loadState();
+        const börVaraPå = s.active === true && !!s.url;
+        // Anta ALLTID den lagrade URL:en och stilen först. Controllerns `url`
+        // är den som lästes vid sidladdning; valde en annan flik ett nytt
+        // landskap aktiverade vi annars fel fil, misslyckades paketkollen och
+        // skrev tillbaka active:false — alltså tvärtom mot avsikten.
+        if (s.url && s.url !== url) url = s.url;
+        if (s.flavor) flavor = s.flavor;
+        if (börVaraPå === isActive()) return;
+        if (börVaraPå) {
+            // quiet: den här fliken initierade inte bytet — logga, alert:a inte.
+            synkPagar = true;
+            Promise.resolve(activate(undefined, true)).finally(() => { synkPagar = false; });
+        } else {
+            if (hardLayer) {
+                try { map.removeLayer(hardLayer); } catch (_) {}
+                hardLayer = null;
+                kind = null;
+            }
+            if (normalLayer && !map.hasLayer(normalLayer)) normalLayer.addTo(map);
+            emit();
+        }
+    }
+    window.addEventListener('storage', function (ev) {
+        if (ev.key === STORAGE_KEY) synkaFranAnnanFlik();
+    });
+    try {
+        const kanal = new BroadcastChannel('hv-hardened');
+        kanal.onmessage = function () { synkaFranAnnanFlik(); };
+    } catch (_) { /* BroadcastChannel saknas — storage-eventet räcker */ }
+
     // Auto-aktivera om föregående session lämnade härdat läge på.
     if (persisted.active && persisted.url) {
         // Aktivera asynkront sa render-pipelinen inte blockerar. quiet=true:

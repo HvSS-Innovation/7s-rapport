@@ -559,9 +559,16 @@ function generateReport() {
 // ── CoT (Cursor on Target) Export ────────────────────────────────────────────
 function generateCoTXML() {
     const v = id => document.getElementById(id).value.trim();
-    const coords = (() => { try { return MGRS.inverse(v('stalle')); } catch(e) { return null; } })();
-    const lat = coords ? coords[0].toFixed(6) : '0';
-    const lon = coords ? coords[1].toFixed(6) : '0';
+    // Koordinaten MÅSTE gå att tolka. Tidigare kördes hela STÄLLE-strängen
+    // genom MGRS.inverse och allt som inte var ren MGRS gav lat/lon = 0 —
+    // en giltig CoT-punkt i Guineabukten. Det drabbade huvudflödet: väljer
+    // man på kartan med nätet på fylls fältet med "MGRS, adress" och
+    // MGRS.inverse kastar. parseStalleToLatLon (opsec.js) plockar ut
+    // koordinaten robust; null → vi genererar INGEN CoT.
+    const coords = window.parseStalleToLatLon(v('stalle'));
+    if (!coords) return null;
+    const lat = coords.lat.toFixed(6);
+    const lon = coords.lon.toFixed(6);
     const time = parseTnrToISO(v('stund'));
     const stale = new Date(new Date(time).getTime() + 30*60000).toISOString();
     const uid = 'SCRIM-' + Date.now().toString(36).toUpperCase();
@@ -577,6 +584,12 @@ function generateCoTXML() {
 }
 function copyCoT() {
     const xml = generateCoTXML();
+    if (!xml) {
+        alert('Kan inte skapa TAK-fil: STÄLLE saknar en tolkbar koordinat.\n\n' +
+            'Ange MGRS (t.ex. 33VWF1234567890) eller decimalgrader, eller välj position på kartan.\n\n' +
+            'Ingen fil skapas — en rapport utan giltig koordinat skulle hamna på 0,0 i ATAK.');
+        return;
+    }
     if (navigator.clipboard?.writeText) { navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat')).catch(() => showCotFeedback('Kunde inte kopiera')); }
     else { const ta = document.createElement('textarea'); ta.value = xml; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); try { document.execCommand('copy'); showCotFeedback('CoT XML kopierat'); } catch(e) { alert('Kunde inte kopiera.'); } document.body.removeChild(ta); }
 }
@@ -643,6 +656,12 @@ function buildDataPackage(cotXml, prefix) {
 }
 function downloadCoT() {
     const xml = generateCoTXML();
+    if (!xml) {
+        alert('Kan inte skapa TAK-fil: STÄLLE saknar en tolkbar koordinat.\n\n' +
+            'Ange MGRS (t.ex. 33VWF1234567890) eller decimalgrader, eller välj position på kartan.\n\n' +
+            'Ingen fil skapas — en rapport utan giltig koordinat skulle hamna på 0,0 i ATAK.');
+        return;
+    }
     const dpBlob = buildDataPackage(xml, 'SCRIM');
     const url = URL.createObjectURL(dpBlob);
     const a = document.createElement('a'); a.href = url; a.download = `SCRIM-rapport-${new Date().toISOString().slice(0,10)}.zip`;
@@ -681,6 +700,12 @@ function executePublish() {
     closePublishDialog();
     const text = document.getElementById('reportOutput').textContent;
     const xml = generateCoTXML();
+    if (!xml) {
+        alert('Kan inte skapa TAK-fil: STÄLLE saknar en tolkbar koordinat.\n\n' +
+            'Ange MGRS (t.ex. 33VWF1234567890) eller decimalgrader, eller välj position på kartan.\n\n' +
+            'Ingen fil skapas — en rapport utan giltig koordinat skulle hamna på 0,0 i ATAK.');
+        return;
+    }
     const dpBlob = buildDataPackage(xml, 'SCRIM');
     const dpFile = new File([dpBlob], `SCRIM-rapport-${new Date().toISOString().slice(0,10)}.zip`, { type: 'application/zip' });
     const files = [dpFile];

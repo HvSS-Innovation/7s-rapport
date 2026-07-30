@@ -39,26 +39,13 @@
 <button id="run">Tolka</button>
 <pre id="manualOut"></pre>
 
+<!-- Testar den SKARPA funktionen ur opsec.js, inte en kopia. Här låg tidigare
+     en egen implementation med kommentaren "bit-identisk som opsec.js". Ingen
+     upprätthöll det löftet: ett test som testar sin egen kopia kan per
+     definition aldrig upptäcka en regression i produktionskoden, och när
+     opsec.js ändrades 2026-07-30 blev kopian omedelbart osann. -->
+<script src="../opsec.js"></script>
 <script>
-// Bit-identisk implementation som opsec.js. Halls fristaende sa fuzz:en
-// fungerar aven om opsec.js bryter — men logiken matchar prod 1:1.
-function parseTnrToISO(tnr) {
-  if (!tnr || tnr === '-') return new Date().toISOString();
-  var now = new Date();
-  var dd = parseInt(tnr.slice(0, 2));
-  var hh = parseInt(tnr.slice(2, 4));
-  var mm = parseInt(tnr.slice(4, 6));
-  var year = now.getFullYear();
-  var month = now.getMonth();
-  if (tnr.length > 6) {
-    var months = ['JAN','FEB','MAR','APR','MAY','JUN','JUL','AUG','SEP','OCT','NOV','DEC'];
-    var mi = months.indexOf(tnr.slice(7, 10).toUpperCase());
-    if (mi >= 0) month = mi;
-    if (tnr.length >= 14) year = parseInt(tnr.slice(10, 14));
-  }
-  var d = new Date(Date.UTC(year, month, dd, hh, mm, 0));
-  return isNaN(d.getTime()) ? new Date().toISOString() : d.toISOString();
-}
 
 function nowIso() { return new Date().toISOString(); }
 function isFresh(iso) {
@@ -73,19 +60,33 @@ var CASES = [
   { name: 'Strecksvar',          input: '-',                 expected: 'fresh' },
   { name: 'null',                input: null,                expected: 'fresh' },
   { name: 'undefined',           input: undefined,           expected: 'fresh' },
-  // Komplett TNR
+  // FORMAT-RÄTTNING 2026-07-30: fallen nedan matade tidigare in TNR MED
+  // MELLANSLAG ('301200 APR 2026'). Appen genererar aldrig det formatet —
+  // nowTnr() bygger DDHHMM + tidszonsbokstav + MÅN + ÅÅÅÅ utan separatorer.
+  // Med mellanslag hamnade årtalsslicen fel och parsern gav år 0202, sa DE
+  // HÄR FALLEN HAR VARIT RÖDA hela tiden — men bannern lästes aldrig.
+  // Ett test som mäter fel format är sämre än inget test.
   { name: 'Kort TNR (DDHHMM)',           input: '301200',                 expected: 'this-month-30T12:00' },
-  { name: 'Komplett TNR med ar',         input: '301200 APR 2026',        expected: '2026-04-30T12:00:00.000Z' },
-  { name: 'Komplett TNR utan ar',        input: '301200 APR',             expected: 'this-year-04-30T12:00:00.000Z' },
+  { name: 'Komplett TNR med ar',         input: '301200BAPR2026',        expected: '2026-04-30T12:00:00.000Z' },
+  { name: 'Komplett TNR utan ar',        input: '301200BAPR',             expected: 'this-year-04-30T12:00:00.000Z' },
   // Manads-prefixet okant → fallback till nuvarande manad
-  { name: 'Okand manad ABC',             input: '301200 ABC',             expected: 'this-month-30T12:00' },
-  { name: 'Stora bokstaver MAJ (sv)',    input: '301200 MAJ',             expected: 'this-month-30T12:00' }, // 'MAJ' finns inte i listan (vi anvander engelska MAY)
+  { name: 'Okand manad ABC',             input: '301200BABC',             expected: 'this-month-30T12:00' },
+  { name: 'Stora bokstaver MAJ (sv)',    input: '301200BMAJ',             expected: 'this-month-30T12:00' }, // 'MAJ' finns inte i listan (vi anvander engelska MAY)
   // Specifika datum
-  { name: 'Forsta sekund i year',        input: '010000 JAN 2026',        expected: '2026-01-01T00:00:00.000Z' },
-  { name: 'Sista minuten december',      input: '312359 DEC 2025',        expected: '2025-12-31T23:59:00.000Z' },
-  { name: 'Skottdag 2024',               input: '291002 FEB 2024',        expected: '2024-02-29T10:02:00.000Z' },
-  // Edge-case: ogiltig dag → JS Date wrappar (inte var bug, men dokumenterar beteendet)
-  { name: 'Februari dag 30 (ogiltigt)',  input: '301400 FEB 2025',        expected: '2025-03-02T14:00:00.000Z' },
+  { name: 'Forsta sekund i year',        input: '010000BJAN2026',        expected: '2026-01-01T00:00:00.000Z' },
+  { name: 'Sista minuten december',      input: '312359BDEC2025',        expected: '2025-12-31T23:59:00.000Z' },
+  { name: 'Skottdag 2024',               input: '291002BFEB2024',        expected: '2024-02-29T10:02:00.000Z' },
+  // RÄTTAT 2026-07-30: tidigare stod här expected '2025-03-02T14:00' med
+  // kommentaren "JS Date wrappar (inte var bug)". Det VAR en bugg — testet
+  // kodifierade den. Date.UTC normaliserar i stället för att avvisa, så
+  // "30 FEB" gav en fullt giltig CoT-tidsstämpel för fel dygn. I ett
+  // fältverktyg är 30 februari inte ett alternativt sätt att skriva 2 mars.
+  // parseTnrStrict gör nu en round-trip-kontroll och returnerar null;
+  // parseTnrToISO faller då tillbaka på aktuell tid ('fresh').
+  { name: 'Februari dag 30 (ogiltigt)',  input: '301400BFEB2025',        expected: 'fresh' },
+  { name: 'Timme 25 (ogiltigt)',         input: '302500BJAN2025',        expected: 'fresh' },
+  { name: 'Minut 61 (ogiltigt)',         input: '011061BJAN2025',        expected: 'fresh' },
+  { name: 'Dag 32 (ogiltigt)',           input: '321400BJAN2025',        expected: 'fresh' },
   // Trasig input
   { name: 'Bara bokstaver',              input: 'ABCDEF',                 expected: 'fresh' }, // parseInt -> NaN -> Date NaN -> fallback
   { name: 'Kortare an 6 tecken',         input: '12',                     expected: 'fresh' }, // parseInt funkar, men dd=12, hh/mm=NaN -> Date NaN -> fallback

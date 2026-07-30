@@ -3,6 +3,17 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.29 — 2026-07-30 — Korrekthetsfel ur fjärde granskningen: dolda lager, CoT 0,0, TNR
+
+- **Dolda lager följde med i PNG-exporten.** Skärmen filtrerar på lagersynlighet, exporten gjorde det inte — ett gömt lager kom tillbaka som pixlar i den delade bilden. Exporten tar nu bara synliga objekt och säger till hur många som utelämnas. Undo och autosave sparar fortsatt allt.
+- **CoT fick koordinaten 0,0 — i huvudflödet.** Väljer man position på kartan med nätet på fylls STÄLLE med "MGRS, adress", och hela strängen kördes genom `MGRS.inverse` som kastar på allt utom ren MGRS → fallback `'0'` → en giltig CoT-punkt i Guineabukten, utan varning. Ny `parseStalleToLatLon` klarar ren MGRS, "MGRS, adress", MGRS i text och decimalgrader, och avvisar udda siffertal (`33VWF999` gav tidigare en trovärdig men fel position). Går koordinaten inte att tolka skapas **ingen** CoT-fil.
+- **TNR-parsern accepterade omöjliga datum.** `Date.UTC` normaliserar i stället för att avvisa, så "30 FEB" blev 2 mars med fullt giltig tidsstämpel. Ny `parseTnrStrict` med intervall- och round-trip-kontroll.
+- **Cross-flik-split-brain:** slog man av härdat i en flik behöll den andra sitt kartlager och sitt gröna "inga externa kart-anrop". Kartcontrollern synkas nu mot globala läget, inklusive URL och stil.
+- **ACK-korrelation:** kvittensen bar inget id, så en aktivering kunde ta emot kvittensen för en samtidig avaktivering. Varje operation har nu eget id och eget fryst förväntat värde.
+- **KMZ-ikonen** pekade på `maps.google.com` i exporterade filer — ett fjärranrop hos mottagaren när ATAK eller Google Earth öppnar dem. Borttagen.
+- **Två fel i våra egna tester:** `audit/tnr-fuzz.html` testade en *kopia* av parsern (kommenterad "bit-identisk", men ingen upprätthöll det) och matade dessutom in ett TNR-format appen aldrig genererar — fallen har varit röda hela tiden utan att någon läste bannern. Sidan testar nu den skarpa funktionen med rätt format.
+- Tre nya regressionstest för CoT-koordinaten. 24/24 gröna.
+
 ## v0.3.28 — 2026-07-30 — Härdat-svep över alla 38 sidor i CI
 
 - **Nytt regressionsskydd** (`test/opsec/sweep.js`): laddar varje app-sida i härdat läge bakom deny-proxyn, i **båda** lägena — med kontrollerande service worker och utan. Byggt på insikten att de tre senaste läckorna alla hittades efter att invariant-testet redan var grönt; de låg i sid-lägen testet aldrig besökte. Sidan får koordinat i STÄLLE, cachad kartposition och ett paket i PMTiles-cachen så kartkod faktiskt triggas. Kör lokalt: `node test/opsec/run-sweep.js`.

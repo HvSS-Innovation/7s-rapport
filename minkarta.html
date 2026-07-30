@@ -3545,19 +3545,37 @@ function resetProtocolPanel() {
 let _lastExport = null;       // { blob, filename }
 let _popoverTimer = null;
 
+// OPSEC: skärmen hoppar över objekt i dolda lager (renderObject), men exporten
+// skickade hela state.objects — dolda lager kom alltså tillbaka som pixlar i den
+// delade bilden. En operatör som gömt ett äldre eller känsligare lager såg en ren
+// karta och delade ändå allt. Exportera bara det som faktiskt syns.
+// OBS: undo-snapshots och autosave ska fortsatt spara ALLA objekt — det är bara
+// det som lämnar enheten som filtreras.
+function synligaObjekt() {
+    if (!state.layerMgr) return state.objects;
+    return state.objects.filter(o => !o.layerId || state.layerMgr.isVisible(o.layerId));
+}
+
 async function prepareExportBlob() {
     if (!state.objects.length) { toast('Ingenting att exportera.'); return null; }
     if (!window.MK_EXPORT) { toast('Export-modulen är inte laddad.'); return null; }
-    const ytterCount = state.objects.filter(o => o.typ === 'ytter').length;
+    const synliga = synligaObjekt();
+    const dolda = state.objects.length - synliga.length;
+    if (!synliga.length) {
+        toast('Alla objekt ligger i dolda lager — inget att exportera.', 3600);
+        return null;
+    }
+    if (dolda > 0) toast(dolda + ' objekt i dolda lager tas INTE med i exporten.', 4000);
+    const ytterCount = synliga.filter(o => o.typ === 'ytter').length;
     if (ytterCount < 2) toast('Tips: placera yttergränsmarkörer för att styra exporten.', 3200);
 
     const titleBase = window.__minkartaTitle || 'MINERING';
     // Räkna bara minor/markörer i subtitlen — yttergränsmarkörer är bbox-hjälpare,
     // inte "objekt" i operativ mening.
-    const exportableCount = state.objects.filter(o => o.typ !== 'ytter').length;
+    const exportableCount = synliga.filter(o => o.typ !== 'ytter').length;
     const subtitle = window.__minkartaSubtitle || ('Minläggningskarta · ' + exportableCount + ' objekt');
     const res = await window.MK_EXPORT.renderExportAsync({
-        objects: state.objects,
+        objects: synliga,
         title: titleBase,
         subtitle,
         targetPx: 2048,

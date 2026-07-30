@@ -8,6 +8,64 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### ✅ 2026-07-30 — Fjärde granskningen: korrekthetsfel, inte egress
+
+Den bästa av de fyra. Efter tre rundor är läckor i egress-klassen täckta av tre
+testlager — och granskningen levererade i stället **fel data**, som inget
+egress-test kan fånga. Allt verifierat i kod eller browser före åtgärd.
+
+- **Å1 HÖG ✅ Dolda lager följde med i PNG-exporten.** Skärmen filtrerar på
+  lagersynlighet (`renderObject`), men exporten skickade hela `state.objects`.
+  Operatören gömde ett lager, kartan såg ren ut, och vid delning kom allt
+  tillbaka som pixlar. **Åtgärd:** `synligaObjekt()` i minkarta + sensorskiss;
+  exporten tar bara det som syns och säger till hur många som utelämnas.
+  Undo och autosave sparar fortsatt allt — det är bara det som lämnar enheten
+  som filtreras.
+- **Å2 HÖG ✅ CoT fick koordinaten 0,0 — i huvudflödet.** Fältet tillåter
+  uttryckligen platsnamn, och kartväljaren skriver `"MGRS, adress"` när
+  geokodningen hittat en gata. Hela strängen kördes genom `MGRS.inverse`, som
+  kastar på allt utom ren MGRS → fallback `'0'` → giltig CoT-punkt i
+  Guineabukten, utan varning. **Verifierat i browser:** "MGRS, Storgatan 4" gav
+  0,0 före fixen. **Åtgärd:** ny `parseStalleToLatLon` i `opsec.js` (ren MGRS,
+  "MGRS, adress", MGRS inbäddad i text, decimalgrader) + paritetskontroll som
+  avvisar udda siffertal (`33VWF999` gav tidigare en trovärdig men fel
+  position). Går koordinaten inte att tolka genereras **ingen** CoT.
+- **Å3 HÖG ✅ TNR-parsern accepterade omöjliga datum.** `Date.UTC` normaliserar
+  i stället för att avvisa: "30 FEB" blev 2 mars med en fullt giltig
+  tidsstämpel. Ny `parseTnrStrict` med intervall- och round-trip-kontroll.
+- **Å4 HÖG ✅ Cross-flik-split-brain.** `pmtiles-layer.js` hade varken
+  `storage`- eller BroadcastChannel-lyssnare: slog man av härdat i flik B
+  behöll flik A sitt kartlager och sitt gröna "inga externa kart-anrop", medan
+  exporten läste det globala läget och gick ut på nätet. Nu synkas controllern
+  — inklusive URL och stil, inte bara på/av.
+- **Å5 ✅ ACK-korrelation.** Kvittensen bar inget id, så en väntande aktivering
+  kunde ta emot ACK:en för en samtidig avaktivering. Varje operation har nu
+  eget id och sitt eget frysta förväntade värde.
+- **Å6 ✅ KMZ-ikonen** pekade på `maps.google.com` i exporterade filer — ett
+  fjärranrop hos MOTTAGAREN när ATAK eller Google Earth öppnar filen, utanför
+  allt vi kan spärra. Borttagen.
+
+**Två fynd i våra egna testlager, hittade under åtgärdsarbetet:**
+
+1. **`audit/tnr-fuzz.html` testade en KOPIA av parsern**, med kommentaren
+   "bit-identisk som opsec.js". Ingen upprätthöll det. Ett test som testar sin
+   egen kopia kan per definition inte upptäcka en regression i produktionskoden.
+   Sidan laddar nu `../opsec.js` och testar den skarpa funktionen.
+2. **Testet matade in ett TNR-format appen aldrig genererar** (med mellanslag:
+   `'312359 DEC 2025'`). Årtalsslicen hamnade fel och parsern gav år 0202 —
+   **fallen har alltså varit röda hela tiden**, men bannern lästes aldrig.
+   Rättat till `nowTnr()`-formatet (`312359BDEC2025`); nu grön på riktigt.
+
+**Ej åtgärdat, medvetet:** granskaren ville neutralisera CoT-metadatan
+(`callsign="7S Rapport"`, rapporttyp i remarks). Till skillnad från PNG-filnamn
+är de **det som gör rapporten läsbar för mottagaren i ATAK**. De skyddar bara
+mot någon som redan har filen — alltså efter att skyddet brustit — och kostar
+operativ tydlighet i normalfallet. Lämnat.
+
+Kvar öppet från granskningen: fynd 6 (cache-kontroll och PMTiles-läsning inte
+atomiska) är rimligt men märkt MISSTÄNKT även av granskaren; kräver ett
+tvåflikstest med kontrollerad fördröjning för att bekräftas.
+
 ### ✅ 2026-07-30 — Härdat-svep över alla 38 sidor (nytt regressionsskydd, inga läckor)
 
 Byggt efter tredje granskningen, på insikten att de tre senaste läckorna

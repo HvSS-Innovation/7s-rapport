@@ -1223,20 +1223,23 @@ function handelseToCoTType(handelse) {
     return 'a-h-G';
 }
 
-function mgrsToLatLon(mgrsStr) {
-    if (!mgrsStr || mgrsStr === '-') return null;
-    try { return MGRS.inverse(mgrsStr); } catch(e) { return null; }
-}
-
 function generateCoTXML() {
     const v = id => document.getElementById(id).value.trim();
     const stalle = v('stalle');
     const stund = v('stund');
     const handelse = v('handelse');
 
-    const coords = mgrsToLatLon(stalle);
-    const lat = coords ? coords[0].toFixed(6) : '0';
-    const lon = coords ? coords[1].toFixed(6) : '0';
+    // Koordinaten MÅSTE gå att tolka. Tidigare gav allt som inte var ren MGRS
+    // lat/lon = 0 — en giltig CoT-punkt i Guineabukten. Det drabbade
+    // huvudflödet: väljer man på kartan med nätet på fylls fältet med
+    // "MGRS, adress" och MGRS.inverse kastar. parseStalleToLatLon (opsec.js)
+    // klarar MGRS, "MGRS, adress" och decimalgrader; null → ingen CoT.
+    const coords = window.parseStalleToLatLon(stalle)
+        || (isFinite(mapSelectedLat) && mapSelectedLat !== null
+            ? { lat: mapSelectedLat, lon: mapSelectedLon } : null);
+    if (!coords) return null;
+    const lat = coords.lat.toFixed(6);
+    const lon = coords.lon.toFixed(6);
 
     const time = parseTnrToISO(stund);
     const stale = new Date(new Date(time).getTime() + 30 * 60000).toISOString();
@@ -1262,6 +1265,12 @@ function generateCoTXML() {
 
 function copyCoT() {
     const xml = generateCoTXML();
+    if (!xml) {
+        alert('Kan inte skapa TAK-fil: STÄLLE saknar en tolkbar koordinat.\n\n' +
+            'Ange MGRS (t.ex. 33VWF1234567890) eller decimalgrader, eller välj position på kartan.\n\n' +
+            'Ingen fil skapas — en rapport utan giltig koordinat skulle hamna på 0,0 i ATAK.');
+        return;
+    }
     if (navigator.clipboard?.writeText) {
         navigator.clipboard.writeText(xml).then(() => showCotFeedback('CoT XML kopierat'));
     } else {
@@ -1345,6 +1354,12 @@ function buildDataPackage(cotXml, prefix) {
 
 function downloadCoT() {
     const xml = generateCoTXML();
+    if (!xml) {
+        alert('Kan inte skapa TAK-fil: STÄLLE saknar en tolkbar koordinat.\n\n' +
+            'Ange MGRS (t.ex. 33VWF1234567890) eller decimalgrader, eller välj position på kartan.\n\n' +
+            'Ingen fil skapas — en rapport utan giltig koordinat skulle hamna på 0,0 i ATAK.');
+        return;
+    }
     const dpBlob = buildDataPackage(xml, '7S');
     const url = URL.createObjectURL(dpBlob);
     const a = document.createElement('a');
@@ -1414,6 +1429,12 @@ function executePublish() {
     closePublishDialog();
     const text = document.getElementById('reportOutput').textContent;
     const xml = generateCoTXML();
+    if (!xml) {
+        alert('Kan inte skapa TAK-fil: STÄLLE saknar en tolkbar koordinat.\n\n' +
+            'Ange MGRS (t.ex. 33VWF1234567890) eller decimalgrader, eller välj position på kartan.\n\n' +
+            'Ingen fil skapas — en rapport utan giltig koordinat skulle hamna på 0,0 i ATAK.');
+        return;
+    }
     const dpBlob = buildDataPackage(xml, '7S');
     const dpFile = new File([dpBlob], `7S-rapport-${new Date().toISOString().slice(0,10)}.zip`, { type: 'application/zip' });
 

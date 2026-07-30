@@ -189,6 +189,38 @@ const P2 = { lat: 43.80, lng: 11.40 };
     check('Fientlig STÄLLE-text renderas som text, inte HTML',
         xss.element === 0 && xss.kord === 0 && xss.text, JSON.stringify(xss));
 
+    // 10d) KORREKTHET, inte egress: CoT-koordinaten. STÄLLE tillåter uttryckligen
+    // platsnamn, och kartväljaren skriver "MGRS, adress" när geokodningen hittat
+    // en gata. Tidigare kördes hela strängen genom MGRS.inverse och allt som
+    // inte var ren MGRS gav lat/lon = 0 — en giltig CoT-punkt i Guineabukten.
+    // Det drabbade HUVUDFLÖDET, inte bara kantfall.
+    await page.goto(BASE + '/index.html', { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.generateCoTXML === 'function', null, { timeout: 20000 });
+    page.on('dialog', d => d.dismiss());
+    const cot = await page.evaluate(() => {
+        const sätt = v => {
+            document.getElementById('stalle').value = v;
+            document.getElementById('stund').value = '011200BJAN2026';
+        };
+        const koord = xml => {
+            if (!xml) return null;
+            const m = xml.match(/lat="([^"]+)" lon="([^"]+)"/);
+            return m ? { lat: parseFloat(m[1]), lon: parseFloat(m[2]) } : null;
+        };
+        sätt('33VWF1234567890, Storgatan 4');
+        const medAdress = koord(window.generateCoTXML());
+        sätt('Bergsvägen vid ladan');
+        const platsnamn = koord(window.generateCoTXML());
+        sätt('33VWF999');
+        const uddaSiffror = koord(window.generateCoTXML());
+        return { medAdress, platsnamn, uddaSiffror };
+    });
+    check('CoT: "MGRS, adress" ger rätt koordinat (inte 0,0)',
+        !!(cot.medAdress && Math.abs(cot.medAdress.lat) > 1 && Math.abs(cot.medAdress.lon) > 1),
+        JSON.stringify(cot.medAdress));
+    check('CoT: platsnamn ger INGEN fil (aldrig 0,0)', cot.platsnamn === null, JSON.stringify(cot.platsnamn));
+    check('CoT: ogiltig MGRS ger INGEN fil', cot.uddaSiffror === null, JSON.stringify(cot.uddaSiffror));
+
     // 10c) DEN FARLIGA LUCKAN: sida UTAN service worker-controller.
     // Testet ovan garanterar bort just det tillstånd som är riskabelt — SW:n
     // registreras och controller väntas in innan mätningen. Men efter en
