@@ -43,11 +43,34 @@ E3. ✅ **`footer.js` transparenslistan felaktig om VÄDER** — sa "hämtar
     (`vader.html:323`; SMHI är bara en länk). **Åtgärd:** raden namnger nu
     Open-Meteo (prognos) + Nominatim (ortens koordinat), SMHI = frivillig länk.
 
-Kvarstår sedan tidigare (bekräftade oförändrade i koden): **H2** (SW helt
-härdat-omedveten — pmtiles-miss → R2, tile-miss → nät, HTML/JS network-first
-mot origin varje sidladdning), **"slå på ändå"** utan lokalt paket
-(`map-hardat-modal.js:60` → on-demand R2-range i härdat; Fas 1.4), ingen
-egress-guard (Fas 1.2), H3 (geotaggat foto i historik).
+**✅ 2026-07-30 — Fas 1+2 byggda och verifierade.** H2, "slå på ändå" och
+egress-guarden är åtgärdade i samma svep:
+
+- **H2 ✅** — service workern är nu härdat-medveten (`service-worker.js`).
+  Sidan speglar läget till IndexedDB (`hv-hardened/kv/state`) + postMessage
+  `HARDENED_SET`; SW:n gör i härdat läge ALDRIG `fetch()` — cacheträff
+  serveras, cachemiss får `503 HARDENED_CACHE_MISS`. Gäller pmtiles-miss,
+  tile-miss OCH same-origin-revalidering av HTML/JS (**beslut A:** ingen
+  auto-uppdatering i härdat — en nätobservatör ska inte se periodiska anrop).
+- **Fas 1.2 ✅** — `shared/hardened-guard.js` (laddas i `<head>` på rapport-,
+  kart-, upk- och vädersidorna) wrappar `fetch`/`XHR.open`/`sendBeacon`:
+  cross-origin kastar kontrollerat fel i härdat. `navigator.share` wrappas
+  INTE (**beslut C:** delning är lokal IPC på användarens initiativ —
+  kärnflödet dela-till-Signal behålls; foton är redan EXIF-strippade).
+- **Fas 1.4 ✅** — "slå på ändå" borttagen (`map-hardat-modal.js`);
+  `activate()` i `pmtiles-layer.js` kräver komplett nedladdat paket
+  (fail-closed, quiet vid boot-autoaktivering).
+- **Fas 2.3 ✅** — `OT_START_JOB`/`PM_START_JOB` har origin-check +
+  URL-allowlist (egna origin/R2/tile-hosts) och vägras helt i härdat;
+  pågående jobb abortas när härdat slås på (Fas 1.3).
+- **Verifierat med Playwright + lokal deny-proxy** (all browsertrafik inkl.
+  SW-fetches genom proxyn): 0 extern egress under härdat; same-origin-miss
+  503:ar utan att nå servern; export renderar; av-slag öppnar nätet igen;
+  aktivering utan paket vägras. 11/11 gröna.
+
+Kvarstår: **Fas 3** (statisk CI-gate + fullt 20-stegs Playwright-scenario som
+regressionsskydd — dagens smoke täcker kärnan men är inte wired i CI),
+**H3** (geotaggat foto i git-historik, ej purgat).
 
 ### ✅ 2026-07-28 — Statusraden påstår "OpenTopoMap" även i härdat läge (åtgärdat 2026-07-29)
 

@@ -109,6 +109,7 @@ const FILES = [
   './vendor/pmtiles/pmtiles.esm.js',
   './vendor/protomaps/protomaps-leaflet.esm.js',
   './vendor/qrcode-generator/qrcode.js',
+  './shared/hardened-guard.js',
   './shared/landskap-offline.js',
   './shared/map-hardat-modal.js',
   './shared/theme-toggle.css',
@@ -201,17 +202,97 @@ async function servePmtilesRange(request) {
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+//  Härdat läge i SW-scope (Fas 2, roadmap-opsec-hardat-lage)
+//
+//  Invariant: härdat === true → SW:n gör ALDRIG fetch(). Cacheträff serveras,
+//  cachemiss får 503 HARDENED_CACHE_MISS. Det gäller även same-origin-
+//  revalidering av HTML/JS (beslut A 2026-07-30: en nätobservatör ska inte
+//  se periodiska anrop från enheten; konsekvensen är att appen inte
+//  auto-uppdaterar förrän härdat stängs av).
+//
+//  SW:n kan inte läsa localStorage. Kontraktet med shared/hardened-guard.js:
+//  sidan speglar active-flaggan till IndexedDB db 'hv-hardened' / store 'kv'
+//  / key 'state' och postMessage:ar HARDENED_SET vid toggle. Minnescachen
+//  nollas när SW:n dödas mellan events → första fetch efter boot läser IDB.
+// ─────────────────────────────────────────────────────────────────────────
+let _hardenedMem = null; // null = okänt (läs IDB), annars boolean
+
+function hardenedReadIDB() {
+  return new Promise(resolve => {
+    try {
+      const req = indexedDB.open('hv-hardened', 1);
+      req.onupgradeneeded = () => { try { req.result.createObjectStore('kv'); } catch (_) {} };
+      req.onerror = () => resolve(false);
+      req.onsuccess = () => {
+        try {
+          const db = req.result;
+          const tx = db.transaction('kv', 'readonly');
+          const get = tx.objectStore('kv').get('state');
+          get.onsuccess = () => { const v = !!(get.result && get.result.active); db.close(); resolve(v); };
+          get.onerror = () => { db.close(); resolve(false); };
+        } catch (_) { resolve(false); }
+      };
+    } catch (_) { resolve(false); }
+  });
+}
+
+async function swHardened() {
+  if (_hardenedMem === null) _hardenedMem = await hardenedReadIDB();
+  return _hardenedMem;
+}
+
+// 503 utan detaljer — svaret ska inte läcka vad som saknas eller varför.
+function hardenedMiss() {
+  return new Response('HARDENED_CACHE_MISS', {
+    status: 503,
+    headers: { 'Content-Type': 'text/plain' }
+  });
+}
+
+// Nedladdningsjobb får bara röra kända mål: egna origin, R2-bucketen och
+// tile-hosts. Allt annat (t.ex. en injicerad postMessage med främmande URL)
+// avvisas — SW:n ska inte kunna användas som generell exfil-/hämtmotor.
+const R2_HOST = 'pub-c61a5f3b22434be6a223f1c6221b2f95.r2.dev';
+function jobUrlAllowed(u) {
+  try {
+    const url = new URL(u, self.location.href);
+    if (url.origin === self.location.origin) return true;
+    if (url.protocol !== 'https:') return false;
+    if (url.host === R2_HOST) return true;
+    if (isTileHost(url.host)) return true;
+    return false;
+  } catch (_) { return false; }
+}
+
+self.addEventListener('message', (e) => {
+  const data = e.data || {};
+  if (data.type !== 'HARDENED_SET') return;
+  // Bara samma origin får styra spärren. Tomt origin släpps igenom
+  // (äldre browser-beteende för SW-messages) — cross-origin-sidor kan ändå
+  // aldrig nå vår registration, kollen är defense-in-depth.
+  if (e.origin && e.origin !== self.location.origin) return;
+  _hardenedMem = !!data.active;
+  if (_hardenedMem) {
+    // Fail-closed aktivering (Fas 1.3): pågående nedladdningsjobb avbryts
+    // direkt — inga kvardröjande fetch-loopar efter att härdat slagits på.
+    Object.values(_otJobs).forEach(j => { try { j.controller.abort(); } catch (_) {} });
+    Object.values(_pmJobs).forEach(j => { try { j.controller.abort(); } catch (_) {} });
+  }
+});
+
 self.addEventListener('fetch', e => {
   const url = new URL(e.request.url);
 
   // PMTiles-fil: kolla pre-download-cachen först. Cache hit → svara med
-  // Range-stöd lokalt (inga utgående requests). Cache miss → låt vanlig
-  // fetch gå igenom (klienten gör range-requests mot original-host som
-  // måste stödja CORS + Range; SW cachar ej automatiskt).
+  // Range-stöd lokalt (inga utgående requests). Cache miss → i härdat läge
+  // 503 (aldrig nät); annars vanlig fetch (klienten gör range-requests mot
+  // original-host som måste stödja CORS + Range; SW cachar ej automatiskt).
   if (e.request.method === 'GET' && url.pathname.endsWith('.pmtiles')) {
     e.respondWith((async () => {
       const local = await servePmtilesRange(e.request);
       if (local) return local;
+      if (await swHardened()) return hardenedMiss();
       return fetch(e.request);
     })());
     return;
@@ -219,12 +300,16 @@ self.addEventListener('fetch', e => {
 
   // Tile-requests: kolla offline-cachen FÖRST (oberoende av subdomän-rotation
   // och query-strängar). Hit landar nedladdade tiles från offline-tiles.js.
-  // Faller tillbaka till nät, sedan vidare till huvudcachen om nätet är nere.
+  // I härdat läge: huvudcachen som sista lokala utväg, sedan 503 — aldrig nät.
+  // Annars: nät, med huvudcachen som fallback om nätet är nere.
   if (e.request.method === 'GET' && isTileHost(url.host)) {
     e.respondWith((async () => {
       const offline = await caches.open(OFFLINE_TILES_CACHE);
       const hit = await offline.match(e.request);
       if (hit) return hit;
+      if (await swHardened()) {
+        return (await caches.match(e.request)) || hardenedMiss();
+      }
       try {
         const resp = await fetch(e.request);
         if (resp && resp.ok) safePut(e.request, resp);
@@ -238,22 +323,35 @@ self.addEventListener('fetch', e => {
     return;
   }
 
-  // Network-first för HTML och JS (alltid senaste version online, cache som fallback)
+  // Network-first för HTML och JS (alltid senaste version online, cache som
+  // fallback). I härdat läge inverteras det: cache-first utan nätfallback —
+  // ingen revalidering, ingen appskal-reparation (Fas 2.4).
   if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.js')) {
-    e.respondWith(
-      fetch(e.request).then(resp => {
+    e.respondWith((async () => {
+      if (await swHardened()) {
+        return (await caches.match(e.request)) || hardenedMiss();
+      }
+      try {
+        const resp = await fetch(e.request);
         safePut(e.request, resp);
         return resp;
-      }).catch(() => caches.match(e.request))
-    );
+      } catch (err) {
+        const cached = await caches.match(e.request);
+        if (cached) return cached;
+        throw err;
+      }
+    })());
   } else {
-    // Cache-first för allt annat (ikoner, JSON-data, etc.)
-    e.respondWith(
-      caches.match(e.request).then(cached => cached || fetch(e.request).then(resp => {
-        safePut(e.request, resp);
-        return resp;
-      }))
-    );
+    // Cache-first för allt annat (ikoner, JSON-data, etc.). I härdat läge:
+    // cachemiss → 503. Täcker även POST m.m. (matchar aldrig cache → 503).
+    e.respondWith((async () => {
+      const cached = await caches.match(e.request);
+      if (cached) return cached;
+      if (await swHardened()) return hardenedMiss();
+      const resp = await fetch(e.request);
+      safePut(e.request, resp);
+      return resp;
+    })());
   }
 });
 
@@ -401,12 +499,29 @@ self.addEventListener('message', (e) => {
   if (data.type === 'OT_START_JOB') {
     const spec = data.spec || {};
     if (!spec.jobId || !Array.isArray(spec.items)) return;
+    // Fas 2.3: bara samma origin får starta jobb, och bara mot kända hosts.
+    if (e.origin && e.origin !== self.location.origin) return;
+    if (!spec.items.every(it => it && jobUrlAllowed(it.url))) {
+      console.warn('[SW] OT_START_JOB avvisad: otillåten tile-URL i spec');
+      return;
+    }
     if (_otJobs[spec.jobId]) {
       // Dedup: en annan flik startade redan samma job-id.
       otEmit(_otJobs[spec.jobId]);
       return;
     }
-    e.waitUntil(otRunTileJob(spec).catch(err => {
+    e.waitUntil((async () => {
+      if (await swHardened()) {
+        // Inga nedladdningsjobb i härdat läge — säg det till UI:t i samma
+        // format som ett jobbfel så sidan inte väntar i evighet.
+        await otBroadcast({ type: 'OT_PROGRESS', jobId: spec.jobId, job: {
+          id: spec.jobId, status: 'error', error: 'Blockerad i härdat läge',
+          total: 0, done: 0, bytes: 0, failed: 0
+        } });
+        return;
+      }
+      return otRunTileJob(spec);
+    })().catch(err => {
       console.error('[SW] otRunTileJob fel', err);
     }));
   } else if (data.type === 'OT_CANCEL') {
@@ -549,7 +664,22 @@ self.addEventListener('message', (e) => {
   if (data.type === 'PM_START_JOB') {
     const spec = data.spec || {};
     if (!spec.url) return;
-    e.waitUntil(runPmtilesJob(spec).catch(err => {
+    // Fas 2.3: bara samma origin, bara kända hosts (egna origin/R2/tiles).
+    if (e.origin && e.origin !== self.location.origin) return;
+    if (!jobUrlAllowed(spec.url)) {
+      console.warn('[SW] PM_START_JOB avvisad: otillåten URL');
+      return;
+    }
+    e.waitUntil((async () => {
+      if (await swHardened()) {
+        await pmBroadcast({ type: 'PM_PROGRESS', url: spec.url, job: {
+          url: spec.url, status: 'error', error: 'Blockerad i härdat läge',
+          loaded: 0, total: 0, percent: 0
+        } });
+        return;
+      }
+      return runPmtilesJob(spec);
+    })().catch(err => {
       console.error('[SW] runPmtilesJob fel', err);
     }));
   } else if (data.type === 'PM_CANCEL') {

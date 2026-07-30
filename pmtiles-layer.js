@@ -143,6 +143,14 @@ function loadState() {
 
 function saveState(s) {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); } catch (_) {}
+    // Fas 1/2: spegla läget till IndexedDB + service workern via
+    // shared/hardened-guard.js (laddas i <head> på alla sidor med kartor).
+    // Utan sync ser SW:n inte toggeln och spärren blir verkningslös.
+    if (window.HVHardened && window.HVHardened.sync) {
+        window.HVHardened.sync();
+    } else {
+        console.warn('[pmtiles] shared/hardened-guard.js saknas på sidan — härdat-läget når inte service workern');
+    }
 }
 
 // SHA-256-verifiering — beräknar hash av en ArrayBuffer och jämför med
@@ -507,7 +515,7 @@ function createController(map, normalLayer, opts) {
         }
     }
 
-    async function activate(promptedUrl) {
+    async function activate(promptedUrl, quiet) {
         if (promptedUrl) url = promptedUrl;
         if (!url) {
             // Fas 1: defaulta till demo-fil (Florens) sa anvandaren ser
@@ -516,6 +524,27 @@ function createController(map, normalLayer, opts) {
             // window.MK_HARDENING.setUrl(...) eller setDemo().
             url = DEFAULT_DEMO_URL;
             console.info('[pmtiles] Anvander default demo-URL (Florens). Byt via setUrl() eller setDemo(index).');
+        }
+
+        // Fas 1.4: härdat läge kräver ett KOMPLETT nedladdat paket. Utan det
+        // skulle kartan range-hämta on-demand från R2 medan UI:t påstår
+        // isolering — "nästan lokal" är värre än ärlig blockering. Gäller
+        // även setDemo() från konsolen: prefetcha demot först.
+        let prefetched = false;
+        try { prefetched = await isPrefetched(url, getExpectedBytesForUrl(url)); } catch (_) {}
+        if (!prefetched) {
+            hardLayer = null;
+            kind = null;
+            saveState({ active: false, url, flavor });
+            emit();
+            if (!quiet) {
+                window.alert('Härdat läge kräver ett nedladdat kartpaket.\n\n' +
+                    'Ladda ner via "Ladda ner offline"-väljaren först (kräver nät), ' +
+                    'och aktivera härdat läge när nedladdningen är klar.');
+            } else {
+                console.warn('[pmtiles] Härdat läge auto-avaktiverat: paketet är inte (längre) nedladdat.');
+            }
+            return false;
         }
 
         try {
@@ -618,8 +647,9 @@ function createController(map, normalLayer, opts) {
 
     // Auto-aktivera om föregående session lämnade härdat läge på.
     if (persisted.active && persisted.url) {
-        // Aktivera asynkront sa render-pipelinen inte blockerar.
-        Promise.resolve().then(() => activate());
+        // Aktivera asynkront sa render-pipelinen inte blockerar. quiet=true:
+        // vid boot ska ett saknat paket inte alert:a — bara logga + slå av.
+        Promise.resolve().then(() => activate(undefined, true));
     }
 
     // Pre-download-wrapper bunden till nuvarande URL + signal.

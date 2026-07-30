@@ -54,18 +54,21 @@
             return;
         }
         if (!ctrl.isActive()) {
+            // Fas 1.4: inget "slå på ändå" — härdat utan komplett lokalt paket
+            // skulle range-hämta on-demand från R2 medan UI:t påstår isolering.
+            // Controllern (pmtiles-layer.js activate) upprätthåller samma krav;
+            // detta ger bara ett vänligare besked innan.
             try {
                 var cached = await ctrl.checkPrefetched();
                 if (!cached) {
-                    var ok = window.confirm(
-                        'Härdat läge kräver att kartan laddats ner via Min Karta-sidan.\n\n' +
-                        'Slå på ändå? Då hämtas kart-tiles on-demand från R2 — ' +
-                        'din IP + visat område kan synas hos hosting-servern första gången.\n\n' +
-                        'OK = aktivera ändå. Avbryt = behåll OpenTopoMap.'
+                    window.alert(
+                        'Härdat läge kräver att kartan laddats ner i förväg.\n\n' +
+                        'Öppna Min Karta → "Ladda ner offline" och hämta ditt område ' +
+                        '(kräver nät), aktivera sedan härdat läge.'
                     );
-                    if (!ok) return;
+                    return;
                 }
-            } catch (_) { /* check misslyckades — låt toggle gå igenom */ }
+            } catch (_) { /* check misslyckades — activate() gör samma kontroll fail-closed */ }
             await ctrl.toggle();
         }
     }

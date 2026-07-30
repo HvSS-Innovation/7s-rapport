@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.21 — 2026-07-30 — Härdat läge är nu en äkta spärr (Fas 1+2)
+
+- **Service workern upprätthåller härdat läge** (Fas 2): sidan speglar läget till IndexedDB + `HARDENED_SET`-message; i härdat gör SW:n aldrig `fetch()` — cacheträff serveras, cachemiss får `503 HARDENED_CACHE_MISS`. Gäller pmtiles, tiles och same-origin-revalidering av HTML/JS (**beslut A:** ingen auto-uppdatering i härdat — en nätobservatör ska inte se periodiska anrop; uppdateringar kommer när härdat stängs av).
+- **Egress-guard i sid-scope** (Fas 1.2, `shared/hardened-guard.js` på rapport-/kart-/upk-/vädersidorna): `fetch`/`XHR`/`sendBeacon` mot cross-origin kastar kontrollerat fel i härdat. `navigator.share` lämnas orörd (**beslut C:** lokal IPC på användarens initiativ — dela-till-Signal är kärnflödet, foton redan EXIF-strippade).
+- **"Slå på ändå" borttagen** (Fas 1.4): härdat kräver komplett nedladdat paket — `activate()` vägrar annars (tyst vid boot, alert vid klick). Nedladdningsjobb i SW:n vägras i härdat och abortas när härdat slås på; `OT_START_JOB`/`PM_START_JOB` fick origin-check + URL-allowlist (egna origin/R2/tile-hosts).
+- **Verifierat med Playwright + lokal deny-proxy** (all trafik inkl. SW-fetches genom proxyn): 11/11 gröna — 0 extern egress under härdat, cachemiss 503:ar utan att nå nätet, PNG-exporten renderar, av-slag öppnar nätet, aktivering utan paket vägras.
+- Städat: död `renderExport` (ersatt av `renderExportAsync`) borttagen ur minkarta-export.js.
+
 ## v0.3.20 — 2026-07-30 — PNG-export fungerar i härdat läge (lokal PMTiles-render)
 
 - **Exporten ritar nu kartbakgrunden från den lokala PMTiles-filen i härdat läge** i stället för att blockeras (uppföljning på v0.3.19/E1). Ny `PMTilesHardening.renderHardenedStatic` (protomaps `Static`-frontend, redan i vendor-bygget) renderar vektorkartan med kartans aktiva flavor rakt in i exportens canvas — pixelexakt mot overlay-projektionen (center räknas som invers mercator av tile-gridets mitt; aritmetiskt lat-mitt hade gett vertikal felpassning). Fail-closed kvarstår: utan nedladdat paket, vid rasterkarta eller om kartmodulen saknas blockeras exporten med tydligt meddelande — on-demand-R2 i härdat accepteras inte.
