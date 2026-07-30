@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.23 — 2026-07-30 — Historik- och infra-hygien (Fas 4)
+
+- **Git-historiken omskriven:** det geotaggade fotot (enda jpg som någonsin committats, bar GPS + kameramodell + tidsstämpel i EXIF) är purgat ur all historik med `git filter-repo` och force-pushat. HEAD-trädet är byte-identiskt före/efter — noll innehållsändring, bara historik; alla 915 commits och alla branches/taggar kvar. **Alla commit-ID:n före detta är nya** → gamla lokala kloner måste klonas om.
+- **Rättat antagande:** `faltrapport`, `faltrapport-HV-UND` och `7s` bär inte fotot (frusna i mars, före foto-committen) och `faltrapport-HV-UND` är en egen variant, inte en spegel — de lämnades därför orörda.
+- **Workflow-hygien:** alla tre workflows har nu least-privilege `permissions:` och samtliga actions är SHA-pinnade (mutable tags borta).
+- **Planeringsfiler avspårade:** `roadmap-*.md` (fullskarm-area-sliders, mineringar, minkarta-v5/v6) borta ur indexet och fångas av `.gitignore` som avsett. Innehållsgranskade — inga skarpa koordinater.
+- **FORM_SECRET verifierat dött:** worker-endpointen svarar 404.
+
 ## v0.3.22 — 2026-07-30 — OPSEC-gate i CI: härdat-invarianten bevakas automatiskt (Fas 3)
 
 - **Statisk egress-gate** (`verktyg/egress-gate.js`, körs i CI på varje push): failar bygget vid ny extern host utanför allowlisten, vid fetch-host (tiles/geokod/väder/R2) i en oregistrerad fil — exakt felklassen som gav PNG-export-läckan — och när en härdat-spärr (gate-markör) raderas ur en fil. Självtest bevisar att alla tre felklasserna larmar.

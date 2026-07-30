@@ -81,7 +81,39 @@ varje push utom [skip ci]):
   Fas 1.4-vägran. 16/16 kontroller; proxyloggen är det auktoritativa beviset
   på 0 egress. Körs lokalt med `node test/opsec/run.js`.
 
-Kvarstår: **H3** (geotaggat foto i git-historik, ej purgat).
+**✅ Fas 4 (2026-07-30) — historik- och infra-hygien.** Sista posterna stängda:
+
+- **H3 ✅ history rewrite genomförd.** Det geotaggade fotot (enda jpg som
+  någonsin committats) är purgat ur all historik med `git filter-repo`
+  `--invert-paths`, och force-pushat till origin (main, restructuring-wip,
+  arkiv/ovningspass-v01, tag `pmtiles-v1`). Verifierat: blobben onåbar,
+  HEAD-trädet **byte-identiskt** före/efter (b531521…) — alltså noll
+  innehållsändring, bara historik — och alla 915 commits kvar.
+  Backup (bundle + mirror-klon) togs före ingreppet.
+  - **Korrigering av tidigare antagande:** de tre andra repona
+    (`faltrapport`, `faltrapport-HV-UND`, `7s`) bär **inte** fotot — alla är
+    frusna i mars 2026, före foto-committen. `faltrapport-HV-UND` är
+    dessutom en egen variant (GPS/MGRS borttaget), inte en spegel. De har
+    därför medvetet lämnats orörda.
+  - **Kvarstår manuellt (kan ej automatiseras):** GitHub serverar fortfarande
+    den gamla blobben via direkt-SHA tills deras GC kört — kräver ett
+    supportärende. De 4 forkarna har inte filen i sitt HEAD-träd, men delar
+    objektlager med parent i GitHubs fork-nätverk. Koordinaten ska tills
+    vidare betraktas som exponerad.
+- **H4 ✅ verifierad utan Cloudflare-access:** worker-endpointen svarar 404 →
+  workern är raderad och det läckta `FORM_SECRET`-värdet är verkningslöst.
+- **M2 ✅** `roadmap-fullskarm-area-sliders/mineringar/minkarta-v5/v6.md`
+  avspårade (`git rm --cached`) och fångas nu av `/roadmap-*.md` i
+  `.gitignore`. Innehållsgranskade först: bara designtext och variabelnamn
+  (`lat`/`lng`), inga skarpa koordinater — därför ingen rewrite för dem.
+- **L4 ✅ + PAT-scope:** alla tre workflows har nu least-privilege
+  `permissions:` (`contents: read` / `issues: write` / `contents: write`) och
+  **alla** actions är SHA-pinnade. Den överprivilegierade PAT:en är redan
+  borta med tipsa-workern (2026-07-25); inga PAT-instruktioner kvar i docs.
+- **L6 (privat backlog) — medvetet nej.** Efter Fas 0–4 finns inga öppna hål
+  kvar att läsa ut ur filen; den är numera en åtgärdslogg snarare än en
+  attacker-checklista, och transparensen är värd mer. Omprövas om en ny
+  öppen post läggs till.
 
 ### ✅ 2026-07-28 — Statusraden påstår "OpenTopoMap" även i härdat läge (åtgärdat 2026-07-29)
 

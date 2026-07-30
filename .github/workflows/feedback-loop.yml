@@ -4,13 +4,19 @@ on:
   issues:
     types: [opened, closed]
 
+# Least privilege: jobben kommenterar på issues och behöver inget annat.
+# Utan blocket ärver GITHUB_TOKEN repots default-scope (kan vara skriv på
+# allt) — onödig attackyta om en action i kedjan skulle komprometteras.
+permissions:
+  issues: write
+
 jobs:
   auto-reply:
     runs-on: ubuntu-latest
     if: github.event.action == 'opened'
     steps:
       - name: Tackmeddelande
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
@@ -23,7 +29,7 @@ jobs:
     if: github.event.action == 'closed'
     steps:
       - name: Losningsmeddelande
-        uses: peter-evans/create-or-update-comment@v4
+        uses: peter-evans/create-or-update-comment@71345be0265236311c031f5c7866368bd1eff043 # v4.0.0
         with:
           issue-number: ${{ github.event.issue.number }}
           body: |
