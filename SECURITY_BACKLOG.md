@@ -62,9 +62,20 @@ egress-test kan fånga. Allt verifierat i kod eller browser före åtgärd.
 mot någon som redan har filen — alltså efter att skyddet brustit — och kostar
 operativ tydlighet i normalfallet. Lämnat.
 
-Kvar öppet från granskningen: fynd 6 (cache-kontroll och PMTiles-läsning inte
-atomiska) är rimligt men märkt MISSTÄNKT även av granskaren; kräver ett
-tvåflikstest med kontrollerad fördröjning för att bekräftas.
+**✅ Å7 (granskningens fynd 6) — BEKRÄFTAT och åtgärdat.** Var märkt MISSTÄNKT;
+ett deterministiskt race-test avgjorde saken. Interleavingen paketkoll → paketet
+raderas (annan flik) → `detectKind()` läser headern gav **2 CONNECT mot R2** —
+och `activate()` returnerade ändå `true`, så operatören fick grönt ljus efter
+att trafiken lämnat enheten. Orsak: spärren gjordes verksam FÖRST efter att
+lagret byggts, så SW:n var i normalläge under hela headerläsningen och en
+cachemiss gick till nätet i stället för att 503:as.
+**Åtgärd:** `saveState({active:true}) + confirm(true)` körs nu **före**
+`detectKind()` — fail-closed innan första nätverkskapabla anropet — och rullas
+tillbaka om något efteråt misslyckas. Verifierat: 2 → 0 egress, och
+aktiveringen rapporterar nu ärligt `false`.
+**Permanent regressionstest:** `test/opsec/race.js` (+ `run-race.js`), eget
+jobb i OPSEC-gaten. Interleavingen görs deterministisk genom att wrappa
+`caches.open` så första lyckade `match()` raderar posten — ingen timing-tur.
 
 ### ✅ 2026-07-30 — Härdat-svep över alla 38 sidor (nytt regressionsskydd, inga läckor)
 

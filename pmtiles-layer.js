@@ -570,6 +570,34 @@ function createController(map, normalLayer, opts) {
             }
         }
 
+        // FAIL-CLOSED FÖRE FÖRSTA NÄTVERKSKAPABLA ANROPET.
+        // detectKind() nedan Range-fetchar PMTiles-headern mot original-URL:en.
+        // Tidigare sattes härdat-läget FÖRST efter att lagret byggts — under
+        // hela den tiden var service workern fortfarande i normalläge, så en
+        // cachemiss gick ut på nätet i stället för att 503:as. Bekräftat med
+        // ett deterministiskt race-test: raderas paketet mellan paketkollen och
+        // headerläsningen (t.ex. av en annan flik) gick 2 Range-anrop ut till
+        // R2 — och aktiveringen returnerade ändå true, så operatören fick grönt
+        // ljus efter att trafiken redan lämnat enheten.
+        // Nu görs spärren verksam först; misslyckas något efteråt rullas den
+        // tillbaka i catch-blocket.
+        saveState({ active: true, url, flavor, kind: persisted.kind || null });
+        if (window.HVHardened && window.HVHardened.confirm) {
+            const spärrVerkstalld = await window.HVHardened.confirm(true);
+            if (!spärrVerkstalld) {
+                hardLayer = null;
+                kind = null;
+                saveState({ active: false, url, flavor });
+                emit();
+                if (!quiet) {
+                    window.alert('Härdat läge kunde INTE aktiveras.\n\n' +
+                        'Appens nätverksspärr svarade inte, så skyddet är AV — ' +
+                        'inte påslaget med varning.\n\nLadda om sidan och försök igen.');
+                }
+                return false;
+            }
+        }
+
         try {
             kind = await detectKind(url);
             if (kind === 'vector') {
@@ -601,15 +629,12 @@ function createController(map, normalLayer, opts) {
             if (demo && demo.center && map.setView) {
                 try { map.setView(demo.center, demo.zoom); } catch (_) {}
             }
+            // Registrera detekterad kind och OMVERIFIERA. Spärren sattes redan
+            // före detectKind (se ovan); den här kontrollen fångar att läget
+            // ändrats under lagerbygget — t.ex. att en annan flik slog av
+            // härdat medan vi höll på.
             saveState({ active: true, url, flavor, kind });
-            // Fas 1.3 / fail-closed aktivering: vänta in att läget är committat
-            // i IDB OCH kvitterat av service workern innan UI:t säger "PÅ".
-            // Utan detta fanns ett fönster där operatören fick grönt läge medan
-            // SW:n fortfarande släppte igenom nätverk.
             if (window.HVHardened && window.HVHardened.confirm) {
-                // confirm(true): bekräfta det BEGÄRDA läget, inte det som råkar
-                // ligga i localStorage — misslyckad skrivning gav annars ett
-                // falskt "verkställt".
                 const verkstalld = await window.HVHardened.confirm(true);
                 if (!verkstalld) {
                     // ROLLBACK, inte varning. Ett grönt "Härdat: PÅ" utan

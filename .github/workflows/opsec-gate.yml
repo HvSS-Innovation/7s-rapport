@@ -67,3 +67,8 @@ jobs:
       # samtliga upptäckta efter att invariant-testet redan var grönt.
       - name: Kör svepet (38 sidor × med/utan service worker)
         run: node test/opsec/run-sweep.js
+      # Race: paketkollen passerar → paketet försvinner → headern läses ändå.
+      # Var en verklig läcka (2 CONNECT mot R2) tills spärren flyttades före
+      # detectKind(). Deterministiskt, inte timing-beroende.
+      - name: Kör race-testet (atomisk aktivering)
+        run: node test/opsec/run-race.js

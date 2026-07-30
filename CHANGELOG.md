@@ -3,6 +3,13 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.30 — 2026-07-30 — Aktiveringen är nu atomisk (race bekräftat och stängt)
+
+- **Bekräftade granskningens sista öppna fynd med ett deterministiskt race-test.** Interleavingen paketkoll → paketet raderas (t.ex. av en annan flik) → PMTiles-headern läses ändå gav **2 CONNECT mot R2** — och `activate()` returnerade `true`, så operatören fick grönt ljus efter att trafiken lämnat enheten.
+- **Orsak:** spärren gjordes verksam först efter att kartlagret byggts. Under hela headerläsningen var service workern i normalläge, så en cachemiss gick till nätet i stället för att 503:as.
+- **Åtgärd:** härdat-läget skrivs och kvitteras nu **före** `detectKind()` — fail-closed innan första nätverkskapabla anropet — och rullas tillbaka om något efteråt misslyckas. Verifierat 2 → 0 egress; aktiveringen rapporterar nu ärligt `false` i stället för falskt grönt.
+- **Permanent regressionstest** (`test/opsec/race.js`) som eget CI-jobb. Racet görs deterministiskt genom att wrappa `caches.open` så första lyckade `match()` raderar posten — ingen timing-tur inblandad.
+
 ## v0.3.29 — 2026-07-30 — Korrekthetsfel ur fjärde granskningen: dolda lager, CoT 0,0, TNR
 
 - **Dolda lager följde med i PNG-exporten.** Skärmen filtrerar på lagersynlighet, exporten gjorde det inte — ett gömt lager kom tillbaka som pixlar i den delade bilden. Exporten tar nu bara synliga objekt och säger till hur många som utelämnas. Undo och autosave sparar fortsatt allt.
