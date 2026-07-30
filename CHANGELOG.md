@@ -3,6 +3,13 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.27 — 2026-07-30 — Falsk bekräftelse av härdat + kartlagren i MINKARTA/SENSORSKISS
+
+- **`confirm()` kunde bekräfta fel tillstånd.** Den läste tillbaka vad som råkade ligga i localStorage i stället för det begärda läget. Misslyckades skrivningen (full lagring) speglades `false` överallt, ack:ades — och `confirm()` svarade **true**, så aktiveringen lämnade grönt UI med öppet nät. Nu tar `confirm(förväntat)` emot det begärda läget och aktiveringen anropar `confirm(true)`. Reproducerat före och efter.
+- **Aktiveringen kräver nu en kontrollerande service worker.** `detectKind()` Range-fetchade PMTiles-headern mot original-URL:en innan spärren var verifierad — och `.pmtiles` är medvetet tillåtet i sid-guarden eftersom SW:n ska servera den ur cache. Utan controller gick anropet rakt ut (uppmätt: 2 externa `.pmtiles`-anrop). Kontrollen sker nu före allt nätverkskapabelt, med kort väntan på `controllerchange`.
+- **Baslagren i MINKARTA och SENSORSKISS.** Egen uppföljning: mitt förra svep matchade bara `L.tileLayer` och missade därför de två viktigaste sidorna, som använder `new HybridTileLayer`. Uppmätt 15–30 externa tile-requests i härdat utan controller; 0 efter fixen.
+- **Footer- och versionslänkar frös i sidladdningens läge** — slogs härdat på efteråt förblev de klickbara. `version.js` (på 22 sidor) var aldrig gate:ad alls. Kontrollen sker nu vid klicket i båda filerna.
+
 ## v0.3.26 — 2026-07-30 — Samma tile-läcka fanns i kartmodalen på sex sidor
 
 - **Uppföljning på minikart-fyndet, hittad genom att söka buggklassen i syskonfilerna.** Kartmodalens baslager lades på kartan direkt, medan `MapHardatModal.attach()` är asynkron och `setView()` körs synkront strax efter — i det fönstret hann Leaflet begära OTM-tiles kring **senaste kartposition** innan härdat tog över. Fanns i index, ah, what, scrim, weft och obslosa. **Mätt före fixen: 18 externa tile-requests per sida** i härdat utan SW-controller; efter fixen 0 på alla sex.

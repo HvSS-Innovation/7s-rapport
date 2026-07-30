@@ -13,6 +13,23 @@ document.addEventListener('DOMContentLoaded', () => {
     // Opsec-länk är samma origin; ingen extern fetch.
     const opsecHtml = ' &middot; <a href="opsec.html" style="color:#4a7c4a;text-decoration:underline" title="Rensa all lokal data fran enheten" aria-label="Glom enheten — rensa all lokal data fran denna enhet">Glom enheten</a>';
     el.innerHTML = verHtml + opsecHtml;
+    // OPSEC: commit-länken går till GitHub och lämnar enheten. Kontrollen sker
+    // vid klicket, inte vid renderingen — härdat kan slås på efter sidladdning.
+    // version.js ligger på 22 sidor, så gaterna i pwa.js och footer.js täcker
+    // den inte. Toppnivå-navigering passerar varken fetch-wrappen eller SW:n.
+    el.addEventListener('click', function (ev) {
+        const a = ev.target.closest && ev.target.closest('a[href^="http"]');
+        if (!a) return;
+        let hardat = false;
+        try {
+            const s = JSON.parse(localStorage.getItem('pmtiles.hardening') || '{}');
+            hardat = s.active === true && !!s.url;
+        } catch (e) {}
+        if (!hardat) return;
+        ev.preventDefault();
+        window.alert('Länken är avstängd i härdat läge.\n\n' +
+            'Den skulle öppna GitHub och avslöja exakt vilken kodversion enheten kör.');
+    });
     const c = document.querySelector('.container');
     if (c) {
         c.appendChild(el);

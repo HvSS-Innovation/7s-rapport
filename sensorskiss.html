@@ -825,11 +825,17 @@ const HybridTileLayer = L.TileLayer.extend({
 function initMap() {
     map = L.map('mapContainer', { zoomControl: true, worldCopyJump: true });
     window.SK_MAP = map;
+    // OPSEC: lägg INTE baslagret på kartan när härdat är lagrat. Hardening-
+    // controllern installeras asynkront nedan, medan Leaflet börjar begära
+    // tiles så snart lagret ligger på en karta med vy — i det fönstret gick
+    // OTM-tiles ut kring operatörens område. Samma fynd som i minkarta.html.
+    // Controllern lägger tillbaka lagret själv när härdat stängs av.
     const tiles = new HybridTileLayer('', {
         maxZoom: 19,
         crossOrigin: 'anonymous',
         attribution: '© OpenTopoMap (z ≤ 17, CC-BY-SA) / © OpenStreetMap (z ≥ 18, ODbL)'
-    }).addTo(map);
+    });
+    if (!(window.HVHardened && window.HVHardened.isActive())) tiles.addTo(map);
     const spinner = document.getElementById('mapSpinner');
     tiles.on('load', () => spinner.classList.add('hidden'));
 

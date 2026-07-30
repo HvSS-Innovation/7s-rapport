@@ -89,18 +89,23 @@
         priv.textContent = 'Ingen data skickas eller lagras utanför din enhet.';
         priv.style.cssText = 'font-size:0.65rem;color:var(--text-muted);opacity:0.7;margin-bottom:12px';
 
-        // Feedback-länk — i härdat läge ett dött span i stället för en <a>.
+        // Feedback-länk. Kontrollen sker vid KLICKET, inte vid skapandet:
+        // härdat kan slås på efter sidladdning (kartmodalen på samma sida, en
+        // annan flik, återkomst ur bfcache) och då frös den gamla varianten
+        // fast i "av"-läget. Länken bär formulärnamnet (7S, WHAT, A-H …) i
+        // URL:en, så ett feltryck talar om exakt vilket verktyg som användes.
         const hardat = isHardened();
-        const fb = document.createElement(hardat ? 'span' : 'a');
-        if (hardat) {
-            fb.textContent = 'Feedback avstängd i härdat läge';
-            fb.title = 'Länken skulle öppna GitHub med formulärnamnet i adressen.';
-        } else {
-            fb.href = buildFeedbackUrl();
-            fb.target = '_blank';
-            fb.rel = 'noopener noreferrer';
-            fb.textContent = 'Bugg eller förslag? Lämna feedback →';
-        }
+        const fb = document.createElement('a');
+        fb.href = buildFeedbackUrl();
+        fb.target = '_blank';
+        fb.rel = 'noopener noreferrer';
+        fb.textContent = 'Bugg eller förslag? Lämna feedback →';
+        fb.addEventListener('click', function (ev) {
+            if (!isHardened()) return;
+            ev.preventDefault();
+            window.alert('Feedback är avstängd i härdat läge.\n\n' +
+                'Länken skulle öppna GitHub och avslöja vilket formulär du använder.');
+        });
         fb.style.cssText = 'display:inline-block;color:var(--text-muted);text-decoration:none;padding:4px 0';
 
         // Om-länk. Behaller link-stil i "stangd"-laget sa den smalter in i
@@ -241,13 +246,20 @@
         // för att gate:a varje enskild <a> i strängen görs ett svep efter
         // insättning: externa länkar blir ren text i härdat läge. Interna
         // ankarlänkar (#egenKopia) lämnas — de lämnar inte enheten.
+        // Klick-tids-kontroll i stället för engångskonvertering: härdat kan slås
+        // på efter att footern renderats. Interna ankarlänkar (#egenKopia)
+        // lämnar inte enheten och rörs inte.
+        aboutBox.addEventListener('click', function (ev) {
+            const a = ev.target.closest && ev.target.closest('a[href^="http"]');
+            if (!a || !isHardened()) return;
+            ev.preventDefault();
+            window.alert('Externa länkar är avstängda i härdat läge.\n\n' +
+                'Att öppna den skulle avslöja för mottagaren att enheten är aktiv.');
+        });
         if (hardat) {
             aboutBox.querySelectorAll('a[href^="http"]').forEach(function (a) {
-                const span = document.createElement('span');
-                span.textContent = a.textContent;
-                span.style.cssText = a.style.cssText;
-                span.title = 'Extern länk dold i härdat läge';
-                a.parentNode.replaceChild(span, a);
+                a.style.textDecoration = 'none';
+                a.title = 'Extern länk avstängd i härdat läge';
             });
         }
 

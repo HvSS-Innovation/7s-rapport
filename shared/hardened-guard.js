@@ -159,14 +159,52 @@
     // sync() är avsiktligt anropbar både fire-and-forget (äldre anropare) och
     // await:ad. Den lösta boolean:en betyder "spärren är bevisligen verkställd
     // i både IDB och service worker" — inte bara "meddelandet är skickat".
-    function sync() {
+    //
+    // `forvantat` är kritiskt: utan det bekräftade sync() bara att IDB och SW
+    // stämmer med vad som RÅKAR ligga i localStorage. Misslyckades skrivningen
+    // (full lagring, blockerad storage) läste den tillbaka `false`, speglade
+    // `false` överallt, fick ack för `false` — och returnerade true. Anroparen
+    // tolkade det som "härdat verkställt" och lämnade grönt UI med öppet nät.
+    // Skicka därför alltid med det tillstånd du BEGÄRDE.
+    function sync(forvantat) {
         active = readActive();
         try { if (bc) bc.postMessage({ type: 'sync' }); } catch (_) {}
+        if (forvantat !== undefined && active !== forvantat) {
+            console.warn('[hardened] Begärt läge ' + forvantat + ' men lagringen säger ' +
+                active + ' — skrivningen gick inte igenom.');
+            return Promise.resolve(false);
+        }
         return writeIdb(active).then(function (skrivenOk) {
             return awaitAck(1500).then(function (ackOk) {
                 return skrivenOk && ackOk;
             });
         }).catch(function () { return false; });
+    }
+
+    // Härdat läge kan bara UPPRÄTTHÅLLAS av en kontrollerande service worker —
+    // tile-bilder och andra resurser som inte går via fetch/XHR är osynliga för
+    // sid-guarden. Saknas controller (force-refresh, allra första besöket) ska
+    // härdat inte kunna påstås vara på. Väntar kort ifall workern är på väg att
+    // ta över, i stället för att fälla direkt.
+    function vantaPaController(timeoutMs) {
+        return new Promise(function (resolve) {
+            var sw = navigator.serviceWorker;
+            if (!sw) { resolve(false); return; }
+            if (sw.controller) { resolve(true); return; }
+            var klar = false;
+            function onChange() {
+                if (!sw.controller) return;
+                klar = true;
+                sw.removeEventListener('controllerchange', onChange);
+                resolve(true);
+            }
+            sw.addEventListener('controllerchange', onChange);
+            setTimeout(function () {
+                if (klar) return;
+                sw.removeEventListener('controllerchange', onChange);
+                resolve(!!sw.controller);
+            }, timeoutMs || 3000);
+        });
     }
 
     // Reparera ev. drift direkt vid sidladdning (IDB/SW kan ha missat en
@@ -177,7 +215,9 @@
         isActive: function () { return active; },
         sync: sync,
         // Explicit namn för anropare som MÅSTE vänta in verkställd spärr innan
-        // de visar "Härdat: PÅ" (pmtiles-layer activate).
-        confirm: sync
+        // de visar "Härdat: PÅ" (pmtiles-layer activate). Anropa med det
+        // tillstånd du begärde: confirm(true).
+        confirm: sync,
+        awaitController: vantaPaController
     };
 })();

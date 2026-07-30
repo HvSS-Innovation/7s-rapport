@@ -547,6 +547,29 @@ function createController(map, normalLayer, opts) {
             return false;
         }
 
+        // Kräv en KONTROLLERANDE service worker INNAN något nätverkskapabelt
+        // körs. detectKind() skapar en PMTiles-läsare mot original-URL:en och
+        // gör en Range-fetch för headern — den passerar sid-guarden (.pmtiles
+        // är tillåtet där, eftersom SW:n ska servera den ur cache) och gick
+        // därför rakt ut på nätet när controller saknades. Verifierat: 2
+        // externa .pmtiles-anrop innan rollback hann köra.
+        if (window.HVHardened && window.HVHardened.awaitController) {
+            const harController = await window.HVHardened.awaitController(3000);
+            if (!harController) {
+                hardLayer = null;
+                kind = null;
+                saveState({ active: false, url, flavor });
+                emit();
+                const msg = 'Härdat läge kan inte aktiveras just nu.\n\n' +
+                    'Appens nätverksspärr (service worker) kontrollerar inte sidan, ' +
+                    'och utan den går skyddet inte att upprätthålla.\n\n' +
+                    'Ladda om sidan och försök igen.';
+                if (!quiet) window.alert(msg);
+                else console.warn('[pmtiles] Härdat ej aktiverat: ingen SW-controller.');
+                return false;
+            }
+        }
+
         try {
             kind = await detectKind(url);
             if (kind === 'vector') {
@@ -584,7 +607,10 @@ function createController(map, normalLayer, opts) {
             // Utan detta fanns ett fönster där operatören fick grönt läge medan
             // SW:n fortfarande släppte igenom nätverk.
             if (window.HVHardened && window.HVHardened.confirm) {
-                const verkstalld = await window.HVHardened.confirm();
+                // confirm(true): bekräfta det BEGÄRDA läget, inte det som råkar
+                // ligga i localStorage — misslyckad skrivning gav annars ett
+                // falskt "verkställt".
+                const verkstalld = await window.HVHardened.confirm(true);
                 if (!verkstalld) {
                     // ROLLBACK, inte varning. Ett grönt "Härdat: PÅ" utan
                     // verkställd SW-spärr är farligare än ett misslyckande:

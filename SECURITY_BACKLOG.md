@@ -8,6 +8,47 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### ✅ 2026-07-30 — Tredje granskningen: falsk bekräftelse + kartlager i minkarta/sensorskiss
+
+Fjärde svepet samma dag. Alla fynd verifierade empiriskt (Playwright bakom
+deny-proxy) före åtgärd — inte bara lästa i koden.
+
+- **Z1 HÖG ✅ `confirm()` bekräftade fel tillstånd.** `sync()` läste tillbaka
+  vad som RÅKADE ligga i localStorage och bekräftade det, i stället för det
+  begärda. Misslyckades skrivningen (full lagring, blockerad storage) lästes
+  `false` tillbaka, speglades till IDB + SW, ack:ades — och `confirm()`
+  returnerade **true**. Aktiveringen tolkade det som "härdat verkställt" och
+  lämnade grönt UI med öppet nät; geokodningen på rapportsidorna hade då
+  passerat sin `isHardened()`-gate. **Reproducerat:** med `setItem` som kastar
+  gav `confirm()` true medan `guard.isActive()` var false.
+  **Åtgärd:** `confirm(forvantat)` — aktiveringen anropar `confirm(true)` och
+  får `false` om lagringen inte stämmer. Verifierat: `confirm(true)` → false.
+- **Z2 HÖG ✅ PMTiles-headern lästes innan spärren var verifierad.**
+  `detectKind()` skapar en läsare mot original-URL:en och Range-fetchar
+  headern. Den passerar sid-guarden (`.pmtiles` är medvetet tillåtet där,
+  eftersom SW:n ska servera den ur cache) — men utan controller finns ingen
+  SW, så anropet gick rakt ut. **Reproducerat:** med paketet i Cache API och
+  utan controller gick 2 externa `.pmtiles`-anrop ut. **Åtgärd:** aktiveringen
+  kräver nu en kontrollerande service worker (med kort väntan på
+  `controllerchange`) INNAN något nätverkskapabelt körs. Härdat kan inte
+  påstås vara på när det inte går att upprätthålla.
+- **Z3 ✅ Egen uppföljning — baslagren i MINKARTA och SENSORSKISS.** Mitt eget
+  svep efter Y6 matchade bara `L.tileLayer` och missade därför de två
+  viktigaste sidorna, som använder `new HybridTileLayer`. **Uppmätt: 15–30
+  externa tile-requests** i härdat utan controller. Nu villkorat `addTo(map)`,
+  0 efteråt. *Lärdom: sök på beteendet (`.addTo(map)` på ett tile-lager), inte
+  på konstruktornamnet.*
+- **Z4 ✅ Footer- och versionslänkar frös i sidladdningens läge.** Kontrollen
+  gjordes en gång vid `DOMContentLoaded`; slogs härdat på efteråt (kartmodalen
+  på samma sida, annan flik, bfcache) förblev länkarna klickbara. `version.js`
+  var dessutom aldrig gate:ad alls — den ligger på 22 sidor och täcktes inte
+  av fixarna i `pwa.js`/`footer.js`. **Åtgärd:** kontroll vid klicket i stället
+  för vid renderingen, i båda filerna.
+
+**Bekräftat rent i granskningen:** inga nya användningar av WebSocket,
+EventSource, WebRTC, externa iframes, media, `srcset`, `@import`, prefetch
+eller preload i aktiv appkod.
+
 ### ✅ 2026-07-30 — Andra externa granskningen: minikartan läckte förbi hela spärren
 
 Uppföljande granskning efter XSS-fixen. Två äkta fynd, båda verifierade i kod

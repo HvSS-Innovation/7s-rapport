@@ -941,11 +941,18 @@ const HybridTileLayer = L.TileLayer.extend({
 function initMap() {
     map = L.map('mapContainer', { zoomControl: true, worldCopyJump: true });
     window.MK_MAP = map;
+    // OPSEC: lägg INTE baslagret på kartan när härdat är lagrat. Hardening-
+    // controllern installeras asynkront nedan (pmtiles-layer.js är en ESM-modul
+    // som kan ladda efter denna kod), medan Leaflet börjar begära tiles så snart
+    // lagret ligger på en karta med vy. I det fönstret gick OTM-tiles ut kring
+    // operatörens område. Verifierat: 30 externa tile-requests utan SW-controller.
+    // Controllern lägger tillbaka lagret själv när härdat stängs av.
     const tiles = new HybridTileLayer('', {
         maxZoom: 19,
         crossOrigin: 'anonymous',          // delar browser-cache med PNG-exportens fetch
         attribution: '© OpenTopoMap (z ≤ 17, CC-BY-SA) / © OpenStreetMap (z ≥ 18, ODbL)'
-    }).addTo(map);
+    });
+    if (!isHardened()) tiles.addTo(map);
     const spinner = document.getElementById('mapSpinner');
     tiles.on('load', () => spinner.classList.add('hidden'));
 
