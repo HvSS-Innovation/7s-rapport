@@ -21,6 +21,14 @@ stab/*
 Thumbs.db
 desktop.ini
 
+# OPSEC-invariant-testet (test/opsec/): playwright installeras --no-save i
+# roten, fixturen (6,6 MB binär) hämtas av run.js, .tmp/ är körningsloggar.
+/node_modules/
+/package.json
+/package-lock.json
+test/opsec/fixtures/
+test/opsec/.tmp/
+
 # Lokala roadmap-anteckningar (innehåller lokal Dropbox-sökväg, ej för publik repo)
 /roadmap-*.md
 

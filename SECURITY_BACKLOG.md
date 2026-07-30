@@ -68,9 +68,20 @@ egress-guarden är åtgärdade i samma svep:
   503:ar utan att nå servern; export renderar; av-slag öppnar nätet igen;
   aktivering utan paket vägras. 11/11 gröna.
 
-Kvarstår: **Fas 3** (statisk CI-gate + fullt 20-stegs Playwright-scenario som
-regressionsskydd — dagens smoke täcker kärnan men är inte wired i CI),
-**H3** (geotaggat foto i git-historik, ej purgat).
+**✅ Fas 3 (2026-07-30):** regressionsskyddet är på plats som GitHub Actions-
+workflow (`.github/workflows/opsec-gate.yml`, SHA-pinnade actions, körs på
+varje push utom [skip ci]):
+
+- **3.1 `verktyg/egress-gate.js`** — statisk grind: failar på ny extern host
+  utanför allowlisten, fetch-host i oregistrerad fil (E1-felklassen) och
+  raderad gate-markör (isHardened/renderHardenedStatic/swHardened m.fl.).
+  Har `--selftest` som bevisar att alla tre felklasserna larmar.
+- **3.2 `test/opsec/`** — invariant-testet i repot: Playwright + deny-all-
+  proxy kör prefetch → härdat → guard/SW/export/appskal/väder → av-slag →
+  Fas 1.4-vägran. 16/16 kontroller; proxyloggen är det auktoritativa beviset
+  på 0 egress. Körs lokalt med `node test/opsec/run.js`.
+
+Kvarstår: **H3** (geotaggat foto i git-historik, ej purgat).
 
 ### ✅ 2026-07-28 — Statusraden påstår "OpenTopoMap" även i härdat läge (åtgärdat 2026-07-29)
 

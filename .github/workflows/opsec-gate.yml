@@ -1,0 +1,51 @@
+# OPSEC-gate (Fas 3, roadmap-opsec-hardat-lage) — två vakter på varje push:
+#
+#  1. egress-gate: statiskt skript som failar när serverad kod får en ny
+#     extern host, en fetch-host dyker upp i en oregistrerad fil, eller en
+#     härdat-spärr (gate-markör) raderas. Konfig: verktyg/egress-gate.js.
+#  2. hardened-invariant: Playwright kör hela härdat-kedjan i riktig browser
+#     bakom en lokal deny-all-proxy — invarianten "härdat = 0 nätverksegress"
+#     bevisas av att proxyloggen är tom. Rigg: test/opsec/.
+#
+#  Auto-bump-commits ([skip ci]) triggar inte. Actions är SHA-pinnade
+#  (mutable tags = supply chain-risk, jfr SECURITY_BACKLOG L4).
+
+name: OPSEC-gate
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - '**.md'
+      - 'audit/**'
+      - 'raw/**'
+      - 'stab/**'
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  egress-gate:
+    name: Statisk egress-gate
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Gate + självtest
+        run: |
+          node verktyg/egress-gate.js
+          node verktyg/egress-gate.js --selftest
+
+  hardened-invariant:
+    name: Härdat läge-invarianten
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+      - name: Installera Playwright + Chromium
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+      - name: Kör invariant-testet (server + deny-proxy + browser)
+        run: node test/opsec/run.js

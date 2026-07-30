@@ -3,6 +3,12 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.22 — 2026-07-30 — OPSEC-gate i CI: härdat-invarianten bevakas automatiskt (Fas 3)
+
+- **Statisk egress-gate** (`verktyg/egress-gate.js`, körs i CI på varje push): failar bygget vid ny extern host utanför allowlisten, vid fetch-host (tiles/geokod/väder/R2) i en oregistrerad fil — exakt felklassen som gav PNG-export-läckan — och när en härdat-spärr (gate-markör) raderas ur en fil. Självtest bevisar att alla tre felklasserna larmar.
+- **Invariant-testet flyttat in i repot** (`test/opsec/`): Playwright + lokal deny-all-proxy kör hela kedjan — prefetch, härdat på, guard-/SW-blockering, appskal ur cache vid reload (beslut A), PNG-export i både sensorskiss och minkarta, vädersidans knapp-disable, av-slag, Fas 1.4-vägran. 16/16 kontroller; proxyloggen bevisar 0 extern egress. Lokalt: `node test/opsec/run.js`. Fixturen (Florens-demon) hämtas vid behov, gitignorerad.
+- **Ny workflow `.github/workflows/opsec-gate.yml`** med SHA-pinnade actions och `permissions: contents: read`. Auto-bump-commits ([skip ci]) triggar inte.
+
 ## v0.3.21 — 2026-07-30 — Härdat läge är nu en äkta spärr (Fas 1+2)
 
 - **Service workern upprätthåller härdat läge** (Fas 2): sidan speglar läget till IndexedDB + `HARDENED_SET`-message; i härdat gör SW:n aldrig `fetch()` — cacheträff serveras, cachemiss får `503 HARDENED_CACHE_MISS`. Gäller pmtiles, tiles och same-origin-revalidering av HTML/JS (**beslut A:** ingen auto-uppdatering i härdat — en nätobservatör ska inte se periodiska anrop; uppdateringar kommer när härdat stängs av).
