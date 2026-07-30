@@ -3,6 +3,12 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.20 — 2026-07-30 — PNG-export fungerar i härdat läge (lokal PMTiles-render)
+
+- **Exporten ritar nu kartbakgrunden från den lokala PMTiles-filen i härdat läge** i stället för att blockeras (uppföljning på v0.3.19/E1). Ny `PMTilesHardening.renderHardenedStatic` (protomaps `Static`-frontend, redan i vendor-bygget) renderar vektorkartan med kartans aktiva flavor rakt in i exportens canvas — pixelexakt mot overlay-projektionen (center räknas som invers mercator av tile-gridets mitt; aritmetiskt lat-mitt hade gett vertikal felpassning). Fail-closed kvarstår: utan nedladdat paket, vid rasterkarta eller om kartmodulen saknas blockeras exporten med tydligt meddelande — on-demand-R2 i härdat accepteras inte.
+- **Ärlig attributionsrad:** exportens fotnot säger "Härdad karta — lokal PMTiles (© OpenStreetMap)" i stället för OpenTopoMap när härdat är på.
+- **Playwright-verifierat:** lokal server + Florens-demofilen → prefetch → härdat på → export: karta + symboler + MGRS/norrpil/skalstock renderade, 0 externa requests under render; negativtest (paketet raderat ur cachen) → blockerad med rätt meddelande.
+
 ## v0.3.19 — 2026-07-30 — OPSEC: PNG-exporten gate:ad i härdat läge
 
 - **PNG-export blockeras fail-closed i härdat läge (E1).** Exporten i minkarta + sensorskiss hämtade OTM/OSM-tiles vars z/x/y ringar in objektens område — ogate:at även i härdat. `renderExportAsync` i båda export-modulerna kastar nu i härdat läge (gate på modulnivå täcker Exportera PNG, Dela protokoll och framtida anropare); felet visas som toast med förklaring. Fynd ur härdat-verifieringen 2026-07-29, se SECURITY_BACKLOG.

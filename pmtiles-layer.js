@@ -21,7 +21,8 @@ import { PMTiles, leafletRasterLayer } from './vendor/pmtiles/pmtiles.esm.js';
 import {
     leafletLayer,
     PolygonSymbolizer,
-    LineSymbolizer
+    LineSymbolizer,
+    Static
 } from './vendor/protomaps/protomaps-leaflet.esm.js';
 
 // Custom 'topo'-flavor som efterliknar OpenTopoMap-känslan: byggnader
@@ -426,6 +427,47 @@ async function removePrefetched(url) {
     } catch (_) { return false; }
 }
 
+// ─── Statisk export-render (härdat läge) ─────────────────────────────────────
+// Ritar härdat-lägets vektorkarta till en given canvas-kontext utan Leaflet-
+// karta (protomaps Static-frontend). Används av PNG-exporten i minkarta/
+// sensorskiss så export i härdat läge läser den lokala PMTiles-filen i
+// stället för att hämta OTM/OSM-raster från nätet.
+//
+// center = { lng, lat } och zoom är exportens tile-grid-parametrar. OBS:
+// anroparen måste räkna center som INVERS mercator av grid-pixelcentrum
+// (inte aritmetiskt lat-mitt) — annars linjerar bakgrunden inte med
+// overlay-projektionen. drawContext respekterar befintlig ctx-transform
+// (translate/scale), så anroparen kan rita med offset och dpr-skala.
+//
+// Fail-closed: kräver aktivt härdat läge med fullständigt nedladdat paket.
+// Utan paket skulle PmtilesSource:ns range-requests gå ut till R2 via SW:ns
+// nätfallback — då är blockering rätt svar, inte en "nästan lokal" export.
+async function renderHardenedStatic(ctx, center, zoom, widthPx, heightPx) {
+    const s = loadState();
+    if (!(s.active === true && s.url)) {
+        throw new Error('Härdat läge är inte aktivt.');
+    }
+    if (s.kind === 'raster') {
+        throw new Error('Aktiv härdad karta är i rasterformat — PNG-export stöds bara för vektorkartor.');
+    }
+    const cached = await isPrefetched(s.url, getExpectedBytesForUrl(s.url));
+    if (!cached) {
+        throw new Error('Kartpaketet är inte nedladdat — exporten skulle hämta kartdata från nätet. Ladda ner paketet via offline-väljaren och försök igen.');
+    }
+    const flavor = s.flavor || DEFAULT_FLAVOR;
+    const staticOpts = { url: s.url, lang: 'sv' };
+    if (flavor === 'topo') {
+        staticOpts.paintRules = topoPaintRules();
+        // Matchar topo-flavorns 'earth'-ton så ytor utan täckning (utanför
+        // extraktets bbox) inte blir genomskinliga hål i exporten.
+        staticOpts.backgroundColor = '#f0ede5';
+    } else {
+        staticOpts.flavor = flavor;
+    }
+    const st = new Static(staticOpts);
+    return st.drawContext(ctx, widthPx, heightPx, { x: center.lng, y: center.lat }, zoom);
+}
+
 function createController(map, normalLayer, opts) {
     opts = opts || {};
     let hardLayer = null;
@@ -668,6 +710,7 @@ window.PMTilesPrefetch = {
 // alternativen inte definieras på tre ställen.
 window.PMTilesHardening = {
     createController,
+    renderHardenedStatic,
     FLAVORS: [
         ['topo', 'Topo (svart bygg)'],
         ['light', 'Light'],

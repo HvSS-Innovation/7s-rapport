@@ -24,8 +24,12 @@ E1. ✅ **PNG-export i minkarta + sensorskiss hämtade OTM/OSM-tiles ogate:at i
     det footer-löftet ("då lämnar inga koordinater enheten", `footer.js:147`)
     säger inte kan hända. **Åtgärd:** `renderExportAsync` kastar fail-closed
     i härdat läge (gate på modulnivå = täcker alla anropare); felet ytas som
-    toast med förklaring + åtgärd. Kvarstående förbättring (ej byggd): rendera
-    exporten från det lokala PMTiles-lagret så export funkar även i härdat.
+    toast med förklaring + åtgärd. **Steg 2 (2026-07-30):** exporten renderar
+    nu kartbakgrunden från den lokala PMTiles-filen i härdat läge
+    (`PMTilesHardening.renderHardenedStatic`, protomaps `Static`-frontend) —
+    blockeringen kvarstår fail-closed när paketet inte är nedladdat (on-demand
+    R2 accepteras inte) eller när aktiv karta är raster. Playwright-verifierad:
+    0 externa requests under render; negativtest utan paket blockeras.
 
 E2. ✅ **Topo-knappens "Aktivera ändå?"-confirm i härdat var vilseledande** —
     `minkarta.html` + `sensorskiss.html` frågade "Aktivera ändå?", men

@@ -32,7 +32,15 @@
         return 'https://tile.openstreetmap.org/' + z + '/' + x + '/' + y + '.png';
     }
     function tileLayerLabel(z) {
+        if (isHardened()) return 'Härdad karta — lokal PMTiles (© OpenStreetMap)';
         return z <= 17 ? 'OpenTopoMap (CC-BY-SA)' : 'OSM Standard (ODbL)';
+    }
+    // Invers mercator (tile-koordinat → lat/lng). Härdat-grenen behöver ge
+    // Static-rendern gridets exakta pixelcentrum som lat/lng.
+    function x2lon(x, z) { return x / Math.pow(2, z) * 360 - 180; }
+    function y2lat(y, z) {
+        const n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
+        return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
     }
 
     // Sektor-polygon för verkansomrade — ska matcha sectorPath() i
@@ -446,14 +454,15 @@
     }
 
     // ── Asynk render — laddar alla SVG till bilder FÖRE toBlob ──────────────
-    // OPSEC: exporten hämtar kartbakgrund från OTM/OSM — tile-koordinaterna
+    // OPSEC: raster-bakgrunden hämtas från OTM/OSM — tile-koordinaterna
     // (z/x/y) ringar in exakt objektens område. I härdat läge får det aldrig
-    // lämna enheten, så hela rendern blockeras fail-closed här (täcker alla
-    // anropare: Exportera PNG, Dela protokoll, framtida).
+    // lämna enheten: då ritas bakgrunden i stället från den lokala PMTiles-
+    // filen via PMTilesHardening.renderHardenedStatic (fail-closed — saknas
+    // modulen eller det nedladdade paketet blockeras exporten helt).
     function isHardened() { try { const s = JSON.parse(localStorage.getItem('pmtiles.hardening') || '{}'); return s.active === true && !!s.url; } catch (e) { return false; } }
 
     async function renderExportAsync(opts) {
-        if (isHardened()) throw new Error('Export blockerad i härdat läge — kartbakgrunden hämtas från nätet och skulle röja området. Stäng av härdat läge för att exportera.');
+        const hardened = isHardened();
         const objects = opts.objects || [];
         const title = opts.title || 'MINERING';
         const subtitle = opts.subtitle || '';
@@ -502,26 +511,48 @@
         }
         ctx.textBaseline = 'alphabetic';
 
-        // 2) Tiles — throttlat (max 4 parallella) + en retry per tile.
-        // OpenTopoMap rate-limitar burst-requests; tidigare Promise.all
-        // över alla tiles gjorde att flertalet tiles 429:ades samtidigt
-        // och ritades som fallback-mörka rutor.
-        const tileJobs = [];
-        for (let ty = tileYMin; ty <= tileYMax; ty++) {
-            for (let tx = tileXMin; tx <= tileXMax; tx++) {
-                const url = tileUrl(z, tx, ty);
-                const dx = (tx - tileXMin) * TILE_SIZE;
-                const dy = (ty - tileYMin) * TILE_SIZE + 60;
-                tileJobs.push(() =>
-                    loadImageWithRetry(url).then(img => ({ img, dx, dy }))
-                );
+        // 2) Kartbakgrund. Härdat: rita lokala PMTiles-vektorkartan via
+        // protomaps Static — inga tile-requests lämnar enheten. Annars:
+        // OTM/OSM-raster, throttlat (max 4 parallella) + en retry per tile
+        // (OpenTopoMap rate-limitar burst-requests; tidigare Promise.all
+        // gjorde att flertalet tiles 429:ades samtidigt och ritades som
+        // fallback-mörka rutor). Center = invers mercator av gridets pixel-
+        // centrum (aritmetiskt lat-mitt skulle ge vertikal felpassning mot
+        // project() nedan).
+        if (hardened) {
+            const PH = global.PMTilesHardening;
+            if (!PH || !PH.renderHardenedStatic) {
+                throw new Error('Export blockerad i härdat läge — kartmodulen är inte laddad. Ladda om sidan och försök igen.');
             }
-        }
-        const tiles = await runThrottled(tileJobs, 4);
-        for (const t of tiles) {
-            if (t.img) ctx.drawImage(t.img, t.dx, t.dy);
-            else {
-                ctx.fillStyle = '#152815'; ctx.fillRect(t.dx, t.dy, TILE_SIZE, TILE_SIZE);
+            const center = {
+                lng: x2lon(tileXMin + tilesW / 2, z),
+                lat: y2lat(tileYMin + tilesH / 2, z)
+            };
+            ctx.save();
+            ctx.translate(0, 60);
+            ctx.beginPath();
+            ctx.rect(0, 0, canvasW, canvasH);
+            ctx.clip();
+            await PH.renderHardenedStatic(ctx, center, z, canvasW, canvasH);
+            ctx.restore();
+        } else {
+            const tileJobs = [];
+            for (let ty = tileYMin; ty <= tileYMax; ty++) {
+                for (let tx = tileXMin; tx <= tileXMax; tx++) {
+                    const url = tileUrl(z, tx, ty);
+                    const dx = (tx - tileXMin) * TILE_SIZE;
+                    const dy = (ty - tileYMin) * TILE_SIZE + 60;
+                    tileJobs.push(() =>
+                        loadImageWithRetry(url).then(img => ({ img, dx, dy }))
+                    );
+                }
+            }
+            const tiles = await runThrottled(tileJobs, 4);
+            for (const t of tiles) {
+                if (t.img) ctx.drawImage(t.img, t.dx, t.dy);
+                else {
+                    ctx.fillStyle = '#152815'; ctx.fillRect(t.dx, t.dy, TILE_SIZE, TILE_SIZE);
+                }
             }
         }
 
