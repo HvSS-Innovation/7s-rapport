@@ -100,32 +100,73 @@
     });
 
     // ── Runtime-sync till IDB + SW ──────────────────────────────────────────
+    // Returnerar en Promise som löser NÄR transaktionen är committad — inte när
+    // den är köad. Anroparen måste kunna veta att läget faktiskt ligger på disk
+    // innan UI:t påstår att spärren gäller.
     function writeIdb(isActive) {
-        try {
-            var req = indexedDB.open('hv-hardened', 1);
-            req.onupgradeneeded = function () {
-                try { req.result.createObjectStore('kv'); } catch (_) {}
-            };
-            req.onsuccess = function () {
-                try {
-                    var db = req.result;
-                    var tx = db.transaction('kv', 'readwrite');
-                    tx.objectStore('kv').put({ active: isActive, ts: Date.now() }, 'state');
-                    tx.oncomplete = function () { db.close(); };
-                } catch (_) {}
-            };
-        } catch (_) {}
+        return new Promise(function (resolve) {
+            try {
+                var req = indexedDB.open('hv-hardened', 1);
+                req.onupgradeneeded = function () {
+                    try { req.result.createObjectStore('kv'); } catch (_) {}
+                };
+                req.onerror = function () { resolve(false); };
+                req.onblocked = function () { resolve(false); };
+                req.onsuccess = function () {
+                    try {
+                        var db = req.result;
+                        var tx = db.transaction('kv', 'readwrite');
+                        tx.objectStore('kv').put({ active: isActive, ts: Date.now() }, 'state');
+                        tx.oncomplete = function () { db.close(); resolve(true); };
+                        tx.onerror = function () { try { db.close(); } catch (_) {} resolve(false); };
+                        tx.onabort = function () { try { db.close(); } catch (_) {} resolve(false); };
+                    } catch (_) { resolve(false); }
+                };
+            } catch (_) { resolve(false); }
+        });
     }
 
+    // Väntar in service workerns HARDENED_ACK. Timeout → false (vi vet inte att
+    // spärren är verkställd), aldrig ett tyst "ja".
+    function awaitAck(timeoutMs) {
+        return new Promise(function (resolve) {
+            var sw = navigator.serviceWorker;
+            if (!sw || !sw.controller) { resolve(false); return; }
+            var klar = false;
+            function handler(ev) {
+                var d = ev.data || {};
+                if (d.type !== 'HARDENED_ACK') return;
+                klar = true;
+                sw.removeEventListener('message', handler);
+                resolve(d.active === active);
+            }
+            sw.addEventListener('message', handler);
+            try {
+                sw.controller.postMessage({ type: 'HARDENED_SET', active: active });
+            } catch (_) {
+                sw.removeEventListener('message', handler);
+                resolve(false);
+                return;
+            }
+            setTimeout(function () {
+                if (klar) return;
+                sw.removeEventListener('message', handler);
+                resolve(false);
+            }, timeoutMs || 1500);
+        });
+    }
+
+    // sync() är avsiktligt anropbar både fire-and-forget (äldre anropare) och
+    // await:ad. Den lösta boolean:en betyder "spärren är bevisligen verkställd
+    // i både IDB och service worker" — inte bara "meddelandet är skickat".
     function sync() {
         active = readActive();
-        writeIdb(active);
         try { if (bc) bc.postMessage({ type: 'sync' }); } catch (_) {}
-        try {
-            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage({ type: 'HARDENED_SET', active: active });
-            }
-        } catch (_) {}
+        return writeIdb(active).then(function (skrivenOk) {
+            return awaitAck(1500).then(function (ackOk) {
+                return skrivenOk && ackOk;
+            });
+        }).catch(function () { return false; });
     }
 
     // Reparera ev. drift direkt vid sidladdning (IDB/SW kan ha missat en
@@ -134,6 +175,9 @@
 
     window.HVHardened = {
         isActive: function () { return active; },
-        sync: sync
+        sync: sync,
+        // Explicit namn för anropare som MÅSTE vänta in verkställd spärr innan
+        // de visar "Härdat: PÅ" (pmtiles-layer activate).
+        confirm: sync
     };
 })();

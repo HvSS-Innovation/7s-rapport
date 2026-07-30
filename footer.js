@@ -144,14 +144,15 @@
 <li><strong>VÄDER-formuläret</strong> – hämtar prognos från <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Open-Meteo</a> och ortens koordinat via Nominatim; <a href="https://www.smhi.se/" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">SMHI</a> öppnas bara som frivillig länk</li>
 </ul>
 <div style="background:#1a0a0a;border:1px solid #6b2020;border-radius:6px;padding:10px 14px;margin:12px 0 10px">
-<p style="margin:0 0 8px;font-size:0.78rem;color:#d4a0a0"><strong style="color:#e05050">I skarpt läge:</strong> Aktivera Härdat läge och förladda kartan innan operationen — då lämnar inga koordinater enheten. Konkret arbetsgång:</p>
+<p style="margin:0 0 8px;font-size:0.78rem;color:#d4a0a0"><strong style="color:#e05050">I skarpt läge:</strong> Aktivera Härdat läge och förladda kartan innan operationen — då lämnar inga koordinater enheten via appens egna anrop. Konkret arbetsgång:</p>
 <ol style="margin:0;padding-left:18px;font-size:0.76rem;color:#d4a0a0">
 <li>Öppna MINKARTA eller SENSORSKISS på en betrodd anslutning.</li>
 <li>Slå på <strong>Härdat läge</strong> — kartan byts till lokal PMTiles-fil utan tile-requests.</li>
 <li>Klicka <strong>Ladda ner offline</strong> en gång — hela bundlen hashas och cachas lokalt.</li>
 <li>Använd <strong>manuell MGRS-inmatning</strong> i rapport-formulären istället för GPS-uppslag mot Nominatim/Overpass.</li>
-<li><strong>Undvik VÄDER-formuläret</strong> i skarpt läge — det går alltid till SMHI när det används.</li>
+<li><strong>Undvik VÄDER-formuläret</strong> i skarpt läge — det går alltid till Open-Meteo/Nominatim när det används.</li>
 </ol>
+<p style="margin:10px 0 0;font-size:0.74rem;color:#c8a24e;line-height:1.5"><strong>Vad Härdat läge INTE kan garantera:</strong> spärren täcker appens egna nätverksanrop. Webbläsaren kontrollerar däremot själv om appen har en ny version, och den kontrollen kan en webbapp inte stänga av inifrån — den passerar utanför appens spärr. En observatör kan därför se att enheten öppnat verktyget, även i Härdat läge. Vill du ha garanterad radiotystnad: <strong>flygplansläge</strong> är det enda som håller.</p>
 </div>
 
 <h3 id="egenKopia" style="color:var(--accent);font-size:0.85rem;margin:16px 0 10px;letter-spacing:0.06em">KÖR DIN EGEN KOPIA</h3>

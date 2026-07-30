@@ -3559,13 +3559,7 @@ async function prepareExportBlob() {
         showModel: state.showModel
     });
     if (!res || !res.blob) throw new Error('Inget bilddata.');
-    let centerMgrs = '';
-    try {
-        const cLat = (res.bbox.minLat + res.bbox.maxLat) / 2;
-        const cLng = (res.bbox.minLng + res.bbox.maxLng) / 2;
-        centerMgrs = MGRS.forward(cLat, cLng);
-    } catch (_) {}
-    const filename = window.MK_EXPORT.exportFilename(centerMgrs);
+    const filename = window.MK_EXPORT.exportFilename();
     _lastExport = { blob: res.blob, filename };
     return _lastExport;
 }

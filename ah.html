@@ -742,8 +742,24 @@ function showCotFeedback(msg) {
 }
 function showPublishDialog() {
     const v = id => document.getElementById(id).value.trim();
-    document.getElementById('publishInfo').innerHTML =
-        `<span class="label">Position:</span> ${v('stalle') || '-'}\n<span class="label">TAK:</span> .cot-fil delas till ATAK\n<span class="label">Signal:</span> Textrapport delas`;
+    // OPSEC: STÄLLE autofylls från geokodningssvar och kan innehålla vad som
+    // helst — bygg raderna som DOM-noder med textContent. Med innerHTML var
+    // fältet en DOM-XSS-sänka, och sid-script kan stänga av härdat läge.
+    const info = document.getElementById('publishInfo');
+    const rader = [
+        ['Position:', v('stalle') || '-'],
+        ['TAK:', '.cot-fil delas till ATAK'],
+        ['Signal:', 'Textrapport delas']
+    ];
+    info.textContent = '';
+    rader.forEach(function (par, i) {
+        const s = document.createElement('span');
+        s.className = 'label';
+        s.textContent = par[0];
+        info.appendChild(s);
+        info.appendChild(document.createTextNode(' ' + par[1]));
+        if (i < rader.length - 1) info.appendChild(document.createTextNode('\n'));
+    });
     document.getElementById('publishOverlay').classList.add('open');
 }
 function closePublishDialog() { document.getElementById('publishOverlay').classList.remove('open'); }

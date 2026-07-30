@@ -634,12 +634,16 @@
     }
     function parseDash(s) { return String(s).split(/[\s,]+/).map(Number).filter(n => !isNaN(n)); }
 
-    function exportFilename(centerMgrs) {
+    // OPSEC: filnamnet följer med ut i delningen (Signal, mail, molnlagring,
+    // mottagarens notiser och backuper) även när bildens EXIF är rensad.
+    // Därför INGEN koordinat i namnet — MGRS hör hemma i bilden, inte i
+    // metadatan runt den. Tidsstämpeln behålls: den gör filerna särskiljbara
+    // och avslöjar inget utöver när meddelandet ändå skickades.
+    function exportFilename() {
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
         const ts = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes());
-        const mgrsSafe = (centerMgrs || 'okand').replace(/\s+/g, '');
-        return 'sensorskiss_' + mgrsSafe + '_' + ts + '.png';
+        return 'sensorskiss_' + ts + '.png';
     }
 
     function downloadBlob(blob, filename) {

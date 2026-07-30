@@ -8,6 +8,52 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### ✅ 2026-07-30 — Extern granskning (ChatGPT SOL 5.6): DOM-XSS + fail-open funna och åtgärdade
+
+Andra-åsikt-granskning beställd efter Fas 0–4, medvetet utan att granskaren
+fick läsa denna fil först. Den hittade fyra äkta fynd som vår egen genomgång
+missade. Alla verifierade i kod före åtgärd, alla fixade samma dag.
+
+- **X1 KRITISK ✅ DOM-XSS i publiceringsdialogen.** `publishInfo.innerHTML`
+  interpolerade STÄLLE-fältet — som **autofylls från geokodningssvar** — plus
+  Signal-gruppnamnet ur localStorage. Fanns på **fem** sidor (index, ah, what,
+  scrim, weft), inte tre som rapporten angav. Med `unsafe-inline` i CSP:n och
+  härdat läge som vanligt JS-tillstånd (X3) gav det en väg att stänga av hela
+  spärren. **Åtgärd:** raderna byggs som DOM-noder med `textContent`.
+  Regressionsskydd: hård spärr i egress-gaten + Playwright-test som matar in
+  fientlig markup och kräver 0 skapade element.
+  *Varför vi missade den:* i index.html står `innerHTML =` och template-
+  strängen på olika rader — radbaserad sökning hittar den inte.
+- **X2 ✅ (delvis, resten dokumenterad)** Webbläsarens egen uppdateringskoll av
+  `service-worker.js` körs med `service-workers mode = none` och kan per spec
+  **inte** fångas av den aktiva workern; samma sak för `cache.add()` i install.
+  Går inte att stänga inifrån en PWA. **Åtgärd:** löftet omformulerat i
+  footern — "appens egna anrop", plus en egen rad om vad Härdat läge *inte*
+  kan garantera och att flygplansläge är det enda som ger radiotystnad.
+  Vårt Playwright-test bevisade app-initierad egress, aldrig denna väg.
+- **X3 ✅ (delvis) Fail-open i service workern.** Varje IDB-felväg gjorde
+  `resolve(false)` = "inte härdat" = nätet öppet, i en komponent genomgående
+  beskriven som fail-closed. **Åtgärd:** "inget läge lagrat" (aldrig aktiverat)
+  skiljs nu från "kunde inte läsa" — det senare behandlas som HÄRDAT och
+  cachas inte, så ett övergående fel inte låser workern. Dessutom
+  `HARDENED_ACK`: `activate()` väntar in committad IDB-transaktion **och**
+  SW-kvittens innan UI:t säger PÅ, och varnar annars.
+  *Kvar:* att godtycklig same-origin-kod kan skriva läget är arkitektoniskt —
+  ett verkligt separat säkerhetsläge kräver egen origin/app. Noteras som
+  medveten begränsning, inte åtgärdad.
+- **X4 ✅ MGRS i delade filnamn.** Exporten strippade EXIF ur bilden men skrev
+  koordinaten i filnamnet (`minkarta_<MGRS>_<tid>.png`), som följer med ut i
+  Signal/mail/backuper. **Åtgärd:** koordinaten borttagen, tidsstämpeln kvar
+  (avslöjar inget utöver när meddelandet ändå skickades). Död `centerMgrs`-
+  beräkning städad på tre anropsplatser.
+- **X5 ✅ Externa länkar i `pwa.js`** (GitHub, 7srapport.com) var klickbara i
+  härdat läge. **Åtgärd:** `extLank()` renderar dem som text när härdat är på.
+
+**Bekräftat icke-fynd:** övriga `innerHTML`-sänkor (app6, pedars, rassoika,
+obo m.fl.) interpolerar hårdkodade listor och interna räknare, aldrig
+fältvärden — kontrollerat en och en. WebRTC/WebSocket är owrappade i guarden,
+men appen använder dem inte; noteras som defense-in-depth-lucka.
+
 ### ✅ 2026-07-29 — Verifiering av härdat läge: PNG-exporten läckte (åtgärdat 2026-07-30)
 
 Uppföljande kodgranskning av kärnlöftet efter Fas 0. **Fas 0-fixarna håller**

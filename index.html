@@ -1351,13 +1351,24 @@ function showPublishDialog() {
     const stalle = v('stalle') || '-';
     const info = document.getElementById('publishInfo');
     const grupp = getSignalGroup();
-    const signalRad = grupp
-        ? `<span class="label">Signal:</span> Textrapport delas → ${grupp}`
-        : `<span class="label">Signal:</span> Textrapport delas`;
-    info.innerHTML =
-        `<span class="label">Position:</span> ${stalle}\n` +
-        `<span class="label">TAK:</span> .cot-fil delas till ATAK\n` +
-        signalRad;
+    // OPSEC: både STÄLLE (autofylls från geokodningssvar) och Signal-gruppen
+    // (fritext ur localStorage) kan innehålla vad som helst — bygg raderna som
+    // DOM-noder med textContent. Med innerHTML var detta en DOM-XSS-sänka, och
+    // sid-script kan stänga av härdat läge.
+    const rader = [
+        ['Position:', stalle],
+        ['TAK:', '.cot-fil delas till ATAK'],
+        ['Signal:', grupp ? 'Textrapport delas → ' + grupp : 'Textrapport delas']
+    ];
+    info.textContent = '';
+    rader.forEach(function (par, i) {
+        const s = document.createElement('span');
+        s.className = 'label';
+        s.textContent = par[0];
+        info.appendChild(s);
+        info.appendChild(document.createTextNode(' ' + par[1]));
+        if (i < rader.length - 1) info.appendChild(document.createTextNode('\n'));
+    });
     const inp = document.getElementById('signalGruppInp');
     if (inp) inp.value = grupp;
     document.getElementById('publishOverlay').classList.add('open');

@@ -169,6 +169,26 @@ const P2 = { lat: 43.80, lng: 11.40 };
     check('0 extern egress under härdat (proxy-bevis)', extDuring.trim() === '',
         extDuring.trim().split('\n').slice(0, 3).join(' | '));
 
+    // 10b) DOM-XSS-regression: STÄLLE autofylls från geokodningssvar och fick
+    // tidigare gå rakt in i publishInfo.innerHTML. Fientlig text ska renderas
+    // som TEXT, aldrig som element. (Fixad 2026-07-30, fem rapportsidor.)
+    await page.goto(BASE + '/index.html', { waitUntil: 'load' });
+    await page.waitForFunction(() => typeof window.showPublishDialog === 'function', null, { timeout: 20000 });
+    const xss = await page.evaluate(() => {
+        const nyttolast = '<img src=x onerror="window.__xss=1">';
+        window.__xss = 0;
+        document.getElementById('stalle').value = nyttolast;
+        window.showPublishDialog();
+        const info = document.getElementById('publishInfo');
+        return {
+            element: info.querySelectorAll('img').length,   // ska vara 0
+            kord: window.__xss,                             // ska vara 0
+            text: info.textContent.includes(nyttolast)      // ska vara true
+        };
+    });
+    check('Fientlig STÄLLE-text renderas som text, inte HTML',
+        xss.element === 0 && xss.kord === 0 && xss.text, JSON.stringify(xss));
+
     // 11) Härdat AV → nätet öppnas igen.
     await page.evaluate(() => {
         const s = JSON.parse(localStorage.getItem('pmtiles.hardening') || '{}');

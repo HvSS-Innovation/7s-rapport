@@ -3,6 +3,16 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.24 — 2026-07-30 — Fynd ur extern granskning: DOM-XSS och fail-open stängda
+
+- **DOM-XSS i publiceringsdialogen (kritisk).** `publishInfo.innerHTML` interpolerade STÄLLE-fältet — som autofylls från geokodningssvar — och Signal-gruppnamnet. Fanns på fem rapportsidor (index, ah, what, scrim, weft). Raderna byggs nu som DOM-noder med `textContent`. Kombinerat med att härdat läge är ett vanligt JS-tillstånd gav hålet en väg att stänga av hela nätverksspärren.
+- **Fail-open i service workern.** Varje IndexedDB-felväg returnerade "inte härdat" = nätet öppet. Nu skiljs "inget läge lagrat" (aldrig aktiverat → öppet) från "kunde inte läsa" (okänt → **härdat**, och cachas inte så ett övergående fel inte låser workern).
+- **Bekräftad aktivering.** Nytt `HARDENED_ACK` från service workern: `activate()` väntar in committad IDB-transaktion och kvittens innan UI:t säger PÅ, och varnar om spärren inte kan verifieras. Stänger fönstret där operatören fick grönt läge medan workern ännu släppte igenom nät.
+- **Koordinaten borta ur delade filnamn.** Exporten strippade EXIF men skrev MGRS i filnamnet, som följer med ut i Signal/mail/backuper. Nu bara tidsstämpel.
+- **Externa länkar gate:ade** i installationspanelen — renderas som text i härdat läge i stället för klickbara utgångar.
+- **Ärligare löfte i footern.** Webbläsarens egen uppdateringskoll av service workern kan per spec inte fångas av appen. Löftet säger nu "appens egna anrop", med en egen rad om vad Härdat läge inte kan garantera och att flygplansläge är det enda som ger radiotystnad.
+- **Regressionsskydd:** egress-gaten fick hård spärr mot `publishInfo`-innerHTML plus en mätt budget för interpolerande `innerHTML`-satser per fil (självtestet täcker nu 5 felklasser), och invariant-testet matar in fientlig markup och kräver 0 skapade element. 17/17 gröna.
+
 ## v0.3.23 — 2026-07-30 — Historik- och infra-hygien (Fas 4)
 
 - **Git-historiken omskriven:** det geotaggade fotot (enda jpg som någonsin committats, bar GPS + kameramodell + tidsstämpel i EXIF) är purgat ur all historik med `git filter-repo` och force-pushat. HEAD-trädet är byte-identiskt före/efter — noll innehållsändring, bara historik; alla 915 commits och alla branches/taggar kvar. **Alla commit-ID:n före detta är nya** → gamla lokala kloner måste klonas om.

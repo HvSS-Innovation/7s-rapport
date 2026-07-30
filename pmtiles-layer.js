@@ -579,6 +579,21 @@ function createController(map, normalLayer, opts) {
                 try { map.setView(demo.center, demo.zoom); } catch (_) {}
             }
             saveState({ active: true, url, flavor, kind });
+            // Fas 1.3 / fail-closed aktivering: vänta in att läget är committat
+            // i IDB OCH kvitterat av service workern innan UI:t säger "PÅ".
+            // Utan detta fanns ett fönster där operatören fick grönt läge medan
+            // SW:n fortfarande släppte igenom nätverk.
+            if (window.HVHardened && window.HVHardened.confirm) {
+                const verkstalld = await window.HVHardened.confirm();
+                if (!verkstalld) {
+                    console.warn('[pmtiles] Härdat läge kunde inte bekräftas av service workern.');
+                    if (!quiet) {
+                        window.alert('Härdat läge kunde inte verifieras mot appens nätverksspärr.\n\n' +
+                            'Kartan visas lokalt, men lita INTE på att nätet är stängt. ' +
+                            'Ladda om sidan och försök igen.');
+                    }
+                }
+            }
             emit();
             return true;
         } catch (err) {

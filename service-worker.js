@@ -218,27 +218,48 @@ async function servePmtilesRange(request) {
 // ─────────────────────────────────────────────────────────────────────────
 let _hardenedMem = null; // null = okänt (läs IDB), annars boolean
 
+// OKANT skiljs medvetet från false. "Inget läge lagrat" (användaren har aldrig
+// slagit på härdat) är ett SVAR och betyder öppet. "Kunde inte läsa" är INTE
+// ett svar — och ett okänt säkerhetstillstånd måste behandlas som härdat, annars
+// blir ett lagringsfel en tyst läcka i stället för ett synligt funktionsfel.
+const HARDENED_OKANT = 'okant';
+
 function hardenedReadIDB() {
   return new Promise(resolve => {
     try {
       const req = indexedDB.open('hv-hardened', 1);
       req.onupgradeneeded = () => { try { req.result.createObjectStore('kv'); } catch (_) {} };
-      req.onerror = () => resolve(false);
+      req.onerror = () => resolve(HARDENED_OKANT);
+      req.onblocked = () => resolve(HARDENED_OKANT);
       req.onsuccess = () => {
         try {
           const db = req.result;
           const tx = db.transaction('kv', 'readonly');
           const get = tx.objectStore('kv').get('state');
-          get.onsuccess = () => { const v = !!(get.result && get.result.active); db.close(); resolve(v); };
-          get.onerror = () => { db.close(); resolve(false); };
-        } catch (_) { resolve(false); }
+          get.onsuccess = () => {
+            // Tom store = aldrig aktiverat = öppet. Post finns = läs flaggan.
+            const v = (get.result === undefined) ? false : !!get.result.active;
+            db.close();
+            resolve(v);
+          };
+          get.onerror = () => { db.close(); resolve(HARDENED_OKANT); };
+          tx.onabort = () => { try { db.close(); } catch (_) {} resolve(HARDENED_OKANT); };
+        } catch (_) { resolve(HARDENED_OKANT); }
       };
-    } catch (_) { resolve(false); }
+    } catch (_) { resolve(HARDENED_OKANT); }
   });
 }
 
 async function swHardened() {
-  if (_hardenedMem === null) _hardenedMem = await hardenedReadIDB();
+  if (_hardenedMem !== null) return _hardenedMem;
+  const lage = await hardenedReadIDB();
+  if (lage === HARDENED_OKANT) {
+    // Fail-closed, men cacha INTE — nästa request försöker läsa igen så ett
+    // övergående IDB-fel inte låser workern i härdat tills den dödas.
+    console.warn('[SW] Kunde inte läsa härdat-läget — behandlar som HÄRDAT (fail-closed).');
+    return true;
+  }
+  _hardenedMem = lage;
   return _hardenedMem;
 }
 
@@ -273,6 +294,14 @@ self.addEventListener('message', (e) => {
   // aldrig nå vår registration, kollen är defense-in-depth.
   if (e.origin && e.origin !== self.location.origin) return;
   _hardenedMem = !!data.active;
+  // Kvittera så sidan kan vänta in att spärren faktiskt är verkställd innan
+  // UI:t säger "Härdat: PÅ". Utan ack fanns ett fönster där användaren fick
+  // grönt läge medan workern ännu inte kände till det.
+  try {
+    if (e.source && e.source.postMessage) {
+      e.source.postMessage({ type: 'HARDENED_ACK', active: _hardenedMem });
+    }
+  } catch (_) {}
   if (_hardenedMem) {
     // Fail-closed aktivering (Fas 1.3): pågående nedladdningsjobb avbryts
     // direkt — inga kvardröjande fetch-loopar efter att härdat slagits på.

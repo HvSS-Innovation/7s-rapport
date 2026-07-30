@@ -13,12 +13,29 @@
     return el;
   }
 
+  // OPSEC: i härdat läge ska inga klickbara utgångar till nätet ligga kvar.
+  // `no-referrer` döljer bara Referer-headern — DNS-uppslag, TLS-handskakning
+  // och själva navigeringen sker ändå, och ett feltryck räcker. Länkarna byts
+  // därför mot ren text när härdat är på.
+  function isHardened() {
+    try {
+      var s = JSON.parse(localStorage.getItem('pmtiles.hardening') || '{}');
+      return s.active === true && !!s.url;
+    } catch (e) { return false; }
+  }
+  function extLank(url, text) {
+    if (isHardened()) {
+      return '<span style="color:#8aaa8a" title="Extern länk dold i härdat läge">' + text + '</span>';
+    }
+    return '<a href="' + url + '" target="_blank" rel="noopener" style="color:#4caf50;text-decoration:underline">' + text + '</a>';
+  }
+
   // Hämta version/commit från version.js (laddas i samma sida)
   function versionLink() {
     var sha = (typeof APP_COMMIT !== 'undefined' && APP_COMMIT) ? APP_COMMIT : '';
     var ver = (typeof APP_VERSION !== 'undefined') ? APP_VERSION : '';
     if (sha) {
-      return '<a href="https://github.com/gitjoda71/7s-rapport/tree/' + sha + '" target="_blank" rel="noopener" style="color:#4caf50;text-decoration:underline">' + sha.slice(0, 7) + '</a>';
+      return extLank('https://github.com/gitjoda71/7s-rapport/tree/' + sha, sha.slice(0, 7));
     }
     return ver ? '<code style="color:#4caf50">' + ver + '</code>' : '';
   }
@@ -68,10 +85,10 @@
           'Ingen data skickas eller lagras utanf\u00f6r din telefon/dator.<br><br>' +
           '<b style="color:#c8e6c9">S\u00e4kerhet</b><br>' +
           'Installation sker p\u00e5 egen risk. All k\u00e4llkod \u00e4r \u00f6ppen och kan granskas: ' +
-          '<a href="https://github.com/gitjoda71/7s-rapport" target="_blank" rel="noopener" style="color:#4caf50;text-decoration:underline">github.com/gitjoda71/7s-rapport</a><br><br>' +
+          extLank('https://github.com/gitjoda71/7s-rapport', 'github.com/gitjoda71/7s-rapport') + '<br><br>' +
           '<b style="color:#c8e6c9">Hur vet jag att sidan verkligen kommer fr\u00e5n GitHub?</b><br>' +
           '<b style="color:#e05050">Det kan du inte veta.</b> ' +
-          '<a href="https://7srapport.com/#egenKopia" style="color:#4caf50;text-decoration:underline">K\u00f6r din egen granskade kopia</a> f\u00f6r att vara s\u00e4ker.<br><br>' +
+          extLank('https://7srapport.com/#egenKopia', 'K\u00f6r din egen granskade kopia') + ' f\u00f6r att vara s\u00e4ker.<br><br>' +
           'Jag p\u00e5st\u00e5r att sidan hostas via GitHub Pages, vilket inneb\u00e4r att den serveras direkt fr\u00e5n det \u00f6ppna repositoriet \u2014 ' +
           'inget mellansteg d\u00e4r koden kan \u00e4ndras. ' +
           'L\u00e4ngst ner p\u00e5 varje sida visas ett versions-ID som l\u00e4nkar till exakt den version av k\u00e4llkoden som k\u00f6rs.' +
