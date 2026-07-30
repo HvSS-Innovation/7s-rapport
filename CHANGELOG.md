@@ -3,6 +3,12 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.19 — 2026-07-30 — OPSEC: PNG-exporten gate:ad i härdat läge
+
+- **PNG-export blockeras fail-closed i härdat läge (E1).** Exporten i minkarta + sensorskiss hämtade OTM/OSM-tiles vars z/x/y ringar in objektens område — ogate:at även i härdat. `renderExportAsync` i båda export-modulerna kastar nu i härdat läge (gate på modulnivå täcker Exportera PNG, Dela protokoll och framtida anropare); felet visas som toast med förklaring. Fynd ur härdat-verifieringen 2026-07-29, se SECURITY_BACKLOG.
+- **Topo-knappens härdat-dialog ärlig (E2):** "Aktivera ändå?"-confirmen (som ändå tyst blockerades av `topo-overlay.js`) ersatt med direkt "blockerad i härdat läge"-toast; ingen opsec-accept sparas längre av misstag.
+- **Footerns transparenslista rättad (E3):** VÄDER-raden namnger nu Open-Meteo (prognos) + Nominatim (ortens koordinat); SMHI är bara en frivillig länk.
+
 ## v0.3.18 — 2026-07-29 — Sex förbättringar ur grannlands-granskningen
 
 - **Fix: blå kilar (falska sjöar) i härdat läge.** Custom topo-flavorns `PolygonSymbolizer` saknade geometrifilter och canvas-fyllde även vattendrags-LineStrings i Protomaps `water`-lager → långsmala blå kilar över land (rapporterad i Estland, fanns latent även i Sverige). Nu polygonfyll enbart för geomType 3 + vattendrag som tunna blå linjer.

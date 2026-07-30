@@ -149,7 +149,14 @@
         return sym.svg.replace(/\{ROT\}/g, rot);
     }
 
+    // OPSEC: exporten hämtar kartbakgrund från OTM/OSM — tile-koordinaterna
+    // (z/x/y) ringar in exakt objektens område. I härdat läge får det aldrig
+    // lämna enheten, så hela rendern blockeras fail-closed här (täcker alla
+    // anropare: Exportera PNG, Dela protokoll, framtida).
+    function isHardened() { try { const s = JSON.parse(localStorage.getItem('pmtiles.hardening') || '{}'); return s.active === true && !!s.url; } catch (e) { return false; } }
+
     async function renderExportAsync(opts) {
+        if (isHardened()) throw new Error('Export blockerad i härdat läge — kartbakgrunden hämtas från nätet och skulle röja området. Stäng av härdat läge för att exportera.');
         const objects = opts.objects || [];
         const title = opts.title || 'SENSORSKISS';
         const subtitle = opts.subtitle || '';

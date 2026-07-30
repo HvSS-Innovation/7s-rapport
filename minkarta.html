@@ -1661,17 +1661,19 @@ function renderMapControls() {
             return;
         }
         if (!ctrl.isActive()) {
+            // I härdat läge blockerar topo-overlay.js aktiveringen ändå —
+            // säg det direkt i stället för en "Aktivera ändå?"-fråga som
+            // ser ut att gå igenom men tyst no-op:ar.
+            if (window.MK_HARDENING && window.MK_HARDENING.isActive()) {
+                toast('Topografi-overlay är blockerad i härdat läge — den hämtar tiles från nätet.', 3500);
+                return;
+            }
             const sourceId = ctrl.getSourceId();
             const sources = window.TopoOverlay.listSources();
             const source = sources.find(s => s.id === sourceId);
             // OPSEC-varning för online-källor — skickar tile-requests dit.
             if (source && source.opsecOnline && !ctrl.hasAcceptedOpsec(sourceId)) {
-                const hard = window.MK_HARDENING && window.MK_HARDENING.isActive();
-                const msg = hard
-                    ? 'OBS: Topografi-overlay "' + source.label + '" hämtar tiles från en online-tjänst.\n\n' +
-                      'Detta bryter Härdat läges OPSEC — din IP + visat område syns hos tile-servern.\n\n' +
-                      'Aktivera ändå?'
-                    : 'Topografi-overlay "' + source.label + '" hämtar tiles från en online-tjänst.\n\n' +
+                const msg = 'Topografi-overlay "' + source.label + '" hämtar tiles från en online-tjänst.\n\n' +
                       'Vill du fortsätta? (sparas — frågas inte igen)';
                 if (!window.confirm(msg)) return;
                 ctrl.markOpsecAccepted(sourceId);

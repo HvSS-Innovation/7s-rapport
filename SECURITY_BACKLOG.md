@@ -8,6 +8,43 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### ✅ 2026-07-29 — Verifiering av härdat läge: PNG-exporten läckte (åtgärdat 2026-07-30)
+
+Uppföljande kodgranskning av kärnlöftet efter Fas 0. **Fas 0-fixarna håller**
+(verifierade en och en, se listan under 2026-07-05-posten). Ett flöde som
+auditen missade läckte — nu stängt:
+
+E1. ✅ **PNG-export i minkarta + sensorskiss hämtade OTM/OSM-tiles ogate:at i
+    härdat läge.** `minkarta-export.js` + `sensorskiss-export.js` (`tileUrl` →
+    `new Image()` mot `*.tile.opentopomap.org` / `tile.openstreetmap.org`,
+    upp till 180 tiles). Anroparna (`prepareExportBlob` + share-flödena) läste
+    aldrig härdat-läget; CSP:ns `img-src` tillåter tile-hosts; SW:n släpper
+    igenom vid cache-miss. → "Exportera PNG"/"Dela" i härdat skickade exakt
+    z/x/y-bbox över **min-/sensorpositionerna** + IP till tredjepart — precis
+    det footer-löftet ("då lämnar inga koordinater enheten", `footer.js:147`)
+    säger inte kan hända. **Åtgärd:** `renderExportAsync` kastar fail-closed
+    i härdat läge (gate på modulnivå = täcker alla anropare); felet ytas som
+    toast med förklaring + åtgärd. Kvarstående förbättring (ej byggd): rendera
+    exporten från det lokala PMTiles-lagret så export funkar även i härdat.
+
+E2. ✅ **Topo-knappens "Aktivera ändå?"-confirm i härdat var vilseledande** —
+    `minkarta.html` + `sensorskiss.html` frågade "Aktivera ändå?", men
+    `topo-overlay.js:184` blockerar ändå tyst (console.warn, return false) —
+    och `markOpsecAccepted` sparades så OPSEC-frågan aldrig visades igen.
+    **Åtgärd:** i härdat visas direkt en "blockerad i härdat läge"-toast,
+    ingen confirm, ingen opsec-accept sparas.
+
+E3. ✅ **`footer.js` transparenslistan felaktig om VÄDER** — sa "hämtar
+    prognos från SMHI", men datakällan är `api.open-meteo.com`
+    (`vader.html:323`; SMHI är bara en länk). **Åtgärd:** raden namnger nu
+    Open-Meteo (prognos) + Nominatim (ortens koordinat), SMHI = frivillig länk.
+
+Kvarstår sedan tidigare (bekräftade oförändrade i koden): **H2** (SW helt
+härdat-omedveten — pmtiles-miss → R2, tile-miss → nät, HTML/JS network-first
+mot origin varje sidladdning), **"slå på ändå"** utan lokalt paket
+(`map-hardat-modal.js:60` → on-demand R2-range i härdat; Fas 1.4), ingen
+egress-guard (Fas 1.2), H3 (geotaggat foto i historik).
+
 ### ✅ 2026-07-28 — Statusraden påstår "OpenTopoMap" även i härdat läge (åtgärdat 2026-07-29)
 
 Åtgärdat: `MapHardatModal.hardenedSourceLabel(ctrl)` namnger aktiv källa

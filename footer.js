@@ -141,7 +141,7 @@
 <ul style="margin:0 0 10px;padding-left:18px">
 <li><strong>Kartvisning</strong> (utan Härdat läge) – hämtar kartbilder från <a href="https://opentopomap.org/about" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">OpenTopoMap</a></li>
 <li><strong>GPS → adress</strong> – slår upp gatunamn via <a href="https://nominatim.org/release-docs/latest/api/Reverse/" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Nominatim</a> (<a href="https://wiki.osmfoundation.org/wiki/Privacy_Policy" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">OpenStreetMap</a>) och <a href="https://wiki.openstreetmap.org/wiki/Overpass_API" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Overpass API</a></li>
-<li><strong>VÄDER-formuläret</strong> – hämtar prognos från <a href="https://opendata.smhi.se/apidocs/metfcst/about.html" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">SMHI</a></li>
+<li><strong>VÄDER-formuläret</strong> – hämtar prognos från <a href="https://open-meteo.com/" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">Open-Meteo</a> och ortens koordinat via Nominatim; <a href="https://www.smhi.se/" target="_blank" rel="noopener noreferrer" style="color:var(--accent)">SMHI</a> öppnas bara som frivillig länk</li>
 </ul>
 <div style="background:#1a0a0a;border:1px solid #6b2020;border-radius:6px;padding:10px 14px;margin:12px 0 10px">
 <p style="margin:0 0 8px;font-size:0.78rem;color:#d4a0a0"><strong style="color:#e05050">I skarpt läge:</strong> Aktivera Härdat läge och förladda kartan innan operationen — då lämnar inga koordinater enheten. Konkret arbetsgång:</p>
