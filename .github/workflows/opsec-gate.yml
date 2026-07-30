@@ -50,3 +50,20 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Kör invariant-testet (server + deny-proxy + browser)
         run: node test/opsec/run.js
+
+  hardened-sweep:
+    name: Härdat-svep över alla sidor
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Installera Playwright + Chromium
+        run: |
+          npm i --no-save playwright
+          npx playwright install --with-deps chromium
+      # Laddar varje app-sida i härdat läge bakom deny-proxyn, i BÅDA lägena:
+      # med kontrollerande service worker och utan. Det senare är där de tre
+      # senaste läckorna fanns — minikartan, kartmodalen och PMTiles-headern —
+      # samtliga upptäckta efter att invariant-testet redan var grönt.
+      - name: Kör svepet (38 sidor × med/utan service worker)
+        run: node test/opsec/run-sweep.js

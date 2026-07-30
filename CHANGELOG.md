@@ -3,6 +3,13 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.28 — 2026-07-30 — Härdat-svep över alla 38 sidor i CI
+
+- **Nytt regressionsskydd** (`test/opsec/sweep.js`): laddar varje app-sida i härdat läge bakom deny-proxyn, i **båda** lägena — med kontrollerande service worker och utan. Byggt på insikten att de tre senaste läckorna alla hittades efter att invariant-testet redan var grönt; de låg i sid-lägen testet aldrig besökte. Sidan får koordinat i STÄLLE, cachad kartposition och ett paket i PMTiles-cachen så kartkod faktiskt triggas. Kör lokalt: `node test/opsec/run-sweep.js`.
+- **Resultat: 76 sidladdningar, 0 extern egress i båda lägena.** Inga nya läckor.
+- Eget jobb i OPSEC-gaten, så det körs på varje push.
+- **Mätlärdom inbyggd i koden:** ett första utkast rapporterade 8 läckande sidor — men mätte `page.on('request')`, som fyrar även för anrop service workern besvarar ur cache. Deny-proxyn visade 0. Endast proxyloggen är bevis på egress; sid-signalen visar bara vad SW:n absorberade.
+
 ## v0.3.27 — 2026-07-30 — Falsk bekräftelse av härdat + kartlagren i MINKARTA/SENSORSKISS
 
 - **`confirm()` kunde bekräfta fel tillstånd.** Den läste tillbaka vad som råkade ligga i localStorage i stället för det begärda läget. Misslyckades skrivningen (full lagring) speglades `false` överallt, ack:ades — och `confirm()` svarade **true**, så aktiveringen lämnade grönt UI med öppet nät. Nu tar `confirm(förväntat)` emot det begärda läget och aktiveringen anropar `confirm(true)`. Reproducerat före och efter.

@@ -8,6 +8,27 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### ✅ 2026-07-30 — Härdat-svep över alla 38 sidor (nytt regressionsskydd, inga läckor)
+
+Byggt efter tredje granskningen, på insikten att de tre senaste läckorna
+(minikartan, kartmodalen, PMTiles-headern) alla hittades **efter** att
+invariant-testet redan var grönt — de låg i sid-lägen testet aldrig besökte.
+
+`test/opsec/sweep.js` laddar varje app-sida i härdat läge bakom deny-proxyn,
+i **båda** lägena: med kontrollerande service worker och utan. Sidan får en
+koordinat i STÄLLE, en cachad kartposition och ett paket i PMTiles-cachen, så
+kod som pannar en karta till operatörens område faktiskt triggas. Kör lokalt
+med `node test/opsec/run-sweep.js`; ligger som eget jobb i OPSEC-gaten.
+
+**Resultat: 76 sidladdningar, 0 extern egress i båda lägena.**
+
+**Mätlärdom värd att minnas:** ett första utkast rapporterade 8 sidor som
+läckande — men mätte `page.on('request')`, som fyrar även för anrop service
+workern sedan besvarar ur cache. Deny-proxyn visade 0. Jag var nära att
+"fixa" en icke-bugg. **Endast proxyloggen är bevis på egress**; sid-signalen
+säger bara vad SW:n absorberade (24 anrop, förväntat). Både `invariant.js`
+och `sweep.js` mäter nu mot proxyn, och kommentaren i koden förklarar varför.
+
 ### ✅ 2026-07-30 — Tredje granskningen: falsk bekräftelse + kartlager i minkarta/sensorskiss
 
 Fjärde svepet samma dag. Alla fynd verifierade empiriskt (Playwright bakom
