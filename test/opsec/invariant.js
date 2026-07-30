@@ -219,6 +219,19 @@ const P2 = { lat: 43.80, lng: 11.40 };
     const miniKarta = await sidaUtanSW.evaluate(() =>
         document.querySelectorAll('#stalleMiniMap .leaflet-tile').length);
     check('Minikartan skapar inga tiles utan SW-controller i härdat', miniKarta === 0, 'tiles=' + miniKarta);
+
+    // Kartmodalens baslager: samma buggklass. Lagret lades på kartan direkt,
+    // medan MapHardatModal.attach() är asynkron och setView() körs synkront
+    // strax efter — Leaflet hann begära tiles kring senaste kartposition innan
+    // härdat tog över. Verifierat före fixen: 18 requests per sida.
+    await sidaUtanSW.evaluate(() => {
+        try { localStorage.setItem('7s_mapLast', JSON.stringify({ lat: 59.3293, lng: 18.0686, z: 13 })); } catch (_) {}
+        if (typeof openMapModal === 'function') openMapModal();
+    });
+    await sidaUtanSW.waitForTimeout(2500);
+    const modalTiles = await sidaUtanSW.evaluate(() => document.querySelectorAll('.leaflet-tile').length);
+    check('Kartmodalen skapar inga tiles utan SW-controller i härdat', modalTiles === 0, 'tiles=' + modalTiles);
+
     const extUtanSW = extLog().slice(extForeUtanSW);
     check('0 extern egress från sida utan SW-controller (proxy-bevis)',
         extUtanSW.trim() === '', extUtanSW.trim().split('\n').slice(0, 3).join(' | '));

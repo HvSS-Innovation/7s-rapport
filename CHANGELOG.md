@@ -3,6 +3,12 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.26 — 2026-07-30 — Samma tile-läcka fanns i kartmodalen på sex sidor
+
+- **Uppföljning på minikart-fyndet, hittad genom att söka buggklassen i syskonfilerna.** Kartmodalens baslager lades på kartan direkt, medan `MapHardatModal.attach()` är asynkron och `setView()` körs synkront strax efter — i det fönstret hann Leaflet begära OTM-tiles kring **senaste kartposition** innan härdat tog över. Fanns i index, ah, what, scrim, weft och obslosa. **Mätt före fixen: 18 externa tile-requests per sida** i härdat utan SW-controller; efter fixen 0 på alla sex.
+- Lagret läggs nu på först när härdat inte är lagrat. Controllern lägger tillbaka det när härdat stängs av, så normalläget är oförändrat.
+- Nytt permanent testfall: modalen öppnas i kontextet utan SW-controller och måste ge 0 tiles. 21/21 gröna.
+
 ## v0.3.25 — 2026-07-30 — Minikartan läckte förbi spärren (andra externa granskningen)
 
 - **Minikartan i STÄLLE-fältet skapade ett OpenTopoMap-lager automatiskt vid sidladdning, utan härdat-kontroll.** Tile-bilder laddas som `<img>` och syns varken för sid-guarden (`fetch`/`XHR`) eller — utan SW-controller — för service workern. Eftersom kartan pannas till koordinaten i STÄLLE ringade tile-rutorna in operatörens position. Lagret skapas nu aldrig i härdat läge och rivs om härdat slås på i efterhand. **Reproducerat:** utan fixen 6 tiles + `CONNECT` mot OpenTopoMap i deny-proxyns logg; med fixen 0 och 0.

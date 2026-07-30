@@ -1007,7 +1007,14 @@ function openMapModal() {
     if (sp && !mapInstance) sp.classList.remove('hidden');
     if (!mapInstance) {
         mapInstance = L.map('mapContainer', { zoomControl: true });
-        var tileLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' }).addTo(mapInstance);
+        // OPSEC: lagg INTE baslagret pa kartan nar hardat ar lagrat.
+        // MapHardatModal.attach() nedan ar asynkron, medan setView() langre
+        // ner kors synkront — i det fonstret hann Leaflet begara OTM-tiles
+        // kring senaste kartposition. Med SW-controller 503:as de, men utan
+        // controller gick de ut (verifierat: 18 requests per sida).
+        // Controllern lagger tillbaka lagret sjalv nar hardat stangs av.
+        var tileLayer = L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', { maxZoom: 17, attribution: '© OpenTopoMap' });
+        if (!isHardened()) tileLayer.addTo(mapInstance);
         tileLayer.on('load', function() { if (sp) sp.classList.add('hidden'); });
         if (window.OfflineTiles && typeof window.OfflineTiles.attachCoverageControl === 'function') {
             window.OfflineTiles.attachCoverageControl(mapInstance);

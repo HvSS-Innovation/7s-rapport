@@ -47,6 +47,19 @@ och åtgärdade; övriga punkter var redan kända eller dokumenterade.
   termineras innan klienterna tagits över, vilket är exakt förutsättningen för
   Y1.
 
+**Y6 HÖG ✅ Samma buggklass i kartmodalen på SEX sidor** (egen uppföljning,
+inte från granskningen). Efter Y1 sökte vi igenom alla externa tile-lager —
+buggen upprepades i modalens baslager på index/ah/what/scrim/weft/obslosa:
+lagret lades på kartan direkt, medan `MapHardatModal.attach()` är asynkron
+och `setView()` körs synkront strax efter. I det fönstret hann Leaflet begära
+tiles kring **senaste kartposition** innan härdat tog över. **Verifierat före
+fixen: 18 externa tile-requests per sida** i härdat utan SW-controller; efter
+fixen 0 på alla sex. Lagret läggs nu på först när härdat inte är lagrat;
+controllern lägger tillbaka det när härdat stängs av.
+*Lärdomen:* det här repot är copy-paste per rapportsida — varje fynd i en
+sådan fil måste sökas i syskonfilerna direkt, det är dokumenterat sedan
+2026-06-19 men gällde uppenbarligen även här.
+
 **Strukturell lärdom:** vårt invariant-test *garanterade bort* det farliga
 tillståndet — det registrerade SW:n och väntade in `controller` innan
 mätningen. Nu finns ett fall som kör `index.html` i ett kontext med
