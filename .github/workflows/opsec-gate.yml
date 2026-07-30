@@ -21,6 +21,7 @@ on:
       - 'raw/**'
       - 'stab/**'
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
