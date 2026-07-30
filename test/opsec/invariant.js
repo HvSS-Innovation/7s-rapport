@@ -189,6 +189,41 @@ const P2 = { lat: 43.80, lng: 11.40 };
     check('Fientlig STÄLLE-text renderas som text, inte HTML',
         xss.element === 0 && xss.kord === 0 && xss.text, JSON.stringify(xss));
 
+    // 10c) DEN FARLIGA LUCKAN: sida UTAN service worker-controller.
+    // Testet ovan garanterar bort just det tillstånd som är riskabelt — SW:n
+    // registreras och controller väntas in innan mätningen. Men efter en
+    // force-refresh (eller allra första besöket) saknar dokumentet controller,
+    // och då finns ingen SW-spärr alls. Tile-bilder går inte via fetch/XHR, så
+    // sid-guarden ser dem inte heller. Här körs index.html i ett FÄRSKT
+    // context utan controller, med härdat lagrat och en koordinat i STÄLLE —
+    // exakt scenariot där minikartan tidigare läckte operatörens position.
+    const utanSW = await browser.newContext({ serviceWorkers: 'block' });
+    const sidaUtanSW = await utanSW.newPage();
+    const extForeUtanSW = extLog().length;
+    await sidaUtanSW.addInitScript(url => {
+        localStorage.setItem('pmtiles.hardening', JSON.stringify({
+            active: true, url: url, flavor: 'topo', kind: 'vector'
+        }));
+    }, PMTILES_URL);
+    await sidaUtanSW.goto(BASE + '/index.html', { waitUntil: 'load' });
+    check('Ingen SW-controller i testkontexten (annars testar vi fel sak)',
+        !(await sidaUtanSW.evaluate(() => !!navigator.serviceWorker.controller)));
+    // Fyll STÄLLE med en koordinat och trigga minikartans synk.
+    await sidaUtanSW.evaluate(() => {
+        const el = document.getElementById('stalle');
+        el.value = '59.3293 18.0686';
+        el.dispatchEvent(new Event('change'));
+        if (typeof syncStalleMiniFromField === 'function') syncStalleMiniFromField();
+    });
+    await sidaUtanSW.waitForTimeout(2500);
+    const miniKarta = await sidaUtanSW.evaluate(() =>
+        document.querySelectorAll('#stalleMiniMap .leaflet-tile').length);
+    check('Minikartan skapar inga tiles utan SW-controller i härdat', miniKarta === 0, 'tiles=' + miniKarta);
+    const extUtanSW = extLog().slice(extForeUtanSW);
+    check('0 extern egress från sida utan SW-controller (proxy-bevis)',
+        extUtanSW.trim() === '', extUtanSW.trim().split('\n').slice(0, 3).join(' | '));
+    await utanSW.close();
+
     // 11) Härdat AV → nätet öppnas igen.
     await page.evaluate(() => {
         const s = JSON.parse(localStorage.getItem('pmtiles.hardening') || '{}');

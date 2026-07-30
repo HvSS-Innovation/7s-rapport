@@ -1006,7 +1006,29 @@ function confirmMapSelection() {
 let stalleMiniMap = null;
 let stalleMiniMarker = null;
 
+// OPSEC: minikartan skapade ett OpenTopoMap-lager automatiskt vid sidladdning.
+// Tile-bilder laddas som <img> och går varken via fetch eller XHR — sid-guarden
+// ser dem alltså inte, och hela skyddet vilade på att service workern hann
+// fånga dem. Saknas controller (force-refresh, allra första besöket,
+// avregistrerad SW) gick de ut ändå. Och eftersom kartan pannas till STÄLLE-
+// fältets koordinat ringade tile-rutorna in operatörens faktiska position.
+// Därför: skapa aldrig lagret i härdat läge, och riv det om härdat slås på
+// efter att kartan redan byggts. Elementet behåller sin bakgrund + hint, så
+// knappen för att öppna den riktiga kartan fungerar som vanligt.
 function ensureStalleMiniMap() {
+    const elH = document.getElementById('stalleMiniMap');
+    if (isHardened()) {
+        if (stalleMiniMap) {
+            try { stalleMiniMap.remove(); } catch (_) {}
+            stalleMiniMap = null;
+            stalleMiniMarker = null;
+        }
+        if (elH) {
+            const hint = elH.querySelector('.stalle-mini-map-hint');
+            if (hint) hint.textContent = 'Karta dold i härdat läge — tryck för att öppna';
+        }
+        return null;
+    }
     if (stalleMiniMap) return stalleMiniMap;
     const el = document.getElementById('stalleMiniMap');
     if (!el || typeof L === 'undefined') return null;

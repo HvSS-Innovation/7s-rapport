@@ -8,6 +8,54 @@ med ✅ + datum.
 
 ## Öppna poster
 
+### ✅ 2026-07-30 — Andra externa granskningen: minikartan läckte förbi hela spärren
+
+Uppföljande granskning efter XSS-fixen. Två äkta fynd, båda verifierade i kod
+och åtgärdade; övriga punkter var redan kända eller dokumenterade.
+
+- **Y1 HÖG ✅ Minikartan i `index.html` kringgick spärren helt.**
+  `ensureStalleMiniMap()` skapade ett OpenTopoMap-lager **automatiskt vid
+  sidladdning, utan någon härdat-kontroll**. Tile-bilder laddas som `<img>`
+  och går varken via `fetch` eller `XHR` — sid-guarden ser dem alltså inte,
+  och hela skyddet vilade på att service workern hann fånga dem. Utan
+  controller (force-refresh, allra första besöket, avregistrerad SW) gick de
+  ut. Värst: `syncStalleMiniFromField()` pannar kartan till koordinaten i
+  STÄLLE-fältet, så tile-rutorna ringade in operatörens faktiska position.
+  **Åtgärd:** lagret skapas aldrig i härdat läge, och rivs om härdat slås på
+  efter att kartan byggts; elementet visar "Karta dold i härdat läge".
+  **Reproducerat och verifierat i båda riktningar:** utan fixen skapar testet
+  6 tiles och deny-proxyn loggar `CONNECT` mot a/b/c.tile.opentopomap.org;
+  med fixen 0 tiles och 0 egress.
+- **Y2 HÖG ✅ Aktiveringen var warning-only — och dokumentationen ljög.**
+  `activate()` varnade när SW-kvittensen uteblev men körde `emit(); return
+  true;` ändå, medan CHANGELOG påstod att den väntar in kvittens innan UI:t
+  säger PÅ. `isActive()` returnerar bara `hardLayer !== null`, så modalen
+  visade grönt "inga externa kart-anrop" oavsett. **Åtgärd:** äkta rollback —
+  lagret rivs, normallagret återställs, `active:false` sparas, `false`
+  returneras och användaren får veta att skyddet är AV, inte påslaget med
+  varning.
+- **Y3 ✅ Footer-länkarna** (feedback till GitHub med formulärnamnet i URL:en,
+  plus källänkarna till OTM/Nominatim/OSM/Overpass/Open-Meteo/SMHI) var
+  fortfarande klickbara i härdat — vi gate:ade `pwa.js` men glömde `footer.js`.
+  Nu: feedback-länken blir ett dött span, och externa `<a>` i Om-panelen
+  ersätts med text efter insättning.
+- **Y4 ✅ Delningsmetadata:** vi tog bort MGRS ur filnamnet men skickade
+  fortfarande `title: 'Minkarta'` / `'Sensorskiss'` och texten
+  "Minläggningskarta" till delningsmålet. Allt neutraliserat till `bilaga_<tid>.png`
+  och `title: 'Bilaga'`.
+- **Y5 ✅ `clients.claim()`** flyttad in i `waitUntil()` — annars kan workern
+  termineras innan klienterna tagits över, vilket är exakt förutsättningen för
+  Y1.
+
+**Strukturell lärdom:** vårt invariant-test *garanterade bort* det farliga
+tillståndet — det registrerade SW:n och väntade in `controller` innan
+mätningen. Nu finns ett fall som kör `index.html` i ett kontext med
+`serviceWorkers: 'block'`, härdat lagrat och koordinat i STÄLLE. 20/20 gröna.
+
+**Ej åtgärdat (medvetet):** att same-origin-kod kan skriva härdat-läget är
+arkitektoniskt; `unsafe-inline` i CSP kvarstår; landspaketens URL:er
+(`finland.pmtiles` osv.) avslöjar valt land för R2-operatören.
+
 ### ✅ 2026-07-30 — Extern granskning (ChatGPT SOL 5.6): DOM-XSS + fail-open funna och åtgärdade
 
 Andra-åsikt-granskning beställd efter Fas 0–4, medvetet utan att granskaren

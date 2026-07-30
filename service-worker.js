@@ -138,10 +138,15 @@ self.addEventListener('activate', e => {
   // Bevara både huvudcachen (versionsstämpel), offline-tiles-cachen och
   // pmtiles-cachen. Allt annat (gamla CACHE-stämplar) raderas.
   const KEEP = new Set([CACHE, OFFLINE_TILES_CACHE, PMTILES_CACHE]);
-  e.waitUntil(caches.keys().then(keys =>
-    Promise.all(keys.filter(k => !KEEP.has(k)).map(k => caches.delete(k)))
-  ));
-  self.clients.claim();
+  // clients.claim() ligger INNE i waitUntil: annars kan workern hinna
+  // termineras innan alla klienter är övertagna, och en okontrollerad sida
+  // laddar resurser förbi härdat-spärren (tile-bilder syns inte för
+  // sid-guarden — bara för SW:n).
+  e.waitUntil(
+    caches.keys()
+      .then(keys => Promise.all(keys.filter(k => !KEEP.has(k)).map(k => caches.delete(k))))
+      .then(() => self.clients.claim())
+  );
 });
 
 // Tile-host-detektion: matchar HybridTileLayer i minkarta.html /

@@ -69,11 +69,6 @@
         const r = lat * Math.PI / 180;
         return (1 - Math.log(Math.tan(r) + 1 / Math.cos(r)) / Math.PI) / 2 * Math.pow(2, z);
     }
-    function x2lon(x, z) { return x / Math.pow(2, z) * 360 - 180; }
-    function y2lat(y, z) {
-        const n = Math.PI - 2 * Math.PI * y / Math.pow(2, z);
-        return 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
-    }
 
     function computeBBox(objects) {
         const ytter = objects.filter(o => o.typ === 'ytter');
@@ -685,7 +680,7 @@
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
         const ts = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes());
-        return 'minkarta_' + ts + '.png';
+        return 'bilaga_' + ts + '.png';
     }
 
     // Explicit download — används av popover när användaren valt "Ladda ner"
@@ -700,7 +695,7 @@
 
     async function shareBlob(blob, filename, textOrNull) {
         const file = new File([blob], filename, { type: 'image/png' });
-        const payload = { files: [file], title: 'Minkarta' };
+        const payload = { files: [file], title: 'Bilaga' };
         if (textOrNull) payload.text = textOrNull;
         if (navigator.canShare && navigator.canShare(payload)) {
             try {
@@ -718,7 +713,7 @@
         const file = new File([blob], filename, { type: 'image/png' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
             try {
-                await navigator.share({ files: [file], title: 'Minkarta', text: 'Minläggningskarta' });
+                await navigator.share({ files: [file], title: 'Bilaga' });
                 return 'shared';
             } catch (e) {
                 if (e && e.name === 'AbortError') return 'cancelled';

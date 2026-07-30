@@ -586,12 +586,27 @@ function createController(map, normalLayer, opts) {
             if (window.HVHardened && window.HVHardened.confirm) {
                 const verkstalld = await window.HVHardened.confirm();
                 if (!verkstalld) {
-                    console.warn('[pmtiles] Härdat läge kunde inte bekräftas av service workern.');
+                    // ROLLBACK, inte varning. Ett grönt "Härdat: PÅ" utan
+                    // verkställd SW-spärr är farligare än ett misslyckande:
+                    // kartan ser lokal ut medan nätet står öppet. Vanligaste
+                    // orsaken är att sidan saknar SW-controller (force-refresh)
+                    // — då ska läget bli AV tills sidan laddats om.
+                    console.warn('[pmtiles] Härdat läge kunde inte bekräftas av service workern — återställer till AV.');
+                    if (hardLayer) {
+                        try { map.removeLayer(hardLayer); } catch (_) {}
+                        hardLayer = null;
+                        kind = null;
+                    }
+                    if (normalLayer && !map.hasLayer(normalLayer)) normalLayer.addTo(map);
+                    saveState({ active: false, url, flavor });
+                    emit();
                     if (!quiet) {
-                        window.alert('Härdat läge kunde inte verifieras mot appens nätverksspärr.\n\n' +
-                            'Kartan visas lokalt, men lita INTE på att nätet är stängt. ' +
+                        window.alert('Härdat läge kunde INTE aktiveras.\n\n' +
+                            'Appens nätverksspärr svarade inte, så skyddet är AV — ' +
+                            'inte påslaget med varning.\n\n' +
                             'Ladda om sidan och försök igen.');
                     }
+                    return false;
                 }
             }
             emit();

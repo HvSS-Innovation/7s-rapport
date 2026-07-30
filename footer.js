@@ -59,6 +59,17 @@
         return 'https://github.com/gitjoda71/7s-rapport/issues/new?title=' + t + '&body=' + b;
     }
 
+    // OPSEC: samma princip som extLank() i pwa.js — i härdat läge ska inga
+    // klickbara utgångar till nätet ligga kvar. Feedback-länken är värst av
+    // dem: den bär formulärnamnet (7S, WHAT, A-H …) i själva URL:en, så ett
+    // feltryck talar om för GitHub exakt vilket verktyg som användes och när.
+    function isHardened() {
+        try {
+            const s = JSON.parse(localStorage.getItem('pmtiles.hardening') || '{}');
+            return s.active === true && !!s.url;
+        } catch (e) { return false; }
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
         const c = document.querySelector('.container');
         if (!c) return;
@@ -78,12 +89,18 @@
         priv.textContent = 'Ingen data skickas eller lagras utanför din enhet.';
         priv.style.cssText = 'font-size:0.65rem;color:var(--text-muted);opacity:0.7;margin-bottom:12px';
 
-        // Feedback-länk
-        const fb = document.createElement('a');
-        fb.href = buildFeedbackUrl();
-        fb.target = '_blank';
-        fb.rel = 'noopener noreferrer';
-        fb.textContent = 'Bugg eller förslag? Lämna feedback →';
+        // Feedback-länk — i härdat läge ett dött span i stället för en <a>.
+        const hardat = isHardened();
+        const fb = document.createElement(hardat ? 'span' : 'a');
+        if (hardat) {
+            fb.textContent = 'Feedback avstängd i härdat läge';
+            fb.title = 'Länken skulle öppna GitHub med formulärnamnet i adressen.';
+        } else {
+            fb.href = buildFeedbackUrl();
+            fb.target = '_blank';
+            fb.rel = 'noopener noreferrer';
+            fb.textContent = 'Bugg eller förslag? Lämna feedback →';
+        }
         fb.style.cssText = 'display:inline-block;color:var(--text-muted);text-decoration:none;padding:4px 0';
 
         // Om-länk. Behaller link-stil i "stangd"-laget sa den smalter in i
@@ -218,6 +235,21 @@
         sep.style.color = 'var(--text-muted)';
         linkRow.appendChild(sep);
         linkRow.appendChild(aboutToggle);
+
+        // OPSEC: Om-panelen är en lång HTML-sträng med källänkar till
+        // OpenTopoMap, Nominatim, OSM, Overpass, Open-Meteo och SMHI. I stället
+        // för att gate:a varje enskild <a> i strängen görs ett svep efter
+        // insättning: externa länkar blir ren text i härdat läge. Interna
+        // ankarlänkar (#egenKopia) lämnas — de lämnar inte enheten.
+        if (hardat) {
+            aboutBox.querySelectorAll('a[href^="http"]').forEach(function (a) {
+                const span = document.createElement('span');
+                span.textContent = a.textContent;
+                span.style.cssText = a.style.cssText;
+                span.title = 'Extern länk dold i härdat läge';
+                a.parentNode.replaceChild(span, a);
+            });
+        }
 
         footer.appendChild(disclaimer);
         footer.appendChild(priv);

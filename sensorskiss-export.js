@@ -643,7 +643,7 @@
         const now = new Date();
         const pad = n => String(n).padStart(2, '0');
         const ts = now.getFullYear() + pad(now.getMonth() + 1) + pad(now.getDate()) + '-' + pad(now.getHours()) + pad(now.getMinutes());
-        return 'sensorskiss_' + ts + '.png';
+        return 'bilaga_' + ts + '.png';
     }
 
     function downloadBlob(blob, filename) {
@@ -657,7 +657,7 @@
 
     async function shareBlob(blob, filename, textOrNull) {
         const file = new File([blob], filename, { type: 'image/png' });
-        const payload = { files: [file], title: 'Sensorskiss' };
+        const payload = { files: [file], title: 'Bilaga' };
         if (textOrNull) payload.text = textOrNull;
         if (navigator.canShare && navigator.canShare(payload)) {
             try {

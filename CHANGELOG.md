@@ -3,6 +3,15 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.25 — 2026-07-30 — Minikartan läckte förbi spärren (andra externa granskningen)
+
+- **Minikartan i STÄLLE-fältet skapade ett OpenTopoMap-lager automatiskt vid sidladdning, utan härdat-kontroll.** Tile-bilder laddas som `<img>` och syns varken för sid-guarden (`fetch`/`XHR`) eller — utan SW-controller — för service workern. Eftersom kartan pannas till koordinaten i STÄLLE ringade tile-rutorna in operatörens position. Lagret skapas nu aldrig i härdat läge och rivs om härdat slås på i efterhand. **Reproducerat:** utan fixen 6 tiles + `CONNECT` mot OpenTopoMap i deny-proxyns logg; med fixen 0 och 0.
+- **Aktiveringen gör äkta rollback.** Tidigare varnade den bara när SW-kvittensen uteblev och slog ändå på läget — trots att dokumentationen påstod motsatsen. Nu rivs lagret, normalläget återställs och skyddet blir AV, med tydligt besked.
+- **Footer-länkarna gate:ade.** Feedback-länken (som bär formulärnamnet i URL:en) blir ett dött span, och källänkarna i Om-panelen ersätts med text i härdat läge — samma princip som redan gällde i `pwa.js`.
+- **Delningsmetadata neutraliserad:** `bilaga_<tid>.png` och `title: 'Bilaga'` i stället för "Minkarta"/"Sensorskiss"/"Minläggningskarta", som annars berättade för delningsmålet vad bilden föreställde.
+- **`clients.claim()` flyttad in i `waitUntil()`** så workern inte kan termineras innan klienterna tagits över.
+- **Testluckan täppt:** invariant-testet garanterade bort det farliga tillståndet genom att alltid vänta in en SW-controller. Nytt fall kör `index.html` med `serviceWorkers: 'block'`, härdat lagrat och koordinat i fältet — verifierat att det går rött utan fixen. 20/20 gröna.
+
 ## v0.3.24 — 2026-07-30 — Fynd ur extern granskning: DOM-XSS och fail-open stängda
 
 - **DOM-XSS i publiceringsdialogen (kritisk).** `publishInfo.innerHTML` interpolerade STÄLLE-fältet — som autofylls från geokodningssvar — och Signal-gruppnamnet. Fanns på fem rapportsidor (index, ah, what, scrim, weft). Raderna byggs nu som DOM-noder med `textContent`. Kombinerat med att härdat läge är ett vanligt JS-tillstånd gav hålet en väg att stänga av hela nätverksspärren.
