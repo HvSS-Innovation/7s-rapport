@@ -310,13 +310,19 @@ function loggVard(url) {
 // hade två skrivare gjort read-modify-write mot samma IDB-nyckel och tappat
 // poster vid samtidighet.
 async function loggaHandelse(handelse) {
-  handelse.t = Date.now();
+  if (!handelse.t) handelse.t = Date.now();
+  const franGuard = handelse.kalla === 'guard';
   if (!handelse.kalla) handelse.kalla = 'sw';
   // Skicka till öppna sidor direkt så härdat-testet kan visa det live.
-  try {
-    const klienter = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    klienter.forEach(k => { try { k.postMessage({ type: 'HARDENED_EVENT', handelse: handelse }); } catch (_) {} });
-  } catch (_) {}
+  // MEN inte guardens egna händelser: dem har sidan redan sänt själv över
+  // BroadcastChannel, och en vidarebefordran här gav dubbletter i loggvyn.
+  // Guarden skickar hit dem enbart för att persisteras.
+  if (!franGuard) {
+    try {
+      const klienter = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+      klienter.forEach(k => { try { k.postMessage({ type: 'HARDENED_EVENT', handelse: handelse }); } catch (_) {} });
+    } catch (_) {}
+  }
   // Och persistera, så en händelse utan öppen sida inte försvinner.
   try {
     const db = await new Promise((res, rej) => {

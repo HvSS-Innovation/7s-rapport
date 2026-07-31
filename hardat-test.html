@@ -47,6 +47,23 @@
   .flyg { background:var(--warn-dim); border:1px solid var(--warn); border-radius:var(--radius); padding:12px 16px; margin-bottom:16px; font-size:0.82rem; color:var(--warn); }
   .flyg b { display:block; font-size:0.9rem; margin-bottom:4px; letter-spacing:0.05em; text-transform:uppercase; }
 
+  .live { position:sticky; top:0; z-index:25; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:11px 13px; margin-bottom:10px; }
+  .live-rubrik { font-size:0.66rem; letter-spacing:0.12em; text-transform:uppercase; color:var(--text-muted); margin-bottom:7px; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+  .live-rutor { display:grid; grid-template-columns:1fr 1fr; gap:6px; }
+  .ruta { border:1px solid var(--border); border-radius:var(--radius-sm); padding:7px 9px; background:var(--bg-input); }
+  .ruta-namn { font-size:0.63rem; letter-spacing:0.06em; text-transform:uppercase; color:var(--text-muted); }
+  .ruta-varde { font-size:0.86rem; font-weight:700; margin-top:1px; }
+  .v-ok { color:var(--accent); } .v-av { color:var(--text-secondary); } .v-larm { color:#ff6b6b; }
+  .larmruta { grid-column:1 / -1; border-color:#ff6b6b; background:#3a1414; }
+  .larmruta .ruta-namn { color:#ffb3b3; }
+  .loggknapp { background:none; border:1px solid var(--border); border-radius:14px; color:var(--text-muted); font-family:inherit; font-size:0.66rem; padding:5px 11px; cursor:pointer; min-height:30px; }
+  .logg { margin-top:8px; max-height:190px; overflow-y:auto; font-family:ui-monospace,monospace; font-size:0.68rem; }
+  .logg-rad { padding:4px 0; border-bottom:1px solid var(--border); color:var(--text-secondary); }
+  .logg-rad.larm { color:#ff9b9b; font-weight:600; }
+  .logg-tom { color:var(--text-muted); font-style:italic; padding:6px 0; }
+
+  .auto-etikett { display:inline-block; font-size:0.6rem; letter-spacing:0.08em; text-transform:uppercase; background:var(--accent); color:#0d1f0d; border-radius:10px; padding:2px 7px; margin-left:7px; vertical-align:middle; font-weight:700; }
+
   .prog { position:sticky; top:0; z-index:20; background:var(--bg-primary); padding:10px 0 12px; margin-bottom:4px; }
   .prog-row { display:flex; justify-content:space-between; align-items:baseline; font-size:0.72rem; color:var(--text-muted); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px; gap:10px; }
   .prog-num { font-family:ui-monospace,monospace; color:var(--accent); font-weight:700; font-size:0.95rem; white-space:nowrap; }
@@ -135,6 +152,8 @@
     appen har en ny version, och det går inte att stänga av inifrån en webbapp.
     Flygplansläge är enda sättet att bevisa full radiotystnad.
   </div>
+
+  <div class="live" id="live"></div>
 
   <div class="prog">
     <div class="prog-row">
@@ -236,9 +255,23 @@
     }
   ];
 
+  // Poster som spärren kan bekräfta HELT själv. Övriga får på sin höjd en
+  // ledtråd av loggen men måste bockas manuellt — annars bygger vi in samma
+  // falska förtroende som testerna redan lurat oss med en gång.
+  // Service workern är dessutom blind när den inte kontrollerar sidan, vilket
+  // är precis där de verkliga läckorna fanns. Loggen bevisar alltså aldrig
+  // frånvaro av läckage, bara närvaro av blockeringar.
+  var AUTO = {
+    f4: function (m) { return m.hardat; },
+    f5: function (m) { return !m.online; },
+    b3: function (m) { return m.hardat && m.laddadOm; }
+  };
+
   var NYCKEL = 'hardat_test_v2';
   var ALLA = GRUPPER.reduce(function (n, g) { return n + g.poster.length; }, 0);
   var state = laddaState();
+  var logg = [];
+  var visaLogg = false;
 
   function laddaState() {
     try { return JSON.parse(localStorage.getItem(NYCKEL) || '{}'); } catch (e) { return {}; }
@@ -262,7 +295,83 @@
     return n;
   }
 
+  // ── Live-panel ──────────────────────────────────────────────────────────
+  function matning() {
+    var sw = ('serviceWorker' in navigator) && !!navigator.serviceWorker.controller;
+    return {
+      hardat: !!(window.HVHardened && window.HVHardened.isActive()),
+      online: navigator.onLine,
+      sw: sw,
+      blockerade: logg.filter(function (h) { return h.typ === 'blockerad'; }).length,
+      larm: logg.filter(function (h) { return h.typ === 'LARM'; }).length,
+      laddadOm: !!state.__laddadOm
+    };
+  }
+
+  function ruta(namn, varde, klass, larm) {
+    var r = el('div', 'ruta' + (larm ? ' larmruta' : ''));
+    r.appendChild(el('div', 'ruta-namn', namn));
+    r.appendChild(el('div', 'ruta-varde ' + klass, varde));
+    return r;
+  }
+
+  function renderaLive() {
+    var m = matning();
+    var box = document.getElementById('live');
+    box.textContent = '';
+
+    var rub = el('div', 'live-rubrik');
+    rub.appendChild(el('span', null, 'Spärrens eget läge — live'));
+    var lk = el('button', 'loggknapp', visaLogg ? 'Dölj logg' : 'Visa logg (' + logg.length + ')');
+    lk.type = 'button';
+    lk.addEventListener('click', function () { visaLogg = !visaLogg; renderaLive(); });
+    rub.appendChild(lk);
+    box.appendChild(rub);
+
+    var rutor = el('div', 'live-rutor');
+    rutor.appendChild(ruta('Härdat läge', m.hardat ? 'PÅ' : 'av', m.hardat ? 'v-ok' : 'v-av'));
+    rutor.appendChild(ruta('Nätet', m.online ? 'på' : 'FLYGPLANSLÄGE', m.online ? 'v-av' : 'v-ok'));
+    rutor.appendChild(ruta('Nätverksspärr', m.sw ? 'aktiv' : 'INAKTIV', m.sw ? 'v-ok' : 'v-larm'));
+    rutor.appendChild(ruta('Blockerade anrop', String(m.blockerade), 'v-ok'));
+    if (m.larm) {
+      rutor.appendChild(ruta('Läckage-larm — anrop försökte gå ut i härdat läge',
+        String(m.larm), 'v-larm', true));
+    }
+    box.appendChild(rutor);
+
+    if (visaLogg) {
+      var l = el('div', 'logg');
+      if (!logg.length) {
+        l.appendChild(el('div', 'logg-tom', 'Inget loggat än. Spärren loggar bara när den faktiskt stoppar något.'));
+      } else {
+        logg.slice().reverse().forEach(function (h) {
+          var tid = new Date(h.t);
+          var rad = el('div', 'logg-rad' + (h.typ === 'LARM' ? ' larm' : ''),
+            String(tid.getHours()).padStart(2, '0') + ':' + String(tid.getMinutes()).padStart(2, '0') + ':' +
+            String(tid.getSeconds()).padStart(2, '0') + '  ' +
+            (h.typ === 'LARM' ? '⚠ ' : '') + h.vard + '  —  ' + h.text);
+          l.appendChild(rad);
+        });
+      }
+      box.appendChild(l);
+    }
+  }
+
+  function autoBekrafta() {
+    var m = matning();
+    var andrat = false;
+    Object.keys(AUTO).forEach(function (id) {
+      var s = post(id);
+      if (s.status) return;                       // rör aldrig ett manuellt svar
+      if (AUTO[id](m)) { s.status = 'ok'; s.auto = true; andrat = true; }
+    });
+    if (andrat) spara();
+    return andrat;
+  }
+
   function rendera() {
+    autoBekrafta();
+    renderaLive();
     var rot = document.getElementById('grupper');
     rot.textContent = '';
     var klara = 0, avvikelser = 0;
@@ -284,11 +393,18 @@
         tryck.setAttribute('aria-pressed', s.status === 'ok' ? 'true' : 'false');
         tryck.appendChild(el('div', 'checkbox'));
         var txt = el('div', 'txt');
-        txt.appendChild(el('div', 'titel', p.titel));
+        var titelrad = el('div', 'titel', p.titel);
+        if (s.status === 'ok' && s.auto) {
+            var etikett = el('span', 'auto-etikett', 'auto');
+            etikett.title = 'Bekräftad av spärren själv, inte av dig';
+            titelrad.appendChild(etikett);
+        }
+        txt.appendChild(titelrad);
         if (p.vantat) txt.appendChild(el('div', 'vantat', p.vantat));
         tryck.appendChild(txt);
         tryck.addEventListener('click', function () {
           s.status = (s.status === 'ok') ? null : 'ok';
+          s.auto = false;                       // manuellt svar väger tyngre
           if (s.status === 'ok') { s.chips = []; s.text = ''; }
           spara(); rendera();
         });
@@ -419,7 +535,78 @@
       rader.push('', '── EJ TESTAT ' + '─'.repeat(32));
       ejTestade.forEach(function (t) { rader.push('  ' + t); });
     }
+
+    // Spärrens egen logg som maskinell evidens. Bara värdnamn — aldrig URL:er,
+    // eftersom ett blockerat geokod-anrop bär koordinaten i query-strängen.
+    var m = matning();
+    rader.push('', '── SPÄRRENS EGEN LOGG ' + '─'.repeat(23));
+    rader.push('  Blockerade anrop: ' + m.blockerade + '   Läckage-larm: ' + m.larm);
+    if (m.larm) {
+      rader.push('  !! LARM: anrop försökte lämna enheten i härdat läge. Detta ska ALDRIG hända.');
+    }
+    if (logg.length) {
+      logg.slice(-25).forEach(function (h) {
+        var d = new Date(h.t);
+        rader.push('  ' + String(d.getHours()).padStart(2, '0') + ':' +
+          String(d.getMinutes()).padStart(2, '0') + ':' + String(d.getSeconds()).padStart(2, '0') +
+          '  [' + h.kalla + '] ' + (h.typ === 'LARM' ? 'LARM ' : '') + h.vard + ' — ' + h.text);
+      });
+    } else {
+      rader.push('  (tom — spärren loggar bara när den faktiskt stoppar något)');
+    }
+    rader.push('  OBS: loggen bevisar att spärren blockerade, inte att inget läckte.');
+    rader.push('  Utan aktiv nätverksspärr ser den ingenting alls.');
     return rader.join('\n');
+  }
+
+  // ── Live-koppling mot spärren ───────────────────────────────────────────
+  // Loggen läses ur IDB vid start (händelser kan ha skett innan sidan öppnades)
+  // och uppdateras sedan live: BroadcastChannel når andra flikar, så du kan ha
+  // checklistan öppen här medan du testar i MINKARTA bredvid.
+  function laddaLogg() {
+    if (!window.HVHardened || !window.HVHardened.logg) return;
+    window.HVHardened.logg().then(function (l) { logg = l || []; renderaLive(); rendera(); });
+  }
+
+  function nyHandelse(h) {
+    if (!h) return;
+    // Samma händelse kan nå oss via flera vägar (BroadcastChannel + SW).
+    // Källan är fixad, men en dubblettspärr här kostar inget och gör att
+    // loggvyn aldrig ljuger om ANTALET blockeringar.
+    var dubblett = logg.some(function (x) {
+      return x.t === h.t && x.vard === h.vard && x.text === h.text && x.kalla === h.kalla;
+    });
+    if (dubblett) return;
+    logg.push(h);
+    if (logg.length > 200) logg = logg.slice(-200);
+    rendera();
+  }
+
+  try {
+    var kanal = new BroadcastChannel('hv-hardened');
+    kanal.onmessage = function (ev) {
+      var d = ev.data || {};
+      if (d.type === 'HARDENED_EVENT') nyHandelse(d.handelse);
+      else rendera();                       // lägesbyte i annan flik
+    };
+  } catch (e) {}
+  window.addEventListener('hardened-event', function (ev) { nyHandelse(ev.detail); });
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', function (ev) {
+      var d = ev.data || {};
+      if (d.type === 'HARDENED_EVENT') nyHandelse(d.handelse);
+    });
+  }
+  window.addEventListener('online', rendera);
+  window.addEventListener('offline', rendera);
+  window.addEventListener('storage', function (ev) { if (ev.key === 'pmtiles.hardening') rendera(); });
+
+  // Post B3 kräver att appen laddats om medan härdat var på. Sidan vet att den
+  // laddats om genom att flaggan sattes i en TIDIGARE körning.
+  if (window.HVHardened && window.HVHardened.isActive()) {
+    if (state.__sett) { state.__laddadOm = true; }
+    state.__sett = true;
+    spara();
   }
 
   document.getElementById('resetBtn').addEventListener('click', function () {
@@ -453,6 +640,7 @@
   });
 
   rendera();
+  laddaLogg();
 })();
 </script>
 
