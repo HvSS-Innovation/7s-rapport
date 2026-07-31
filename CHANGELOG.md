@@ -3,6 +3,16 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.31 — 2026-07-31 — Spärren larmar, och fälttestet kan läsa larmet live
+
+- **`natverk()` är nu enda vägen ut på nätet från service workern.** Sker ett nätanrop medan härdat är på är det per definition ett fel — det blockeras *och* larmas i stället för att passera tyst. Alla fyra fetch-vägar plus de två nedladdningsjobben går genom den (ett jobb i flykten får inte överleva att härdat slås på mitt i).
+- **Skyddar mot regressionsklassen som gav oss minikartan och kartmodalen:** ny kod som glömmer sin härdat-koll fastnar i wrappern i stället för att läcka. Egress-gaten failar bygget om rå `fetch(e.request)` återinförs i `service-worker.js`.
+- **Händelselogg med bara värdnamn, aldrig URL.** En blockerad geokodning bär koordinaten i query-strängen — loggen får inte bli den läcka den ska bevaka. SW:n är enda skribent.
+- **FÄLTTEST (`hardat-test.html`) fick en live-panel:** ha checklistan öppen i en flik och testa härdat i en annan, panelen uppdateras via BroadcastChannel. Visar härdat på/av, nät eller flygplansläge, om spärren kontrollerar sidan, antal blockerade anrop och en röd larmruta.
+- **Auto-bekräftelse, men snålt: tre poster.** Bara härdat aktiverat, flygplansläge och härdat kvar efter omladdning kan spärren avgöra själv; de märks "auto" så testaren ser vad som är maskinellt bekräftat. Manuellt svar väger alltid tyngre. Resten får på sin höjd en ledtråd — service workern är **blind** när den inte kontrollerar sidan, vilket är precis där minikartan och kartmodalen läckte. Både UI och rapport säger rakt ut: loggen bevisar att spärren blockerade, inte att inget läckte.
+- Rapporten får sektionen SPÄRRENS EGEN LOGG (25 senaste) som maskinell evidens.
+- **Dubblettfix:** guardens händelser nådde loggvyn två gånger (direkt via BroadcastChannel + vidarebefordrade av SW:n), så antalet blockeringar ljög. SW:n vidarebefordrar inte längre guard-händelser.
+
 ## v0.3.30 — 2026-07-30 — Aktiveringen är nu atomisk (race bekräftat och stängt)
 
 - **Bekräftade granskningens sista öppna fynd med ett deterministiskt race-test.** Interleavingen paketkoll → paketet raderas (t.ex. av en annan flik) → PMTiles-headern läses ändå gav **2 CONNECT mot R2** — och `activate()` returnerade `true`, så operatören fick grönt ljus efter att trafiken lämnat enheten.
