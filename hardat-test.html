@@ -30,7 +30,7 @@
     --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
     --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
     --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
-    --warn:#c8a24e; --danger:#c62828;
+    --warn:#c8a24e; --warn-dim:#2a1a0a; --danger:#c62828;
     --radius:8px; --radius-sm:4px;
   }
   * { box-sizing:border-box; margin:0; padding:0; }
@@ -40,46 +40,70 @@
   header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
   header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
 
-  .intro { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; font-size:0.8rem; color:var(--text-secondary); margin-bottom:14px; }
+  .intro { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; font-size:0.8rem; color:var(--text-secondary); margin-bottom:12px; }
   .intro strong { color:var(--text-primary); }
-  .flyg { background:#2a1a0a; border:1px solid var(--warn); border-radius:var(--radius); padding:12px 16px; margin-bottom:18px; font-size:0.82rem; color:var(--warn); }
+  .hur { background:var(--bg-secondary); border:1px solid var(--border-focus); border-radius:var(--radius); padding:12px 16px; font-size:0.8rem; color:var(--text-secondary); margin-bottom:12px; }
+  .hur b { color:var(--text-primary); }
+  .flyg { background:var(--warn-dim); border:1px solid var(--warn); border-radius:var(--radius); padding:12px 16px; margin-bottom:16px; font-size:0.82rem; color:var(--warn); }
   .flyg b { display:block; font-size:0.9rem; margin-bottom:4px; letter-spacing:0.05em; text-transform:uppercase; }
 
-  .prog { position:sticky; top:0; z-index:10; background:var(--bg-primary); padding:8px 0 12px; }
-  .prog-row { display:flex; justify-content:space-between; align-items:baseline; font-size:0.75rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px; }
-  .prog-num { font-family:ui-monospace,monospace; color:var(--accent); font-weight:700; font-size:0.95rem; }
+  .prog { position:sticky; top:0; z-index:20; background:var(--bg-primary); padding:10px 0 12px; margin-bottom:4px; }
+  .prog-row { display:flex; justify-content:space-between; align-items:baseline; font-size:0.72rem; color:var(--text-muted); letter-spacing:0.05em; text-transform:uppercase; margin-bottom:6px; gap:10px; }
+  .prog-num { font-family:ui-monospace,monospace; color:var(--accent); font-weight:700; font-size:0.95rem; white-space:nowrap; }
+  .prog-avvik { font-family:ui-monospace,monospace; color:var(--warn); font-weight:700; font-size:0.95rem; white-space:nowrap; }
   .prog-bar { height:6px; background:var(--bg-card); border-radius:3px; overflow:hidden; }
   .prog-fill { height:100%; background:var(--accent); width:0%; transition:width .25s; }
 
-  .grupp { margin:22px 0 8px; }
-  .grupp-titel { font-size:0.72rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:2px; }
+  .grupp-titel { font-size:0.72rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin:22px 0 2px; }
   .grupp-desc { font-size:0.74rem; color:var(--text-muted); margin-bottom:10px; }
 
-  .item { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:13px 15px; margin-bottom:8px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
-  .item:active { background:var(--bg-secondary); }
-  .item.done { border-color:var(--accent); background:var(--accent-dim); }
-  .item-head { display:flex; align-items:flex-start; gap:12px; }
-  .checkbox { width:24px; height:24px; border:2px solid var(--border-focus); border-radius:6px; flex-shrink:0; position:relative; margin-top:1px; }
-  .item.done .checkbox { background:var(--accent); border-color:var(--accent); }
-  .checkbox::after { content:''; position:absolute; left:7px; top:2px; width:6px; height:11px; border-right:2.5px solid #0d1f0d; border-bottom:2.5px solid #0d1f0d; transform:rotate(45deg); opacity:0; }
-  .item.done .checkbox::after { opacity:1; }
-  .item-body { flex:1; min-width:0; }
-  .item-titel { font-size:0.92rem; font-weight:600; }
-  .item-vantat { font-size:0.78rem; color:var(--text-secondary); margin-top:3px; }
-  .item-vantat b { color:var(--accent); font-weight:600; }
+  .item { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); margin-bottom:8px; overflow:hidden; }
+  .item.ok { border-color:var(--accent); background:var(--accent-dim); }
+  .item.avvek { border-color:var(--warn); background:var(--warn-dim); }
 
-  .anteckning { margin-top:20px; }
-  .anteckning label { display:block; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
-  textarea { width:100%; min-height:110px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border); border-radius:var(--radius); padding:11px 13px; font-family:inherit; font-size:0.88rem; resize:vertical; }
-  textarea:focus { outline:none; border-color:var(--border-focus); }
+  .rad { display:flex; align-items:stretch; gap:0; }
+  .tryck { flex:1; display:flex; align-items:flex-start; gap:12px; padding:13px 8px 13px 15px; background:none; border:none; text-align:left; font-family:inherit; color:inherit; cursor:pointer; min-height:56px; -webkit-tap-highlight-color:transparent; }
+  .tryck:active { opacity:0.7; }
+  .checkbox { width:26px; height:26px; border:2px solid var(--border-focus); border-radius:6px; flex-shrink:0; position:relative; margin-top:1px; }
+  .item.ok .checkbox { background:var(--accent); border-color:var(--accent); }
+  .item.avvek .checkbox { background:var(--warn); border-color:var(--warn); }
+  .checkbox::after { content:''; position:absolute; left:8px; top:3px; width:6px; height:12px; border-right:2.5px solid #0d1f0d; border-bottom:2.5px solid #0d1f0d; transform:rotate(45deg); opacity:0; }
+  .item.ok .checkbox::after { opacity:1; }
+  .item.avvek .checkbox::after { content:'!'; left:0; top:0; width:100%; height:100%; border:none; transform:none; opacity:1; display:flex; align-items:center; justify-content:center; color:#0d1f0d; font-weight:800; font-size:1rem; }
+  .txt { flex:1; min-width:0; }
+  .titel { font-size:0.93rem; font-weight:600; }
+  .vantat { font-size:0.78rem; color:var(--text-secondary); margin-top:3px; }
+  /* Avvikelse-kortet har mörk bakgrund i BÅDA teman (--warn-dim saknar
+     ljus-variant, precis som flygplans-rutan). Texten får därför inte följa
+     temats variabler — i ljust läge blev den mörk på mörkt. Lås färgerna. */
+  .item.avvek .titel { color:#f2e7d2; }
+  .item.avvek .vantat { color:#c2a97c; }
 
-  .knappar { display:flex; gap:10px; margin:18px 0 8px; }
-  .btn { flex:1; padding:12px; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); font-family:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; }
+  .avvek-knapp { flex-shrink:0; min-width:64px; min-height:56px; border:none; border-left:1px solid var(--border); background:none; color:var(--text-muted); font-family:inherit; font-size:0.7rem; font-weight:700; letter-spacing:0.04em; text-transform:uppercase; cursor:pointer; padding:6px; }
+  .avvek-knapp:active { background:var(--warn-dim); }
+  .item.avvek .avvek-knapp { color:var(--warn); border-left-color:var(--warn); }
+
+  .panel { border-top:1px solid var(--warn); padding:13px 15px 15px; }
+  .panel-rubrik { font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--warn); margin-bottom:8px; font-weight:700; }
+  .chips { display:flex; flex-wrap:wrap; gap:7px; margin-bottom:10px; }
+  .chip { min-height:40px; padding:8px 13px; border-radius:20px; border:1px solid var(--border-focus); background:var(--bg-input); color:var(--text-secondary); font-family:inherit; font-size:0.79rem; cursor:pointer; text-align:left; }
+  .chip.vald { background:var(--warn); border-color:var(--warn); color:#241705; font-weight:600; }
+  .panel textarea { width:100%; min-height:74px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px; font-family:inherit; font-size:0.86rem; resize:vertical; }
+  .panel textarea:focus { outline:none; border-color:var(--warn); }
+
+  .knappar { display:flex; gap:10px; margin:20px 0 8px; }
+  .btn { flex:1; min-height:50px; padding:12px; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); font-family:inherit; font-size:0.85rem; font-weight:600; cursor:pointer; }
   .btn-primary { background:var(--accent); border-color:var(--accent); color:#0d1f0d; }
+  .btn:active { opacity:0.8; }
 
-  .klar { background:var(--accent-dim); border:1px solid var(--accent); border-radius:var(--radius); padding:16px; text-align:center; margin:16px 0; }
-  .klar-titel { font-size:1.05rem; font-weight:700; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase; }
-  .klar-txt { font-size:0.82rem; color:var(--text-secondary); margin-top:4px; }
+  .klar { border-radius:var(--radius); padding:16px; text-align:center; margin:16px 0; border:1px solid var(--accent); background:var(--accent-dim); }
+  .klar.medavvik { border-color:var(--warn); background:var(--warn-dim); }
+  .klar-titel { font-size:1.05rem; font-weight:700; color:var(--accent); letter-spacing:0.06em; text-transform:uppercase; }
+  .klar.medavvik .klar-titel { color:var(--warn); }
+  .klar-txt { font-size:0.83rem; color:var(--text-secondary); margin-top:5px; }
+
+  .miljo { font-size:0.7rem; color:var(--text-muted); font-family:ui-monospace,monospace; background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:10px 12px; margin-top:14px; word-break:break-word; }
+  .miljo b { color:var(--text-secondary); font-family:'Inter',sans-serif; display:block; margin-bottom:4px; letter-spacing:0.06em; text-transform:uppercase; font-size:0.68rem; }
 </style>
 </head>
 <body>
@@ -98,6 +122,13 @@
     prövar. Tar ungefär en kvart.
   </div>
 
+  <div class="hur">
+    <b>Så här går det till:</b> tryck på raden när steget är gjort och blev som
+    beskrivet. Blev det något annat — tryck <b>AVVEK</b> i stället, välj vad som
+    hände och skriv vid behov en rad till. Avsluta med <b>Kopiera rapport</b>;
+    då får du en färdig felrapport med enhet, version och allt som avvek.
+  </div>
+
   <div class="flyg">
     <b>Börja med flygplansläge</b>
     Härdat läge stoppar appens egna anrop. Men webbläsaren kontrollerar själv om
@@ -106,210 +137,305 @@
   </div>
 
   <div class="prog">
-    <div class="prog-row"><span>Genomfört</span><span class="prog-num" id="progNum">0 / 0</span></div>
+    <div class="prog-row">
+      <span>Genomfört <span class="prog-num" id="progNum">0 / 0</span></span>
+      <span>Avvikelser <span class="prog-avvik" id="progAvvik">0</span></span>
+    </div>
     <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
   </div>
 
   <div id="grupper"></div>
   <div id="klarBanner"></div>
 
-  <div class="anteckning">
-    <label for="notes">Anteckningar — vad kändes fel eller i vägen?</label>
-    <textarea id="notes" placeholder="Skriv här. Sparas lokalt på enheten."></textarea>
-  </div>
-
   <div class="knappar">
     <button class="btn" id="resetBtn" type="button">Börja om</button>
-    <button class="btn btn-primary" id="copyBtn" type="button">Kopiera resultat</button>
+    <button class="btn btn-primary" id="copyBtn" type="button">Kopiera rapport</button>
   </div>
+
+  <div class="miljo" id="miljo"></div>
 </div>
 
 <script>
 (function () {
   'use strict';
 
+  // Generella förslag som gäller nästan alla steg. Läggs sist i varje lista så
+  // de specifika (som beskriver just det stegets typiska fel) kommer först.
+  var GENERELLA = ['Inget hände alls', 'Appen hängde sig', 'Appen laddade om sig', 'Knappen gick inte att trycka'];
+
   var GRUPPER = [
     {
-      id: 'F', titel: 'Förberedelse',
-      desc: 'Gör detta med nätet på, innan flygplansläget.',
+      titel: 'Förberedelse', desc: 'Gör detta med nätet på, innan flygplansläget.',
       poster: [
-        { id: 'f1', titel: 'Installera appen på hemskärmen', vantat: 'Lägg till på hemskärmen — testet gäller PWA:n, inte en webbläsarflik.' },
-        { id: 'f2', titel: 'Öppna MINKARTA', vantat: 'På en anslutning du litar på.' },
-        { id: 'f3', titel: 'Ladda ner ditt landskap offline', vantat: 'Vänta tills nedladdningen är helt klar.' },
-        { id: 'f4', titel: 'Slå på Härdat läge', vantat: 'Varningsraden ska bli grön.' },
-        { id: 'f5', titel: 'Sätt telefonen i flygplansläge', vantat: 'Nu börjar det riktiga testet.' }
+        { id:'f1', titel:'Installera appen på hemskärmen', vantat:'iPhone: Dela → Lägg till på hemskärmen (måste vara Safari). Android: menyn → Installera.',
+          forslag:['Hittade inget installationsval','Öppnades ändå i webbläsaren'] },
+        { id:'f2', titel:'Öppna MINKARTA i den installerade appen', vantat:'Starta från ikonen, inte från webbläsaren.',
+          forslag:['Kartan laddade inte','Adressfältet syntes fortfarande'] },
+        { id:'f3', titel:'Ladda ner ett landskap offline', vantat:'Börja med ett litet. Vänta tills nedladdningen är helt klar.',
+          forslag:['Nedladdningen avbröts','Slut på lagringsutrymme','Tog orimligt lång tid','Kom aldrig till 100 %'] },
+        { id:'f4', titel:'Slå på Härdat läge', vantat:'Varningsraden ovanför kartan ska bli grön.',
+          forslag:['Vägrade aktiveras','Meddelande om att paketet saknas','Raden blev inte grön'] },
+        { id:'f5', titel:'Sätt telefonen i flygplansläge', vantat:'', endastAtgard:true }
       ]
     },
     {
-      id: 'A', titel: 'A — Fungerar verktyget alls?',
-      desc: 'Hela kedjan från tom rapport till delad fil.',
+      titel: 'A — Fungerar verktyget alls?', desc: 'Hela kedjan från tom rapport till delad fil.',
       poster: [
-        { id: 'a1', titel: 'Fyll i en 7S-rapport', vantat: 'Ska gå som vanligt.' },
-        { id: 'a2', titel: 'Öppna Karta och välj en position', vantat: 'Kartan ritas lokalt. Varningsraden ska vara GRÖN: "Härdat läge PÅ".' },
-        { id: 'a3', titel: 'Bekräfta positionen', vantat: 'MGRS hamnar i STÄLLE. Ingen adress ska fyllas i — adressuppslag är avstängt.' },
-        { id: 'a4', titel: 'Bifoga ett foto', vantat: 'Status ska säga att metadata är rensad.' },
-        { id: 'a5', titel: 'Tryck Publicera och dela', vantat: 'Delningsarket öppnas med text och CoT-fil.' },
-        { id: 'a6', titel: 'Öppna CoT-filen i ATAK', vantat: 'Punkten ska hamna på RÄTT plats. Hoppa över om du saknar ATAK.' }
+        { id:'a1', titel:'Fyll i en 7S-rapport', vantat:'Ska gå precis som vanligt.',
+          forslag:['Fält gick inte att fylla i','Tangentbordet täckte fältet'] },
+        { id:'a2', titel:'Öppna Karta och välj en position', vantat:'Kartan ritas lokalt. Varningsraden ska vara GRÖN: "Härdat läge PÅ".',
+          forslag:['Kartan var tom eller grå','Raden var gul, inte grön','Kartan visade OpenTopoMap','Kartan gick inte att panorera'] },
+        { id:'a3', titel:'Bekräfta positionen', vantat:'MGRS hamnar i STÄLLE. Ingen adress ska fyllas i — adressuppslag är avstängt.',
+          forslag:['En adress fylldes i ändå','Inget hamnade i fältet','Fel koordinat'] },
+        { id:'a4', titel:'Bifoga ett foto', vantat:'Status ska säga att metadata är rensad.',
+          forslag:['Ingen status visades','Fotot kunde inte bifogas','Sa att rensningen misslyckades'] },
+        { id:'a5', titel:'Tryck Publicera och dela', vantat:'Delningsarket öppnas med text och CoT-fil.',
+          forslag:['Delningsarket öppnades inte','Bara texten följde med, ingen fil','Signal saknades i listan'] },
+        { id:'a6', titel:'Öppna CoT-filen i ATAK', vantat:'Punkten ska hamna på RÄTT plats. Hoppa över om du saknar ATAK.',
+          forslag:['Punkten hamnade fel','Filen gick inte att öppna','ATAK avvisade formatet'] }
       ]
     },
     {
-      id: 'B', titel: 'B — De fyra sätten att säga nej',
-      desc: 'Alla är avsiktliga. Känns någon för hårdhänt är det den viktigaste återkopplingen från hela testet — skriv det i anteckningarna.',
+      titel: 'B — De fyra sätten att säga nej',
+      desc: 'Alla är avsiktliga. Känns någon för hårdhänt i fält är det den viktigaste återkopplingen från hela testet — tryck AVVEK och skriv varför.',
       poster: [
-        { id: 'b1', titel: 'Skriv ett platsnamn i STÄLLE och dela', vantat: 'Ruta: "Kan inte skapa TAK-fil". Ingen fil skapas. Textrapporten ska ändå gå att dela.' },
-        { id: 'b2', titel: 'Dölj ett lager i MINKARTA och exportera PNG', vantat: 'Meddelande om hur många dolda objekt som utelämnas. Bilden ska sakna dem.' },
-        { id: 'b3', titel: 'Tvinga omladdning av appen', vantat: 'Härdat ska fortsatt vara PÅ. Blir det AV med besked — notera det.' },
-        { id: 'b4', titel: 'Låt appen ligga i härdat några dagar', vantat: 'Ingen uppdatering sker. Nya versioner kommer först när härdat stängs av.' }
+        { id:'b1', titel:'Skriv ett platsnamn i STÄLLE och dela', vantat:'Ruta: "Kan inte skapa TAK-fil". Ingen fil skapas. Textrapporten ska ändå gå att dela.',
+          forslag:['Filen skapades ändå','Inget meddelande visades','Textrapporten gick inte heller att dela','Meddelandet var svårt att förstå'] },
+        { id:'b2', titel:'Dölj ett lager i MINKARTA och exportera PNG', vantat:'Meddelande om hur många dolda objekt som utelämnas. Bilden ska sakna dem.',
+          forslag:['De dolda objekten kom med i bilden','Inget meddelande visades','Exporten misslyckades helt'] },
+        { id:'b3', titel:'Tvinga omladdning av appen', vantat:'Härdat ska fortsatt vara PÅ.',
+          forslag:['Härdat var AV efteråt','Fick besked om att spärren inte kan upprätthållas','Kartpaketet var borta'] },
+        { id:'b4', titel:'Låt appen ligga i härdat några dagar', vantat:'Ingen uppdatering sker. Nya versioner kommer först när härdat stängs av.',
+          forslag:['Kartpaketet hade försvunnit','Appen hade uppdaterat sig ändå','Härdat hade slagits av'] }
       ]
     },
     {
-      id: 'C', titel: 'C — Visar appen sant läge?',
+      titel: 'C — Visar appen sant läge?',
       desc: 'Ett verktyg som ljuger om sitt skydd är farligare än ett utan skydd.',
       poster: [
-        { id: 'c1', titel: 'Läs statusraden i MINKARTA', vantat: 'Ska namnge din lokala karta, t.ex. "Härdat: Uppland" — INTE OpenTopoMap.' },
-        { id: 'c2', titel: 'Öppna appen i två flikar, slå av härdat i den ena', vantat: 'Den andra ska följa med. Ingen grön garanti får ligga kvar.' },
-        { id: 'c3', titel: 'Tryck feedback-länken längst ned', vantat: 'Ska vägra med besked, inte öppna GitHub.' },
-        { id: 'c4', titel: 'Öppna VÄDER', vantat: 'Knappen avstängd, grön banner om härdat läge.' }
+        { id:'c1', titel:'Läs statusraden i MINKARTA', vantat:'Ska namnge din lokala karta, t.ex. "Härdat: Uppland" — INTE OpenTopoMap.',
+          forslag:['Raden sa OpenTopoMap','Raden var tom','Fel landskap namngavs'] },
+        { id:'c2', titel:'Öppna appen i två flikar, slå av härdat i den ena', vantat:'Den andra ska följa med. Ingen grön garanti får ligga kvar.',
+          forslag:['Andra fliken visade fortfarande grönt','Gick inte att öppna två flikar'] },
+        { id:'c3', titel:'Tryck feedback-länken längst ned', vantat:'Ska vägra med besked, inte öppna GitHub.',
+          forslag:['GitHub öppnades','Inget hände och inget besked gavs'] },
+        { id:'c4', titel:'Öppna VÄDER', vantat:'Knappen avstängd, grön banner om härdat läge.',
+          forslag:['Knappen gick att trycka','Ingen banner visades','Väder hämtades faktiskt'] }
       ]
     },
     {
-      id: 'D', titel: 'D — Efter testet',
-      desc: 'Återställ enheten.',
+      titel: 'D — Efter testet', desc: 'Återställ enheten.',
       poster: [
-        { id: 'd1', titel: 'Stäng av flygplansläge', vantat: '' },
-        { id: 'd2', titel: 'Stäng av härdat läge', vantat: '' },
-        { id: 'd3', titel: 'Kontrollera att kartan och VÄDER fungerar igen', vantat: 'Kartan ska återgå till OpenTopoMap.' },
-        { id: 'd4', titel: 'Kör Glöm enheten om testet gjordes med skarpa uppgifter', vantat: 'Finns längst ned på varje sida.' }
+        { id:'d1', titel:'Stäng av flygplansläge', vantat:'', endastAtgard:true },
+        { id:'d2', titel:'Stäng av härdat läge', vantat:'Ska gå att stänga av från kartan eller vädersidan.',
+          forslag:['Gick inte att stänga av','Kartan förblev lokal'] },
+        { id:'d3', titel:'Kontrollera att kartan och VÄDER fungerar igen', vantat:'Kartan ska återgå till OpenTopoMap.',
+          forslag:['Kartan förblev tom','Väder fungerade inte','Appen behövde laddas om först'] },
+        { id:'d4', titel:'Kör Glöm enheten om testet gjordes med skarpa uppgifter', vantat:'Finns längst ned på varje sida.', endastAtgard:true }
       ]
     }
   ];
 
-  var NYCKEL = 'hardat_test_state';
+  var NYCKEL = 'hardat_test_v2';
   var ALLA = GRUPPER.reduce(function (n, g) { return n + g.poster.length; }, 0);
   var state = laddaState();
 
   function laddaState() {
     try { return JSON.parse(localStorage.getItem(NYCKEL) || '{}'); } catch (e) { return {}; }
   }
-  function sparaState() {
+  function spara() {
     // localStorage, inte sessionStorage: testet spänner över omladdningar,
-    // flygplansläge och flera dagar (post B4). sessionStorage hade tappats.
+    // flygplansläge och flera dagar (post B4).
     try { localStorage.setItem(NYCKEL, JSON.stringify(state)); } catch (e) {}
   }
+  function post(id) {
+    if (!state[id]) state[id] = { status: null, chips: [], text: '' };
+    return state[id];
+  }
 
-  // Byggt med DOM-noder och textContent genomgående — ingen innerHTML med
-  // interpolerad text. Samma mönster som infördes efter DOM-XSS-fixen
-  // 2026-07-30; håller också sidan utanför egress-gatens sänk-budget.
+  // Allt byggs med DOM-noder och textContent — ingen innerHTML med interpolerad
+  // text. Samma mönster som infördes efter DOM-XSS-fixen 2026-07-30.
+  function el(tagg, klass, text) {
+    var n = document.createElement(tagg);
+    if (klass) n.className = klass;
+    if (text != null) n.textContent = text;
+    return n;
+  }
+
   function rendera() {
     var rot = document.getElementById('grupper');
     rot.textContent = '';
-    var klara = 0;
+    var klara = 0, avvikelser = 0;
 
     GRUPPER.forEach(function (grupp) {
-      var g = document.createElement('div');
-      g.className = 'grupp';
-      var t = document.createElement('div');
-      t.className = 'grupp-titel';
-      t.textContent = grupp.titel;
-      g.appendChild(t);
-      var d = document.createElement('div');
-      d.className = 'grupp-desc';
-      d.textContent = grupp.desc;
-      g.appendChild(d);
-      rot.appendChild(g);
+      rot.appendChild(el('div', 'grupp-titel', grupp.titel));
+      rot.appendChild(el('div', 'grupp-desc', grupp.desc));
 
-      grupp.poster.forEach(function (post) {
-        var gjord = !!state[post.id];
-        if (gjord) klara++;
+      grupp.poster.forEach(function (p) {
+        var s = post(p.id);
+        if (s.status) klara++;
+        if (s.status === 'avvek') avvikelser++;
 
-        var el = document.createElement('div');
-        el.className = 'item' + (gjord ? ' done' : '');
-        el.setAttribute('role', 'button');
-        el.setAttribute('tabindex', '0');
-        el.setAttribute('aria-pressed', gjord ? 'true' : 'false');
+        var kort = el('div', 'item' + (s.status === 'ok' ? ' ok' : s.status === 'avvek' ? ' avvek' : ''));
+        var rad = el('div', 'rad');
 
-        var head = document.createElement('div');
-        head.className = 'item-head';
-        var box = document.createElement('div');
-        box.className = 'checkbox';
-        head.appendChild(box);
-
-        var body = document.createElement('div');
-        body.className = 'item-body';
-        var titel = document.createElement('div');
-        titel.className = 'item-titel';
-        titel.textContent = post.titel;
-        body.appendChild(titel);
-        if (post.vantat) {
-          var v = document.createElement('div');
-          v.className = 'item-vantat';
-          v.textContent = post.vantat;
-          body.appendChild(v);
-        }
-        head.appendChild(body);
-        el.appendChild(head);
-
-        function vaxla() { state[post.id] = !state[post.id]; sparaState(); rendera(); }
-        el.addEventListener('click', vaxla);
-        el.addEventListener('keydown', function (ev) {
-          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); vaxla(); }
+        var tryck = el('button', 'tryck');
+        tryck.type = 'button';
+        tryck.setAttribute('aria-pressed', s.status === 'ok' ? 'true' : 'false');
+        tryck.appendChild(el('div', 'checkbox'));
+        var txt = el('div', 'txt');
+        txt.appendChild(el('div', 'titel', p.titel));
+        if (p.vantat) txt.appendChild(el('div', 'vantat', p.vantat));
+        tryck.appendChild(txt);
+        tryck.addEventListener('click', function () {
+          s.status = (s.status === 'ok') ? null : 'ok';
+          if (s.status === 'ok') { s.chips = []; s.text = ''; }
+          spara(); rendera();
         });
-        rot.appendChild(el);
+        rad.appendChild(tryck);
+
+        if (!p.endastAtgard) {
+          var avvekBtn = el('button', 'avvek-knapp', 'Avvek');
+          avvekBtn.type = 'button';
+          avvekBtn.setAttribute('aria-pressed', s.status === 'avvek' ? 'true' : 'false');
+          avvekBtn.addEventListener('click', function () {
+            s.status = (s.status === 'avvek') ? null : 'avvek';
+            spara(); rendera();
+            if (s.status === 'avvek') {
+              var ta = document.getElementById('ta_' + p.id);
+              if (ta) ta.focus();
+            }
+          });
+          rad.appendChild(avvekBtn);
+        }
+        kort.appendChild(rad);
+
+        if (s.status === 'avvek') {
+          var panel = el('div', 'panel');
+          panel.appendChild(el('div', 'panel-rubrik', 'Vad hände i stället?'));
+          var chips = el('div', 'chips');
+          (p.forslag || []).concat(GENERELLA).forEach(function (förslag) {
+            var vald = s.chips.indexOf(förslag) >= 0;
+            var c = el('button', 'chip' + (vald ? ' vald' : ''), förslag);
+            c.type = 'button';
+            c.setAttribute('aria-pressed', vald ? 'true' : 'false');
+            c.addEventListener('click', function () {
+              var i = s.chips.indexOf(förslag);
+              if (i >= 0) s.chips.splice(i, 1); else s.chips.push(förslag);
+              spara(); rendera();
+            });
+            chips.appendChild(c);
+          });
+          panel.appendChild(chips);
+
+          var ta = document.createElement('textarea');
+          ta.id = 'ta_' + p.id;
+          ta.placeholder = 'Något mer? Skriv gärna vad du gjorde precis innan.';
+          ta.value = s.text || '';
+          ta.addEventListener('input', function () { s.text = ta.value; spara(); });
+          panel.appendChild(ta);
+          kort.appendChild(panel);
+        }
+
+        rot.appendChild(kort);
       });
     });
 
     document.getElementById('progNum').textContent = klara + ' / ' + ALLA;
+    document.getElementById('progAvvik').textContent = String(avvikelser);
     document.getElementById('progFill').style.width = (klara / ALLA * 100) + '%';
 
     var banner = document.getElementById('klarBanner');
     banner.textContent = '';
     if (klara === ALLA) {
-      var box2 = document.createElement('div');
-      box2.className = 'klar';
-      var bt = document.createElement('div');
-      bt.className = 'klar-titel';
-      bt.textContent = 'Testet genomfört';
-      var bx = document.createElement('div');
-      bx.className = 'klar-txt';
-      bx.textContent = 'Kopiera resultatet och lägg in utfallet i test/opsec/faltest.md.';
-      box2.appendChild(bt);
-      box2.appendChild(bx);
-      banner.appendChild(box2);
+      var box = el('div', 'klar' + (avvikelser ? ' medavvik' : ''));
+      box.appendChild(el('div', 'klar-titel', avvikelser ? 'Klart — ' + avvikelser + ' avvikelse' + (avvikelser === 1 ? '' : 'r') : 'Klart utan anmärkning'));
+      box.appendChild(el('div', 'klar-txt', avvikelser
+        ? 'Tryck Kopiera rapport och klistra in den där du rapporterar.'
+        : 'Skyddet betedde sig som det ska på den här enheten.'));
+      banner.appendChild(box);
     }
+    ritaMiljo();
   }
 
-  // Anteckningar
-  var notes = document.getElementById('notes');
-  notes.value = state.__notes || '';
-  notes.addEventListener('input', function () {
-    state.__notes = notes.value;
-    sparaState();
-  });
+  // Miljöuppgifter samlas automatiskt — en testare ska inte behöva veta vad en
+  // buggrapport måste innehålla. Ingenting skickas någonstans; det hamnar bara
+  // i urklipp när du själv trycker Kopiera.
+  function miljorader() {
+    var r = [];
+    var fristaende = window.matchMedia && window.matchMedia('(display-mode: standalone)').matches;
+    var iosStandalone = ('standalone' in navigator) ? !!navigator.standalone : false;
+    r.push('Enhet: ' + navigator.userAgent);
+    r.push('Installerad som app: ' + ((fristaende || iosStandalone) ? 'ja' : 'nej — körs i webbläsare'));
+    try {
+      var v = (typeof APP_VERSION !== 'undefined' ? APP_VERSION : '?');
+      var c = (typeof APP_COMMIT !== 'undefined' && APP_COMMIT) ? APP_COMMIT.slice(0, 7) : '?';
+      r.push('Appversion: ' + v + ' (' + c + ')');
+    } catch (e) {}
+    var hardat = !!(window.HVHardened && window.HVHardened.isActive());
+    r.push('Härdat läge: ' + (hardat ? 'PÅ' : 'av'));
+    var sw = ('serviceWorker' in navigator) && !!navigator.serviceWorker.controller;
+    r.push('Nätverksspärr (service worker): ' + (sw ? 'kontrollerar sidan' : 'kontrollerar INTE sidan'));
+    r.push('Online enligt enheten: ' + (navigator.onLine ? 'ja' : 'nej (flygplansläge?)'));
+    return r;
+  }
+
+  function ritaMiljo() {
+    var box = document.getElementById('miljo');
+    box.textContent = '';
+    box.appendChild(el('b', null, 'Följer med i rapporten'));
+    miljorader().forEach(function (rad) { box.appendChild(el('div', null, rad)); });
+  }
+
+  function byggRapport() {
+    var rader = ['HÄRDAT-TEST — ' + new Date().toLocaleString('sv-SE'), ''];
+    miljorader().forEach(function (r) { rader.push(r); });
+
+    var avvikande = [], ejTestade = [];
+    GRUPPER.forEach(function (g) {
+      g.poster.forEach(function (p) {
+        var s = post(p.id);
+        if (s.status === 'avvek') avvikande.push({ g: g, p: p, s: s });
+        else if (!s.status) ejTestade.push(p.titel);
+      });
+    });
+
+    rader.push('', 'Genomfört: ' + (ALLA - ejTestade.length) + ' / ' + ALLA +
+        '   Avvikelser: ' + avvikande.length);
+
+    if (avvikande.length) {
+      rader.push('', '── AVVIKELSER ' + '─'.repeat(30));
+      avvikande.forEach(function (a) {
+        rader.push('', '[' + a.g.titel.split('—')[0].trim() + '] ' + a.p.titel);
+        if (a.p.vantat) rader.push('  Förväntat: ' + a.p.vantat);
+        if (a.s.chips.length) rader.push('  Hände:     ' + a.s.chips.join('; '));
+        if (a.s.text) rader.push('  Kommentar: ' + a.s.text);
+      });
+    } else {
+      rader.push('', 'Inga avvikelser.');
+    }
+
+    if (ejTestade.length) {
+      rader.push('', '── EJ TESTAT ' + '─'.repeat(32));
+      ejTestade.forEach(function (t) { rader.push('  ' + t); });
+    }
+    return rader.join('\n');
+  }
 
   document.getElementById('resetBtn').addEventListener('click', function () {
-    if (!window.confirm('Nollställ hela checklistan och anteckningarna?')) return;
+    if (!window.confirm('Nollställ hela checklistan, alla val och anteckningar?')) return;
     state = {};
     try { localStorage.removeItem(NYCKEL); } catch (e) {}
-    notes.value = '';
     rendera();
   });
 
   document.getElementById('copyBtn').addEventListener('click', function () {
-    var rader = ['HÄRDAT-TEST — ' + new Date().toLocaleString('sv-SE'), ''];
-    GRUPPER.forEach(function (grupp) {
-      rader.push(grupp.titel);
-      grupp.poster.forEach(function (post) {
-        rader.push('  [' + (state[post.id] ? 'x' : ' ') + '] ' + post.titel);
-      });
-      rader.push('');
-    });
-    if (state.__notes) { rader.push('ANTECKNINGAR:', state.__notes); }
-    var txt = rader.join('\n');
+    var txt = byggRapport();
     var knapp = document.getElementById('copyBtn');
-    function klart() { knapp.textContent = 'Kopierat'; setTimeout(function () { knapp.textContent = 'Kopiera resultat'; }, 2000); }
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(txt).then(klart, reserv);
-    } else { reserv(); }
+    function klart() {
+      knapp.textContent = 'Kopierat';
+      setTimeout(function () { knapp.textContent = 'Kopiera rapport'; }, 2200);
+    }
     function reserv() {
       var ta = document.createElement('textarea');
       ta.value = txt;
@@ -317,9 +443,13 @@
       ta.style.opacity = '0';
       document.body.appendChild(ta);
       ta.select();
-      try { document.execCommand('copy'); klart(); } catch (e) { knapp.textContent = 'Kunde inte kopiera'; }
+      try { document.execCommand('copy'); klart(); }
+      catch (e) { knapp.textContent = 'Kunde inte kopiera'; }
       document.body.removeChild(ta);
     }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(klart, reserv);
+    } else { reserv(); }
   });
 
   rendera();
@@ -329,9 +459,9 @@
 <script src="footer.js" defer></script>
 <script src="version.js" defer></script>
 <script src="pwa.js" defer></script>
-<!-- Sidan ligger medvetet UTANFÖR nav.js ITEMS — den ska vara nåbar via URL
-     för den som vill verifiera sitt skydd, men inte ta plats i menyn för den
-     som bara ska skriva en rapport. HV_PAGE sätts ändå så menyn renderas rätt. -->
+<!-- Sidan ligger medvetet UTANFÖR nav.js ITEMS — nåbar via URL för den som vill
+     verifiera sitt skydd, men tar inte plats i menyn för den som bara ska
+     skriva en rapport. HV_PAGE sätts ändå så menyn renderas rätt. -->
 <script>window.HV_PAGE = 'HARDAT_TEST';</script>
 <script src="lib/nav.js"></script>
 </body>
