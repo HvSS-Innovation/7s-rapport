@@ -152,7 +152,12 @@ const REQUIRED_MARKERS = {
 //     interpolerar hårdkodade konstanter), utan för att en NY sänka ska
 //     tvinga fram ett medvetet beslut i stället för att glida in.
 const FORBUDNA_MONSTER = [
-    { re: /publishInfo['"]?\s*\)?\s*\.innerHTML/, text: 'publishInfo sätts via innerHTML — bygg raderna med textContent (DOM-XSS, fixad 2026-07-30)' }
+    { re: /publishInfo['"]?\s*\)?\s*\.innerHTML/, text: 'publishInfo sätts via innerHTML — bygg raderna med textContent (DOM-XSS, fixad 2026-07-30)' },
+    // Service workerns fetch-handler ska ALLTID gå via natverk(), som blockerar
+    // och larmar om ett nätanrop sker i härdat läge. En ny gren som anropar
+    // fetch(e.request) direkt kringgår den sista spärren — och det var precis
+    // så minikartan och kartmodalen läckte: ny kod som glömde sin kontroll.
+    { fil: 'service-worker.js', re: /(?<!\/\/[^\n]{0,200})\bfetch\(e\.request\)/, text: 'rå fetch(e.request) i service workern — använd natverk(e.request) så läckage-larmet gäller' }
 ];
 
 // MÄTT mot koden efter XSS-fixen 2026-07-30 — inte gissat. Filer som saknas
@@ -240,7 +245,10 @@ function scan(files, readFile) {
     for (const file of files) {
         const src = readFile(file);
         for (const f of FORBUDNA_MONSTER) {
-            if (f.re.test(src)) errors.push('FÖRBJUDET MÖNSTER i ' + file + ': ' + f.text);
+            if (f.fil && f.fil !== file) continue;
+            // Kommentarrader räknas inte — de förklarar ofta just förbudet.
+            const kod = src.split('\n').filter(r => !/^\s*(\/\/|\*|\/\*)/.test(r)).join('\n');
+            if (f.re.test(kod)) errors.push('FÖRBJUDET MÖNSTER i ' + file + ': ' + f.text);
         }
     }
 
@@ -287,6 +295,8 @@ function selftest() {
                    "document.getElementById('publishInfo').innerHTML = `x${y}`;";
         }
         if (f === 'index.html') return real(f).replace(/stripExif/g, 'borttagen');
+        // Simulera att någon återinför rå fetch i service workerns fetch-handler.
+        if (f === 'service-worker.js') return real(f) + '\n      return fetch(e.request);\n';
         return real(f);
     };
     const errs = scan(fakeFiles, fakeRead);
@@ -294,8 +304,9 @@ function selftest() {
         'ny extern host': errs.some(e => e.includes('exfil.example.com')),
         'fetch-host i ny fil': errs.some(e => e.includes('tile.opentopomap.org') && e.includes('evil-ny-fil.js')),
         'raderad gate-markör': errs.some(e => e.includes('stripExif')),
-        'publishInfo-innerHTML': errs.some(e => e.includes('FÖRBJUDET MÖNSTER')),
-        'ny innerHTML-sänka': errs.some(e => e.includes('NY innerHTML-SÄNKA'))
+        'publishInfo-innerHTML': errs.some(e => e.includes('FÖRBJUDET MÖNSTER') && e.includes('publishInfo')),
+        'ny innerHTML-sänka': errs.some(e => e.includes('NY innerHTML-SÄNKA')),
+        'rå fetch i service worker': errs.some(e => e.includes('FÖRBJUDET MÖNSTER') && e.includes('natverk'))
     };
     const misslyckade = Object.keys(krav).filter(k => !krav[k]);
     if (misslyckade.length === 0) {

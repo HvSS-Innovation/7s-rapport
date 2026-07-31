@@ -277,6 +277,98 @@ function hardenedMiss() {
   });
 }
 
+// ─────────────────────────────────────────────────────────────────────────
+//  HÄNDELSELOGG + LÄCKAGE-LARM
+//
+//  Spärren visste redan när den blockerade något — den berättade det bara
+//  aldrig. Loggen gör spärrens arbete synligt: för härdat-testet som
+//  maskinell evidens, och i skarp drift som larm om något går fel.
+//
+//  ALDRIG FULL URL. Ett blockerat anrop heter t.ex.
+//  `nominatim.../reverse?lat=59.32&lon=18.07` — loggades det vore loggen en
+//  ny lagring av exakt de koordinater spärren finns för att skydda, kvar i
+//  IDB tills någon wipe:ar. Därför bara värdnamn, kategori och tidpunkt.
+// ─────────────────────────────────────────────────────────────────────────
+const LOGG_MAX = 150;
+
+function loggKategori(url) {
+  try {
+    const u = new URL(url, self.location.href);
+    if (u.pathname.endsWith('.pmtiles')) return 'karta-paket';
+    if (isTileHost(u.host)) return 'kart-tiles';
+    if (u.origin === self.location.origin) return 'app-fil';
+    return 'extern';
+  } catch (_) { return 'okand'; }
+}
+
+function loggVard(url) {
+  try { return new URL(url, self.location.href).host; } catch (_) { return '?'; }
+}
+
+// Service workern är ENDA skrivaren till loggen. Sid-guarden skickar sina
+// blockeringar hit via postMessage i stället för att skriva själv — annars
+// hade två skrivare gjort read-modify-write mot samma IDB-nyckel och tappat
+// poster vid samtidighet.
+async function loggaHandelse(handelse) {
+  handelse.t = Date.now();
+  if (!handelse.kalla) handelse.kalla = 'sw';
+  // Skicka till öppna sidor direkt så härdat-testet kan visa det live.
+  try {
+    const klienter = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+    klienter.forEach(k => { try { k.postMessage({ type: 'HARDENED_EVENT', handelse: handelse }); } catch (_) {} });
+  } catch (_) {}
+  // Och persistera, så en händelse utan öppen sida inte försvinner.
+  try {
+    const db = await new Promise((res, rej) => {
+      const r = indexedDB.open('hv-hardened', 1);
+      r.onupgradeneeded = () => { try { r.result.createObjectStore('kv'); } catch (_) {} };
+      r.onsuccess = () => res(r.result);
+      r.onerror = () => rej(r.error);
+    });
+    const tx = db.transaction('kv', 'readwrite');
+    const store = tx.objectStore('kv');
+    const get = store.get('logg');
+    get.onsuccess = () => {
+      const logg = Array.isArray(get.result) ? get.result : [];
+      logg.push(handelse);
+      store.put(logg.slice(-LOGG_MAX), 'logg');
+    };
+    tx.oncomplete = () => db.close();
+  } catch (_) {}
+}
+
+// ENDA vägen ut på nätet från service workern. Varje fetch måste gå genom
+// den här — sker ett nätanrop medan härdat är på är det per definition ett
+// fel, och då ska det både BLOCKERAS och larmas, inte tyst passera.
+//
+// Skyddar mot regressioner: en framtida ny gren i fetch-handlern som glömmer
+// sin hardened-koll fastnar här i stället för att läcka. Egress-gaten
+// kontrollerar att rå `fetch(e.request)` inte återinförs i den här filen.
+async function natverk(request) {
+  if (await swHardened()) {
+    loggaHandelse({
+      typ: 'LARM',
+      vard: loggVard(request.url),
+      kategori: loggKategori(request.url),
+      text: 'Nätanrop försöktes i härdat läge — blockerat av sista spärren'
+    });
+    console.error('[SW] LÄCKAGE-LARM: nätanrop i härdat läge blockerat —', loggVard(request.url));
+    return hardenedMiss();
+  }
+  return fetch(request);
+}
+
+// Blockering som gick rätt till: logga som evidens, inte som fel.
+function hardenedMissLoggad(request, varfor) {
+  loggaHandelse({
+    typ: 'blockerad',
+    vard: loggVard(request.url),
+    kategori: loggKategori(request.url),
+    text: varfor
+  });
+  return hardenedMiss();
+}
+
 // Nedladdningsjobb får bara röra kända mål: egna origin, R2-bucketen och
 // tile-hosts. Allt annat (t.ex. en injicerad postMessage med främmande URL)
 // avvisas — SW:n ska inte kunna användas som generell exfil-/hämtmotor.
@@ -294,6 +386,13 @@ function jobUrlAllowed(u) {
 
 self.addEventListener('message', (e) => {
   const data = e.data || {};
+  // Sid-guardens blockeringar: persistera dem åt sidan.
+  if (data.type === 'HARDENED_EVENT_LOG' && data.handelse) {
+    if (e.origin && e.origin !== self.location.origin) return;
+    const h = data.handelse;
+    loggaHandelse({ typ: h.typ, vard: h.vard, kategori: h.kategori, text: h.text, kalla: 'guard' });
+    return;
+  }
   if (data.type !== 'HARDENED_SET') return;
   // Bara samma origin får styra spärren. Tomt origin släpps igenom
   // (äldre browser-beteende för SW-messages) — cross-origin-sidor kan ändå
@@ -330,8 +429,8 @@ self.addEventListener('fetch', e => {
     e.respondWith((async () => {
       const local = await servePmtilesRange(e.request);
       if (local) return local;
-      if (await swHardened()) return hardenedMiss();
-      return fetch(e.request);
+      if (await swHardened()) return hardenedMissLoggad(e.request, 'Kartpaket ej i cachen');
+      return natverk(e.request);
     })());
     return;
   }
@@ -346,10 +445,10 @@ self.addEventListener('fetch', e => {
       const hit = await offline.match(e.request);
       if (hit) return hit;
       if (await swHardened()) {
-        return (await caches.match(e.request)) || hardenedMiss();
+        return (await caches.match(e.request)) || hardenedMissLoggad(e.request, 'Kart-tile ej nedladdad');
       }
       try {
-        const resp = await fetch(e.request);
+        const resp = await natverk(e.request);
         if (resp && resp.ok) safePut(e.request, resp);
         return resp;
       } catch (_) {
@@ -367,10 +466,10 @@ self.addEventListener('fetch', e => {
   if (url.pathname.endsWith('.html') || url.pathname.endsWith('/') || url.pathname.endsWith('.js')) {
     e.respondWith((async () => {
       if (await swHardened()) {
-        return (await caches.match(e.request)) || hardenedMiss();
+        return (await caches.match(e.request)) || hardenedMissLoggad(e.request, 'Appfil ej i cachen');
       }
       try {
-        const resp = await fetch(e.request);
+        const resp = await natverk(e.request);
         safePut(e.request, resp);
         return resp;
       } catch (err) {
@@ -385,8 +484,8 @@ self.addEventListener('fetch', e => {
     e.respondWith((async () => {
       const cached = await caches.match(e.request);
       if (cached) return cached;
-      if (await swHardened()) return hardenedMiss();
-      const resp = await fetch(e.request);
+      if (await swHardened()) return hardenedMissLoggad(e.request, 'Resurs ej i cachen');
+      const resp = await natverk(e.request);
       safePut(e.request, resp);
       return resp;
     })());
@@ -426,6 +525,13 @@ function otEmit(job) {
 }
 
 async function otFetchTile(cache, item, signal) {
+  // Jobb vägras redan vid start i härdat och abortas när härdat slås på —
+  // men ett jobb i flykten får inte överleva ett lägesbyte. Sista spärren.
+  if (await swHardened()) {
+    loggaHandelse({ typ: 'LARM', vard: loggVard(item.url), kategori: 'kart-tiles',
+      text: 'Nedladdningsjobb försökte hämta i härdat läge — stoppat' });
+    throw new Error('Blockerad i härdat läge');
+  }
   const resp = await fetch(item.url, {
     mode: 'cors',
     credentials: 'omit',
@@ -651,6 +757,13 @@ async function runPmtilesJob(spec) {
   }
 
   try {
+    // Samma sista spärr som otFetchTile: ett pmtiles-jobb i flykten får inte
+    // överleva att härdat slås på mitt i nedladdningen.
+    if (await swHardened()) {
+      loggaHandelse({ typ: 'LARM', vard: loggVard(url), kategori: 'karta-paket',
+        text: 'Paketnedladdning försökte hämta i härdat läge — stoppad' });
+      throw new Error('Blockerad i härdat läge');
+    }
     const resp = await fetch(url, { signal: job.controller.signal, mode: 'cors' });
     if (!resp.ok) throw new Error('HTTP ' + resp.status);
     const total = parseInt(resp.headers.get('content-length') || '0', 10);

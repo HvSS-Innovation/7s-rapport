@@ -54,9 +54,30 @@
         } catch (_) { return false; }
     }
 
+    // ── Händelselogg ────────────────────────────────────────────────────────
+    // Gör spärrens arbete synligt för härdat-testet (och för den som undrar
+    // om skyddet gör något alls). ALDRIG full URL: ett blockerat geokod-anrop
+    // bär koordinaten i query-strängen, och en logg som sparar den vore en ny
+    // lagring av exakt det spärren finns för att skydda. Bara värdnamn.
+    function loggaHandelse(handelse) {
+        handelse.t = Date.now();
+        handelse.kalla = 'guard';
+        // Live till andra flikar (härdat-testet lyssnar) …
+        try { if (bc) bc.postMessage({ type: 'HARDENED_EVENT', handelse: handelse }); } catch (_) {}
+        try { window.dispatchEvent(new CustomEvent('hardened-event', { detail: handelse })); } catch (_) {}
+        // … och till service workern för persistens. SW:n är enda skrivaren,
+        // så två parter aldrig gör read-modify-write mot samma IDB-nyckel.
+        try {
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'HARDENED_EVENT_LOG', handelse: handelse });
+            }
+        } catch (_) {}
+    }
+
     function blockedError(what, u) {
         var host = '';
         try { host = new URL(u, location.href).host; } catch (_) {}
+        loggaHandelse({ typ: 'blockerad', vard: host || '?', kategori: 'extern', text: what + ' stoppad av sid-spärren' });
         return new Error('Blockerad i härdat läge: ' + what + (host ? ' mot ' + host : '') +
             '. Stäng av härdat läge för att öppna nätet.');
     }
@@ -83,7 +104,12 @@
     if (navigator.sendBeacon) {
         var origBeacon = navigator.sendBeacon.bind(navigator);
         navigator.sendBeacon = function (url, data) {
-            if (active && !isAllowedUrl(url)) return false;
+            if (active && !isAllowedUrl(url)) {
+                var h = '';
+                try { h = new URL(url, location.href).host; } catch (_) {}
+                loggaHandelse({ typ: 'blockerad', vard: h || '?', kategori: 'extern', text: 'sendBeacon stoppad av sid-spärren' });
+                return false;
+            }
             return origBeacon(url, data);
         };
     }
@@ -225,8 +251,31 @@
     // toggle gjord från en sida utan guarden).
     sync();
 
+    // Läser den persisterade loggen (skriven av service workern) så
+    // härdat-testet kan visa evidens även för händelser som skedde innan
+    // sidan öppnades.
+    function lasLogg() {
+        return new Promise(function (resolve) {
+            try {
+                var req = indexedDB.open('hv-hardened', 1);
+                req.onupgradeneeded = function () { try { req.result.createObjectStore('kv'); } catch (_) {} };
+                req.onerror = function () { resolve([]); };
+                req.onsuccess = function () {
+                    try {
+                        var db = req.result;
+                        var get = db.transaction('kv', 'readonly').objectStore('kv').get('logg');
+                        get.onsuccess = function () { var v = get.result; db.close(); resolve(Array.isArray(v) ? v : []); };
+                        get.onerror = function () { db.close(); resolve([]); };
+                    } catch (_) { resolve([]); }
+                };
+            } catch (_) { resolve([]); }
+        });
+    }
+
     window.HVHardened = {
         isActive: function () { return active; },
+        logg: lasLogg,
+        loggaHandelse: loggaHandelse,
         sync: sync,
         // Explicit namn för anropare som MÅSTE vänta in verkställd spärr innan
         // de visar "Härdat: PÅ" (pmtiles-layer activate). Anropa med det
