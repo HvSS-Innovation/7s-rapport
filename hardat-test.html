@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+<meta charset="UTF-8">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'">
+<meta http-equiv="Cache-Control" content="no-store">
+<meta name="referrer" content="no-referrer">
+<meta name="google" content="notranslate">
+<script src="shared/hardened-guard.js"></script>
+<script>if(location.protocol==='http:'&&location.hostname!=='localhost'&&location.hostname!=='127.0.0.1')location.replace('https://'+location.host+location.pathname+location.search+location.hash);</script>
+<script>(function(){try{var s=localStorage.getItem('skyttebok_settings_lightmode');var l=(s==='on')||(s!=='off'&&window.matchMedia&&window.matchMedia('(prefers-color-scheme: light)').matches);if(l)document.documentElement.setAttribute('data-theme','light');}catch(e){}})();</script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0d1f0d">
+<meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="alternate icon" href="favicon.ico">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Härdat-test">
+<title>Härdat-test — 7S Rapport</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="shared/theme-toggle.css">
+<script src="shared/theme-toggle.js" defer></script>
+<link rel="stylesheet" href="fonts/inter.css">
+<link rel="stylesheet" href="lib/nav.css">
+<style>
+  :root {
+    --bg-primary:#0d1f0d; --bg-secondary:#152815; --bg-card:#1a321a;
+    --bg-input:#0f240f; --border:#2d4a2d; --border-focus:#4a7c4a;
+    --text-primary:#e8f0e8; --text-secondary:#8aaa8a; --text-muted:#5a7a5a;
+    --accent:#4caf50; --accent-hover:#66bb6a; --accent-dim:#1e3d1e;
+    --warn:#c8a24e; --danger:#c62828;
+    --radius:8px; --radius-sm:4px;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { font-family:'Inter',system-ui,sans-serif; background:var(--bg-primary); color:var(--text-primary); min-height:100vh; padding:16px; line-height:1.5; }
+  .container { max-width:680px; margin:0 auto; }
+  header { text-align:center; padding:20px 0 12px; }
+  header h1 { font-size:1.4rem; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; color:var(--accent); }
+  header p { font-size:0.72rem; color:var(--text-muted); letter-spacing:0.06em; margin-top:2px; }
+
+  .intro { background:var(--bg-secondary); border:1px solid var(--border); border-radius:var(--radius); padding:14px 16px; font-size:0.8rem; color:var(--text-secondary); margin-bottom:14px; }
+  .intro strong { color:var(--text-primary); }
+  .flyg { background:#2a1a0a; border:1px solid var(--warn); border-radius:var(--radius); padding:12px 16px; margin-bottom:18px; font-size:0.82rem; color:var(--warn); }
+  .flyg b { display:block; font-size:0.9rem; margin-bottom:4px; letter-spacing:0.05em; text-transform:uppercase; }
+
+  .prog { position:sticky; top:0; z-index:10; background:var(--bg-primary); padding:8px 0 12px; }
+  .prog-row { display:flex; justify-content:space-between; align-items:baseline; font-size:0.75rem; color:var(--text-muted); letter-spacing:0.06em; text-transform:uppercase; margin-bottom:6px; }
+  .prog-num { font-family:ui-monospace,monospace; color:var(--accent); font-weight:700; font-size:0.95rem; }
+  .prog-bar { height:6px; background:var(--bg-card); border-radius:3px; overflow:hidden; }
+  .prog-fill { height:100%; background:var(--accent); width:0%; transition:width .25s; }
+
+  .grupp { margin:22px 0 8px; }
+  .grupp-titel { font-size:0.72rem; font-weight:700; letter-spacing:0.14em; text-transform:uppercase; color:var(--accent); margin-bottom:2px; }
+  .grupp-desc { font-size:0.74rem; color:var(--text-muted); margin-bottom:10px; }
+
+  .item { background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); padding:13px 15px; margin-bottom:8px; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+  .item:active { background:var(--bg-secondary); }
+  .item.done { border-color:var(--accent); background:var(--accent-dim); }
+  .item-head { display:flex; align-items:flex-start; gap:12px; }
+  .checkbox { width:24px; height:24px; border:2px solid var(--border-focus); border-radius:6px; flex-shrink:0; position:relative; margin-top:1px; }
+  .item.done .checkbox { background:var(--accent); border-color:var(--accent); }
+  .checkbox::after { content:''; position:absolute; left:7px; top:2px; width:6px; height:11px; border-right:2.5px solid #0d1f0d; border-bottom:2.5px solid #0d1f0d; transform:rotate(45deg); opacity:0; }
+  .item.done .checkbox::after { opacity:1; }
+  .item-body { flex:1; min-width:0; }
+  .item-titel { font-size:0.92rem; font-weight:600; }
+  .item-vantat { font-size:0.78rem; color:var(--text-secondary); margin-top:3px; }
+  .item-vantat b { color:var(--accent); font-weight:600; }
+
+  .anteckning { margin-top:20px; }
+  .anteckning label { display:block; font-size:0.72rem; letter-spacing:0.08em; text-transform:uppercase; color:var(--text-muted); margin-bottom:6px; }
+  textarea { width:100%; min-height:110px; background:var(--bg-input); color:var(--text-primary); border:1px solid var(--border); border-radius:var(--radius); padding:11px 13px; font-family:inherit; font-size:0.88rem; resize:vertical; }
+  textarea:focus { outline:none; border-color:var(--border-focus); }
+
+  .knappar { display:flex; gap:10px; margin:18px 0 8px; }
+  .btn { flex:1; padding:12px; border-radius:var(--radius); border:1px solid var(--border); background:var(--bg-card); color:var(--text-secondary); font-family:inherit; font-size:0.82rem; font-weight:600; cursor:pointer; }
+  .btn-primary { background:var(--accent); border-color:var(--accent); color:#0d1f0d; }
+
+  .klar { background:var(--accent-dim); border:1px solid var(--accent); border-radius:var(--radius); padding:16px; text-align:center; margin:16px 0; }
+  .klar-titel { font-size:1.05rem; font-weight:700; color:var(--accent); letter-spacing:0.08em; text-transform:uppercase; }
+  .klar-txt { font-size:0.82rem; color:var(--text-secondary); margin-top:4px; }
+</style>
+</head>
+<body>
+<noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px;text-align:center">JavaScript krävs för checklistan.</div></noscript>
+
+<div class="container">
+  <header>
+    <h1>Härdat-test</h1>
+    <p>Verifiera att skyddet håller på din egen telefon</p>
+  </header>
+
+  <div class="intro">
+    Appens automatiska tester körs i en webbläsare på en dator. De kan inte säga
+    något om hur verktyget beter sig på <strong>din</strong> telefon — eller om
+    det ens går att använda med skyddet påslaget. Det är vad den här listan
+    prövar. Tar ungefär en kvart.
+  </div>
+
+  <div class="flyg">
+    <b>Börja med flygplansläge</b>
+    Härdat läge stoppar appens egna anrop. Men webbläsaren kontrollerar själv om
+    appen har en ny version, och det går inte att stänga av inifrån en webbapp.
+    Flygplansläge är enda sättet att bevisa full radiotystnad.
+  </div>
+
+  <div class="prog">
+    <div class="prog-row"><span>Genomfört</span><span class="prog-num" id="progNum">0 / 0</span></div>
+    <div class="prog-bar"><div class="prog-fill" id="progFill"></div></div>
+  </div>
+
+  <div id="grupper"></div>
+  <div id="klarBanner"></div>
+
+  <div class="anteckning">
+    <label for="notes">Anteckningar — vad kändes fel eller i vägen?</label>
+    <textarea id="notes" placeholder="Skriv här. Sparas lokalt på enheten."></textarea>
+  </div>
+
+  <div class="knappar">
+    <button class="btn" id="resetBtn" type="button">Börja om</button>
+    <button class="btn btn-primary" id="copyBtn" type="button">Kopiera resultat</button>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+
+  var GRUPPER = [
+    {
+      id: 'F', titel: 'Förberedelse',
+      desc: 'Gör detta med nätet på, innan flygplansläget.',
+      poster: [
+        { id: 'f1', titel: 'Installera appen på hemskärmen', vantat: 'Lägg till på hemskärmen — testet gäller PWA:n, inte en webbläsarflik.' },
+        { id: 'f2', titel: 'Öppna MINKARTA', vantat: 'På en anslutning du litar på.' },
+        { id: 'f3', titel: 'Ladda ner ditt landskap offline', vantat: 'Vänta tills nedladdningen är helt klar.' },
+        { id: 'f4', titel: 'Slå på Härdat läge', vantat: 'Varningsraden ska bli grön.' },
+        { id: 'f5', titel: 'Sätt telefonen i flygplansläge', vantat: 'Nu börjar det riktiga testet.' }
+      ]
+    },
+    {
+      id: 'A', titel: 'A — Fungerar verktyget alls?',
+      desc: 'Hela kedjan från tom rapport till delad fil.',
+      poster: [
+        { id: 'a1', titel: 'Fyll i en 7S-rapport', vantat: 'Ska gå som vanligt.' },
+        { id: 'a2', titel: 'Öppna Karta och välj en position', vantat: 'Kartan ritas lokalt. Varningsraden ska vara GRÖN: "Härdat läge PÅ".' },
+        { id: 'a3', titel: 'Bekräfta positionen', vantat: 'MGRS hamnar i STÄLLE. Ingen adress ska fyllas i — adressuppslag är avstängt.' },
+        { id: 'a4', titel: 'Bifoga ett foto', vantat: 'Status ska säga att metadata är rensad.' },
+        { id: 'a5', titel: 'Tryck Publicera och dela', vantat: 'Delningsarket öppnas med text och CoT-fil.' },
+        { id: 'a6', titel: 'Öppna CoT-filen i ATAK', vantat: 'Punkten ska hamna på RÄTT plats. Hoppa över om du saknar ATAK.' }
+      ]
+    },
+    {
+      id: 'B', titel: 'B — De fyra sätten att säga nej',
+      desc: 'Alla är avsiktliga. Känns någon för hårdhänt är det den viktigaste återkopplingen från hela testet — skriv det i anteckningarna.',
+      poster: [
+        { id: 'b1', titel: 'Skriv ett platsnamn i STÄLLE och dela', vantat: 'Ruta: "Kan inte skapa TAK-fil". Ingen fil skapas. Textrapporten ska ändå gå att dela.' },
+        { id: 'b2', titel: 'Dölj ett lager i MINKARTA och exportera PNG', vantat: 'Meddelande om hur många dolda objekt som utelämnas. Bilden ska sakna dem.' },
+        { id: 'b3', titel: 'Tvinga omladdning av appen', vantat: 'Härdat ska fortsatt vara PÅ. Blir det AV med besked — notera det.' },
+        { id: 'b4', titel: 'Låt appen ligga i härdat några dagar', vantat: 'Ingen uppdatering sker. Nya versioner kommer först när härdat stängs av.' }
+      ]
+    },
+    {
+      id: 'C', titel: 'C — Visar appen sant läge?',
+      desc: 'Ett verktyg som ljuger om sitt skydd är farligare än ett utan skydd.',
+      poster: [
+        { id: 'c1', titel: 'Läs statusraden i MINKARTA', vantat: 'Ska namnge din lokala karta, t.ex. "Härdat: Uppland" — INTE OpenTopoMap.' },
+        { id: 'c2', titel: 'Öppna appen i två flikar, slå av härdat i den ena', vantat: 'Den andra ska följa med. Ingen grön garanti får ligga kvar.' },
+        { id: 'c3', titel: 'Tryck feedback-länken längst ned', vantat: 'Ska vägra med besked, inte öppna GitHub.' },
+        { id: 'c4', titel: 'Öppna VÄDER', vantat: 'Knappen avstängd, grön banner om härdat läge.' }
+      ]
+    },
+    {
+      id: 'D', titel: 'D — Efter testet',
+      desc: 'Återställ enheten.',
+      poster: [
+        { id: 'd1', titel: 'Stäng av flygplansläge', vantat: '' },
+        { id: 'd2', titel: 'Stäng av härdat läge', vantat: '' },
+        { id: 'd3', titel: 'Kontrollera att kartan och VÄDER fungerar igen', vantat: 'Kartan ska återgå till OpenTopoMap.' },
+        { id: 'd4', titel: 'Kör Glöm enheten om testet gjordes med skarpa uppgifter', vantat: 'Finns längst ned på varje sida.' }
+      ]
+    }
+  ];
+
+  var NYCKEL = 'hardat_test_state';
+  var ALLA = GRUPPER.reduce(function (n, g) { return n + g.poster.length; }, 0);
+  var state = laddaState();
+
+  function laddaState() {
+    try { return JSON.parse(localStorage.getItem(NYCKEL) || '{}'); } catch (e) { return {}; }
+  }
+  function sparaState() {
+    // localStorage, inte sessionStorage: testet spänner över omladdningar,
+    // flygplansläge och flera dagar (post B4). sessionStorage hade tappats.
+    try { localStorage.setItem(NYCKEL, JSON.stringify(state)); } catch (e) {}
+  }
+
+  // Byggt med DOM-noder och textContent genomgående — ingen innerHTML med
+  // interpolerad text. Samma mönster som infördes efter DOM-XSS-fixen
+  // 2026-07-30; håller också sidan utanför egress-gatens sänk-budget.
+  function rendera() {
+    var rot = document.getElementById('grupper');
+    rot.textContent = '';
+    var klara = 0;
+
+    GRUPPER.forEach(function (grupp) {
+      var g = document.createElement('div');
+      g.className = 'grupp';
+      var t = document.createElement('div');
+      t.className = 'grupp-titel';
+      t.textContent = grupp.titel;
+      g.appendChild(t);
+      var d = document.createElement('div');
+      d.className = 'grupp-desc';
+      d.textContent = grupp.desc;
+      g.appendChild(d);
+      rot.appendChild(g);
+
+      grupp.poster.forEach(function (post) {
+        var gjord = !!state[post.id];
+        if (gjord) klara++;
+
+        var el = document.createElement('div');
+        el.className = 'item' + (gjord ? ' done' : '');
+        el.setAttribute('role', 'button');
+        el.setAttribute('tabindex', '0');
+        el.setAttribute('aria-pressed', gjord ? 'true' : 'false');
+
+        var head = document.createElement('div');
+        head.className = 'item-head';
+        var box = document.createElement('div');
+        box.className = 'checkbox';
+        head.appendChild(box);
+
+        var body = document.createElement('div');
+        body.className = 'item-body';
+        var titel = document.createElement('div');
+        titel.className = 'item-titel';
+        titel.textContent = post.titel;
+        body.appendChild(titel);
+        if (post.vantat) {
+          var v = document.createElement('div');
+          v.className = 'item-vantat';
+          v.textContent = post.vantat;
+          body.appendChild(v);
+        }
+        head.appendChild(body);
+        el.appendChild(head);
+
+        function vaxla() { state[post.id] = !state[post.id]; sparaState(); rendera(); }
+        el.addEventListener('click', vaxla);
+        el.addEventListener('keydown', function (ev) {
+          if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); vaxla(); }
+        });
+        rot.appendChild(el);
+      });
+    });
+
+    document.getElementById('progNum').textContent = klara + ' / ' + ALLA;
+    document.getElementById('progFill').style.width = (klara / ALLA * 100) + '%';
+
+    var banner = document.getElementById('klarBanner');
+    banner.textContent = '';
+    if (klara === ALLA) {
+      var box2 = document.createElement('div');
+      box2.className = 'klar';
+      var bt = document.createElement('div');
+      bt.className = 'klar-titel';
+      bt.textContent = 'Testet genomfört';
+      var bx = document.createElement('div');
+      bx.className = 'klar-txt';
+      bx.textContent = 'Kopiera resultatet och lägg in utfallet i test/opsec/faltest.md.';
+      box2.appendChild(bt);
+      box2.appendChild(bx);
+      banner.appendChild(box2);
+    }
+  }
+
+  // Anteckningar
+  var notes = document.getElementById('notes');
+  notes.value = state.__notes || '';
+  notes.addEventListener('input', function () {
+    state.__notes = notes.value;
+    sparaState();
+  });
+
+  document.getElementById('resetBtn').addEventListener('click', function () {
+    if (!window.confirm('Nollställ hela checklistan och anteckningarna?')) return;
+    state = {};
+    try { localStorage.removeItem(NYCKEL); } catch (e) {}
+    notes.value = '';
+    rendera();
+  });
+
+  document.getElementById('copyBtn').addEventListener('click', function () {
+    var rader = ['HÄRDAT-TEST — ' + new Date().toLocaleString('sv-SE'), ''];
+    GRUPPER.forEach(function (grupp) {
+      rader.push(grupp.titel);
+      grupp.poster.forEach(function (post) {
+        rader.push('  [' + (state[post.id] ? 'x' : ' ') + '] ' + post.titel);
+      });
+      rader.push('');
+    });
+    if (state.__notes) { rader.push('ANTECKNINGAR:', state.__notes); }
+    var txt = rader.join('\n');
+    var knapp = document.getElementById('copyBtn');
+    function klart() { knapp.textContent = 'Kopierat'; setTimeout(function () { knapp.textContent = 'Kopiera resultat'; }, 2000); }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(txt).then(klart, reserv);
+    } else { reserv(); }
+    function reserv() {
+      var ta = document.createElement('textarea');
+      ta.value = txt;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); klart(); } catch (e) { knapp.textContent = 'Kunde inte kopiera'; }
+      document.body.removeChild(ta);
+    }
+  });
+
+  rendera();
+})();
+</script>
+
+<script src="footer.js" defer></script>
+<script src="version.js" defer></script>
+<script src="pwa.js" defer></script>
+<!-- Sidan ligger medvetet UTANFÖR nav.js ITEMS — den ska vara nåbar via URL
+     för den som vill verifiera sitt skydd, men inte ta plats i menyn för den
+     som bara ska skriva en rapport. HV_PAGE sätts ändå så menyn renderas rätt. -->
+<script>window.HV_PAGE = 'HARDAT_TEST';</script>
+<script src="lib/nav.js"></script>
+</body>
+</html>

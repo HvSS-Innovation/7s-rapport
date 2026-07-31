@@ -23,6 +23,7 @@ const FILES = [
   './forkort-data.js',
   './forkort.html',
   './fors.html',
+  './hardat-test.html',
   './hjalm24.html',
   './index.html',
   './landskap-geo.js',

@@ -9,6 +9,12 @@ prövar.
 
 Kör den efter större ändringar i härdat-kedjan. Tar ~15 minuter.
 
+> **Kör listan i appen, inte här.** `hardat-test.html` har samma innehåll med
+> bockrutor, framsteg och anteckningsfält — och ligger i service workerns cache,
+> så den fungerar i flygplansläge när den här filen inte gör det. Sidan saknar
+> medvetet rad i menyn; öppna den via URL: `7srapport.com/hardat-test.html`.
+> Den här filen är källan för innehållet och för utfallsloggen nedan.
+
 **Status per 2026-07-31: aldrig körd.** Fyll i utfallet nedan första gången.
 
 ---
