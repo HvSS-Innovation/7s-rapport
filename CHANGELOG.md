@@ -3,6 +3,13 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.32 — 2026-08-30 — Fotobilagan bär både rapport-ID och fototid
+
+- **Bilagan heter nu `7S-<TNR>-S<fototid>.jpg`** i stället för bara `7S-<TNR>.jpg`. TNR först — det är rapport-ID:t och den otvetydiga kopplingen mellan `Foto:`-raden och filen — med fototiden som suffix så bilden också säger något om motivet när den ligger lösryckt i en bildmapp.
+- **Suffixet sätts bara när bilden faktiskt hade en EXIF-tidsstämpel.** Signal- och WhatsApp-vidarebefordrade bilder är metadata-strippade, skärmdumpar likaså; de får kortnamnet som förut i stället för en påhittad tid. Tidsstämpeln nollställs per vald bild, så en tidigare bilds tid kan inte hänga kvar.
+- **Värdet tas ur Stund, inte ur EXIF-minnet.** Rättar operatören tiden i formuläret följer filnamnet med, så bilagan aldrig säger emot rapporttexten. EXIF-tiden är fallback om Stund handredigerats till något annat än DDHHMM.
+- Fototid i filnamnet är medvetet accepterat: den uppgiften står redan i klartext som `Stund` i rapporten, och metadata-strippningen av själva bildfilen är orörd (GPS, kamera och allt annat droppas fortfarande vid omkodningen).
+
 ## v0.3.31 — 2026-07-31 — Spärren larmar, och fälttestet kan läsa larmet live
 
 - **`natverk()` är nu enda vägen ut på nätet från service workern.** Sker ett nätanrop medan härdat är på är det per definition ett fel — det blockeras *och* larmas i stället för att passera tyst. Alla fyra fetch-vägar plus de två nedladdningsjobben går genom den (ett jobb i flykten får inte överleva att härdat slås på mitt i).

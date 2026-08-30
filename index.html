@@ -653,7 +653,8 @@ function showVerifyBtn(mgrsStr) {
 // ── Foto EXIF ────────────────────────────────────────────────────────────────
 let lastFotoFilename = '';   // rått filnamn från väljaren (ofta MediaStore-ID på Android)
 let lastFotoFile = null;
-let lastFotoName = '';       // rapport-tie:at namn (7S-<TNR>.jpg) för text + bilaga
+let lastFotoName = '';       // rapport-tie:at namn (7S-<TNR>[-S<fototid>].jpg) för text + bilaga
+let lastFotoExifTid = '';    // DDHHMM ur EXIF, '' när bilden saknade tidsstämpel
 // Bygg en File med rapport-tie:at namn så bilagan matchar Foto:-raden.
 function renamedFoto() {
     if (!lastFotoFile) return null;
@@ -686,6 +687,7 @@ async function readFoto(input) {
     const status = document.getElementById('fotoStatus');
     lastFotoFilename = file.name;
     lastFotoFile = null;   // fail-closed tills fotot är rensat på metadata
+    lastFotoExifTid = '';  // nollställ så en tidigare bilds tid inte hänger kvar
     status.textContent = 'Läser metadata...';
     // 1) Läs tidsstämpeln ur ORIGINALET (innan strippning tar bort den).
     let tidInfo = '';
@@ -694,7 +696,8 @@ async function readFoto(input) {
         const dt = exif && (exif.DateTimeOriginal || exif.DateTime);
         if (dt) {
             const d = new Date(dt), p = n => String(n).padStart(2,'0');
-            document.getElementById('stund').value = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
+            lastFotoExifTid = `${p(d.getDate())}${p(d.getHours())}${p(d.getMinutes())}`;
+            document.getElementById('stund').value = lastFotoExifTid;
             tidInfo = ' Tid hämtad från foto.';
         }
     } catch(_) { /* ingen/oläsbar EXIF — strippa ändå */ }
@@ -1185,9 +1188,14 @@ function generateReport() {
     saveFranIfNew(v('fran'));
     const tnr = nowTnr();
     // Döp fotot efter rapportens TNR så namnet blir meningsfullt (Android ger annars MediaStore-ID).
+    // TNR först — det är rapport-ID:t och korrelationen till rapporten. Fototiden hängs på som
+    // -S<DDHHMM> men BARA när bilden hade en EXIF-tidsstämpel; värdet tas ur Stund så bilagan
+    // aldrig säger emot rapporttexten, med EXIF-tiden som fallback om Stund handredigerats bort.
     if (lastFotoFile) {
         const ext = (lastFotoFile.name.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0].toLowerCase();
-        lastFotoName = `7S-${tnr.slice(0,6)}${ext}`;
+        const stund = v('stund');
+        const fotoTid = lastFotoExifTid ? (/^\d{6}$/.test(stund) ? stund : lastFotoExifTid) : '';
+        lastFotoName = `7S-${tnr.slice(0,6)}${fotoTid ? '-S' + fotoTid : ''}${ext}`;
     } else {
         lastFotoName = '';
     }
@@ -1525,7 +1533,7 @@ function resetForm() {
     if (!confirm('Nollställ rapporten?')) return;
     ['stund','stalle','handelse','symbol','sedan','sagesman'].forEach(id =>
         document.getElementById(id).value = '');
-    lastFotoFilename = ''; lastFotoFile = null; lastFotoName = '';
+    lastFotoFilename = ''; lastFotoFile = null; lastFotoName = ''; lastFotoExifTid = '';
     document.getElementById('fotoStatus').textContent = '';
     backToEdit();
 }
