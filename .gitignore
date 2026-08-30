@@ -50,3 +50,6 @@ verktyg/*.jpg
 verktyg/*.txt
 verktyg/*.pdf
 verktyg/*.py
+
+# Stoppnota/handoff — lokal sessionsanteckning, ej för publik repo
+/HANDOFF.md
