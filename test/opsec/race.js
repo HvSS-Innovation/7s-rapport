@@ -73,6 +73,15 @@ function check(namn, ok, detalj) {
                 if (träff) { try { await cache.delete(ext); } catch (_) {} }
                 return träff;
             };
+            // isPrefetched läser numera meta-posten + keys() i stället för
+            // paketet (WebKit-minne) — racet ska raderas efter paketkollen
+            // oavsett vilken väg kollen tar.
+            const origKeys = cache.keys.bind(cache);
+            cache.keys = async function () {
+                const k = await origKeys();
+                try { await cache.delete(ext); } catch (_) {}
+                return k;
+            };
             return cache;
         };
         window.alert = () => {};

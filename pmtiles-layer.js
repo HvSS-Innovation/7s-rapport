@@ -240,6 +240,7 @@ async function prefetchPMTiles(url, opts) {
                 }
             });
             await cache.put(url, cacheResponse);
+            await writeMeta(cache, url, loaded);
 
             if (expectedSha256) {
                 console.warn('[pmtiles] Hoppar SHA-256 för fil > ' +
@@ -289,6 +290,7 @@ async function prefetchPMTiles(url, opts) {
             }
         });
         await cache.put(url, cacheResp);
+        await writeMeta(cache, url, loaded);
 
         return { ok: true, bytes: loaded, hex: verification.hex };
     } catch (err) {
@@ -408,30 +410,72 @@ function cancelSmart(url) {
     }
 }
 
+// Meta-post per paket: en liten JSON-post under paketets URL + "?hv-meta=1"
+// som bär storleken. Existens- och storlekskontrollen läser BARA den — aldrig
+// själva paketet. Tidigare gjorde isPrefetched cache.match(url) på hela
+// paketet för att läsa en header; Chromium disk-backar svaret, men WebKit
+// materialiserar kroppen i sidans process. Landskaps-väljaren kör kontrollen
+// för varje nedladdat paket när den öppnas → på Joels iPhone (tio landskap
+// nedladdade) dog fliken med "sidan kunde inte laddas" innan en enda rad
+// renderats (2026-08-30). Samma nyckel skrivs av service workerns
+// nedladdningsjobb (service-worker.js runPmtilesJob) — håll formatet i synk.
+function metaKey(url) {
+    try {
+        const u = new URL(url);
+        u.searchParams.set('hv-meta', '1');
+        return u.toString();
+    } catch (_) { return url + '?hv-meta=1'; }
+}
+
+async function writeMeta(cache, url, bytes) {
+    try {
+        await cache.put(metaKey(url), new Response(JSON.stringify({ bytes: bytes, ts: Date.now() }), {
+            headers: { 'Content-Type': 'application/json' }
+        }));
+    } catch (_) {}
+}
+
 async function isPrefetched(url, expectedBytes) {
     try {
         const cache = await caches.open(PMTILES_CACHE);
-        const hit = await cache.match(url);
-        if (!hit) return false;
-        // Storlekskontroll mot expected — hindrar att gamla cachade
-        // versioner anses giltiga efter rebuild av pmtiles-filen.
-        if (expectedBytes && expectedBytes > 0) {
-            const cl = parseInt(hit.headers.get('content-length') || '0', 10);
-            if (cl > 0 && cl !== expectedBytes) {
-                console.warn('[pmtiles] cachad fil har fel storlek (' + cl +
+        // Storlekskontroll mot expected — hindrar att gamla cachade versioner
+        // anses giltiga efter rebuild av pmtiles-filen. Läser meta-posten,
+        // inte paketet.
+        const meta = await cache.match(metaKey(url));
+        if (meta && expectedBytes && expectedBytes > 0) {
+            let m = null;
+            try { m = await meta.json(); } catch (_) {}
+            const bytes = (m && m.bytes) ? m.bytes : 0;
+            if (bytes > 0 && bytes !== expectedBytes) {
+                console.warn('[pmtiles] cachad fil har fel storlek (' + bytes +
                     ' bytes, väntar ' + expectedBytes + '). Invaliderar.');
                 await cache.delete(url);
+                await cache.delete(metaKey(url));
                 return false;
             }
         }
-        return true;
+        // Existens via keys(): returnerar bara Request-objekt, inga kroppar.
+        // Paket nedladdade före meta-posten fanns (≤ v0.3.33) saknar meta och
+        // passerar utan storlekskontroll — radera + hämta om i väljaren för att
+        // få den.
+        const keys = await cache.keys();
+        return keys.some(r => r.url === url);
     } catch (_) { return false; }
 }
 
 async function removePrefetched(url) {
     try {
         const cache = await caches.open(PMTILES_CACHE);
-        return await cache.delete(url);
+        const ok = await cache.delete(url);
+        await cache.delete(metaKey(url));
+        // SW:n memoiserar paketets Blob per URL — säg till att glömma den,
+        // annars serveras den raderade filen tills workern startar om.
+        try {
+            if (navigator.serviceWorker && navigator.serviceWorker.controller) {
+                navigator.serviceWorker.controller.postMessage({ type: 'PM_FORGET', url: url });
+            }
+        } catch (_) {}
+        return ok;
     } catch (_) { return false; }
 }
 

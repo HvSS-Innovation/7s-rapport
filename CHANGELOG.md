@@ -3,6 +3,14 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.34 — 2026-08-30 — iPhone: paketkollen och tile-serveringen rör inte längre hela paketet
+
+Joels andra iPhone-försök samma kväll: "Slå på Härdat läge" → väljaren visade alla landskap som "Kommer snart" → Safari: "sidan kunde inte laddas". Det är WebKits minneskrasch, och det bekräftar fynd 6 i granskningen.
+
+- **`isPrefetched()` läste hela paketet för att kolla en header.** `cache.match(url)` på ett 100–600 MB-paket är gratis i Chromium (disk-backat) men materialiserar kroppen i sidans process i WebKit. Väljaren kör kontrollen för varje nedladdat paket när den öppnas — med tio landskap nedladdade dog fliken innan `refreshStatuses()` hunnit rendera en rad (därav "Kommer snart" överallt). Nu bär en liten meta-post (`<paket-url>?hv-meta=1`, `{ bytes, ts }`) storleken; kontrollen läser den + `cache.keys()` (bara Request-objekt) och rör aldrig paketet. Skrivs av både SW-jobbet och in-page-nedladdningen. Paket nedladdade före denna version saknar meta och passerar utan storlekskontroll — radera + hämta om i väljaren för att få den.
+- **Service workern memoiserar paketets Blob per URL.** `servePmtilesRange` gjorde `cache.match` + `.blob()` per tile-anrop — 15–30 samtidiga anrop mot ett landskap blev flera GB i WebKit. Nu läses paketet en gång per SW-liv, `slice()` är en vy. Glöms vid `PM_FORGET` (sidan raderade paketet) och när ett nedladdningsjobb skrivit om filen. Obs: detta är en mildring, inte lösningen — ett 600 MB-paket ligger fortfarande i ett stycke i minnet när det används. Chunkad lagring (paketet i N×16 MB-poster) är nästa milstolpe om stora landskap fortfarande faller på telefonen.
+- Race-testet hookar nu även `cache.keys()` så "paketet försvinner efter paketkollen" simuleras oavsett vilken väg kollen tar.
+
 ## v0.3.33 — 2026-08-30 — Härdat läge på iPhone: inget "grönt men tomt", inget "grått för evigt"
 
 Ur Joels fälttest i Safari på iPhone (paketen fanns nedladdade, kartan visades ändå inte) plus en statisk granskning av kedjan med WebKit-ögon. Fullständig fyndlista (13 punkter, varav 5 kvar) i lokal `roadmap-hardat-ios.md`.

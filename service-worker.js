@@ -175,18 +175,61 @@ function safePut(request, resp) {
 // byte-rangen via Blob.slice() (disk-backed, lazy) istället för att läsa
 // hela filen i RAM. Tidigare arrayBuffer()-versionen sprängde mobil-RAM
 // vid 2+ GB-filer.
+//
+// Paketets Blob memoiseras per URL för workerns livstid. Tidigare gjordes
+// cache.match + .blob() PER tile-anrop; Chromium disk-backar det, men WebKit
+// materialiserar kroppen vid varje match — 15–30 samtidiga tile-anrop mot ett
+// landskap på 100–600 MB blev flera GB och nätverksprocessen dog (iPhone
+// 2026-08-30). Nu läses paketet en gång per SW-liv; slice() är en vy.
+// Glöms vid PM_FORGET (sidan raderade paketet) och när ett jobb skrivit om
+// filen. SW:n dödas ofta på iOS, så minnet är inte permanent.
+const _pmBlobs = new Map(); // url → Promise<{ blob, type } | null>
+
+function pmBlob(url) {
+  let p = _pmBlobs.get(url);
+  if (!p) {
+    p = (async () => {
+      const cache = await caches.open(PMTILES_CACHE);
+      const cached = await cache.match(url, { ignoreVary: true });
+      if (!cached) return null;
+      return {
+        blob: await cached.blob(),
+        type: cached.headers.get('content-type') || 'application/octet-stream'
+      };
+    })();
+    _pmBlobs.set(url, p);
+    p.then(v => { if (!v) _pmBlobs.delete(url); }, () => _pmBlobs.delete(url));
+  }
+  return p;
+}
+
+// Samma nyckelformat som pmtiles-layer.js metaKey(): paketets URL +
+// "?hv-meta=1" → liten JSON-post { bytes, ts }. Existens-/storlekskontrollen
+// i sidan läser den i stället för paketet (WebKit-minne, se ovan).
+function pmMetaKey(url) {
+  try {
+    const u = new URL(url);
+    u.searchParams.set('hv-meta', '1');
+    return u.toString();
+  } catch (_) { return url + '?hv-meta=1'; }
+}
+
 async function servePmtilesRange(request) {
-  const cache = await caches.open(PMTILES_CACHE);
-  const cached = await cache.match(request, { ignoreVary: true });
-  if (!cached) return null;
+  const rec = await pmBlob(request.url);
+  if (!rec) return null;
+  const blob = rec.blob;
+  const fullHeaders = {
+    'Content-Type': rec.type,
+    'Content-Length': String(blob.size),
+    'Accept-Ranges': 'bytes'
+  };
 
   const range = request.headers.get('range');
-  if (!range) return cached.clone();
+  if (!range) return new Response(blob, { status: 200, headers: fullHeaders });
 
   const m = range.match(/^bytes=(\d+)-(\d*)$/);
-  if (!m) return cached.clone();
+  if (!m) return new Response(blob, { status: 200, headers: fullHeaders });
 
-  const blob = await cached.clone().blob();
   const start = parseInt(m[1], 10);
   const end = m[2] ? parseInt(m[2], 10) : blob.size - 1;
   if (start >= blob.size || end < start) {
@@ -200,7 +243,7 @@ async function servePmtilesRange(request) {
     status: 206,
     statusText: 'Partial Content',
     headers: {
-      'Content-Type': cached.headers.get('content-type') || 'application/octet-stream',
+      'Content-Type': rec.type,
       'Content-Length': String(slice.size),
       'Content-Range': 'bytes ' + start + '-' + end + '/' + blob.size,
       'Accept-Ranges': 'bytes'
@@ -802,6 +845,13 @@ async function runPmtilesJob(spec) {
       }
     });
     await cache.put(url, cacheResp);
+    // Meta-post med verklig storlek (content-length kan saknas → job.loaded).
+    try {
+      await cache.put(pmMetaKey(url), new Response(
+        JSON.stringify({ bytes: total || job.loaded, ts: Date.now() }),
+        { headers: { 'Content-Type': 'application/json' } }));
+    } catch (_) {}
+    _pmBlobs.delete(url); // ev. memoiserad gammal version ska inte serveras
 
     job.status = 'done';
     job.percent = 100;
@@ -842,6 +892,12 @@ self.addEventListener('message', (e) => {
   } else if (data.type === 'PM_CANCEL') {
     const j = _pmJobs[data.url];
     if (j && j.controller) j.controller.abort();
+  } else if (data.type === 'PM_FORGET') {
+    // Sidan raderade paketet (removePrefetched) — släpp den memoiserade
+    // Bloben så nästa range-anrop ger cachemiss (503 i härdat), inte gammal
+    // data. Bara samma origin får trigga det.
+    if (e.origin && e.origin !== self.location.origin) return;
+    if (data.url) _pmBlobs.delete(data.url);
   } else if (data.type === 'PM_LIST_JOBS') {
     const list = Object.values(_pmJobs).map(pmSnapshot);
     const target = e.source;
