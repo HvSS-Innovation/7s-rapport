@@ -503,20 +503,86 @@ function createController(map, normalLayer, opts) {
     // Bestäm om filen är vector (MVT) eller raster (PNG/WebP) genom att läsa
     // PMTiles-headerns tile_type-byte. Vector → protomaps-leaflet, raster →
     // pmtiles' inbyggda leafletRasterLayer.
+    //
+    // Headern läses genom service workerns range-servering — det är den
+    // första riktiga läsningen ur paketet. Misslyckas den är paketet INTE
+    // läsbart lokalt, och då ska aktiveringen misslyckas. Tidigare svaldes
+    // felet och 'vector' antogs: lagret byggdes, UI:t blev grönt "Härdat: PÅ"
+    // och varje tile misslyckades tyst — en tom karta bakom en grön garanti
+    // (iPhone-fyndet 2026-08-30, där WebKit föll på range-läsningen).
     async function detectKind(pmtilesUrl) {
-        try {
-            const p = new PMTiles(pmtilesUrl);
-            const header = await p.getHeader();
-            // tile_type: 0 = unknown, 1 = MVT, 2 = PNG, 3 = JPEG, 4 = WEBP, 5 = AVIF
-            return header.tileType === 1 ? 'vector' : 'raster';
-        } catch (err) {
-            console.warn('[pmtiles] kunde inte läsa header, antar vector', err);
-            return 'vector';
-        }
+        const p = new PMTiles(pmtilesUrl);
+        const header = await p.getHeader();
+        // tile_type: 0 = unknown, 1 = MVT, 2 = PNG, 3 = JPEG, 4 = WEBP, 5 = AVIF
+        return header.tileType === 1 ? 'vector' : 'raster';
     }
 
-    async function activate(promptedUrl, quiet) {
+    // Synligt felläge. null = inget fel. { text, kartaDold } efter en
+    // misslyckad aktivering; läses av varningsraden (map-hardat-modal.js
+    // decorateWarning) så operatören ser VARFÖR kartan är tom i stället för
+    // en spinner i evighet.
+    let fel = null;
+    function getFel() { return fel; }
+
+    // Gemensam återställning när aktiveringen misslyckas — oavsett i vilken
+    // gren. Tidigare nollade de tidiga grenarna bara state och emit():ade;
+    // OTM-lagret lades bara tillbaka i EN av fem grenar. Vid boot i lagrat
+    // härdat läggs OTM-lagret medvetet aldrig på (index/minkarta hoppar över
+    // det), så en misslyckad boot-aktivering lämnade en karta utan baslager
+    // och en spinner som aldrig försvann, och eftersom boot är quiet kom
+    // inget besked alls.
+    //
+    // `hadeNormal` = låg OTM-lagret på kartan när aktiveringen började? Bara
+    // då läggs det tillbaka. Låg det INTE där (boot i härdat) får ett
+    // misslyckande inte tyst koppla upp OTM kring senaste kartposition —
+    // operatören trodde sig vara i härdat. Kartan lämnas tom, felet visas i
+    // varningsraden, och online-kartan kräver ett uttryckligt tryck
+    // (visaNormal). Fail-closed även i felvägen.
+    function misslyckadAktivering(orsak, hadeNormal, quiet, alertText) {
+        if (hardLayer) { try { map.removeLayer(hardLayer); } catch (_) {} }
+        hardLayer = null;
+        kind = null;
+        saveState({ active: false, url, flavor });
+        if (hadeNormal && normalLayer && !map.hasLayer(normalLayer)) normalLayer.addTo(map);
+        fel = { text: orsak, kartaDold: !hadeNormal };
+        emit();
+        if (!quiet && alertText) window.alert(alertText);
+        else console.warn('[pmtiles] Härdat ej aktiverat: ' + orsak);
+        return false;
+    }
+
+    // Operatörens uttryckliga val efter ett misslyckande: visa online-kartan.
+    // Vägrar om härdat under tiden lagrats PÅ igen (t.ex. från en annan flik)
+    // — då ska synken ta över, inte ett OTM-lager läggas på i härdat.
+    function visaNormal() {
+        if (loadState().active === true) return false;
+        fel = null;
+        if (normalLayer && !map.hasLayer(normalLayer)) normalLayer.addTo(map);
+        emit();
+        return true;
+    }
+
+    // En aktivering i taget. saveState() → guardens BroadcastChannel-echo →
+    // synkaFranAnnanFlik() → activate() IGEN, mitt i den pågående
+    // (BroadcastChannel levererar till alla andra kanalobjekt med samma namn,
+    // även i samma dokument, och isActive() är false tills lagret ligger på
+    // kartan). Två aktiveringar i flykten byggde två lager, och den enas
+    // saveState kunde fälla den andras kvittens — race-testet visade
+    // "kvitterade inte" i stället för det verkliga läsfelet. En andra begäran
+    // hakar nu på den pågående i stället för att starta om.
+    let pagaende = null;
+    function activate(promptedUrl, quiet) {
+        if (pagaende) return pagaende;
+        pagaende = aktivera(promptedUrl, quiet).finally(() => { pagaende = null; });
+        return pagaende;
+    }
+
+    async function aktivera(promptedUrl, quiet) {
         if (promptedUrl) url = promptedUrl;
+        // Låg online-lagret på kartan när vi började? Styr vad återställningen
+        // får göra vid misslyckande (se misslyckadAktivering).
+        const hadeNormal = !!(normalLayer && map.hasLayer(normalLayer));
+        fel = null;
         if (!url) {
             // Fas 1: defaulta till demo-fil (Florens) sa anvandaren ser
             // resultatet direkt. Fas 2 byter till svensk hostad fil med
@@ -533,18 +599,11 @@ function createController(map, normalLayer, opts) {
         let prefetched = false;
         try { prefetched = await isPrefetched(url, getExpectedBytesForUrl(url)); } catch (_) {}
         if (!prefetched) {
-            hardLayer = null;
-            kind = null;
-            saveState({ active: false, url, flavor });
-            emit();
-            if (!quiet) {
-                window.alert('Härdat läge kräver ett nedladdat kartpaket.\n\n' +
-                    'Ladda ner via "Ladda ner offline"-väljaren först (kräver nät), ' +
-                    'och aktivera härdat läge när nedladdningen är klar.');
-            } else {
-                console.warn('[pmtiles] Härdat läge auto-avaktiverat: paketet är inte (längre) nedladdat.');
-            }
-            return false;
+            return misslyckadAktivering(
+                'kartpaketet är inte (längre) nedladdat', hadeNormal, quiet,
+                'Härdat läge kräver ett nedladdat kartpaket.\n\n' +
+                'Ladda ner via "Ladda ner offline"-väljaren först (kräver nät), ' +
+                'och aktivera härdat läge när nedladdningen är klar.');
         }
 
         // Kräv en KONTROLLERANDE service worker INNAN något nätverkskapabelt
@@ -556,17 +615,12 @@ function createController(map, normalLayer, opts) {
         if (window.HVHardened && window.HVHardened.awaitController) {
             const harController = await window.HVHardened.awaitController(3000);
             if (!harController) {
-                hardLayer = null;
-                kind = null;
-                saveState({ active: false, url, flavor });
-                emit();
-                const msg = 'Härdat läge kan inte aktiveras just nu.\n\n' +
+                return misslyckadAktivering(
+                    'nätverksspärren (service worker) kontrollerar inte sidan', hadeNormal, quiet,
+                    'Härdat läge kan inte aktiveras just nu.\n\n' +
                     'Appens nätverksspärr (service worker) kontrollerar inte sidan, ' +
                     'och utan den går skyddet inte att upprätthålla.\n\n' +
-                    'Ladda om sidan och försök igen.';
-                if (!quiet) window.alert(msg);
-                else console.warn('[pmtiles] Härdat ej aktiverat: ingen SW-controller.');
-                return false;
+                    'Stäng och öppna appen igen (eller ladda om sidan) och försök på nytt.');
             }
         }
 
@@ -585,16 +639,12 @@ function createController(map, normalLayer, opts) {
         if (window.HVHardened && window.HVHardened.confirm) {
             const spärrVerkstalld = await window.HVHardened.confirm(true);
             if (!spärrVerkstalld) {
-                hardLayer = null;
-                kind = null;
-                saveState({ active: false, url, flavor });
-                emit();
-                if (!quiet) {
-                    window.alert('Härdat läge kunde INTE aktiveras.\n\n' +
-                        'Appens nätverksspärr svarade inte, så skyddet är AV — ' +
-                        'inte påslaget med varning.\n\nLadda om sidan och försök igen.');
-                }
-                return false;
+                return misslyckadAktivering(
+                    'nätverksspärren kvitterade inte', hadeNormal, quiet,
+                    'Härdat läge kunde INTE aktiveras.\n\n' +
+                    'Appens nätverksspärr svarade inte, så skyddet är AV — ' +
+                    'inte påslaget med varning.\n\n' +
+                    'Stäng och öppna appen igen (eller ladda om sidan) och försök på nytt.');
             }
         }
 
@@ -642,37 +692,35 @@ function createController(map, normalLayer, opts) {
                     // kartan ser lokal ut medan nätet står öppet. Vanligaste
                     // orsaken är att sidan saknar SW-controller (force-refresh)
                     // — då ska läget bli AV tills sidan laddats om.
-                    console.warn('[pmtiles] Härdat läge kunde inte bekräftas av service workern — återställer till AV.');
-                    if (hardLayer) {
-                        try { map.removeLayer(hardLayer); } catch (_) {}
-                        hardLayer = null;
-                        kind = null;
-                    }
-                    if (normalLayer && !map.hasLayer(normalLayer)) normalLayer.addTo(map);
-                    saveState({ active: false, url, flavor });
-                    emit();
-                    if (!quiet) {
-                        window.alert('Härdat läge kunde INTE aktiveras.\n\n' +
-                            'Appens nätverksspärr svarade inte, så skyddet är AV — ' +
-                            'inte påslaget med varning.\n\n' +
-                            'Ladda om sidan och försök igen.');
-                    }
-                    return false;
+                    return misslyckadAktivering(
+                        'nätverksspärren kunde inte bekräfta läget efter lagerbygget', hadeNormal, quiet,
+                        'Härdat läge kunde INTE aktiveras.\n\n' +
+                        'Appens nätverksspärr svarade inte, så skyddet är AV — ' +
+                        'inte påslaget med varning.\n\n' +
+                        'Stäng och öppna appen igen (eller ladda om sidan) och försök på nytt.');
                 }
             }
             emit();
             return true;
         } catch (err) {
+            // Hit kommer detectKind (paketet gick inte att läsa genom SW:ns
+            // range-servering) och lagerbygget. Spärren är redan PÅ när detta
+            // körs, så orsaken är alltid LOKAL — cache, service worker, minne —
+            // aldrig URL:en eller CORS. Tidigare skyllde texten på "Range +
+            // CORS" och alert:ade även vid quiet boot.
             console.error('[pmtiles] kunde inte aktivera härdat läge', err);
-            hardLayer = null;
-            kind = null;
-            saveState({ active: false, url, flavor });
-            window.alert('Kunde inte ladda PMTiles-fil: ' + (err && err.message || 'okänt fel') + '\n\nKontrollera att URL:n stödjer Range-requests + CORS.');
-            return false;
+            const orsak = 'kartpaketet gick inte att läsa lokalt (' + ((err && err.message) || 'okänt fel') + ')';
+            return misslyckadAktivering(orsak, hadeNormal, quiet,
+                'Härdat läge kunde INTE aktiveras.\n\n' +
+                'Kartpaketet gick inte att läsa ur enhetens lagring: ' +
+                ((err && err.message) || 'okänt fel') + '\n\n' +
+                'Skyddet är AV. Prova att radera paketet i "Ladda ner offline" ' +
+                'och hämta det igen, eller stäng och öppna appen på nytt.');
         }
     }
 
     function deactivate() {
+        fel = null;
         if (hardLayer) {
             try { map.removeLayer(hardLayer); } catch (_) {}
             hardLayer = null;
@@ -735,6 +783,7 @@ function createController(map, normalLayer, opts) {
     let synkPagar = false;
     function synkaFranAnnanFlik() {
         if (synkPagar) return;                 // re-entrans: saveState → sync → hit
+        if (pagaende) return;                  // aktivering i flykten: den avgör slutläget
         const s = loadState();
         const börVaraPå = s.active === true && !!s.url;
         // Anta ALLTID den lagrade URL:en och stilen först. Controllerns `url`
@@ -830,6 +879,7 @@ function createController(map, normalLayer, opts) {
 
     return {
         isActive, activate, deactivate, toggle,
+        getFel, visaNormal,
         getUrl, setUrl,
         getFlavor, setFlavor,
         getKind,

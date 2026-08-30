@@ -264,6 +264,33 @@ const P2 = { lat: 43.80, lng: 11.40 };
     const modalTiles = await sidaUtanSW.evaluate(() => document.querySelectorAll('.leaflet-tile').length);
     check('Kartmodalen skapar inga tiles utan SW-controller i härdat', modalTiles === 0, 'tiles=' + modalTiles);
 
+    // Boot-aktiveringen MISSLYCKAS här (paketet finns inte i detta färska
+    // context). Det ska ge ett SYNLIGT felläge: röd varningsrad med orsak,
+    // dold spinner, "Försök igen" + uttrycklig "Visa online-karta" — och INGET
+    // OTM-lager tyst tillbakalagt (tiles=0 ovan). Tidigare: grå karta +
+    // spinner i evighet utan besked, eftersom boot körs quiet och bara en av
+    // fem felgrenar lade tillbaka baslagret (iPhone-fyndet 2026-08-30).
+    const felLage = await sidaUtanSW.evaluate(() => {
+        const rad = document.getElementById('mapExtTileWarning');
+        const sp = document.getElementById('mapSpinner');
+        const m = (typeof mapInstance !== 'undefined') ? mapInstance : null;
+        const ctrl = (m && m.__hardenCtrl) ? m.__hardenCtrl : null;
+        return {
+            text: rad ? rad.textContent : '',
+            spinnerDold: !!(sp && sp.classList.contains('hidden')),
+            fel: (ctrl && ctrl.getFel) ? ctrl.getFel() : null,
+            knappar: rad ? Array.from(rad.querySelectorAll('button')).map(b => b.textContent) : []
+        };
+    });
+    check('Misslyckad boot-aktivering visar felläge i varningsraden',
+        /kunde inte aktiveras/i.test(felLage.text) && !!felLage.fel && felLage.fel.kartaDold === true,
+        JSON.stringify(felLage));
+    check('Felläget döljer spinnern och erbjuder Försök igen + online-karta',
+        felLage.spinnerDold
+            && felLage.knappar.some(k => /Försök igen/.test(k))
+            && felLage.knappar.some(k => /online-karta/.test(k)),
+        JSON.stringify({ spinnerDold: felLage.spinnerDold, knappar: felLage.knappar }));
+
     const extUtanSW = extLog().slice(extForeUtanSW);
     check('0 extern egress från sida utan SW-controller (proxy-bevis)',
         extUtanSW.trim() === '', extUtanSW.trim().split('\n').slice(0, 3).join(' | '));

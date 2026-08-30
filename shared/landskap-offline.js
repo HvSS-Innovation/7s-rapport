@@ -102,11 +102,22 @@
             '.lo-style select{background:#0f240f;color:#e8f0e8;border:1px solid #2d4a2d;border-radius:6px;padding:7px 8px;font:inherit;cursor:pointer}',
             '.lo-style select:hover{border-color:#4caf50}',
             '@media (max-width:760px){',
-                '.lo-body{flex-direction:column}',
-                // Kartan är hög och smal (Sverige) — ge den rejäl höjd så den inte
-                // krymper till en oläslig strimma på en bred/kort mobilskärm.
-                '.lo-mapwrap{flex:0 0 auto;height:52vh;min-height:260px;padding:4px}',
-                '.lo-side{flex:1 1 auto;max-width:none;border-left:none;border-top:1px solid #2d4a2d}',
+                // 100dvh = viewporten UNDER Safaris verktygsfält (inset:0 räknar
+                // med fältet infällt, och overlayn hindrar sidan från att
+                // scrolla så det fälls aldrig in → footern hamnade bakom det).
+                '.lo-overlay{height:100dvh}',
+                // Hela kroppen scrollar: karta överst, listan under. Tidigare låg
+                // kartan (52vh, ej krympbar) och en trerads-footer fast och lämnade
+                // ~30 px åt listan på en iPhone — bara gruppetiketten syntes, och
+                // grannländerna (som saknar geometri i kartan) gick inte att nå.
+                '.lo-body{flex-direction:column;overflow-y:auto;-webkit-overflow-scrolling:touch}',
+                '.lo-mapwrap{flex:0 0 auto;height:min(46vh,420px);min-height:220px;padding:4px}',
+                '.lo-side{flex:0 0 auto;max-width:none;min-height:0;border-left:none;border-top:1px solid #2d4a2d}',
+                '.lo-list{overflow:visible;padding-bottom:12px}',
+                // Kompakt footer: infotext på egen rad, Kartstil + knapp delar rad.
+                '.lo-foot{padding:8px 12px calc(8px + env(safe-area-inset-bottom));gap:8px}',
+                '.lo-foot-info{flex:1 1 100%;min-width:0;font-size:0.72rem}',
+                '.lo-style{flex:1 1 auto}',
                 '.lo-tip{font-size:1rem;padding:5px 13px}',
                 '.lo-hovername{display:none}', // floating-tippen räcker på mobil
             '}'

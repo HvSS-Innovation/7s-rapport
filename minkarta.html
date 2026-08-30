@@ -965,7 +965,9 @@ function initMap() {
             // inte fyra om hardLayer ersätter tiles innan tiles laddat
             // (auto-activate vid pageload + flygplansläge → spinner fastnade).
             window.MK_HARDENING.onChange(() => {
-                if (window.MK_HARDENING.isActive()) {
+                // Dölj även vid MISSLYCKAD aktivering: kartan är då tom med
+                // besked i varningsraden — en spinner ovanpå skulle dölja det.
+                if (window.MK_HARDENING.isActive() || window.MK_HARDENING.getFel()) {
                     spinner.classList.add('hidden');
                 }
                 // Statusraden namnger aktiv kartkälla — uppdatera vid toggle,

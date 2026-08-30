@@ -79,7 +79,11 @@ function check(namn, ok, detalj) {
         const ctrl = window.SK_HARDENING;
         await ctrl.setUrl(ext);
         const ok = await ctrl.activate();
-        return { aktiveringOk: ok, hardat: window.HVHardened.isActive() };
+        return {
+            aktiveringOk: ok,
+            hardat: window.HVHardened.isActive(),
+            fel: (typeof ctrl.getFel === 'function') ? ctrl.getFel() : null
+        };
     }, EXT);
 
     await page.waitForTimeout(2500);
@@ -90,6 +94,13 @@ function check(namn, ok, detalj) {
     check('Aktiveringen ljuger inte om resultatet',
         !(res.aktiveringOk === true && res.hardat === false),
         'activate=' + res.aktiveringOk + ' hardat=' + res.hardat);
+    // Paketet är oläsbart när headern ska läsas → aktiveringen ska MISSLYCKAS
+    // och lämna ett synligt felläge. Tidigare svalde detectKind() felet,
+    // antog 'vector' och byggde ett lager som aldrig kunde rita en tile:
+    // grönt "Härdat: PÅ", tom karta.
+    check('Oläsbart paket = misslyckad aktivering med synligt felläge',
+        res.aktiveringOk === false && !!res.fel && /läsa/.test(res.fel.text || ''),
+        'activate=' + res.aktiveringOk + ' fel=' + JSON.stringify(res.fel));
 
     await browser.close();
     console.log(fel === 0 ? '\nAKTIVERINGEN ÄR ATOMISK — inget läcker i racet.' : '\n' + fel + ' KONTROLL(ER) RÖDA');

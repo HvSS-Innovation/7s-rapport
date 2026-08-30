@@ -846,7 +846,9 @@ function initMap() {
             // När Härdat blir aktivt: dölj spinner. tiles.on('load') hinner
             // inte fyra om hardLayer ersätter tiles innan tiles laddat.
             window.SK_HARDENING.onChange(() => {
-                if (window.SK_HARDENING.isActive()) {
+                // Dölj även vid MISSLYCKAD aktivering: kartan är då tom med
+                // besked i varningsraden — en spinner ovanpå skulle dölja det.
+                if (window.SK_HARDENING.isActive() || window.SK_HARDENING.getFel()) {
                     spinner.classList.add('hidden');
                 }
                 // Statusraden namnger aktiv kartkälla — uppdatera vid toggle.
