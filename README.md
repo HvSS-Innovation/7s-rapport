@@ -39,7 +39,7 @@ Verktyget kommer nu att fungera även när du har flygplansläge eller är i rad
 | **PEDARS** | Stridsvärderapport |
 | **SCHEMA** | Postschema med automatisk rullning och avlösningsväckning |
 | **EOBUSARE** | Eldorder |
-| **OBO** | Orientering-Beslut-Order (*Tidigt utvecklingsstadium*) |
+| **OBO** | Order på gruppnivå: OBO (full), OBK (mycket ont om tid), OSK (understöd) — import av plutonens 5-punktsorder |
 | **RASSOIKA** | Patrullchefens checklista (*Tidigt utvecklingsstadium*) |
 | **VÄDER** | Meteorologisk prognos (Hämtar SMHI-data vid täckning) |
 | **MINKARTA** | Minläggningskarta & minprotokoll (reglementstecken från stab-paketet 2026-04-26, UPK-numrering 001–999, UPK/SP-auto-inmätning, datalista, automatisk dela-med-karta, jumbo-symboler i PNG-export, övningsläge) |

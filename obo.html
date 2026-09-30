@@ -68,6 +68,9 @@
         label { font-weight: 600; font-size: 0.82rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-bottom: 6px; }
         .sub-label { font-weight: 600; font-size: 0.78rem; letter-spacing: 0.05em; text-transform: uppercase; color: var(--text-secondary); display: block; margin-top: 14px; margin-bottom: 6px; }
         .field-hint { font-size: 0.72rem; color: var(--text-muted); margin-top: 5px; opacity: 0.75; }
+        /* Överföringsgrad från 5-punktsordern (Gc-kursen): strikt / bryt ner / viktigaste */
+        .xfer { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-muted); font-size: 0.6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
+        .xfer-strikt { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
 
         input[type="text"], input[type="datetime-local"], textarea, select {
             width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 1rem; padding: 12px 14px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; appearance: none;
@@ -155,7 +158,7 @@
 <noscript><div style="background:#3a1818;color:#ffd1d1;padding:14px 18px;border-bottom:2px solid #e05050;font-family:ui-sans-serif,system-ui,sans-serif;text-align:center;font-size:0.9rem;line-height:1.5"><strong>JavaScript är avstängt.</strong> Verktyget kräver JavaScript. Aktivera i webbläsarens inställningar och ladda om sidan.</div></noscript>
 <div class="container">
 
-    <header><h1>OBO</h1><p>Orientering &middot; Beslut &middot; Order</p></header>
+    <header><h1>OBO</h1><p id="headerSub">Orientering &middot; Beslut &middot; Order</p></header>
 
 
 <!-- FORM VIEW -->
@@ -186,6 +189,19 @@
             <div class="field-hint">Format: DDHHMM eller DDHHMMZMånÅÅÅÅ (t.ex. 031430BAPR2026)</div>
         </div>
 
+        <!-- ORDERFORMAT -->
+        <div class="form-group">
+            <label for="orderFormat">Orderformat</label>
+            <select id="orderFormat" onchange="applyFormat()">
+                <option value="OBO">OBO &ndash; full order</option>
+                <option value="OBK">OBK &ndash; mycket ont om tid</option>
+                <option value="OSK">OSK &ndash; underst&ouml;d</option>
+            </select>
+            <div class="field-hint" id="formatHint"></div>
+        </div>
+
+        <div id="fullForm">
+
         <!-- PUK-IMPORT -->
         <div class="form-group import-group">
             <div class="section-label">
@@ -200,15 +216,6 @@
             <div class="import-feedback" id="importFeedback"></div>
         </div>
 
-        <!-- Rubrikfält -->
-        <div class="form-group">
-            <label for="orderFormat">Orderformat</label>
-            <select id="orderFormat">
-                <option value="OBO">OBO</option>
-                <option value="OBK">OBK</option>
-            </select>
-        </div>
-
         <!-- Sektion O – ORIENTERING -->
         <div class="form-group section-group">
             <div class="section-label">
@@ -219,22 +226,26 @@
                 </div>
             </div>
 
-            <label for="o_motstandaren">Motst&aring;ndaren</label>
+            <div class="field-hint" style="margin:0 0 10px">Strikt = ordagrant fr&aring;n h&ouml;gre chef &middot; Bryt ner = din niv&aring;, dina slutsatser &middot; Viktigaste = bara det som ber&ouml;r gruppen</div>
+            <label for="o_motstandaren">Motst&aring;ndaren <span class="xfer" aria-hidden="true">bryt ner</span></label>
             <textarea id="o_motstandaren" placeholder="Fienden &mdash; f&ouml;r&auml;ndringar, hot, r&ouml;relser..."></textarea>
 
-            <label for="o_egna" style="margin-top:12px">Egna f&ouml;rband</label>
+            <label for="o_egna" style="margin-top:12px">Egna f&ouml;rband <span class="xfer" aria-hidden="true">viktigaste</span></label>
             <textarea id="o_egna" placeholder="Egna f&ouml;rband &mdash; kompaniets/plutonens uppgift, sidof&ouml;rband..."></textarea>
 
-            <label for="o_terrang" style="margin-top:12px">Terr&auml;ngen</label>
+            <label for="o_understod" style="margin-top:12px">Underst&ouml;d <span class="xfer" aria-hidden="true">viktigaste</span></label>
+            <textarea id="o_understod" placeholder="Underst&ouml;d &mdash; vem st&ouml;djer oss, med vad, var..."></textarea>
+
+            <label for="o_terrang" style="margin-top:12px">Terr&auml;ngen <span class="xfer" aria-hidden="true">viktigaste</span></label>
             <textarea id="o_terrang" placeholder="Terr&auml;ngen &mdash; relevant f&ouml;r uppgiften..."></textarea>
 
-            <label for="o_vader" style="margin-top:12px">V&auml;der</label>
+            <label for="o_vader" style="margin-top:12px">V&auml;der <span class="xfer" aria-hidden="true">viktigaste</span></label>
             <textarea id="o_vader" placeholder="V&auml;der &mdash; vind, sikt, nederb&ouml;rd, m&ouml;rker..."></textarea>
 
-            <label for="o_civil" style="margin-top:12px">Civill&auml;get</label>
+            <label for="o_civil" style="margin-top:12px">Civill&auml;get <span class="xfer" aria-hidden="true">bryt ner</span></label>
             <textarea id="o_civil" placeholder="Civill&auml;get &mdash; civil n&auml;rvaro, restriktioner..."></textarea>
 
-            <label for="o_plut_uppgift" style="margin-top:12px">Plutonens uppgift</label>
+            <label for="o_plut_uppgift" style="margin-top:12px">Plutonens uppgift <span class="xfer xfer-strikt" aria-hidden="true">strikt</span></label>
             <textarea id="o_plut_uppgift" placeholder="Plutonens uppgift (vid behov)..."></textarea>
 
             <div class="var-uppgift-box">
@@ -253,18 +264,18 @@
                 </div>
             </div>
 
-            <span class="sub-label">M&aring;lbild (valfritt)</span>
+            <span class="sub-label">M&aring;lbild (valfritt) <span class="xfer" aria-hidden="true">bryt ner</span></span>
             <textarea id="b_malb" placeholder="Hur ser det ut n&auml;r uppgiften &auml;r l&ouml;st? (Dr&ouml;narbild 200m upp)"></textarea>
 
-            <span class="sub-label">GFI &ndash; Genomf&ouml;randeid&eacute;</span>
+            <span class="sub-label">GFI &ndash; Genomf&ouml;randeid&eacute; <span class="xfer" aria-hidden="true">bryt ner</span></span>
             <textarea id="b_inled" rows="2" placeholder="Inledningsvis..."></textarea>
             <textarea id="b_darefter" rows="2" placeholder="D&auml;refter..." style="margin-top:6px"></textarea>
             <textarea id="b_slutligen" rows="2" placeholder="Slutligen..." style="margin-top:6px"></textarea>
 
-            <span class="sub-label">RIL &ndash; Riktlinjer (valfritt)</span>
+            <span class="sub-label">RIL &ndash; Riktlinjer (valfritt) <span class="xfer" aria-hidden="true">bryt ner</span></span>
             <textarea id="b_ril" placeholder="Vad g&auml;ller fortl&ouml;pande, omfallsplan..."></textarea>
 
-            <span class="sub-label">RFI &ndash; Regler f&ouml;r ingripande</span>
+            <span class="sub-label">RFI &ndash; Regler f&ouml;r ingripande <span class="xfer xfer-strikt" aria-hidden="true">strikt</span></span>
             <textarea id="b_rfi" placeholder="Ordagrant fr&aring;n 5-punktsordern..."></textarea>
             <div class="field-hint">Alltid med &ndash; ordagrant fr&aring;n h&ouml;gre chefs order</div>
         </div>
@@ -272,9 +283,9 @@
         <!-- Sektion O/K – ORDER/KOMMANDO -->
         <div class="form-group section-group" id="orderSection">
             <div class="section-label">
-                <div class="section-letter" id="orderSectionLetter">O</div>
+                <div class="section-letter">O</div>
                 <div>
-                    <div class="section-title" id="orderSectionTitle">Order</div>
+                    <div class="section-title">Order</div>
                     <div class="section-subtitle">VEM / N&Auml;R</div>
                 </div>
             </div>
@@ -284,15 +295,45 @@
 
             <hr class="divider">
 
-            <label for="o_skadeplats" style="margin-top:4px">Skadeplatsen</label>
+            <label for="o_skadeplats" style="margin-top:4px">Skadeplatsen <span class="xfer" aria-hidden="true">bryt ner</span></label>
             <textarea id="o_skadeplats" rows="2" placeholder="Var tas skadade om hand..."></textarea>
 
-            <label for="o_samband" style="margin-top:12px">Samband</label>
+            <label for="o_underhall" style="margin-top:12px">Underh&aring;ll <span class="xfer" aria-hidden="true">bryt ner</span></label>
+            <textarea id="o_underhall" rows="2" placeholder="Mat, vatten, ammunition, p&aring;fyllning..."></textarea>
+
+            <label for="o_samband" style="margin-top:12px">Samband <span class="xfer" aria-hidden="true">viktigaste</span></label>
             <textarea id="o_samband" rows="2" placeholder="Radiokanal, f&ouml;rbindelsepunkter, reserv..."></textarea>
 
-            <label for="o_chef_pos" style="margin-top:12px">Var g&aring;r chefen och stf</label>
+            <label for="o_chef_pos" style="margin-top:12px">Var g&aring;r chefen och stf <span class="xfer" aria-hidden="true">viktigaste</span></label>
             <textarea id="o_chef_pos" rows="2" placeholder="Chefens och stf:s placering under uppgiften..."></textarea>
         </div>
+
+        </div><!-- /fullForm -->
+
+        <!-- KORTFORMAT – OBK / OSK (tre rader) -->
+        <div id="kortForm" hidden>
+            <div class="form-group section-group">
+                <div class="section-label">
+                    <div class="section-letter">O</div>
+                    <div><div class="section-title">Orientering</div><div class="section-subtitle">Orientering och uppdrag &ndash; egen uppgift</div></div>
+                </div>
+                <textarea id="k_o" rows="2"></textarea>
+            </div>
+            <div class="form-group section-group">
+                <div class="section-label">
+                    <div class="section-letter" id="kortMidLetter">B</div>
+                    <div><div class="section-title" id="kortMidTitle">Beslut</div><div class="section-subtitle">Genomf&ouml;rande</div></div>
+                </div>
+                <textarea id="k_mid" rows="2"></textarea>
+            </div>
+            <div class="form-group section-group">
+                <div class="section-label">
+                    <div class="section-letter">K</div>
+                    <div><div class="section-title">Kommando</div><div class="section-subtitle">Uppgift till underst&auml;llda &ndash; reglementerat orderuttryck</div></div>
+                </div>
+                <textarea id="k_k" rows="2"></textarea>
+            </div>
+        </div><!-- /kortForm -->
 
         <button class="btn btn-primary" onclick="generateReport()">Generera order</button>
 
@@ -300,7 +341,7 @@
 
     <!-- RESULT VIEW -->
     <div class="result-view" id="resultView">
-        <div class="result-header">OBO redo att kopieras</div>
+        <div class="result-header" id="resultHeader">OBO redo att kopieras</div>
         <pre class="report-output" id="reportOutput"></pre>
         <button class="btn btn-copy" onclick="copyReport()">Kopiera till urklipp</button>
         <div class="copy-feedback" id="copyFeedback">Kopierat</div>
@@ -402,13 +443,37 @@ function removeCard(id) {
 }
 
 // ============================================================
-// ORDERFORMAT CHANGE
+// ORDERFORMAT – OBO (full), OBK (mycket ont om tid), OSK (understöd)
+// Exempel och rubriker från Gc-kursens ordertränings-material (RSU2 2025).
 // ============================================================
-document.getElementById('orderFormat').addEventListener('change', function() {
-    const isOBK = this.value === 'OBK';
-    document.getElementById('orderSectionLetter').textContent = isOBK ? 'K' : 'O';
-    document.getElementById('orderSectionTitle').textContent = isOBK ? 'Kommando' : 'Order';
-});
+const FORMATS = {
+    OBO: { sub: 'Orientering · Beslut · Order',
+           hint: 'Full order på gruppnivå – nedbrytning av plutonens 5-punktsorder' },
+    OBK: { sub: 'Orientering · Beslut · Kommando',
+           hint: 'Vid mycket ont om tid – tre korta rader som slutar i kommandot',
+           mid: ['B', 'Beslut'],
+           ph: ['Ex: Skyttar skogsbrynet klockan 1', 'Ex: Nedkämpa, samtidigt eldöppnande', 'Ex: ELD!'] },
+    OSK: { sub: 'Orientering · Skjutgränser · Kommando',
+           hint: 'Vid uppgiften UNDERSTÖD – orientering, skjutgränser, kommando',
+           mid: ['S', 'Skjutgränser'],
+           ph: ['Ex: Vi ska understödja 1 grp anfall mot höjden. 1 grp anfaller till vänster om oss. Eld mellan STORA GRANEN och VÄGSLUTET.',
+                'Ex: Skjutgräns vänster STORA GRANEN!',
+                'Ex: Eld på min order. Färdigställning!'] }
+};
+
+function applyFormat() {
+    const format = document.getElementById('orderFormat').value;
+    const f = FORMATS[format];
+    const kort = format !== 'OBO';
+    document.getElementById('fullForm').hidden = kort;
+    document.getElementById('kortForm').hidden = !kort;
+    document.getElementById('headerSub').textContent = f.sub;
+    document.getElementById('formatHint').textContent = f.hint;
+    if (!kort) return;
+    document.getElementById('kortMidLetter').textContent = f.mid[0];
+    document.getElementById('kortMidTitle').textContent = f.mid[1];
+    ['k_o', 'k_mid', 'k_k'].forEach((id, i) => { document.getElementById(id).placeholder = f.ph[i]; });
+}
 
 // ============================================================
 // GENERERA RAPPORT
@@ -425,10 +490,26 @@ function generateReport() {
     ];
     lines.push('');
 
+    // OBK/OSK – tre rader, inget mer
+    if (format !== 'OBO') {
+        lines.push('ORIENTERING', v('k_o') || '-', '');
+        lines.push(FORMATS[format].mid[1].toUpperCase(), v('k_mid') || '-', '');
+        lines.push('KOMMANDO', v('k_k') || '-', '');
+        showReport(lines);
+        return;
+    }
+
+    // Lystringsgrad, tid och riktning meddelas före orienteringen
+    lines.push('MANÖVER! ORDER!');
+    lines.push('Tid meddelas:      "Klockan är __:__ och __… NU!"');
+    lines.push('Riktning meddelas: "Norr är dit!"');
+    lines.push('');
+
     // Orientering – alltid visa
     lines.push('ORIENTERING');
     lines.push(`Fi:                ${v('o_motstandaren') || '-'}`);
     lines.push(`Egna:              ${v('o_egna') || '-'}`);
+    lines.push(`Understöd:         ${v('o_understod') || '-'}`);
     lines.push(`Terräng:           ${v('o_terrang') || '-'}`);
     lines.push(`Väder:             ${v('o_vader') || '-'}`);
     lines.push(`Civil:             ${v('o_civil') || '-'}`);
@@ -448,7 +529,7 @@ function generateReport() {
 
     // Order/Kommando
     const orderKort = document.getElementById('orderLista').children;
-    lines.push(format === 'OBK' ? 'KOMMANDO' : 'ORDER');
+    lines.push('ORDER');
     if (orderKort.length) {
         Array.from(orderKort).forEach(card => {
             const inputs = card.querySelectorAll('input');
@@ -465,13 +546,18 @@ function generateReport() {
         lines.push('-');
     }
     lines.push(`Skadeplatsen: ${v('o_skadeplats') || '-'}`);
+    lines.push(`Underhåll:    ${v('o_underhall') || '-'}`);
     lines.push(`Samband:      ${v('o_samband') || '-'}`);
     lines.push(`Chefen/stf:   ${v('o_chef_pos') || '-'}`);
     lines.push('');
 
     lines.push('');
-    lines.push('SLUT. Tillägg? Frågor? Framåt!');
+    lines.push('SLUT. Tillägg? Frågor? Kontrollfrågor! Framåt!');
+    showReport(lines);
+}
 
+function showReport(lines) {
+    document.getElementById('resultHeader').textContent = document.getElementById('orderFormat').value + ' redo att kopieras';
     document.getElementById('reportOutput').textContent = lines.join('\n');
     document.getElementById('formView').classList.add('hidden');
     document.getElementById('resultView').classList.add('active');
@@ -511,8 +597,7 @@ function clearAll() {
     orderCount = 0;
     document.querySelectorAll('input[type="text"], textarea').forEach(el => el.value = '');
     document.getElementById('orderFormat').value = 'OBO';
-    document.getElementById('orderSectionLetter').textContent = 'O';
-    document.getElementById('orderSectionTitle').textContent = 'Order';
+    applyFormat();
     goBack();
     setNow();
     addOrder(); addOrder();
@@ -523,6 +608,7 @@ function clearAll() {
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     setNow();
+    applyFormat();
     addOrder();
     addOrder();
 });
@@ -547,15 +633,15 @@ function parsePUK() {
     const positions = [];
     sectionPatterns.forEach(sp => {
         const m = raw.match(sp.re);
-        if (m) positions.push({ key: sp.key, start: m.index + m[0].length });
+        if (m) positions.push({ key: sp.key, hdr: m.index, start: m.index + m[0].length });
     });
     positions.sort((a, b) => a.start - b.start);
 
     // Extrahera sektionstext
     const sections = {};
     positions.forEach((p, i) => {
-        const end = i + 1 < positions.length ? positions[i + 1].start : raw.length;
-        // Gå tillbaka till rubriken för att trimma rätt
+        // Sektionen slutar där nästa rubrik börjar (inte där dess innehåll börjar)
+        const end = i + 1 < positions.length ? positions[i + 1].hdr : raw.length;
         sections[p.key] = raw.substring(p.start, end).trim();
     });
 
@@ -574,6 +660,8 @@ function parsePUK() {
 
     // Hjälpfunktion: extrahera sub-sektion ur text
     function extract(text, patterns) {
+        // Avslutande radbrytning så att lookahead-mönstren (\n + nästa rubrik | slut) även träffar sista fältet
+        text = text + '\n';
         for (const p of patterns) {
             const m = text.match(p);
             if (m) return m[1].trim();
@@ -590,19 +678,22 @@ function parsePUK() {
     if (sections.ori) {
         const t = sections.ori;
         fillField('o_motstandaren', extract(t, [
-            /(?:Fi(?:ende)?|Motst[aå]ndare[n]?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Egna|Terr|Civil|V[aå]r\s+uppgift|Pluton|$))/i
+            /(?:Fi(?:ende)?|Motst[aå]ndare[n]?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Egna|Underst|Terr|Civil|V[aå]r\s+uppgift|Pluton|$))/i
         ]));
         fillField('o_egna', extract(t, [
-            /(?:Egna(?:\s+f[oö]rband)?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Terr|Civil|V[aå]r\s+uppgift|Pluton|Fi|$))/i
+            /(?:Egna(?:\s+f[oö]rband)?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Underst|Terr|Civil|V[aå]r\s+uppgift|Pluton|Fi|$))/i
+        ]));
+        fillField('o_understod', extract(t, [
+            /(?:^|\n)\s*Underst[oö]d\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Terr|Civil|V[aå]r\s+uppgift|Pluton|Fi|Egna|$))/i
         ]));
         fillField('o_terrang', extract(t, [
-            /(?:Terr[aä]ng(?:en)?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Civil|V[aå]r\s+uppgift|Pluton|Fi|Egna|$))/i
+            /(?:Terr[aä]ng(?:en)?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:Civil|V[aå]r\s+uppgift|Pluton|Fi|Egna|Underst|$))/i
         ]));
         fillField('o_civil', extract(t, [
-            /(?:Civil(?:l[aä]ge[t]?|befolkning(?:en)?)?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:V[aå]r\s+uppgift|Pluton|Fi|Egna|Terr|$))/i
+            /(?:Civil(?:l[aä]ge[t]?|befolkning(?:en)?)?)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:V[aå]r\s+uppgift|Pluton|Fi|Egna|Underst|Terr|$))/i
         ]));
         fillField('o_plut_uppgift', extract(t, [
-            /(?:Pluton(?:ens)?\s+uppgift)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:V[aå]r\s+uppgift|Fi|Egna|Terr|Civil|$))/i
+            /(?:Pluton(?:ens)?\s+uppgift)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:V[aå]r\s+uppgift|Fi|Egna|Underst|Terr|Civil|$))/i
         ]));
         fillField('o_var_uppgift', extract(t, [
             /(?:V[aå]r\s+uppgift)\s*[:\-]\s*([\s\S]*?)$/im
@@ -700,13 +791,17 @@ function parsePUK() {
         }
     }
 
-    // ── LOGISTIK (sektion 4) – sjukvård → skadeplatsen ──
+    // ── UTHÅLLIGHET (sektion 4) – sjukvård → skadeplatsen, underhåll → underhåll ──
     if (sections.log) {
         const t = sections.log;
-        fillField('o_skadeplats', extract(t, [
-            /(?:Sjukv[åa]rd(?:stj[äa]nst)?|Skadeplatsen?|Samlingsplats\s+f[öo]r\s+skadade)\s*[:\- ]?\s*([\s\S]*?)(?=\n\s*(?:Pluton|Underh|$))/i,
-            /^([\s\S]+)/i
-        ]));
+        const sjukvard = extract(t, [
+            /(?:Sjukv[åa]rd(?:stj[äa]nst)?|Skadeplatsen?|Samlingsplats\s+f[öo]r\s+skadade)\s*[:\- ]?\s*([\s\S]*?)(?=\n\s*(?:Pluton|Underh|$))/i
+        ]);
+        const underhall = extract(t, [
+            /(?:Underh[åa]ll(?:stj[äa]nst)?)\s*[:\- ]?\s*([\s\S]*?)(?=\n\s*(?:Pluton|Sjukv|Skadeplats|Samlingsplats|$))/i
+        ]);
+        fillField('o_skadeplats', sjukvard || (underhall ? '' : t));
+        fillField('o_underhall', underhall);
     }
 
     // ── LEDNING (sektion 5) ──

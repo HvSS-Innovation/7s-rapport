@@ -3,6 +3,17 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.35 — 2026-09-30 — OBO: tre orderformer och kursens nedbrytningsmodell
+
+Underlag: Gruppchefskursens ordertränings-material (RSU2 2025, "5-punkt, OBO, OBK, OSK & U3T"), särskilt bilden "Order översättning" (PlutO → OBO med tre pilsorter). Lokal fyndlista och v0.3-plan (U3T + beslutsmatris, obyggt) i `roadmap-obo.md`.
+
+- **Orderformat OBO / OBK / OSK.** Väljaren får OSK (Orientering – Skjutgränser – Kommando, vid uppgiften UNDERSTÖD). OBK och OSK visar ett kortformulär med tre fält och kursens exempel som platshållare ("Skyttar skogsbrynet klockan 1" / "Nedkämpa, samtidigt eldöppnande" / "ELD!"); tidigare bytte OBK bara bokstaven O→K på det fulla OBO-formuläret. Utskriften för kortformaten är tre block utan lystringsgrad eller avslut. Text i det fulla formuläret ligger kvar vid byte fram och tillbaka.
+- **Överföringsgrad per fält.** Badge vid varje fält: *strikt* (ordagrant från högre chef: Plutonens uppgift, RFI), *bryt ner* (din nivå, dina slutsatser: Motståndaren, Civilläget, Målbild, GFI, RIL, Skadeplatsen, Underhåll) eller *viktigaste* (bara det som berör gruppen: Egna, Understöd, Terrängen, Väder, Samband, Chefen/stf). Legend överst i Orienteringen.
+- **Nya fält Understöd (Orientering) och Underhåll (Order/uthållighet).** Båda i utskriften och i PUK-importen (`Understöd:`, `Underhållstjänst:`). Tidigare svaldes en `Understöd:`-rad in i Egna förband och underhållstjänsten tappades helt.
+- **Utskriften följer ordergivningen.** Inleds med `MANÖVER! ORDER!`, `Tid meddelas: "Klockan är __:__ och __… NU!"` och `Riktning meddelas: "Norr är dit!"`; avslutas `SLUT. Tillägg? Frågor? Kontrollfrågor! Framåt!`. Resultatrubriken säger vilket format som genererats.
+- **Två pre-existerande parserbuggar rättade.** (1) Varje sektion i PUK-importen slutade där *nästa sektions innehåll* började, så nästa rubrikrad ("3. GENOMFÖRANDE") hängde med in i föregående fält — VÅR UPPGIFT fick alltid rubriken på köpet. (2) Fältmönstren letar efter "radbrytning + nästa rubrik", men sektionstexten trimmas, så sista fältet i varje sektion (Civilläget, Slutligen, Underhåll…) matchade aldrig. Nu slutar sektionen vid nästa rubrik och `extract()` lägger på en avslutande radbrytning.
+- **Verifierat** med en headless Playwright-svit (38 kontroller: format-växling, PUK-import med alla fem sektioner, utskrift per format, nollställ, inga JS-fel) och skärmdumpar i mobilbredd. Sviten ligger i sessionens scratchpad, inte i repot.
+
 ## v0.3.34 — 2026-08-30 — iPhone: paketkollen och tile-serveringen rör inte längre hela paketet
 
 Joels andra iPhone-försök samma kväll: "Slå på Härdat läge" → väljaren visade alla landskap som "Kommer snart" → Safari: "sidan kunde inte laddas". Det är WebKits minneskrasch, och det bekräftar fynd 6 i granskningen.
