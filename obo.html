@@ -708,26 +708,26 @@ function parsePUK() {
     if (sections.gen || sections.bes) {
         const t = sections.gen || sections.bes;
         fillField('b_malb', extract(t, [
-            /(?:M[aå]lbild)\s*:?\s*([\s\S]*?)(?=\n\s*(?:Inled|GFI|D[aä]refter|Slutligen|RIL\b|Order\b|Insatsregler|$))/i
+            /(?:M[aå]lbild)\s*:?\s*([\s\S]*?)(?=\n\s*(?:Inled|GFI|Genomf[öo]randeid|D[aä]refter|Slutligen|RIL\b|Riktlinjer|Order\b|Insatsregler|$))/i
         ]));
         fillField('b_inled', extract(t, [
-            /(?:Inledningsvis|Inled(?:ning)?)\s*:?\s*([\s\S]*?)(?=\n\s*(?:D[aä]refter|Slutligen|RIL\b|M[aå]lbild|Order\b|Insatsregler|$))/i
+            /(?:Inledningsvis|Inled(?:ning)?)\s*:?\s*([\s\S]*?)(?=\n\s*(?:D[aä]refter|Slutligen|RIL\b|Riktlinjer|M[aå]lbild|Order\b|Insatsregler|$))/i
         ]));
         fillField('b_darefter', extract(t, [
-            /(?:D[aä]refter)\s*:?\s*([\s\S]*?)(?=\n\s*(?:Slutligen|RIL\b|Inled|M[aå]lbild|Order\b|Insatsregler|$))/i
+            /(?:D[aä]refter)\s*:?\s*([\s\S]*?)(?=\n\s*(?:Slutligen|RIL\b|Riktlinjer|Inled|M[aå]lbild|Order\b|Insatsregler|$))/i
         ]));
         fillField('b_slutligen', extract(t, [
-            /(?:Slutligen)\s*:?\s*([\s\S]*?)(?=\n\s*(?:RIL\b|Inled|D[aä]refter|M[aå]lbild|Order\b|Insatsregler|$))/i
+            /(?:Slutligen)\s*:?\s*([\s\S]*?)(?=\n\s*(?:RIL\b|Riktlinjer|Inled|D[aä]refter|M[aå]lbild|Order\b|Insatsregler|$))/i
         ]));
         fillField('b_ril', extract(t, [
-            /(?:RIL\b|Riktlinjer)[^\n]*\n([\s\S]*?)(?=\n\s*(?:Order\b|Insatsregler|\d+\.|$))/i
+            /(?:^|\n)\s*(?:RIL\b|Riktlinjer)[^\n]*\n([\s\S]*?)(?=\n\s*(?:Order\b|Insatsregler|\d+\.|$))/i
         ]));
         fillField('b_rfi', extract(t, [
-            /(?:Insatsregler|RFI)\b[^\n]*\n([\s\S]*?)(?=\n\s*(?:Order\b|RIL\b|\d+\.|$))/i
+            /(?:^|\n)\s*(?:Insatsregler|RFI)\b[^\n]*\n([\s\S]*?)(?=\n\s*(?:Order\b|RIL\b|Riktlinjer|\d+\.|$))/i
         ]));
         // Extrahera eventuell "Order"-undersektion ur gen → används av orderLista-parsern
         if (!sections.ord) {
-            const om = t.match(/\bOrder\b[^\n]*\n([\s\S]*?)(?=\n\s*(?:Insatsregler|RIL\b|\d+\.|$))/i);
+            const om = t.match(/(?:^|\n)\s*Order\b[^\n]*\n([\s\S]*?)(?=\n\s*(?:Insatsregler|RIL\b|Riktlinjer|\d+\.|$))/i);
             if (om) sections.ord = om[1];
         }
         // Fallback: om inga sub-rubriker, lägg allt i GFI inledning
