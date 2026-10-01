@@ -3,6 +3,20 @@
 Kort milstolpslogg för utvecklingscykeln **Positionering / Ramsor / In-app roadmap**.
 Detaljerade beskrivningar finns i README-dagboken.
 
+## v0.3.36 — 2026-10-01 — OBO: plutonsordern blir underlag, inte innehåll
+
+Joels test med `test/puk-exempel.txt`: den genererade OBO:n var plutonsordern ordagrant — 330 av 331 ord, alla 19 fält kopierade. Badgarna sa "bryt ner" men importen gjorde tvärtom. Samma order handnedbruten för 2 grp landar på 156 ord.
+
+- **Importen fyller inte längre fälten.** Plutonsorderns text läggs som hopfällt underlag vid varje fält ("Ur plutonsordern (45 ord)") med knappen "Kopiera hit och korta" för den som vill utgå från texten. "Fäll ut allt underlag" öppnar alla på en gång. Underlaget hamnar aldrig i den genererade ordern.
+- **Bara strikt-fälten förifylls:** Plutonens uppgift (plutonsorderns "2. VÅR UPPGIFT" — tidigare hamnade den felaktigt i gruppens VÅR UPPGIFT), RFI/Insatsregler och gruppens egen uppgift.
+- **Gruppens uppgift väljs med knapp.** Plutonens order till grupperna blir knappar under VÅR UPPGIFT ("Vilken är din grupp?"); vald rad förs över ordagrant. Står gruppen i Från-fältet ("2 GRP", "2A GRP") väljs den direkt. Raderna blir inte längre orderkort — korten är gruppchefens uppgifter till sina egna soldater — utan visas som underlag ovanför korten.
+- **Ordräknare.** Varje bryt ner/viktigaste-fält visar antal ord och varnar över riktmärket 20. Resultatvyn visar totalen och, efter import, andelen av plutonsordern; 75 % eller mer flaggas "bryt ner mer".
+- **Sidoeffekt:** inklistrad ordertext sattes tidigare in i orderkorten via `innerHTML` utan escaping. Den vägen är borta; underlag och gruppknappar byggs med `textContent`.
+- **Rättad order slår igenom vid omimport.** Strikt-fält som inte rörts sedan förra importen uppdateras till ny lydelse, och tidigare vald grupp följer med. Har gruppchefen skrivit egen text behålls den; plutonsorderns lydelse läggs då som underlag med knappen "Använd denna lydelse" och feedbacken säger det. (Fynd ur granskningen: tidigare låg gamla insatsregler tyst kvar.)
+- **Kantfall i plutonsorderns form** (granskningsfynd, alla med test): Order-blocket hittas även när det står sist i sektion 3; "Beredd:" på egen rad följer med föregående grupps uppgift i stället för att bli en egen gruppknapp; "Vår uppgift:" under ORIENTERING går till Plutonens uppgift; ett Från-fält utan grupp ("AQ") autoväljer ingenting; plutonsorderns ordantal räknas en gång per sektion i stället för per fält, så fritextorder dubbelräknas inte.
+- Testsviten utökad till 86 kontroller; `test/obo/dump-puk.mjs` visar nu vad som blir underlag, strikt ifyllt och gruppval. Måttstocken (samma order handnedbruten för 2 grp) ligger i `test/puk-exempel-nedbruten-2grp.txt`.
+- **Kvar:** formulärtexten "Tomma fält utelämnas i export" stämmer inte (utskriften skriver streck, medvetet enhetligt över formulären); Väder har inget parsermönster; U3T + beslutsmatris obyggda.
+
 ## v0.3.35 — 2026-09-30 — OBO: tre orderformer och kursens nedbrytningsmodell
 
 Underlag: Gruppchefskursens ordertränings-material (RSU2 2025, "5-punkt, OBO, OBK, OSK & U3T"), särskilt bilden "Order översättning" (PlutO → OBO med tre pilsorter). Lokal fyndlista och v0.3-plan (U3T + beslutsmatris, obyggt) i `roadmap-obo.md`.

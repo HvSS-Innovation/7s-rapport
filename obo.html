@@ -71,6 +71,18 @@
         /* Överföringsgrad från 5-punktsordern (Gc-kursen): strikt / bryt ner / viktigaste */
         .xfer { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: 10px; border: 1px solid var(--border); background: var(--bg-secondary); color: var(--text-muted); font-size: 0.6rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; vertical-align: middle; }
         .xfer-strikt { border-color: var(--accent); background: var(--accent-dim); color: var(--accent); }
+        /* Underlag ur plutonsordern – visas vid fältet, hamnar aldrig i utskriften */
+        .underlag { margin: 0 0 6px; border: 1px dashed var(--border); border-radius: var(--radius-sm); background: var(--bg-secondary); font-size: 0.8rem; }
+        .underlag summary { cursor: pointer; padding: 10px; color: var(--text-muted); font-weight: 600; letter-spacing: .03em; -webkit-tap-highlight-color: transparent; }
+        .underlag-text { padding: 0 10px 8px; color: var(--text-secondary); line-height: 1.45; white-space: pre-wrap; }
+        .underlag .btn-add { margin: 0 10px 10px; }
+        #ulToggle[hidden] { display: none; }
+        .ordrakn { font-size: 0.7rem; color: var(--text-muted); text-align: right; margin-top: 3px; }
+        .ordrakn.over, .ord-total.over { color: #d98a2b; font-weight: 700; }
+        html[data-theme="light"] .ordrakn.over, html[data-theme="light"] .ord-total.over { color: #b26a00; }
+        .ord-total { text-align: center; font-size: 0.78rem; color: var(--text-muted); margin-bottom: 10px; }
+        .grp-btn { background: var(--bg-input); border: 1px solid var(--border-focus); border-radius: 20px; color: var(--text-primary); font-family: inherit; font-size: 0.85rem; font-weight: 600; padding: 8px 14px; margin: 0 6px 8px 0; min-height: 40px; cursor: pointer; }
+        .grp-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
         input[type="text"], input[type="datetime-local"], textarea, select {
             width: 100%; background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius-sm); color: var(--text-primary); font-family: inherit; font-size: 1rem; padding: 12px 14px; outline: none; transition: border-color 0.15s; -webkit-appearance: none; appearance: none;
@@ -208,12 +220,13 @@
                 <div class="section-letter">&#9997;</div>
                 <div>
                     <div class="section-title">Importera 5-punktsorder (BETA)</div>
-                    <div class="section-subtitle">Klistra in PUK fr&aring;n h&ouml;gre chef &ndash; f&auml;lten fylls automatiskt</div>
+                    <div class="section-subtitle">Klistra in plutonsordern &ndash; den l&auml;ggs som underlag vid varje f&auml;lt, du bryter ner sj&auml;lv. Bara strikta f&auml;lt fylls i.</div>
                 </div>
             </div>
-            <textarea id="pukInput" placeholder="Klistra in 5-punktsorder (PUK) h&auml;r...&#10;&#10;Parsern letar efter: ORIENTERING, BESLUT/VERKSAMHETSID&Eacute;, ORDER/UPPGIFTER, UNDERH&Aring;LL, LEDNING"></textarea>
-            <button class="btn btn-import" onclick="parsePUK()">Tolka &amp; fyll i</button>
+            <textarea id="pukInput" placeholder="Klistra in 5-punktsorder (PUK) h&auml;r...&#10;&#10;Rubriker som k&auml;nns igen: ORIENTERING, V&Aring;R UPPGIFT, GENOMF&Ouml;RANDE (M&aring;lbild, Inledningsvis/D&auml;refter/Slutligen, Riktlinjer, Order, Insatsregler), UTH&Aring;LLIGHET, LEDNING"></textarea>
+            <button class="btn btn-import" onclick="parsePUK()">Tolka &amp; l&auml;gg som underlag</button>
             <div class="import-feedback" id="importFeedback"></div>
+            <button type="button" class="btn-add" id="ulToggle" onclick="toggleUnderlag()" hidden>F&auml;ll ut allt underlag</button>
         </div>
 
         <!-- Sektion O – ORIENTERING -->
@@ -250,6 +263,7 @@
 
             <div class="var-uppgift-box">
                 <span class="sub-label">V&Aring;R UPPGIFT (ordagrant)</span>
+                <div id="grpVal"></div>
                 <textarea id="o_var_uppgift" rows="3" placeholder="V&Aring;R UPPGIFT (ordagrant fr&aring;n h&ouml;gre chef) &mdash; OBLIGATORISKT"></textarea>
             </div>
         </div>
@@ -342,6 +356,7 @@
     <!-- RESULT VIEW -->
     <div class="result-view" id="resultView">
         <div class="result-header" id="resultHeader">OBO redo att kopieras</div>
+        <div class="ord-total" id="ordTotal"></div>
         <pre class="report-output" id="reportOutput"></pre>
         <button class="btn btn-copy" onclick="copyReport()">Kopiera till urklipp</button>
         <div class="copy-feedback" id="copyFeedback">Kopierat</div>
@@ -495,7 +510,7 @@ function generateReport() {
         lines.push('ORIENTERING', v('k_o') || '-', '');
         lines.push(FORMATS[format].mid[1].toUpperCase(), v('k_mid') || '-', '');
         lines.push('KOMMANDO', v('k_k') || '-', '');
-        showReport(lines);
+        showReport(lines, ordIFalt(['k_o', 'k_mid', 'k_k']));
         return;
     }
 
@@ -529,6 +544,7 @@ function generateReport() {
 
     // Order/Kommando
     const orderKort = document.getElementById('orderLista').children;
+    let kortOrd = 0;
     lines.push('ORDER');
     if (orderKort.length) {
         Array.from(orderKort).forEach(card => {
@@ -540,6 +556,7 @@ function generateReport() {
             if (enhet || uppgift) {
                 lines.push(`${enhet || '?'}: ${uppgift || ''}`);
                 if (beredd) lines.push(`  Beredd: ${beredd}`);
+                kortOrd += antalOrd(uppgift || '') + antalOrd(beredd || '');
             }
         });
     } else {
@@ -553,10 +570,15 @@ function generateReport() {
 
     lines.push('');
     lines.push('SLUT. Tillägg? Frågor? Kontrollfrågor! Framåt!');
-    showReport(lines);
+    showReport(lines, ordIFalt([...BUDGET_FALT, ...STRIKT_FALT]) + kortOrd, pukOrd);
 }
 
-function showReport(lines) {
+// ord = innehållsord i ordern; jfr = ord i den tolkade plutonsordern (0 om ingen importerats)
+function showReport(lines, ord, jfr) {
+    const total = document.getElementById('ordTotal');
+    const pct = jfr ? Math.round(ord / jfr * 100) : 0;
+    total.textContent = `${ord} ord` + (jfr ? ` · plutonsordern ${jfr} ord (${pct} %)` : '') + (pct >= ORD_ANDEL_MAX ? ' – bryt ner mer' : '');
+    total.classList.toggle('over', pct >= ORD_ANDEL_MAX);
     document.getElementById('resultHeader').textContent = document.getElementById('orderFormat').value + ' redo att kopieras';
     document.getElementById('reportOutput').textContent = lines.join('\n');
     document.getElementById('formView').classList.add('hidden');
@@ -596,6 +618,13 @@ function clearAll() {
     document.getElementById('orderLista').innerHTML = '';
     orderCount = 0;
     document.querySelectorAll('input[type="text"], textarea').forEach(el => el.value = '');
+    rensaUnderlag();
+    STRIKT_FALT.forEach(id => {
+        const d = document.getElementById(id).dataset;
+        delete d.importerat;
+        delete d.grupp;
+    });
+    BUDGET_FALT.forEach(uppdateraOrd);
     document.getElementById('orderFormat').value = 'OBO';
     applyFormat();
     goBack();
@@ -609,9 +638,172 @@ function clearAll() {
 document.addEventListener('DOMContentLoaded', function() {
     setNow();
     applyFormat();
+    initOrdrakning();
     addOrder();
     addOrder();
 });
+
+// ============================================================
+// UNDERLAG + ORDRÄKNING
+// Plutonsorderns text läggs som underlag VID fälten, inte i dem: gruppchefen
+// bryter ner själv. Bara strikt-fälten (ordagrant från högre chef) förifylls.
+// Ordräknaren håller emot att ordern blir en avskrift av plutonsordern.
+// ============================================================
+const STRIKT_FALT = ['o_plut_uppgift', 'o_var_uppgift', 'b_rfi'];
+const BUDGET_FALT = ['o_motstandaren', 'o_egna', 'o_understod', 'o_terrang', 'o_vader', 'o_civil',
+                     'b_malb', 'b_inled', 'b_darefter', 'b_slutligen', 'b_ril',
+                     'o_skadeplats', 'o_underhall', 'o_samband', 'o_chef_pos'];
+const ORD_BUDGET = 20;      // riktmärke per bryt ner/viktigaste-fält
+const ORD_ANDEL_MAX = 75;   // procent av plutonsorderns ord – över det är ordern i praktiken en avskrift
+const FALT_NAMN = {
+    o_motstandaren: 'Motståndaren', o_egna: 'Egna förband', o_understod: 'Understöd', o_terrang: 'Terrängen',
+    o_civil: 'Civilläget', o_plut_uppgift: 'Plutonens uppgift', o_var_uppgift: 'Vår uppgift',
+    b_malb: 'Målbild', b_inled: 'Inledningsvis', b_darefter: 'Därefter', b_slutligen: 'Slutligen',
+    b_ril: 'Riktlinjer', b_rfi: 'Insatsregler',
+    o_skadeplats: 'Sjukvård', o_underhall: 'Underhåll', o_samband: 'Samband', o_chef_pos: 'Chefens plats'
+};
+let pukOrd = 0;             // antal ord i senast tolkade plutonsorder
+
+function antalOrd(s) {
+    s = s.trim();
+    return s ? s.split(/\s+/).length : 0;
+}
+
+function ordIFalt(ids) {
+    return ids.reduce((n, id) => n + antalOrd(v(id)), 0);
+}
+
+function uppdateraOrd(id) {
+    const r = document.getElementById('or_' + id);
+    if (!r) return;   // strikt-fält har ingen räknare
+    const n = antalOrd(document.getElementById(id).value);
+    r.textContent = n ? `${n} ord` + (n > ORD_BUDGET ? ` – korta (riktmärke ${ORD_BUDGET})` : '') : '';
+    r.classList.toggle('over', n > ORD_BUDGET);
+}
+
+function initOrdrakning() {
+    BUDGET_FALT.forEach(id => {
+        const el = document.getElementById(id);
+        const r = document.createElement('div');
+        r.className = 'ordrakn';
+        r.id = 'or_' + id;
+        el.insertAdjacentElement('afterend', r);
+        el.addEventListener('input', () => uppdateraOrd(id));
+    });
+}
+
+// Byggs med textContent – inklistrad ordertext tolkas aldrig som HTML
+function byggUnderlag(id, rubrik, text) {
+    const d = document.createElement('details');
+    d.className = 'underlag';
+    d.id = id;
+    const s = document.createElement('summary');
+    s.textContent = `${rubrik} (${antalOrd(text)} ord)`;
+    const p = document.createElement('div');
+    p.className = 'underlag-text';
+    p.textContent = text;
+    d.append(s, p);
+    d.addEventListener('toggle', synkaUlToggle);
+    return d;
+}
+
+// Bryt ner/viktigaste-fält: knappen lägger texten i fältet som utgångspunkt att korta.
+// Strikt-fält (bara när användarens egen text behölls vid omimport): knappen ersätter med plutonsorderns lydelse.
+function setUnderlag(faltId, text) {
+    const el = document.getElementById(faltId);
+    const strikt = STRIKT_FALT.includes(faltId);
+    const d = byggUnderlag('ul_' + faltId, 'Ur plutonsordern – ' + FALT_NAMN[faltId], text);
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'btn-add';
+    b.textContent = strikt ? 'Använd denna lydelse' : 'Kopiera hit och korta';
+    b.addEventListener('click', () => {
+        if (strikt) {
+            el.value = text;
+            el.dataset.importerat = text;
+        } else {
+            el.value = el.value.trim() ? el.value.trim() + '\n' + text : text;
+            uppdateraOrd(faltId);
+        }
+        el.focus();
+    });
+    d.append(b);
+    el.insertAdjacentElement('beforebegin', d);
+}
+
+function rensaUnderlag() {
+    document.querySelectorAll('.underlag').forEach(d => d.remove());
+    document.getElementById('grpVal').textContent = '';
+    const t = document.getElementById('ulToggle');
+    t.hidden = true;
+    t.textContent = 'Fäll ut allt underlag';
+    pukOrd = 0;
+}
+
+// Knapptexten följer verkligt läge, även när underlagen öppnats ett och ett för hand
+function synkaUlToggle() {
+    const nagonStangd = Array.from(document.querySelectorAll('.underlag')).some(d => !d.open);
+    document.getElementById('ulToggle').textContent = nagonStangd ? 'Fäll ut allt underlag' : 'Fäll ihop allt underlag';
+}
+
+function toggleUnderlag() {
+    const alla = Array.from(document.querySelectorAll('.underlag'));
+    const oppna = alla.some(d => !d.open);
+    alla.forEach(d => { d.open = oppna; });
+    synkaUlToggle();
+}
+
+// "2A GRP", "2:a grp", "2 grp" → "2GRP"
+function normEnhet(s) {
+    return s.toUpperCase().replace(/(\d)\s*:?\s*[AE](?=\s|$)/g, '$1').replace(/[^A-ZÅÄÖ0-9]/g, '');
+}
+
+// Gruppens egen uppgift = dess rad i plutonens order (IGU), ordagrant. Väljs med knapp.
+// Väljs direkt om gruppen står i Från-fältet, eller om samma grupp valdes vid förra importen
+// och texten inte ändrats sedan dess. Returnerar true om en rad valdes automatiskt.
+function byggGruppval(entries) {
+    const box = document.getElementById('grpVal');
+    const ta = document.getElementById('o_var_uppgift');
+    const named = entries.filter(e => normEnhet(e.enhet));
+    if (!named.length) return false;
+    const hint = document.createElement('div');
+    hint.className = 'field-hint';
+    hint.style.margin = '0 0 6px';
+    hint.textContent = 'Vilken är din grupp? Uppgiften förs över ordagrant.';
+    box.append(hint);
+    const knappar = named.map(e => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'grp-btn';
+        b.textContent = e.enhet;
+        b.setAttribute('aria-pressed', 'false');
+        b.addEventListener('click', () => {
+            ta.value = e.uppgift;
+            ta.dataset.importerat = e.uppgift;
+            ta.dataset.grupp = normEnhet(e.enhet);
+            box.querySelectorAll('.grp-btn').forEach(x => {
+                x.classList.toggle('active', x === b);
+                x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+            });
+            ta.classList.add('field-flash');
+            setTimeout(() => ta.classList.remove('field-flash'), 700);
+        });
+        box.append(b);
+        return b;
+    });
+    const nu = v('o_var_uppgift');
+    if (nu && nu !== ta.dataset.importerat) return false;   // användarens egen text rörs inte
+    const fran = normEnhet(v('fran'));
+    // Minst två tecken och (^|\D) så att "12 GRP" i Från inte väljer "2 grp" och en tom enhet inte matchar allt
+    const traffar = knappar.filter((b, i) => {
+        const n = normEnhet(named[i].enhet);
+        if (nu) return n === ta.dataset.grupp;
+        return n.length >= 2 && fran && new RegExp('(^|\\D)' + n).test(fran);
+    });
+    if (traffar.length !== 1) return false;
+    traffar[0].click();
+    return true;
+}
 
 // ============================================================
 // PUK-PARSER – Tolka 5-punktsorder
@@ -619,6 +811,7 @@ document.addEventListener('DOMContentLoaded', function() {
 function parsePUK() {
     const raw = document.getElementById('pukInput').value.trim();
     if (!raw) return;
+    rensaUnderlag();
 
     // Dela texten i sektioner baserat på vanliga rubriker
     const sectionPatterns = [
@@ -645,17 +838,38 @@ function parsePUK() {
         sections[p.key] = raw.substring(p.start, end).trim();
     });
 
-    let filled = 0;
+    // Plutonsorderns omfång: ord i sektionerna utan radetiketter ("Fi:", "Målbild:") – räknas en gång,
+    // oberoende av vilka fält texten sedan hamnar i
+    pukOrd = Object.values(sections).reduce((n, s) =>
+        n + antalOrd(s.split('\n').map(l => l.replace(/^\s*[^:\n]{1,25}:(\s+|$)/, '')).join('\n')), 0);
 
-    // Hjälpfunktion: sätter fält om det är tomt
+    let underlagAntal = 0, striktAntal = 0, behallna = 0;
+    const sett = {};   // första träffen per fält vinner
+
+    // Hjälpfunktion: strikt-fält fylls i, övriga får texten som underlag.
+    // Strikt-fält skrivs över om de är tomma eller oförändrade sedan förra importen (rättad order ska slå igenom);
+    // har användaren skrivit eget behålls det och plutonsorderns lydelse läggs som underlag.
     function fillField(id, value) {
-        if (!value || !value.trim()) return;
+        if (!value || !value.trim() || sett[id]) return;
         const el = document.getElementById(id);
-        if (!el || el.value.trim()) return; // Skriv inte över
-        el.value = value.trim();
+        if (!el) return;
+        const text = value.trim();
+        sett[id] = true;
+        if (!STRIKT_FALT.includes(id)) {
+            setUnderlag(id, text);
+            underlagAntal++;
+            return;
+        }
+        const nu = el.value.trim();
+        if (nu && nu !== el.dataset.importerat) {
+            if (nu !== text) { setUnderlag(id, text); behallna++; }
+            return;
+        }
+        el.value = text;
+        el.dataset.importerat = text;
         el.classList.add('field-flash');
         setTimeout(() => el.classList.remove('field-flash'), 700);
-        filled++;
+        striktAntal++;
     }
 
     // Hjälpfunktion: extrahera sub-sektion ur text
@@ -669,9 +883,10 @@ function parsePUK() {
         return '';
     }
 
-    // ── VÅR UPPGIFT (sektion 2 i PlutO) ──
+    // ── Sektion 2 i PlutO: plutonchefens "vår uppgift" = PLUTONENS uppgift för gruppen.
+    //    Gruppens egen uppgift är dess rad i Order/IGU och väljs i byggGruppval().
     if (sections.upp) {
-        fillField('o_var_uppgift', sections.upp);
+        fillField('o_plut_uppgift', sections.upp);
     }
 
     // ── ORIENTERING ──
@@ -695,11 +910,13 @@ function parsePUK() {
         fillField('o_plut_uppgift', extract(t, [
             /(?:Pluton(?:ens)?\s+uppgift)\s*[:\-]\s*([\s\S]*?)(?=\n\s*(?:V[aå]r\s+uppgift|Fi|Egna|Underst|Terr|Civil|$))/i
         ]));
-        fillField('o_var_uppgift', extract(t, [
+        // "Vår uppgift:" under ORIENTERING är plutonens uppgift – utom när texten själv redan
+        // angett plutonens uppgift (en OBO-formad text), då är raden gruppens egen
+        fillField(sett.o_plut_uppgift ? 'o_var_uppgift' : 'o_plut_uppgift', extract(t, [
             /(?:V[aå]r\s+uppgift)\s*[:\-]\s*([\s\S]*?)$/im
         ]));
         // Om inga sub-rubriker hittades, lägg allt i motståndaren
-        if (filled === 0 && sections.ori.length > 5) {
+        if (!['o_motstandaren', 'o_egna', 'o_understod', 'o_terrang', 'o_civil'].some(id => sett[id]) && sections.ori.length > 5) {
             fillField('o_motstandaren', sections.ori);
         }
     }
@@ -727,11 +944,12 @@ function parsePUK() {
         ]));
         // Extrahera eventuell "Order"-undersektion ur gen → används av orderLista-parsern
         if (!sections.ord) {
-            const om = t.match(/(?:^|\n)\s*Order\b[^\n]*\n([\s\S]*?)(?=\n\s*(?:Insatsregler|RIL\b|Riktlinjer|\d+\.|$))/i);
+            // t + '\n' av samma skäl som i extract(): Order-blocket kan stå sist i sektionen
+            const om = (t + '\n').match(/(?:^|\n)\s*Order\b[^\n]*\n([\s\S]*?)(?=\n\s*(?:Insatsregler|RIL\b|Riktlinjer|\d+\.|$))/i);
             if (om) sections.ord = om[1];
         }
         // Fallback: om inga sub-rubriker, lägg allt i GFI inledning
-        if (!v('b_inled') && !v('b_malb') && t.length > 5) {
+        if (!sett.b_inled && !sett.b_malb && t.length > 5) {
             fillField('b_inled', t);
         }
     }
@@ -743,6 +961,11 @@ function parsePUK() {
         const orderEntries = [];
         let current = null;
         lines.forEach(line => {
+            // "Beredd: …" på egen rad hör till föregående enhets uppgift, det är ingen egen enhet
+            if (orderEntries.length && /^\s*[-•*]?\s*Beredd\b/i.test(line)) {
+                orderEntries[orderEntries.length - 1].uppgift += ' ' + line.trim();
+                return;
+            }
             // Matchar "Enhet: uppgift" men även "EA text" (militär kortform utan kolon)
             const m = line.match(/^\s*[-•*]?\s*(.+?)\s*[:\-–]\s+(.+)/) ||
                       line.match(/^\s*([A-ZÅÄÖ]{2,4})\s+(.+)/);
@@ -759,35 +982,13 @@ function parsePUK() {
         });
 
         if (orderEntries.length) {
-            // Rensa befintliga tomma kort och skapa nya
-            const lista = document.getElementById('orderLista');
-            const existing = lista.querySelectorAll('.dyn-card');
-            let emptyCards = [];
-            existing.forEach(card => {
-                const inputs = card.querySelectorAll('input');
-                const ta = card.querySelector('textarea');
-                if (!inputs[0]?.value.trim() && !ta?.value.trim()) emptyCards.push(card);
-            });
-            emptyCards.forEach(c => c.remove());
-
-            orderEntries.forEach(entry => {
-                orderCount++;
-                const card = document.createElement('div');
-                card.className = 'dyn-card field-flash';
-                card.id = 'orderCard_' + orderCount;
-                card.innerHTML = `
-                    <div class="dyn-card-header">
-                        <span class="dyn-card-title">Ordertagare ${orderCount}</span>
-                        <button class="btn-remove-sm" onclick="removeCard('orderCard_${orderCount}')" title="Ta bort">&#10005;</button>
-                    </div>
-                    <input type="text" placeholder="Enhet/Person" value="${entry.enhet.replace(/"/g, '&quot;')}">
-                    <textarea rows="2" placeholder="Uppgift..." style="margin-top:6px">${entry.uppgift}</textarea>
-                    <input type="text" placeholder="Beredd... (valfritt)" style="margin-top:6px">
-                `;
-                lista.appendChild(card);
-                setTimeout(() => card.classList.remove('field-flash'), 700);
-                filled++;
-            });
+            // Plutonens rader gäller grupperna – de blir underlag och gruppval, inte orderkort.
+            // Orderkorten är gruppchefens egna uppgifter till sina soldater.
+            document.getElementById('orderLista').insertAdjacentElement('beforebegin',
+                byggUnderlag('ul_orderLista', 'Ur plutonsordern – order till grupperna',
+                    orderEntries.map(e => (e.enhet ? e.enhet + ': ' : '') + e.uppgift).join('\n')));
+            underlagAntal++;
+            if (byggGruppval(orderEntries)) striktAntal++;
         }
     }
 
@@ -822,9 +1023,11 @@ function parsePUK() {
 
     // Feedback
     const fb = document.getElementById('importFeedback');
-    if (filled > 0) {
-        fb.textContent = `${filled} f\u00e4lt ifyllda fr\u00e5n PUK.`;
+    if (underlagAntal + striktAntal > 0) {
+        fb.textContent = `${underlagAntal} underlag vid f\u00e4lten, ${striktAntal} strikta f\u00e4lt ifyllda. Bryt ner resten sj\u00e4lv.`
+            + (behallna ? ` ${behallna} strikta f\u00e4lt beh\u00f6ll din text \u2013 plutonsorderns lydelse ligger som underlag.` : '');
         fb.style.color = 'var(--accent)';
+        document.getElementById('ulToggle').hidden = underlagAntal === 0;
     } else {
         fb.textContent = 'Kunde inte tolka n\u00e5gra sektioner. Kontrollera formatet.';
         fb.style.color = 'var(--danger-hover)';
