@@ -169,7 +169,7 @@ const HTML_SINK_BUDGET = {
     'pedars.html': 4,
     'fg.html': 3,
     'forkort.html': 2,
-    'obo.html': 2,
+    'obo.html': 1,
     'ra763.html': 2,
     'rassoika.html': 2,
     'saekr.html': 2,
